@@ -1,0 +1,2 @@
+# bobcoin
+replace money

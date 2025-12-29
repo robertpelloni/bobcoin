@@ -280,6 +280,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bobcoin-economy"
+version = "0.1.0"
+
+[[package]]
+name = "bobcoin-mining"
+version = "0.1.0"
+
+[[package]]
 name = "bobcoin-node"
 version = "0.1.0"
 dependencies = [

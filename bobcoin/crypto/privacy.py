@@ -119,8 +119,8 @@ class RingSignature:
             decoys.append(decoy)
         
         # Insert true public key at random position
-        import random
-        position = random.randint(0, ring_size - 1)
+        import secrets
+        position = secrets.randbelow(ring_size)
         decoys.insert(position, true_public_key)
         
         return decoys

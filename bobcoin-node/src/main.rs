@@ -17,6 +17,8 @@ use tracing::{info, warn, error};
 use std::env;
 use serde::{Serialize, Deserialize};
 use bobcoin_dance::{DanceOffSession, DanceMove, GrooveVerifier, BasicGrooveVerifier};
+use bobcoin_core::Block;
+use bobcoin_mining::SocialValueProof;
 
 const VERSION: &str = include_str!("../../VERSION.md");
 
@@ -173,6 +175,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // Verification Logic
                             if verifier.verify_groove(&session) {
                                 info!("✅ VALID GROOVE: Dance session {} verified successfully!", id);
+                                
+                                // Create a mock SocialValueProof
+                                let mut social_proof = SocialValueProof::new(peer_id.to_string());
+                                social_proof.exercise_score = 50.0;
+                                social_proof.social_score = 60.0; // Total > 25.0
+
+                                // Create a new Block
+                                let block = Block::new(
+                                    1, // Mock index
+                                    vec![], // No transactions yet
+                                    "00000000000000000000000000000000".to_string(), // Genesis previous hash
+                                    Some(social_proof),
+                                    Some(session),
+                                );
+
+                                info!("⛏️  MINED NEW BLOCK with Social Proof! Hash: {}", block.hash);
                             } else {
                                 warn!("❌ WEAK SAUCE: Dance session {} failed verification.", id);
                             }

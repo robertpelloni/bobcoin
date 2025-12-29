@@ -1,3 +1,5 @@
+pub mod relationship;
+use relationship::{RelationshipVerifier, GrowthMilestone};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Social Value Mining - Bobcoin's unique consensus mechanism.
@@ -14,6 +16,9 @@ pub struct SocialValueProof {
     pub exercise_score: f64,     // Physical health contribution
     pub social_score: f64,       // Social interaction contribution
     pub relationship_score: f64, // Relationship health contribution
+
+    // Verifiers
+    pub relationship_verifier: Option<RelationshipVerifier>, // Relationship verifier
 
     // Proof details
     pub timestamp: u64,
@@ -82,6 +87,14 @@ impl SocialValueProof {
         }
         if self.timestamp < current_time.saturating_sub(86400) {
             return false; // Older than 24 hours
+        }
+
+        // Validate relationship milestones if a verifier is present
+        if let Some(verifier) = &self.relationship_verifier {
+            // Example policy: If relationship score is high, expect at least a 'FirstDate' milestone
+            if self.relationship_score > 50.0 && !verifier.verify_milestone(&GrowthMilestone::FirstDate) {
+                return false;
+            }
         }
 
         true

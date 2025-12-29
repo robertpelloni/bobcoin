@@ -23,7 +23,7 @@ The Python implementation in `bobcoin/` serves as a reference prototype for the 
 | **bobcoin-privacy** | 0.1.0 | 🟢 Beta | KeyPairs, Pedersen Commitments, Ring Signature structs. |
 | **bobcoin-consensus** | 0.1.0 | 🟡 In Progress | Consensus traits defined. |
 | **bobcoin-dance** | 0.1.0 | 🟢 Beta | Basic Move struct and verification logic. |
-| **bobcoin-node** | 0.1.0 | 🟡 Alpha | Basic CLI entry point. |
+| **bobcoin-node** | 0.1.7 | 🟢 Beta | Integration with `mining` and `dance` completed. |
 | **bobcoin-economy** | 0.1.0 | 🟡 In Progress | Economy: Anti-hoarding, Demurrage. |
 | **bobcoin-mining** | 0.1.0 | 🟡 In Progress | Mining: Social Value, Relationship Verification. |
 
@@ -41,7 +41,7 @@ The following features exist in the Python prototype and need to be ported to Ru
 
 ## Build Information
 
-*   **Current Version**: 0.1.6 (Target)
+*   **Current Version**: 0.1.7
 *   **Build Date**: 2025-12-29
 *   **Platform**: win32
 *   **Rust Edition**: 2021

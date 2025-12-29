@@ -40,8 +40,8 @@ pub struct Block {
     pub previous_hash: String,
     pub hash: String,
     pub nonce: u64,
-    pub social_proof: Option<SocialValueProof>,
-    pub dance_session: Option<DanceOffSession>,
+    pub social_value_proof: Option<SocialValueProof>,
+    pub dance_off_session: Option<DanceOffSession>,
 }
 
 impl Block {
@@ -49,8 +49,8 @@ impl Block {
         index: u64, 
         transactions: Vec<Transaction>, 
         previous_hash: String,
-        social_proof: Option<SocialValueProof>,
-        dance_session: Option<DanceOffSession>,
+        social_value_proof: Option<SocialValueProof>,
+        dance_off_session: Option<DanceOffSession>,
     ) -> Self {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -64,8 +64,8 @@ impl Block {
             previous_hash,
             hash: String::new(),
             nonce: 0,
-            social_proof,
-            dance_session,
+            social_value_proof,
+            dance_off_session,
         };
         block.hash = block.calculate_hash();
         block
@@ -83,20 +83,13 @@ impl Block {
         hasher.update(self.previous_hash.as_bytes());
         hasher.update(self.nonce.to_be_bytes());
 
-        if let Some(proof) = &self.social_proof {
-            // Assuming SocialValueProof is serializable or has a way to contribute to hash
-            // Since I don't see the definition of SocialValueProof, I'll rely on serde serialization for hash consistency
-            // similar to how Transaction works in the existing calculate_hash (though Transaction calls its own calculate_hash, let's see if SocialValueProof has one or if we just serialize it)
-            // The existing code for Transaction calls `tx.calculate_hash()`.
-            // The existing code for Block `calculate_hash` manually updates hasher.
-            // I should probably use serde_json to stringify if it doesn't have a hash method, or just stringify the whole block for hashing if I wanted to be lazy, but I should follow the pattern.
-            // Since I don't know if SocialValueProof/DanceOffSession have `calculate_hash`, I will use `serde_json::to_string` on them since they are likely Serialize.
+        if let Some(proof) = &self.social_value_proof {
             if let Ok(serialized) = serde_json::to_string(proof) {
                 hasher.update(serialized.as_bytes());
             }
         }
 
-        if let Some(session) = &self.dance_session {
+        if let Some(session) = &self.dance_off_session {
              if let Ok(serialized) = serde_json::to_string(session) {
                 hasher.update(serialized.as_bytes());
             }

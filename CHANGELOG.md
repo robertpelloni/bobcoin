@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7] - 2025-12-29
+### Added
+- Updated `Block` struct to include `SocialValueProof` and `DanceOffSession`.
+- Node now mines blocks upon validating verified Dance Off sessions.
+
 ## [0.1.6] - 2025-12-29
 ### Added
 - Ported Relationship Verification logic to `bobcoin-mining`.

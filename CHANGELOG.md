@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2025-12-29
+### Added
+- Ported Relationship Verification logic to `bobcoin-mining`.
+- Integrated `RelationshipVerifier` into `SocialValueProof`.
+
 ## [0.1.5] - 2025-12-29
 ### Added
 - Created `bobcoin-economy` and `bobcoin-mining` crates.

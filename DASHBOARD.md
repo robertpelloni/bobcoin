@@ -37,11 +37,11 @@ The following features exist in the Python prototype and need to be ported to Ru
 | **Dating App Logic** | `bobcoin/economy/dating_app.py` | `bobcoin-economy` (New Crate) | 🔴 Pending |
 | **Exercise Game** | `bobcoin/economy/exercise_game.py` | `bobcoin-dance` / `bobcoin-economy` | 🟡 Partial |
 | **Social Value Mining** | `bobcoin/mining/social_value_mining.py` | `bobcoin-mining` (New Crate) | 🔴 Pending |
-| **Relationship Verifier** | `bobcoin/mining/relationship_verifier.py` | `bobcoin-mining` (New Crate) | 🔴 Pending |
+| **Relationship Verifier** | `bobcoin/mining/relationship_verifier.py` | `bobcoin-mining` (New Crate) | 🟢 Completed |
 
 ## Build Information
 
-*   **Current Version**: 0.1.3 (Target)
+*   **Current Version**: 0.1.6 (Target)
 *   **Build Date**: 2025-12-29
 *   **Platform**: win32
 *   **Rust Edition**: 2021

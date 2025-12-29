@@ -1,98 +1,50 @@
 # Bobcoin Roadmap
 
-## Phase 1: Foundation & Documentation (Current)
+## Phase 1: Foundation & Documentation (Completed)
 - [x] Initialize repository
-- [ ] Establish documentation standards (AGENTS.md, CLAUDE.md)
-- [x] Define project structure and architecture
-- [ ] Set up CI/CD pipelines
+- [x] Establish documentation standards (AGENTS.md, CLAUDE.md)
+- [x] Define project structure and architecture (Rust Workspace)
+- [x] Set up CI/CD pipelines (Basic Build/Test)
 
-## Phase 2: Core Architecture Design
-- [ ] Implement "Rhythm" Consensus (PoS + PoD)
-    - [ ] Define slot/epoch structure
-    - [ ] Implement VDF for leader selection
-- [ ] Develop "Groove" Validation Algorithm
-    - [ ] Train ML model for dance verification (Liveness, Humanity, Uniqueness)
-    - [ ] Define "DancePacket" structure and serialization
-- [ ] Design Privacy Layer
-    - [ ] Implement CLSAG Ring Signatures
-    - [ ] Implement Bulletproofs+ for RingCT
-- [ ] Select technology stack (Language, Frameworks)
+## Phase 2: Core Architecture Implementation (In Progress)
+- [x] **Core Structures (`bobcoin-core`)**
+    - [x] Define `Block`, `Transaction`, `TxInput`, `TxOutput` structs.
+    - [x] Implement SHA-256 Hashing and Serialization traits.
+- [ ] **Consensus Engine (`bobcoin-consensus`)**
+    - [ ] Define `Consensus` trait and `PoH` (Proof of History) scaffolding.
+    - [ ] Implement VDF (Verifiable Delay Function) logic.
+    - [ ] Define slot/epoch scheduling.
+- [ ] **Privacy Layer (`bobcoin-privacy`)**
+    - [ ] Implement Scalar and Group Element abstractions (Curve25519/Ristretto).
+    - [ ] Implement basic Ring Signature verification.
+    - [ ] Integrate Confidential Transactions (RingCT).
+- [x] **Proof of Dance (`bobcoin-dance`)**
+    - [x] Define `DanceMove` struct and serialization.
+    - [x] Implement `GrooveVerifier` trait.
+    - [ ] Develop ML model interfaces for motion verification.
 
-## Phase 3: Prototype Implementation
-- [ ] Implement Validator Node (Rust/Go)
-- [ ] Implement Mobile "Dancer" Client (React Native/Flutter)
-    - [ ] Integrate TEE/TrustZone for sensor data signing
-- [ ] Implement Storage Node
-- [ ] Internal testingnet launch
+## Phase 3: Node & Network Implementation
+- [x] **Node Application (`bobcoin-node`)**
+    - [x] Basic CLI entry point with versioning.
+    - [ ] Implement P2P networking stack (libp2p).
+    - [ ] Implement RPC/API layer for clients.
+- [ ] **Storage & State**
+    - [ ] Implement Ledger database integration (RocksDB/Sled).
+    - [ ] Implement UTXO set management.
 
-## Phase 4: Testing & Security
-- [ ] Comprehensive unit and integration testing
-- [ ] Security audit of consensus logic and crypto primitives
-- [ ] Stress testing network capabilities (TPS benchmarks)
+## Phase 4: Client Ecosystem
+- [ ] **Mobile "Dancer" Client**
+    - [ ] React Native/Flutter prototype.
+    - [ ] Sensor data capture and signing.
+- [ ] **Wallet Application**
+    - [ ] Address generation and key management.
+    - [ ] Transaction creation and signing.
 
-## Phase 5: Public Launch
-- [ ] Mainnet launch
-- [ ] Release official wallet apps
-- [ ] Community building and governance setup
+## Phase 5: Testing & Security
+- [ ] Comprehensive unit and integration testing.
+- [ ] Security audit of consensus logic and crypto primitives.
+- [ ] Stress testing network capabilities (TPS benchmarks).
 
-
-## Phase 1: Foundation & Documentation (Current)
-- [x] Initialize repository
-- [ ] Establish documentation standards (AGENTS.md, CLAUDE.md)
-- [x] Define project structure and architecture
-- [ ] Set up CI/CD pipelines
-
-## Phase 2: Core Architecture Design
-- [ ] Implement "Rhythm" Consensus (PoS + PoD)
-    - [ ] Define slot/epoch structure
-    - [ ] Implement VDF for leader selection
-- [ ] Develop "Groove" Validation Algorithm
-    - [ ] Train ML model for dance verification (Liveness, Humanity, Uniqueness)
-    - [ ] Define "DancePacket" structure and serialization
-- [ ] Design Privacy Layer
-    - [ ] Implement CLSAG Ring Signatures
-    - [ ] Implement Bulletproofs+ for RingCT
-- [ ] Select technology stack (Language, Frameworks)
-
-## Phase 3: Prototype Implementation
-- [ ] Implement Validator Node (Rust/Go)
-- [ ] Implement Mobile "Dancer" Client (React Native/Flutter)
-    - [ ] Integrate TEE/TrustZone for sensor data signing
-- [ ] Implement Storage Node
-- [ ] Internal testingnet launch
-
-## Phase 4: Testing & Security
-- [ ] Comprehensive unit and integration testing
-- [ ] Security audit of consensus logic and crypto primitives
-- [ ] Stress testing network capabilities (TPS benchmarks)
-
-## Phase 5: Public Launch
-- [ ] Mainnet launch
-- [ ] Release official wallet apps
-- [ ] Community building and governance setup
-
-
-## Phase 2: Core Architecture Design
-- [ ] Define Hybrid Consensus Mechanism
-    - Combination of Proof of Work (PoW) and Proof of Stake (PoS)
-- [ ] Design "Proof of Dance" Protocol
-    - Integration of physical movement data validation
-    - Oracle design for dance verification
-- [ ] Select technology stack (Language, Frameworks)
-
-## Phase 3: Prototype Implementation
-- [ ] Implement basic blockchain node
-- [ ] Implement wallet interface
-- [ ] Develop "Proof of Dance" input module
-- [ ] Internal testingnet launch
-
-## Phase 4: Testing & Security
-- [ ] Comprehensive unit and integration testing
-- [ ] Security audit of consensus logic
-- [ ] Stress testing network capabilities
-
-## Phase 5: Public Launch
-- [ ] Mainnet launch
-- [ ] Release official wallet apps
-- [ ] Community building and governance setup
-
+## Phase 6: Launch
+- [ ] Testnet deployment.
+- [ ] Mainnet launch.

@@ -1,6 +1,7 @@
 pub mod relationship;
 use relationship::{RelationshipVerifier, GrowthMilestone};
 use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Serialize, Deserialize};
 
 /// Social Value Mining - Bobcoin's unique consensus mechanism.
 ///
@@ -10,7 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const MIN_SCORE_TO_MINE: f64 = 25.0;
 pub const TARGET_SCORE: f64 = 75.0;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SocialValueProof {
     // Activity categories
     pub exercise_score: f64,     // Physical health contribution

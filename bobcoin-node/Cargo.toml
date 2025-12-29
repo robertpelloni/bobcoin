@@ -26,5 +26,6 @@ tracing-subscriber = "0.3"
 anyhow = "1.0"
 bobcoin-core = { path = "../bobcoin-core" }
 bobcoin-dance = { version = "0.1.0", path = "../bobcoin-dance" }
+bobcoin-mining = { path = "../bobcoin-mining" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.148"

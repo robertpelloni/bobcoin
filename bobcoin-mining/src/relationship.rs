@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum InteractionType {
     FirstMessage,
     MeaningfulConversation,
@@ -22,7 +23,7 @@ impl InteractionType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum GrowthMilestone {
     Matched,
     FirstDate, // Added based on requirements "e.g., > 10 interactions for 'FirstDate'"
@@ -34,7 +35,7 @@ pub enum GrowthMilestone {
     YearConnection,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Interaction {
     pub interaction_type: InteractionType,
     pub timestamp: u64,
@@ -69,7 +70,7 @@ impl Interaction {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct RelationshipVerifier {
     pub interaction_history: Vec<Interaction>,
     pub trust_score: f32,

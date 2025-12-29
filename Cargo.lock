@@ -265,6 +265,8 @@ version = "0.1.0"
 name = "bobcoin-core"
 version = "0.1.0"
 dependencies = [
+ "bobcoin-dance",
+ "bobcoin-mining",
  "hex",
  "serde",
  "serde_json",
@@ -286,6 +288,9 @@ version = "0.1.0"
 [[package]]
 name = "bobcoin-mining"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bobcoin-node"
@@ -294,6 +299,7 @@ dependencies = [
  "anyhow",
  "bobcoin-core",
  "bobcoin-dance",
+ "bobcoin-mining",
  "futures",
  "libp2p",
  "serde",

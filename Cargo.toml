@@ -1,34 +1,9 @@
-[workspace]
-resolver = "2"
-members = [
-    "bobcoin-core",
-    "bobcoin-consensus",
-    "bobcoin-privacy",
-    "bobcoin-dance",
-    "bobcoin-node",
-]
-resolver = "2"
-members = [
-    "bobcoin-core",
-    "bobcoin-consensus",
-    "bobcoin-privacy",
-    "bobcoin-dance",
-    "bobcoin-node",
-]
-
-members = [
-    "bobcoin-core",
-    "bobcoin-consensus",
-    "bobcoin-privacy",
-    "bobcoin-dance",
-    "bobcoin-node",
-]
-
-members = [
-    "bobcoin-core",
-    "bobcoin-consensus",
-    "bobcoin-privacy",
-    "bobcoin-dance",
-    "bobcoin-node",
-]
-
+[workspace]  
+resolver = "2"  
+members = [  
+    "bobcoin-core",  
+    "bobcoin-consensus",  
+    "bobcoin-privacy",  
+    "bobcoin-dance",  
+    "bobcoin-node",  
+] 

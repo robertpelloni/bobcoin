@@ -1,64 +1,38 @@
-# Bobcoin
+# Bobcoin Core & Research
 
-> Replace money with dance.
+**This is the central research hub and module repository for the Bobcoin ecosystem.**
 
-Bobcoin is a revolutionary cryptocurrency project aiming to implement a hybrid Proof of Work / Proof of Stake consensus mechanism, featuring the unique "Proof of Dance" validation protocol.
+**IMPORTANT:** Bobcoin is a **Game Point System**, not a financial cryptocurrency. We prioritize fun, health, and community over speculation.
 
-## Documentation
+This repository is **not** intended to be a standalone node binary. Instead, it functions as a **library workspace** and **brainstorming lab**. The crates developed here (`bobcoin-dance`, `bobcoin-privacy`, etc.) are designed to be consumed as submodules in various external projects:
 
-- [Roadmap](ROADMAP.md): Project goals and timeline.
-- [Changelog](CHANGELOG.md): History of changes.
-- [Agent Instructions](AGENTS.md): Guidelines for AI contributors.
-- [Version](VERSION.md): Current version.
+*   **StepMania:** Implementing "Proof of Dance" verification for rhythm game scores.
+*   **OkGame:** Integrating economy and movement verification.
+*   **Fwber:** (Project details TBD).
 
-## Project Structure
+## 📚 Workspace Modules
 
-- `ROADMAP.md`: Development plan.
-- `CHANGELOG.md`: Release notes.
-- `AGENTS.md`: AI persona and rules.
-- `CLAUDE.md`: LLM specific instructions.
+| Crate | Purpose | Status |
+| :--- | :--- | :--- |
+| **`bobcoin-dance`** | The core logic for verifying physical movement, intended for game engines. | 🟢 Stable API |
+| **`bobcoin-privacy`** | Cryptographic primitives (Ring Signatures, Bulletproofs) for anonymous transactions. | 🟡 Research |
+| **`bobcoin-core`** | Shared data structures (Blocks, Transactions) used across the ecosystem. | 🟢 Stable |
+| **`bobcoin-consensus`** | Experiments in timing and agreement (Proof of History / Vouching). | 🟡 Research |
+| **`bobcoin-node`** | *Experimental* P2P networking reference implementation. | 🟡 Prototype |
 
-## Getting Started
+## 🧪 Research Areas
 
-(TBD - Stack selection in progress)
+*   **Biometric Vouching:** How to use FaceID/TouchID to prevent Sybil attacks in P2P games.
+*   **Mobile ZK-Proofs:** Feasibility of generating zero-knowledge proofs on mobile chips.
+*   **P2P Mesh:** Battery-efficient networking for mobile devices (`libp2p` configuration).
 
-Bobcoin is a revolutionary cryptocurrency project aiming to implement a hybrid Proof of Work / Proof of Stake consensus mechanism, featuring the unique "Proof of Dance" validation protocol.
+## 🛠 Integration
 
-## Documentation
+To use these crates in your project:
 
-- [Roadmap](ROADMAP.md): Project goals and timeline.
-- [Changelog](CHANGELOG.md): History of changes.
-- [Agent Instructions](AGENTS.md): Guidelines for AI contributors.
-- [Version](VERSION.md): Current version.
+```toml
+[dependencies]
+bobcoin-dance = { git = "https://github.com/your-username/bobcoin", path = "bobcoin-dance" }
+```
 
-## Project Structure
-
-- `ROADMAP.md`: Development plan.
-- `CHANGELOG.md`: Release notes.
-- `AGENTS.md`: AI persona and rules.
-- `CLAUDE.md`: LLM specific instructions.
-
-## Getting Started
-
-(TBD - Stack selection in progress)
-
-Bobcoin is a revolutionary cryptocurrency project aiming to implement a hybrid Proof of Work / Proof of Stake consensus mechanism, featuring the unique "Proof of Dance" validation protocol.
-
-## Documentation
-
-- [Roadmap](ROADMAP.md): Project goals and timeline.
-- [Changelog](CHANGELOG.md): History of changes.
-- [Agent Instructions](AGENTS.md): Guidelines for AI contributors.
-- [Version](VERSION.md): Current version.
-
-## Project Structure
-
-- `ROADMAP.md`: Development plan.
-- `CHANGELOG.md`: Release notes.
-- `AGENTS.md`: AI persona and rules.
-- `CLAUDE.md`: LLM specific instructions.
-
-## Getting Started
-
-(TBD - Stack selection in progress)
-
+*Note: FFI bindings for C++ (StepMania) are planned but not yet implemented.*

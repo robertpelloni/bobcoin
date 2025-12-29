@@ -5,6 +5,7 @@
 - [x] Establish documentation standards (AGENTS.md, CLAUDE.md)
 - [x] Define project structure and architecture (Rust Workspace)
 - [x] Set up CI/CD pipelines (Basic Build/Test)
+- [x] Research & Feasibility Analysis (FEATURES_AND_FORKS.md)
 
 ## Phase 2: Core Architecture Implementation (In Progress)
 - [x] **Core Structures (`bobcoin-core`)**
@@ -14,19 +15,21 @@
     - [ ] Define `Consensus` trait and `PoH` (Proof of History) scaffolding.
     - [ ] Implement VDF (Verifiable Delay Function) logic.
     - [ ] Define slot/epoch scheduling.
-- [ ] **Privacy Layer (`bobcoin-privacy`)**
-    - [ ] Implement Scalar and Group Element abstractions (Curve25519/Ristretto).
-    - [ ] Implement basic Ring Signature verification.
-    - [ ] Integrate Confidential Transactions (RingCT).
+- [x] **Privacy Layer (`bobcoin-privacy`)**
+    - [x] Implement `KeyPair` generation (Ristretto).
+    - [x] Implement Pedersen Commitments.
+    - [x] Scaffold Ring Signatures.
+    - [ ] Integrate Bulletproofs range proofs.
 - [x] **Proof of Dance (`bobcoin-dance`)**
     - [x] Define `DanceMove` struct and serialization.
     - [x] Implement `GrooveVerifier` trait.
+    - [x] Implement `DanceOffSession` with Witness/Biometric fields.
     - [ ] Develop ML model interfaces for motion verification.
 
 ## Phase 3: Node & Network Implementation
 - [x] **Node Application (`bobcoin-node`)**
     - [x] Basic CLI entry point with versioning.
-    - [ ] Implement P2P networking stack (libp2p).
+    - [ ] Implement P2P networking stack (`libp2p` with QUIC/Relay).
     - [ ] Implement RPC/API layer for clients.
 - [ ] **Storage & State**
     - [ ] Implement Ledger database integration (RocksDB/Sled).
@@ -36,6 +39,7 @@
 - [ ] **Mobile "Dancer" Client**
     - [ ] React Native/Flutter prototype.
     - [ ] Sensor data capture and signing.
+    - [ ] Biometric integration (TouchID/FaceID).
 - [ ] **Wallet Application**
     - [ ] Address generation and key management.
     - [ ] Transaction creation and signing.

@@ -18,14 +18,14 @@ The Bobcoin project is organized as a Rust workspace containing several crates, 
 | Module | Version | Status | Description |
 | :--- | :--- | :--- | :--- |
 | **bobcoin-core** | 0.1.0 | 🟢 Stable | Core structs (Block, Tx) implemented. |
-| **bobcoin-privacy** | 0.1.0 | 🟡 In Progress | Privacy primitives being scaffolded. |
+| **bobcoin-privacy** | 0.1.0 | 🟢 Beta | KeyPairs, Pedersen Commitments, Ring Signature structs. |
 | **bobcoin-consensus** | 0.1.0 | 🟡 In Progress | Consensus traits defined. |
 | **bobcoin-dance** | 0.1.0 | 🟢 Beta | Basic Move struct and verification logic. |
 | **bobcoin-node** | 0.1.0 | 🟡 Alpha | Basic CLI entry point. |
 
 ## Build Information
 
-*   **Current Version**: 0.1.2 (Target)
+*   **Current Version**: 0.1.3 (Target)
 *   **Build Date**: 2025-12-29
 *   **Platform**: win32
 *   **Rust Edition**: 2021

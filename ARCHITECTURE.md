@@ -1,20 +1,20 @@
 # Bobcoin Architecture Specification
 
 ## 1. Overview
-Bobcoin is a high-performance, privacy-preserving blockchain that introduces a novel "Proof of Dance" (PoD) mechanism. It combines the sub-second finality of Solana's Proof of History/Stake architecture with the robust privacy guarantees of Monero, all powered by physical human movement.
+Bobcoin is a high-performance, privacy-preserving game point system that introduces a novel "Proof of Dance" (PoD) mechanism. It combines the sub-second finality of Solana's Proof of History/Stake architecture with robust privacy guarantees, all powered by physical human movement.
 
 ## 2. Hybrid Consensus Mechanism
-Bobcoin utilizes a dual-layer consensus model to balance speed, security, and fair distribution.
+Bobcoin utilizes a dual-layer consensus model to balance speed, fair distribution, and fun.
 
 ### 2.1. The "Rhythm" Consensus (PoS + PoD)
 *   **Block Production (The Beat):** Time is divided into slots (approx. 400ms).
-*   **Validators (The Judges):** High-performance nodes that participate in Proof of Stake. They vote on the validity of blocks and finalize the chain state.
-*   **Miners (The Dancers):** Users who perform "Proof of Dance" to earn the right to propose blocks or earn block rewards.
+*   **Validators (The Judges):** High-performance nodes that participate in Proof of Stake. They vote on the validity of blocks and finalize the game state.
+*   **Miners (The Dancers):** Users who perform "Proof of Dance" to earn the right to propose blocks or earn Game Points.
 
 ### 2.2. Workflow
 1.  **Dance Submission:** Dancers broadcast signed motion data packets (Dance Proofs) to the network.
 2.  **Block Proposal:** A Leader Validator is selected via a Verifiable Delay Function (VDF) weighted by Stake. The Leader selects a set of valid Dance Proofs to include in the block.
-3.  **Validation:** Validators verify the transactions and the validity of the Dance Proofs (using the ML Verifier).
+3.  **Validation:** Validators verify the transfers and the validity of the Dance Proofs (using the ML Verifier).
 4.  **Finalization:** Validators vote on the block. Once >2/3 supermajority is reached, the block is finalized.
 
 ## 3. Proof of Dance (PoD) Specification
@@ -78,20 +78,20 @@ Bobcoin implements "Fast Privacy" by optimizing Monero's primitives for a high-t
 *   **Dance Channels:** Dedicated UDP channels for high-frequency motion data ingestion.
 
 ## 1. Overview
-Bobcoin is a high-performance, privacy-preserving blockchain that introduces a novel "Proof of Dance" (PoD) mechanism. It combines the sub-second finality of Solana's Proof of History/Stake architecture with the robust privacy guarantees of Monero, all powered by physical human movement.
+Bobcoin is a high-performance, privacy-preserving game point system that introduces a novel "Proof of Dance" (PoD) mechanism. It combines the sub-second finality of Solana's Proof of History/Stake architecture with robust privacy guarantees, all powered by physical human movement.
 
 ## 2. Hybrid Consensus Mechanism
-Bobcoin utilizes a dual-layer consensus model to balance speed, security, and fair distribution.
+Bobcoin utilizes a dual-layer consensus model to balance speed, fair distribution, and fun.
 
 ### 2.1. The "Rhythm" Consensus (PoS + PoD)
 *   **Block Production (The Beat):** Time is divided into slots (approx. 400ms).
-*   **Validators (The Judges):** High-performance nodes that participate in Proof of Stake. They vote on the validity of blocks and finalize the chain state.
-*   **Miners (The Dancers):** Users who perform "Proof of Dance" to earn the right to propose blocks or earn block rewards.
+*   **Validators (The Judges):** High-performance nodes that participate in Proof of Stake. They vote on the validity of blocks and finalize the game state.
+*   **Miners (The Dancers):** Users who perform "Proof of Dance" to earn the right to propose blocks or earn Game Points.
 
 ### 2.2. Workflow
 1.  **Dance Submission:** Dancers broadcast signed motion data packets (Dance Proofs) to the network.
 2.  **Block Proposal:** A Leader Validator is selected via a Verifiable Delay Function (VDF) weighted by Stake. The Leader selects a set of valid Dance Proofs to include in the block.
-3.  **Validation:** Validators verify the transactions and the validity of the Dance Proofs (using the ML Verifier).
+3.  **Validation:** Validators verify the transfers and the validity of the Dance Proofs (using the ML Verifier).
 4.  **Finalization:** Validators vote on the block. Once >2/3 supermajority is reached, the block is finalized.
 
 ## 3. Proof of Dance (PoD) Specification

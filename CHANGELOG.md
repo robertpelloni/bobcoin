@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2025-12-29
+### Added
+- Implemented `DanceOffSession` in `bobcoin-dance`.
+- Added fields for `witness_signature`, `witness_id`, and `biometric_auth_passed` to support "Vouched Dance-Offs".
+- Updated `GrooveVerifier` to check for witness presence and biometric flags.
+
+## [0.1.3] - 2025-12-29
+### Added
+- Implemented `KeyPair` generation in `bobcoin-privacy` using Ristretto group.
+- Implemented Pedersen Commitments for hiding transaction amounts.
+- Scaffolded Ring Signature structures (MLSAG style).
+- Added `sha2` dependency to `bobcoin-privacy`.
+- Downgraded `rand` to 0.8.5 to resolve dependency conflicts with `curve25519-dalek`.
+
+## [0.1.2] - 2025-12-29
+### Fixed
+- Fixed compilation errors in `bobcoin-core` (duplicate structs) and `bobcoin-dance` (missing dependencies).
+- Stabilized workspace build.
+
 ## [0.1.1] - 2025-12-29
 ### Added
 - Initialized Rust workspace with crates: `bobcoin-core`, `bobcoin-consensus`, `bobcoin-privacy`, `bobcoin-dance`, `bobcoin-node`.
@@ -12,18 +31,3 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Initial project setup
 - Documentation ecosystem (ROADMAP, CHANGELOG, VERSION, AGENTS)
-
-All notable changes to this project will be documented in this file.
-
-## [0.1.1] - 2025-12-29
-### Added
-- Initialized Rust workspace with crates: `bobcoin-core`, `bobcoin-consensus`, `bobcoin-privacy`, `bobcoin-dance`, `bobcoin-node`.
-- Implemented version reading in `bobcoin-node` CLI.
-- Added `DASHBOARD.md`.
-
-## [0.1.0] - 2025-12-29
-### Added
-- Initial project setup
-- Documentation ecosystem (ROADMAP, CHANGELOG, VERSION, AGENTS)
-
-

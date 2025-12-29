@@ -11,20 +11,21 @@
     6.  **Updated** `DASHBOARD.md`, `ROADMAP.md`, `CHANGELOG.md`, `VERSION.md` (to v0.1.5), and `AGENTS.md`.
 
 ## Current Project State
-- **Version:** 0.1.6
+- **Version:** 0.1.7
 - **Architecture:** Rust Workspace with 7 members (`core`, `consensus`, `privacy`, `dance`, `node`, `economy`, `mining`).
 - **Status:**
+    - `bobcoin-node`: Integrates `mining` and `dance` (node can mine blocks!).
     - `bobcoin-economy`: Contains `StandardDemurrageCalculator` and `AccountHealth`.
     - `bobcoin-mining`: Contains `SocialMiner`, `SocialValueProof`, and `RelationshipVerifier` (in `relationship` module).
     - `bobcoin-dance`: Functional (Proof of Dance).
     - `bobcoin/` (Python): Serves as the logic reference for porting.
 
 ## Next Steps (Roadmap)
-1.  **Integrate Node:** The `bobcoin-node` crate needs to actually use these new economy/mining modules to validate blocks.
-2.  **Port "Music Game" Logic:** Move `bobcoin/economy/music_game.py` to `bobcoin-dance` or a new crate.
-3.  **Consensus:** Implement the "Proof of History" / VDF scaffolding referenced in the docs.
+1.  **Port "Music Game" Logic:** Move `bobcoin/economy/music_game.py` to `bobcoin-dance`. This is the top priority for the next session.
+2.  **Consensus:** Implement the "Proof of History" / VDF scaffolding referenced in the docs.
+3.  **Integrate Node:** Further refine the integration of economy/mining modules if needed.
 
 ## Notes for Next Agent
 - The project is explicitly **NOT** about money. It is a game point system.
 - Prioritize functionality parity between the Python prototype and the new Rust crates.
-- Check `bobcoin/economy/music_game.py` for the next logical port.
+- **Critical:** The "Music Game" logic resides in `bobcoin/economy/music_game.py` and needs to be moved to `bobcoin-dance`.

@@ -4,6 +4,8 @@
 
 The Bobcoin project is organized as a Rust workspace containing several crates, each responsible for a specific domain of the blockchain's functionality. This modular architecture allows for parallel development, easier testing, and clear separation of concerns.
 
+The Python implementation in `bobcoin/` serves as a reference prototype for the Rust implementation.
+
 ### Directory Layout
 
 *   **`/` (Root)**: Contains workspace configuration (`Cargo.toml`), global documentation (`README.md`, `ROADMAP.md`, `CHANGELOG.md`), and build artifacts.
@@ -22,6 +24,20 @@ The Bobcoin project is organized as a Rust workspace containing several crates, 
 | **bobcoin-consensus** | 0.1.0 | 🟡 In Progress | Consensus traits defined. |
 | **bobcoin-dance** | 0.1.0 | 🟢 Beta | Basic Move struct and verification logic. |
 | **bobcoin-node** | 0.1.0 | 🟡 Alpha | Basic CLI entry point. |
+| **bobcoin-economy** | 0.1.0 | 🟡 In Progress | Economy: Anti-hoarding, Demurrage. |
+| **bobcoin-mining** | 0.1.0 | 🟡 In Progress | Mining: Social Value, Relationship Verification. |
+
+## Migration Status (Python -> Rust)
+
+The following features exist in the Python prototype and need to be ported to Rust:
+
+| Feature | Python Source | Rust Destination | Status |
+| :--- | :--- | :--- | :--- |
+| **Anti-Hoarding / Demurrage** | `bobcoin/economy/anti_hoarding.py` | `bobcoin-economy` (New Crate) | 🔴 Pending |
+| **Dating App Logic** | `bobcoin/economy/dating_app.py` | `bobcoin-economy` (New Crate) | 🔴 Pending |
+| **Exercise Game** | `bobcoin/economy/exercise_game.py` | `bobcoin-dance` / `bobcoin-economy` | 🟡 Partial |
+| **Social Value Mining** | `bobcoin/mining/social_value_mining.py` | `bobcoin-mining` (New Crate) | 🔴 Pending |
+| **Relationship Verifier** | `bobcoin/mining/relationship_verifier.py` | `bobcoin-mining` (New Crate) | 🔴 Pending |
 
 ## Build Information
 

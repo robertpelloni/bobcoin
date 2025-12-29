@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2025-12-29
+### Added
+- Created `bobcoin-economy` and `bobcoin-mining` crates.
+- Merged feature branches for Economy and Mining logic.
+- Began porting Python prototype logic to Rust modules.
+
 ## [0.1.4] - 2025-12-29
 ### Added
 - Implemented `DanceOffSession` in `bobcoin-dance`.

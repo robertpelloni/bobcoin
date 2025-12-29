@@ -25,6 +25,10 @@
     - [x] Implement `GrooveVerifier` trait.
     - [x] Implement `DanceOffSession` with Witness/Biometric fields.
     - [ ] Develop ML model interfaces for motion verification.
+- [ ] **Economy & Mining (`bobcoin-economy`, `bobcoin-mining`)**
+    - [ ] Port Anti-Hoarding/Demurrage logic from Python. (In Progress)
+    - [ ] Port Social Value Mining logic from Python. (In Progress)
+    - [ ] Port Dating App and Relationship verification logic.
 
 ## Phase 3: Node & Network Implementation
 - [x] **Node Application (`bobcoin-node`)**

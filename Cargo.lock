@@ -293,6 +293,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bobcoin-networking"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.10.0",
+]
+
+[[package]]
 name = "bobcoin-node"
 version = "0.1.0"
 dependencies = [
@@ -308,6 +315,10 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
 ]
+
+[[package]]
+name = "bobcoin-oracle"
+version = "0.1.0"
 
 [[package]]
 name = "bobcoin-privacy"

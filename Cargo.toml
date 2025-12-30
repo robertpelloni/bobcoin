@@ -7,5 +7,5 @@ members = [
     "bobcoin-dance",
     "bobcoin-node",
     "bobcoin-economy",
-    "bobcoin-mining",
+    "bobcoin-mining", "bobcoin-networking", "bobcoin-oracle",
 ]

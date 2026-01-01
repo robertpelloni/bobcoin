@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2025-12-30
+### Added
+- Added `bobcoin-networking` crate (Solana-style Packet architecture).
+- Added `bobcoin-oracle` crate (Chainlink-style Off-Chain Reporting).
+
 ## [0.1.7] - 2025-12-29
 ### Added
 - Updated `Block` struct to include `SocialValueProof` and `DanceOffSession`.

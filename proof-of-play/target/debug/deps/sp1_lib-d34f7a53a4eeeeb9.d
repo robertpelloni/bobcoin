@@ -1,0 +1,12 @@
+C:\Users\hyper\workspace\bobcoin\proof-of-play\target\debug\deps\sp1_lib-d34f7a53a4eeeeb9.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\bls12381.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\bn254.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\ed25519.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\io.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\secp256k1.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\unconstrained.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\utils.rs
+
+C:\Users\hyper\workspace\bobcoin\proof-of-play\target\debug\deps\libsp1_lib-d34f7a53a4eeeeb9.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\bls12381.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\bn254.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\ed25519.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\io.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\secp256k1.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\unconstrained.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\utils.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\bls12381.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\bn254.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\ed25519.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\io.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\secp256k1.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\unconstrained.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sp1-lib-1.2.0\src\utils.rs:

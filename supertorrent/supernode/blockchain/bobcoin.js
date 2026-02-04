@@ -1,7 +1,7 @@
 
 // Helper for safe dynamic imports
 async function safeImport(moduleName, mockExport) {
-    if (process.platform === 'win32') {
+    if (process.platform === 'win32' && !process.env.NO_MOCKS) {
         if (moduleName.includes('solana') || moduleName.includes('lightprotocol')) {
             console.warn(`[Mock] Module '${moduleName}' disabled on Windows (binding issues). Using mock implementation.`);
             return mockExport;

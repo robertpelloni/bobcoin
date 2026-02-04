@@ -1,0 +1,32 @@
+
+const GAME_SERVER_URL = 'http://localhost:3000';
+
+export async function submitProof(score, perfects, greats) {
+    // Generate a simulated public key (In real app, connect to Phantom Wallet)
+    const playerId = 'PlayerOnePublicKey1111111111111111111111';
+
+    const proof = {
+        playerId,
+        publicValues: {
+            score,
+            perfects: Math.floor(score / 100), // Approximate for mock
+            greats: 0
+        },
+        proofBytes: 'mock_proof_from_frontend'
+    };
+
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/submit-proof`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ proof })
+        });
+
+        return await response.json();
+    } catch (e) {
+        console.error("API Error:", e);
+        throw e;
+    }
+}

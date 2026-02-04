@@ -1,16 +1,22 @@
-const BobcoinBridge = require('./blockchain/bobcoin');
-const MockTorrentManager = require('./torrent-manager');
+import BobcoinBridge from './blockchain/bobcoin.js';
+import TorrentManager from './torrent-manager.js';
 
-const torrentManager = new MockTorrentManager();
+const torrentManager = new TorrentManager();
 const bobcoinBridge = new BobcoinBridge();
-const myAddress = bobcoinBridge.keypair.publicKey.toBase58();
+// Need to initialize bridge async
+(async () => {
+    await bobcoinBridge.init();
+    const myAddress = bobcoinBridge.keypair.publicKey.toBase58();
+    console.log('=== Supertorrent Node Startup ===');
+    console.log(`Validator Address: ${myAddress}`);
 
-console.log('=== Supertorrent Node Startup ===');
-console.log(`Validator Address: ${myAddress}`);
+    runProofOfStorageLoop();
+})();
 
-torrentManager.addFile('hash_ubuntu_iso', 4 * 1024 * 1024 * 1024); 
-torrentManager.addFile('hash_wiki_dump', 20 * 1024 * 1024 * 1024); 
-torrentManager.addFile('hash_big_buck_bunny', 500 * 1024 * 1024); 
+// Sintel, a free, Creative Commons movie
+const SINTEL_MAGNET = 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
+
+torrentManager.addFile(SINTEL_MAGNET);
 
 async function runProofOfStorageLoop() {
     console.log('\n[Supernode] Starting Proof of Storage Loop...');
@@ -24,14 +30,14 @@ async function runProofOfStorageLoop() {
     }
 
     console.log(`[Supernode] Generating proof for ${storedFiles.length} files (${(totalSize / 1024 / 1024).toFixed(2)} MB total)...`);
-    
+
     const merkleRoot = bobcoinBridge.generateStorageProof(storedFiles);
-    
+
     if (merkleRoot) {
         try {
             const signature = await bobcoinBridge.submitProofOfStorage(merkleRoot, totalSize);
             console.log(`[Supernode] Proof submitted successfully! Tx: ${signature}`);
-            
+
             const isEligible = await bobcoinBridge.isValidatorEligible(myAddress);
             console.log(`[Supernode] Validator Status: ${isEligible ? 'ACTIVE' : 'INACTIVE'}`);
         } catch (error) {
@@ -40,4 +46,4 @@ async function runProofOfStorageLoop() {
     }
 }
 
-runProofOfStorageLoop();
+// runProofOfStorageLoop();

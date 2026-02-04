@@ -1,4 +1,6 @@
-function safeRequire(moduleName, mockExport) {
+
+// Helper for safe dynamic imports
+async function safeImport(moduleName, mockExport) {
     if (process.platform === 'win32') {
         if (moduleName.includes('solana') || moduleName.includes('lightprotocol')) {
             console.warn(`[Mock] Module '${moduleName}' disabled on Windows (binding issues). Using mock implementation.`);
@@ -6,58 +8,61 @@ function safeRequire(moduleName, mockExport) {
         }
     }
     try {
-        return require(moduleName);
+        const mod = await import(moduleName);
+        return mod.default || mod;
     } catch (e) {
         console.warn(`[Mock] Module '${moduleName}' failed to load. Using mock. Error: ${e.message}`);
         return mockExport;
     }
 }
 
-const { Connection, Keypair, PublicKey } = safeRequire('@solana/web3.js', {
-    Connection: class { constructor(url) { this.url = url; } },
-    Keypair: class {
-        constructor() { this.publicKey = new (class { toBase58() { return 'MockPublicKey111111111111111111111111111111'; } })(); }
-        static generate() { return new this(); }
-    },
-    PublicKey: class { constructor(val) { this.val = val; } toBase58() { return this.val || 'MockPublicKey'; } }
-});
+import { MerkleTree } from 'merkletreejs';
+import crypto from 'crypto';
 
-const { Rpc } = safeRequire('@lightprotocol/stateless.js', {
-    Rpc: class { constructor(connection) { } }
-});
-
-const { CompressedTokenProgram } = safeRequire('@lightprotocol/compressed-token', {
-    CompressedTokenProgram: {}
-});
-
-const { PaymentChannel } = safeRequire('x402-solana', {
-    PaymentChannel: {}
-});
-
-const BN = safeRequire('bn.js', class BN { });
-
-// Real implementations for logic that works everywhere
-const { MerkleTree } = require('merkletreejs');
-// Check if keccak256 loads, otherwise fallback to polyfill or just crash if critical (MerkleTree needs it)
+// Try loading keccak256
 let keccak256;
 try {
-    keccak256 = require('keccak256');
+    const kMod = await import('keccak256');
+    keccak256 = kMod.default || kMod;
 } catch (e) {
     console.warn("keccak256 native module failed. Falling back to crypto 'sha256'.");
-    const crypto = require('crypto');
     keccak256 = (x) => crypto.createHash('sha256').update(x).digest();
 }
 
-class BobcoinBridge {
-    constructor(rpcUrl = 'https://api.devnet.solana.com', keypair = Keypair.generate()) {
-        this.connection = new Connection(rpcUrl, 'confirmed');
-        this.keypair = keypair;
-        this.lightRpc = new Rpc(this.connection);
+export default class BobcoinBridge {
+    constructor() {
+        this.initialized = false;
+    }
+
+    async init() {
+        // Load Dependencies Dynamically
+        const web3 = await safeImport('@solana/web3.js', {
+            Connection: class { constructor(url) { this.url = url; } },
+            Keypair: class {
+                constructor() { this.publicKey = new (class { toBase58() { return 'MockPublicKey111111111111111111111111111111'; } })(); }
+                static generate() { return new this(); }
+            },
+            PublicKey: class { constructor(val) { this.val = val; } toBase58() { return this.val || 'MockPublicKey'; } }
+        });
+
+        this.Connection = web3.Connection;
+        this.Keypair = web3.Keypair;
+        this.PublicKey = web3.PublicKey;
+
+        // Initialize Defaults
+        this.connection = new this.Connection('https://api.devnet.solana.com', 'confirmed');
+        this.keypair = this.Keypair.generate();
+
+        const stateless = await safeImport('@lightprotocol/stateless.js', {
+            Rpc: class { constructor(connection) { } }
+        });
+        this.lightRpc = new stateless.Rpc(this.connection);
+
         this.initialized = true;
     }
 
     async createCompressedMint() {
-        const mockMintAddress = new PublicKey('BobCoinMintAddress1111111111111111111111111');
+        const mockMintAddress = new this.PublicKey('BobCoinMintAddress1111111111111111111111111');
         return Promise.resolve(mockMintAddress);
     }
 
@@ -95,8 +100,7 @@ class BobcoinBridge {
      */
 
     /**
-     * Simulates generating a Merkle Proof for the stored files.
-     * In a real implementation, this would hash all file chunks on disk.
+     * Generates a Merkle Proof for the stored files.
      * @param {Array<string>} fileHashes - List of hashes of stored files.
      * @returns {string} The Merkle Root.
      */
@@ -199,5 +203,3 @@ class BobcoinBridge {
         }
     }
 }
-
-module.exports = BobcoinBridge;

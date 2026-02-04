@@ -1,8 +1,14 @@
 function safeRequire(moduleName, mockExport) {
+    if (process.platform === 'win32') {
+        if (moduleName.includes('solana') || moduleName.includes('lightprotocol')) {
+            console.warn(`[Mock] Module '${moduleName}' disabled on Windows (binding issues). Using mock implementation.`);
+            return mockExport;
+        }
+    }
     try {
         return require(moduleName);
     } catch (e) {
-        console.warn(`[Mock] Module '${moduleName}' not found. Using mock implementation.`);
+        console.warn(`[Mock] Module '${moduleName}' failed to load. Using mock. Error: ${e.message}`);
         return mockExport;
     }
 }
@@ -17,7 +23,7 @@ const { Connection, Keypair, PublicKey } = safeRequire('@solana/web3.js', {
 });
 
 const { Rpc } = safeRequire('@lightprotocol/stateless.js', {
-    Rpc: class { constructor(connection) {} }
+    Rpc: class { constructor(connection) { } }
 });
 
 const { CompressedTokenProgram } = safeRequire('@lightprotocol/compressed-token', {
@@ -28,7 +34,19 @@ const { PaymentChannel } = safeRequire('x402-solana', {
     PaymentChannel: {}
 });
 
-const BN = safeRequire('bn.js', class BN {});
+const BN = safeRequire('bn.js', class BN { });
+
+// Real implementations for logic that works everywhere
+const { MerkleTree } = require('merkletreejs');
+// Check if keccak256 loads, otherwise fallback to polyfill or just crash if critical (MerkleTree needs it)
+let keccak256;
+try {
+    keccak256 = require('keccak256');
+} catch (e) {
+    console.warn("keccak256 native module failed. Falling back to crypto 'sha256'.");
+    const crypto = require('crypto');
+    keccak256 = (x) => crypto.createHash('sha256').update(x).digest();
+}
 
 class BobcoinBridge {
     constructor(rpcUrl = 'https://api.devnet.solana.com', keypair = Keypair.generate()) {
@@ -53,7 +71,7 @@ class BobcoinBridge {
     }
 
     async verifyPeerPayment(paymentProof, expectedAmount) {
-        const isValid = true; 
+        const isValid = true;
         if (!isValid) {
             throw new Error('Invalid payment proof');
         }
@@ -62,7 +80,7 @@ class BobcoinBridge {
 
     async payForResource(requestHeader) {
         const [protocol, dest, price, resourceId] = requestHeader.split(' ');
-        
+
         if (protocol !== '402-solana') {
             throw new Error('Unsupported payment protocol');
         }
@@ -86,11 +104,13 @@ class BobcoinBridge {
         if (!fileHashes || fileHashes.length === 0) {
             return null;
         }
-        // Simple mock Merkle root generation: hash of all hashes
-        // In reality, this would be a proper Merkle Tree implementation
-        const crypto = require('crypto');
-        const combined = fileHashes.join('');
-        const merkleRoot = crypto.createHash('sha256').update(combined).digest('hex');
+
+        console.log(`[PoUS] Generating Merkle Tree for ${fileHashes.length} files...`);
+        // Use keccak256 for hashing leaves and nodes
+        const leaves = fileHashes.map(x => keccak256(x));
+        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+
+        const merkleRoot = tree.getHexRoot();
         console.log(`[PoUS] Generated Storage Merkle Root: ${merkleRoot}`);
         return merkleRoot;
     }
@@ -142,13 +162,13 @@ class BobcoinBridge {
 
         console.log(`[PoUS] Verifying Game Score Proof for Player: ${proofData.playerId}`);
         console.log(`[PoUS] Claimed Score: ${proofData.publicValues.score}`);
-        
+
         const { perfects, greats, score } = proofData.publicValues;
         const calculatedScore = (perfects * 100) + (greats * 50);
-        
+
         if (calculatedScore !== score) {
-             console.error(`[PoUS] Invalid Proof: Score mismatch. Claimed ${score}, Calculated ${calculatedScore}`);
-             return Promise.resolve(false);
+            console.error(`[PoUS] Invalid Proof: Score mismatch. Claimed ${score}, Calculated ${calculatedScore}`);
+            return Promise.resolve(false);
         }
 
         console.log('[PoUS] Proof Verified Successfully ✅');
@@ -167,7 +187,7 @@ class BobcoinBridge {
         }
 
         const score = proofData.publicValues.score;
-        const tokensToMint = Math.floor(score / 1000); 
+        const tokensToMint = Math.floor(score / 1000);
 
         if (tokensToMint > 0) {
             console.log(`[PoUS] Minting ${tokensToMint} BOB tokens to ${playerAddress} for score ${score}`);

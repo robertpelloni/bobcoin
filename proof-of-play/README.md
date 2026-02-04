@@ -31,3 +31,16 @@ It ensures:
 2. `score <= 1,000,000`
 
 If valid, it commits the score and a boolean `true` to the public output.
+
+## Integration (Game Server)
+
+The `game-server` directory contains a Node.js Host application that:
+1.  Accepts proofs (simulated or real) via HTTP POST.
+2.  Verifies the public values match the score.
+3.  Interacts with the `supertorrent` bridge to mint tokens.
+
+To run the Verifier:
+```bash
+cd ../game-server
+npm start
+```

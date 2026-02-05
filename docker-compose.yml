@@ -31,11 +31,19 @@ services:
     environment:
       - VITE_API_URL=http://localhost:3001
 
-  zk-circuit-builder:
+  zk-service:
     build:
       context: .
       dockerfile: proof-of-play/Dockerfile
     volumes:
       - ./proof-of-play:/app
-    profiles:
-      - tools
+    # Override CMD to run the server instead of just building
+    # We must ensure the ELF is built first. 
+    # For dev, we can chain commands: build program -> run script/server
+    command: >
+      bash -c "
+        cd program && cargo prove build --output-directory elf &&
+        cd ../script && cargo run --release
+      "
+    ports:
+      - "8080:8080"

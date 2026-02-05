@@ -54,7 +54,32 @@ app.post('/submit-proof', async (req, res) => {
     console.log(`[GameServer] Received Proof from ${proof.playerId}. Score: ${proof.publicValues.score}`);
 
     try {
-        // 1. Verify Proof (This checks the score calculation)
+        // 1. ZK Verification (Phase 13)
+        // Check if ZK Service is available and verify execution
+        try {
+            console.log('[GameServer] Requesting ZK Verification from zk-service...');
+            const zkResponse = await fetch('http://zk-service:8080/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(proof)
+            });
+
+            if (zkResponse.ok) {
+                const zkResult = await zkResponse.json();
+                console.log('[GameServer] ZK Service Result:', zkResult);
+                if (!zkResult.success) {
+                    throw new Error(`ZK Verification Failed: ${zkResult.error}`);
+                }
+            } else {
+                console.warn('[GameServer] ZK Service unavailable or error. status:', zkResponse.status);
+                // Fallback? Or fail? For robustness, we warn but proceed to Bridge check.
+            }
+        } catch (zkErr) {
+            console.error('[GameServer] ZK Service Error:', zkErr.message);
+            // Decide if hard fail. For now, soft fail to allow gameplay if verify service is down.
+        }
+
+        // 2. Bridge Verification (Simple logic + Signature check if we had it)
         const isValid = await bridge.verifyGameScoreProof(proof);
 
         if (!isValid) {

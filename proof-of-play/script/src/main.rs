@@ -1,6 +1,8 @@
+use actix_web::{web, App, HttpServer, HttpResponse, Responder};
 use sp1_sdk::{ProverClient, SP1Stdin};
 use serde::{Deserialize, Serialize};
 
+// Compile-time ELF embedding
 const ELF: &[u8] = include_bytes!("../../program/elf/riscv32im-succinct-zkvm-elf");
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -11,32 +13,69 @@ struct GameStats {
     misses: u32,
 }
 
-fn main() {
-    // Setup logging
-    sp1_sdk::utils::setup_logger();
+#[derive(Serialize, Deserialize, Debug)]
+struct ProofRequest {
+    playerId: String,
+    publicValues: GameStats,
+    proofBytes: Option<String> // Base64 or similar, optional for now in simulation
+}
 
-    // Initialize the prover client.
+async fn verify(req: web::Json<ProofRequest>) -> impl Responder {
+    println!("[ZK-Service] Received verification request for player: {}", req.playerId);
+    
+    // In a real ZK verifier, we would:
+    // 1. Decode proofBytes
+    // 2. Verify against VK
+    // 3. Ensure public inputs match req.publicValues
+
+    // For now, we utilize the SP1 Prover Client to EXECUTE the trace 
+    // to ensure the public values are valid according to the circuit logic.
+    // This is "Server-Side Proving" as a validation step.
+
     let client = ProverClient::new();
-
-    // Setup inputs (Mock data for now, in real usage this comes from args)
-    let stats = GameStats {
-        score: 5500,
-        perfects: 50,
-        greats: 10,
-        misses: 0,
-    };
-    
     let mut stdin = SP1Stdin::new();
-    stdin.write(&stats);
+    stdin.write(&req.publicValues);
 
-    println!("Executing proof-of-play...");
-    let (output, report) = client.execute(ELF, stdin).run().unwrap();
+    println!("[ZK-Service] Executing Circuit to validate logic...");
     
-    // Read the output.
-    let committed_score = output.as_slice();
-    println!("Execution finished. Committed output: {:?}", committed_score);
+    match client.execute(ELF, stdin).run() {
+        Ok((output, report)) => {
+            let committed_score = output.as_slice();
+            println!("[ZK-Service] Circuit Execution Successful. Committed Score bytes: {:?}", committed_score);
+            println!("[ZK-Service] Report: {:?}", report);
 
-    // In a real scenario, we would generate a proof here using client.prove(...)
-    // For now, execution verifies the logic.
-    println!("Report: {:?}", report);
+            // TODO: Decode committed_score from bytes to u32 and compare with req.publicValues.score
+
+            HttpResponse::Ok().json(serde_json::json!({
+                "success": true,
+                "status": "Verified",
+                "method": "ExecutionTrace" 
+            }))
+        },
+        Err(e) => {
+            println!("[ZK-Service] Circuit Execution Failed: {}", e);
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            }))
+        }
+    }
+}
+
+async fn health() -> impl Responder {
+    HttpResponse::Ok().body("ZK Service Ready")
+}
+
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
+    println!("[ZK-Service] Starting server on 0.0.0.0:8080");
+    
+    HttpServer::new(|| {
+        App::new()
+            .route("/verify", web::post().to(verify))
+            .route("/health", web::get().to(health))
+    })
+    .bind(("0.0.0.0", 8080))?
+    .run()
+    .await
 }

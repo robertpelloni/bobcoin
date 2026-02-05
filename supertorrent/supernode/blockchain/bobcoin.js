@@ -281,6 +281,73 @@ export default class BobcoinBridge {
     }
 
     /**
+     * Retrieves the Global Leaderboard by scanning on-chain Memos.
+     * @param {number} limit
+     * @returns {Promise<Array>}
+     */
+    async getLeaderboard(limit = 10) {
+        if (!this.keypair) {
+            console.warn('[PoUS] Keypair not loaded, cannot scan own transactions.');
+            return [];
+        }
+
+        try {
+            const pubKey = this.keypair.publicKey;
+            // Fetch last 50 transactions to find recent high scores
+            const signatures = await this.connection.getSignaturesForAddress(pubKey, { limit: 50 });
+
+            // Fetch parsed transactions
+            const txs = await this.connection.getParsedTransactions(signatures.map(s => s.signature));
+
+            const scores = [];
+
+            for (const tx of txs) {
+                if (!tx || !tx.meta || tx.meta.err) continue;
+
+                // Look for Memo instruction
+                const instructions = tx.transaction.message.instructions;
+                for (const ix of instructions) {
+                    if (ix.program === 'spl-memo') {
+                        // Parsed memo is usually in ix.parsed
+                        const memo = ix.parsed;
+                        // Format: "Bobcoin Proof of Play: Player=... Score=... Reward=..."
+                        if (typeof memo === 'string' && memo.startsWith('Bobcoin Proof of Play:')) {
+                            const playerMatch = memo.match(/Player=(.+?) /);
+                            const scoreMatch = memo.match(/Score=(\d+)/);
+
+                            if (playerMatch && scoreMatch) {
+                                scores.push({
+                                    player: playerMatch[1],
+                                    score: parseInt(scoreMatch[1]),
+                                    signature: tx.transaction.signatures[0],
+                                    date: new Date(tx.blockTime * 1000).toLocaleString()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Deduplicate by Player (Keep highest) 
+            const highScoreMap = new Map();
+            for (const s of scores) {
+                if (!highScoreMap.has(s.player) || highScoreMap.get(s.player).score < s.score) {
+                    highScoreMap.set(s.player, s);
+                }
+            }
+
+            // Sort and slice
+            return Array.from(highScoreMap.values())
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit);
+
+        } catch (e) {
+            console.error('[PoUS] Failed to fetch leaderboard:', e);
+            return [];
+        }
+    }
+
+    /**
      * Mints tokens based on a verified game score.
      * @param {string} playerAddress
      * @param {Object} proofData

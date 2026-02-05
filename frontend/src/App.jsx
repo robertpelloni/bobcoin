@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { submitProof, getBankroll } from './api'
+import { Leaderboard } from './components/Leaderboard'
 
 function App() {
     const [score, setScore] = useState(0)
@@ -102,6 +103,9 @@ function App() {
                         </a>
                     </div>
                 )}
+
+                <Leaderboard refreshTrigger={mintStatus} />
+
                 <div className="version-tag">v{__APP_VERSION__}</div>
             </div>
         </div>

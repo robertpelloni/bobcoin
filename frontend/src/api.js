@@ -41,3 +41,14 @@ export async function getBankroll() {
         return 0;
     }
 }
+
+export async function getLeaderboard() {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/leaderboard`);
+        const data = await response.json();
+        return data.leaderboard || [];
+    } catch (e) {
+        console.error("Failed to fetch leaderboard", e);
+        return [];
+    }
+}

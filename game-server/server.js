@@ -36,8 +36,15 @@ app.get('/bankroll', async (req, res) => {
     if (!bridgeReady) {
         return res.status(503).json({ error: 'Bridge not ready' });
     }
-    const balance = await bridge.getBankroll();
     res.json({ balance });
+});
+
+app.get('/leaderboard', async (req, res) => {
+    if (!bridgeReady) {
+        return res.status(503).json({ error: 'Bridge not ready' });
+    }
+    const leaderboard = await bridge.getLeaderboard(10);
+    res.json({ leaderboard });
 });
 
 app.post('/submit-proof', async (req, res) => {

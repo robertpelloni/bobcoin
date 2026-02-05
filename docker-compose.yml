@@ -30,3 +30,12 @@ services:
       - "5174:5173"
     environment:
       - VITE_API_URL=http://localhost:3001
+
+  zk-circuit-builder:
+    build:
+      context: .
+      dockerfile: proof-of-play/Dockerfile
+    volumes:
+      - ./proof-of-play:/app
+    profiles:
+      - tools

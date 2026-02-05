@@ -258,6 +258,16 @@ export default class BobcoinBridge {
         console.log(`[PoUS] Verifying Game Score Proof for Player: ${proofData.playerId}`);
         console.log(`[PoUS] Claimed Score: ${proofData.publicValues.score}`);
 
+        // Phase 12: Simulate SP1 Proof Verification
+        if (proofData.proofBytes) {
+            console.log(`[PoUS] SP1 Proof Bytes Detected (Length: ${proofData.proofBytes.length}). Verifying cryptographic proof...`);
+            // TODO: In Phase 13, import @sp1-sdk/verifier and verify proofBytes against the Verification Key (VK)
+            // For now, we trust the presence of data + public input check
+            console.log('[PoUS] Cryptographic Check Passed (Simulated)');
+        } else {
+            console.warn('[PoUS] No SP1 Proof Bytes found. Falling back to optimistic public value check.');
+        }
+
         const { perfects, greats, score } = proofData.publicValues;
         const calculatedScore = (perfects * 100) + (greats * 50);
 

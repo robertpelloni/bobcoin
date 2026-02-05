@@ -102,6 +102,7 @@ function App() {
                         </a>
                     </div>
                 )}
+                <div className="version-tag">v{__APP_VERSION__}</div>
             </div>
         </div>
     )

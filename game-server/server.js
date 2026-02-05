@@ -117,5 +117,5 @@ app.post('/submit-proof', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[GameServer] Listening on http://localhost:${PORT}`);
+    console.log(`[GameServer] Listening on Internal Port ${PORT} (Exposed on 3001)`);
 });

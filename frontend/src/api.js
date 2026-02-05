@@ -1,5 +1,5 @@
 
-const GAME_SERVER_URL = 'http://localhost:3000';
+const GAME_SERVER_URL = 'http://localhost:3001';
 
 export async function submitProof(score, perfects, greats) {
     // Generate a simulated public key (In real app, connect to Phantom Wallet)

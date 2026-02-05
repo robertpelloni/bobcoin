@@ -47,8 +47,27 @@ export default class BobcoinBridge {
                 async requestAirdrop() { return 'mock_airdrop_sig'; }
                 async getLatestBlockhash() { return { blockhash: 'mock_bh', lastValidBlockHeight: 100 }; }
                 async confirmTransaction() { return true; }
-                async getSignaturesForAddress() { return []; }
-                async getParsedTransactions() { return []; }
+                async getSignaturesForAddress() {
+                    return [{ signature: 'mock_tx_content_reg' }];
+                }
+                async getParsedTransactions(sigs) {
+                    if (sigs.includes('mock_tx_content_reg')) {
+                        return [{
+                            blockTime: Date.now() / 1000,
+                            meta: { err: null },
+                            transaction: {
+                                signatures: ['mock_tx_content_reg'],
+                                message: {
+                                    instructions: [{
+                                        program: 'spl-memo',
+                                        parsed: 'Bobcoin Content Registration: Magnet=magnet:?xt=urn:btih:MOCKHASH123&dn=Cyberpunk_Asset_Pack Burn=1000'
+                                    }]
+                                }
+                            }
+                        }];
+                    }
+                    return [];
+                }
             },
             Keypair: class {
                 constructor() { this.publicKey = new (class { toBase58() { return 'MockPublicKey111111111111111111111111111111'; } })(); }
@@ -403,6 +422,78 @@ export default class BobcoinBridge {
         // For prototype, we optimistically assume true or verify simplistic local cache
         // TODO: Implement deep scan
         return Promise.resolve(true);
+    }
+
+    /**
+     * Retrieves the list of registered content (files) from the blockchain.
+     * @param {number} limit 
+     * @returns {Promise<Array>}
+     */
+    async getRegisteredContent(limit = 10) {
+        if (!this.keypair) {
+            console.warn('[PoUS] Keypair not loaded, cannot scan transactions.');
+            return [];
+        }
+
+        try {
+            const pubKey = this.keypair.publicKey;
+            // Fetch last 50 transactions to find registrations
+            const signatures = await this.connection.getSignaturesForAddress(pubKey, { limit: 50 });
+
+            // Fetch parsed transactions
+            const txs = await this.connection.getParsedTransactions(signatures.map(s => s.signature));
+
+            const contentList = [];
+
+            for (const tx of txs) {
+                if (!tx || !tx.meta || tx.meta.err) continue;
+
+                // Look for Memo instruction
+                const instructions = tx.transaction.message.instructions;
+                for (const ix of instructions) {
+                    if (ix.program === 'spl-memo') {
+                        const memo = ix.parsed;
+                        // Format: "Bobcoin Content Registration: Magnet=... Burn=..."
+                        if (typeof memo === 'string' && memo.startsWith('Bobcoin Content Registration:')) {
+                            const magnetMatch = memo.match(/Magnet=(.+?) /);
+                            const burnMatch = memo.match(/Burn=(\d+)/);
+
+                            if (magnetMatch) {
+                                // Extract name from magnet link if possible (dn param)
+                                const magnet = magnetMatch[1];
+                                const dnMatch = magnet.match(/dn=(.+?)(&|$)/);
+                                const name = dnMatch ? decodeURIComponent(dnMatch[1]) : 'Unknown File';
+
+                                contentList.push({
+                                    magnet: magnet,
+                                    name: name,
+                                    burnAmount: burnMatch ? parseInt(burnMatch[1]) : 0,
+                                    signature: tx.transaction.signatures[0],
+                                    date: new Date(tx.blockTime * 1000).toLocaleString()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Deduplicate by Magnet
+            const uniqueContent = new Map();
+            for (const c of contentList) {
+                if (!uniqueContent.has(c.magnet)) {
+                    uniqueContent.set(c.magnet, c);
+                }
+            }
+
+            // Sort by Burn Amount (Highest First)
+            return Array.from(uniqueContent.values())
+                .sort((a, b) => b.burnAmount - a.burnAmount)
+                .slice(0, limit);
+
+        } catch (e) {
+            console.error('[PoUS] Failed to fetch registered content:', e);
+            return [];
+        }
     }
 
     /**

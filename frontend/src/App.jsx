@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { submitProof, getBankroll } from './api'
 import { Leaderboard } from './components/Leaderboard'
+import { Marketplace } from './components/Marketplace'
 
 function App() {
     const [score, setScore] = useState(0)
@@ -104,7 +105,8 @@ function App() {
                     </div>
                 )}
 
-                <Leaderboard refreshTrigger={mintStatus} />
+                <Leaderboard mintStatus={mintStatus} />
+                <Marketplace />
 
                 <div className="version-tag">v{__APP_VERSION__}</div>
             </div>

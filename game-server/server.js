@@ -47,6 +47,14 @@ app.get('/leaderboard', async (req, res) => {
     res.json({ leaderboard });
 });
 
+app.get('/content', async (req, res) => {
+    if (!bridgeReady) {
+        return res.status(503).json({ error: 'Bridge not ready' });
+    }
+    const content = await bridge.getRegisteredContent(10);
+    res.json({ content });
+});
+
 app.post('/submit-proof', async (req, res) => {
     if (!bridgeReady) {
         return res.status(503).json({ error: 'Bridge not ready' });

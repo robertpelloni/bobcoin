@@ -1,16 +1,27 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { submitProof } from './api'
+import { submitProof, getBankroll } from './api'
 
 function App() {
     const [score, setScore] = useState(0)
     const [combo, setCombo] = useState(0)
     const [mintStatus, setMintStatus] = useState(null) // null, 'minting', 'success', 'error'
     const [txSignature, setTxSignature] = useState('')
-    const [lastTxId, setLastTxId] = useState('')
+    const [bankroll, setBankroll] = useState(0)
 
     // Cyberpunk effect: Glitch text on hit
     const [glitch, setGlitch] = useState(false)
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            const bal = await getBankroll()
+            setBankroll(bal)
+        }
+        fetchStats()
+        // Poll every 10s
+        const interval = setInterval(fetchStats, 10000)
+        return () => clearInterval(interval)
+    }, [])
 
     const handleHit = () => {
         // Basic clicker mechanic for now
@@ -37,7 +48,8 @@ function App() {
             if (result.success) {
                 setMintStatus('success')
                 setTxSignature(result.tx)
-                setLastTxId(result.tx.substring(0, 8) + '...')
+                // Update bankroll after mint
+                setTimeout(async () => setBankroll(await getBankroll()), 2000)
             } else {
                 setMintStatus('error')
                 alert(result.error || 'Minting failed')
@@ -51,7 +63,14 @@ function App() {
     return (
         <div className="game-container">
             <div className="ui-layer">
-                <h1 className={glitch ? 'glitch' : ''} data-text="BOBCOIN">BOBCOIN</h1>
+                <header className="game-header">
+                    <h1 className={glitch ? 'glitch' : ''} data-text="BOBCOIN">BOBCOIN</h1>
+                    <div className="bankroll-display">
+                        <span className="label">SERVER BANKROLL:</span>
+                        <span className={`value ${bankroll < 0.01 ? 'danger' : ''}`}>{bankroll.toFixed(4)} SOL</span>
+                    </div>
+                </header>
+
                 <div className="stats-box">
                     <p>SCORE: <span className="neon-text">{score}</span></p>
                     <p>COMBO: <span className="neon-text-blue">x{combo}</span></p>
@@ -73,7 +92,14 @@ function App() {
                     <div className="modal success">
                         <h2>MINT SUCCESSFUL</h2>
                         <p>Tokens minted to wallet.</p>
-                        <p className="tx-id">TX: {txSignature}</p>
+                        <a
+                            href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="tx-link"
+                        >
+                            VIEW ON EXPLORER &rarr;
+                        </a>
                     </div>
                 )}
             </div>

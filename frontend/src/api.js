@@ -30,3 +30,14 @@ export async function submitProof(score, perfects, greats) {
         throw e;
     }
 }
+
+export async function getBankroll() {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/bankroll`);
+        const data = await response.json();
+        return data.balance;
+    } catch (e) {
+        console.error("Failed to fetch bankroll:", e);
+        return 0;
+    }
+}

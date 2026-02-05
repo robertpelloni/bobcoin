@@ -62,9 +62,8 @@ export default class BobcoinBridge {
         this.connection = new this.Connection(rpcUrl, 'confirmed');
         this.keypair = this.Keypair.generate();
 
-        // Auto-fund new wallet
-        // this.requestAirdrop();
-
+        // Auto-fund new wallet with retry loop
+        this.ensureFunded();
         try {
             const stateless = await safeImport('@lightprotocol/stateless.js', {
                 Rpc: class { constructor(connection) { } }
@@ -77,6 +76,41 @@ export default class BobcoinBridge {
         }
 
         this.initialized = true;
+    }
+
+    async getBankroll() {
+        if (!this.connection || !this.keypair) return 0;
+        try {
+            const balance = await this.connection.getBalance(this.keypair.publicKey);
+            return balance / this.LAMPORTS_PER_SOL;
+        } catch (e) {
+            console.error('[BobcoinBridge] Failed to get bankroll:', e);
+            return 0;
+        }
+    }
+
+    async ensureFunded(maxRetries = 5) {
+        let retries = 0;
+        while (retries < maxRetries) {
+            try {
+                const balance = await this.connection.getBalance(this.keypair.publicKey);
+                if (balance >= 1 * this.LAMPORTS_PER_SOL) {
+                    console.log(`[BobcoinBridge] Wallet funded: ${balance / this.LAMPORTS_PER_SOL} SOL`);
+                    return;
+                }
+
+                console.log(`[BobcoinBridge] Low balance (${balance / this.LAMPORTS_PER_SOL} SOL). Requesting airdrop (Attempt ${retries + 1})...`);
+                await this.requestAirdrop();
+
+                // Wait 5s before checking again to allow confirmation
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            } catch (err) {
+                console.warn(`[BobcoinBridge] Funding attempt failed: ${err.message}. Retrying in 10s...`);
+                await new Promise(resolve => setTimeout(resolve, 10000));
+            }
+            retries++;
+        }
+        console.warn('[BobcoinBridge] Failed to fund wallet after multiple attempts. Operating with low balance.');
     }
 
     async requestAirdrop() {
@@ -258,8 +292,8 @@ export default class BobcoinBridge {
                 const balance = await this.connection.getBalance(this.keypair.publicKey);
                 if (balance < 0.001 * this.LAMPORTS_PER_SOL) {
                     console.log('[PoUS] Low balance for minting, attempting airdrop...');
-                    // Try airdrop but don't block if it fails (rate limits)
-                    await this.requestAirdrop().catch(e => console.warn('Minting airdrop skipped:', e.message));
+                    // Try airdrop loop non-blocking
+                    this.ensureFunded(2); // Short retry (2 attempts)
                 }
 
                 const MEMO_PROGRAM_ID = new this.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcQb");

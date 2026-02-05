@@ -3,13 +3,28 @@ import TorrentManager from './torrent-manager.js';
 
 const torrentManager = new TorrentManager();
 const bobcoinBridge = new BobcoinBridge();
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // process.exit(1); // Optional: force exit to let Docker restart, but we want to see logs first
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+// Global state
+let myAddress;
+
 // Need to initialize bridge async
 (async () => {
     await bobcoinBridge.init();
-    const myAddress = bobcoinBridge.keypair.publicKey.toBase58();
+    myAddress = bobcoinBridge.keypair.publicKey.toBase58();
     console.log('=== Supertorrent Node Startup ===');
     console.log(`Validator Address: ${myAddress}`);
 
+    // Run the loop every 30 seconds
+    setInterval(runProofOfStorageLoop, 30000);
+    // Also run immediately
     runProofOfStorageLoop();
 })();
 
@@ -31,19 +46,20 @@ async function runProofOfStorageLoop() {
 
     console.log(`[Supernode] Generating proof for ${storedFiles.length} files (${(totalSize / 1024 / 1024).toFixed(2)} MB total)...`);
 
-    const merkleRoot = bobcoinBridge.generateStorageProof(storedFiles);
+    try {
+        const merkleRoot = bobcoinBridge.generateStorageProof(storedFiles);
 
-    if (merkleRoot) {
-        try {
+        if (merkleRoot) {
             const signature = await bobcoinBridge.submitProofOfStorage(merkleRoot, totalSize);
             console.log(`[Supernode] Proof submitted successfully! Tx: ${signature}`);
 
             const isEligible = await bobcoinBridge.isValidatorEligible(myAddress);
             console.log(`[Supernode] Validator Status: ${isEligible ? 'ACTIVE' : 'INACTIVE'}`);
-        } catch (error) {
-            console.error('[Supernode] Failed to submit proof:', error);
         }
+    } catch (error) {
+        console.error('[Supernode] Failed to submit proof:', error);
     }
 }
+
 
 // runProofOfStorageLoop();

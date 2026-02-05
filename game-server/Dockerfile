@@ -9,7 +9,7 @@ WORKDIR /app
 COPY supertorrent/package.json ./supertorrent/
 COPY supertorrent/ ./supertorrent/
 # Install supertorrent deps first to ensure binaries are built
-RUN cd supertorrent && npm install
+RUN cd supertorrent && npm install --legacy-peer-deps
 
 # Setup Game Server
 WORKDIR /app/game-server

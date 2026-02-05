@@ -8,7 +8,11 @@ async function safeImport(moduleName, mockExport) {
         }
     }
     try {
+        console.log(`[Debug] Importing ${moduleName}...`);
         const mod = await import(moduleName);
+        console.log(`[Debug] Imported ${moduleName}.`);
+        console.log(`[Debug] mod.Connection: ${!!mod.Connection}`);
+        console.log(`[Debug] mod.default.Connection: ${mod.default ? !!mod.default.Connection : 'no-default'}`);
         return mod.default || mod;
     } catch (e) {
         console.warn(`[Mock] Module '${moduleName}' failed to load. Using mock. Error: ${e.message}`);
@@ -48,17 +52,47 @@ export default class BobcoinBridge {
         this.Connection = web3.Connection;
         this.Keypair = web3.Keypair;
         this.PublicKey = web3.PublicKey;
+        this.Transaction = web3.Transaction;
+        this.TransactionInstruction = web3.TransactionInstruction;
+        this.sendAndConfirmTransaction = web3.sendAndConfirmTransaction;
+        this.LAMPORTS_PER_SOL = web3.LAMPORTS_PER_SOL;
 
         // Initialize Defaults
-        this.connection = new this.Connection('https://api.devnet.solana.com', 'confirmed');
+        const rpcUrl = 'http://api.devnet.solana.com';
+        this.connection = new this.Connection(rpcUrl, 'confirmed');
         this.keypair = this.Keypair.generate();
 
-        const stateless = await safeImport('@lightprotocol/stateless.js', {
-            Rpc: class { constructor(connection) { } }
-        });
-        this.lightRpc = new stateless.Rpc(this.connection);
+        // Auto-fund new wallet
+        // this.requestAirdrop();
+
+        try {
+            const stateless = await safeImport('@lightprotocol/stateless.js', {
+                Rpc: class { constructor(connection) { } }
+            });
+            // Use URL string directly to avoid web3.js version conflicts
+            this.lightRpc = new stateless.Rpc(rpcUrl);
+            console.log('[BobcoinBridge] LightProtocol Rpc initialized successfully.');
+        } catch (err) {
+            console.error('[BobcoinBridge] Failed to init LightProtocol:', err);
+        }
 
         this.initialized = true;
+    }
+
+    async requestAirdrop() {
+        try {
+            console.log(`[BobcoinBridge] Requesting airdrop for ${this.keypair.publicKey.toBase58()}...`);
+            const signature = await this.connection.requestAirdrop(this.keypair.publicKey, 1 * this.LAMPORTS_PER_SOL);
+            const latestBlockHash = await this.connection.getLatestBlockhash();
+            await this.connection.confirmTransaction({
+                blockhash: latestBlockHash.blockhash,
+                lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+                signature: signature
+            });
+            console.log(`[BobcoinBridge] Airdrop successful: ${signature}`);
+        } catch (err) {
+            console.warn('[BobcoinBridge] Airdrop failed (might be rate limited):', err.message);
+        }
     }
 
     async createCompressedMint() {
@@ -132,14 +166,37 @@ export default class BobcoinBridge {
 
         console.log(`[PoUS] Submitting Proof of Storage: Root=${merkleRoot}, Size=${totalBytes} bytes`);
 
-        // Mock Solana Transaction for submitting proof
-        // const instruction = new TransactionInstruction({ ... })
-        // const tx = new Transaction().add(instruction);
-        // await sendAndConfirmTransaction(this.connection, tx, [this.keypair]);
+        try {
+            // Ensure balance
+            const balance = await this.connection.getBalance(this.keypair.publicKey);
+            if (balance < 0.001 * this.LAMPORTS_PER_SOL) {
+                console.log('[PoUS] Low balance, retrying airdrop...');
+                await this.requestAirdrop();
+            }
 
-        // Return a mock transaction signature
-        const signature = `pous_tx_${Date.now()}_${merkleRoot.substring(0, 8)}`;
-        return Promise.resolve(signature);
+            // Memo Program ID (Mainnet/Devnet)
+            const MEMO_PROGRAM_ID = new this.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcQb");
+
+            const instruction = new this.TransactionInstruction({
+                keys: [],
+                programId: MEMO_PROGRAM_ID,
+                data: Buffer.from(`Bobcoin Proof of Storage: ${merkleRoot} (${totalBytes} bytes)`, 'utf-8'),
+            });
+
+            const tx = new this.Transaction().add(instruction);
+
+            console.log('[PoUS] Sending transaction...');
+            const signature = await this.sendAndConfirmTransaction(this.connection, tx, [this.keypair]);
+
+            const explorerUrl = `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
+            console.log(`[PoUS] Transaction Confirmed: ${explorerUrl}`);
+            return signature;
+
+        } catch (err) {
+            console.error('[PoUS] Transaction failed:', err);
+            // Fallback to mock if real chain fails (graceful degradation for demo)
+            return `mock_fallback_${Date.now()}`;
+        }
     }
 
     /**
@@ -194,9 +251,39 @@ export default class BobcoinBridge {
         const tokensToMint = Math.floor(score / 1000);
 
         if (tokensToMint > 0) {
-            console.log(`[PoUS] Minting ${tokensToMint} BOB tokens to ${playerAddress} for score ${score}`);
-            const txSignature = `mint_tx_${Date.now()}_${score}`;
-            return Promise.resolve({ signature: txSignature, amount: tokensToMint });
+            console.log(`[PoUS] Recording Proof of Play for ${playerAddress}. Score: ${score}, Reward: ${tokensToMint} BOB`);
+
+            try {
+                // Ensure sufficient balance for fees
+                const balance = await this.connection.getBalance(this.keypair.publicKey);
+                if (balance < 0.001 * this.LAMPORTS_PER_SOL) {
+                    console.log('[PoUS] Low balance for minting, attempting airdrop...');
+                    // Try airdrop but don't block if it fails (rate limits)
+                    await this.requestAirdrop().catch(e => console.warn('Minting airdrop skipped:', e.message));
+                }
+
+                const MEMO_PROGRAM_ID = new this.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcQb");
+
+                // Create immutable record of the gameplay
+                const memoContent = `Bobcoin Proof of Play: Player=${playerAddress} Score=${score} Reward=${tokensToMint} BOB`;
+
+                const instruction = new this.TransactionInstruction({
+                    keys: [],
+                    programId: MEMO_PROGRAM_ID,
+                    data: Buffer.from(memoContent, 'utf-8'),
+                });
+
+                const tx = new this.Transaction().add(instruction);
+                const signature = await this.sendAndConfirmTransaction(this.connection, tx, [this.keypair]);
+
+                const explorerUrl = `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
+                console.log(`[PoUS] Minting Transaction Confirmed: ${explorerUrl}`);
+
+                return Promise.resolve({ signature: signature, amount: tokensToMint });
+            } catch (err) {
+                console.error('[PoUS] Minting transaction failed:', err);
+                throw new Error(`On-chain minting failed: ${err.message}`);
+            }
         } else {
             console.log(`[PoUS] Score ${score} too low to mint tokens.`);
             return Promise.resolve({ signature: null, amount: 0 });

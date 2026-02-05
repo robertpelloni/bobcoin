@@ -7,7 +7,9 @@ import cors from 'cors';
 // OR we rely on supertorrent exporting it. 
 // Given the current supertorrent setup, index.js does NOT export the bridge. 
 // We will try deep import.
-import BobcoinBridge from 'supertorrent/supernode/blockchain/bobcoin.js';
+// import BobcoinBridge from 'supertorrent/supernode/blockchain/bobcoin.js';
+// Docker structure allows relative import from sibling directory
+import BobcoinBridge from '../supertorrent/supernode/blockchain/bobcoin.js';
 
 const app = express();
 const PORT = 3000;

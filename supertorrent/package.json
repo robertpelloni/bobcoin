@@ -10,7 +10,8 @@
   "dependencies": {
     "@lightprotocol/compressed-token": "latest",
     "@lightprotocol/stateless.js": "latest",
-    "@solana/web3.js": "^1.91.0",
+    "@solana/web3.js": "1.87.6",
+    "rpc-websockets": "7.4.0",
     "bn.js": "^5.2.1",
     "keccak256": "latest",
     "merkletreejs": "latest",

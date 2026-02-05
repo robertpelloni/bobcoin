@@ -7,13 +7,14 @@ WORKDIR /app/supertorrent
 
 # Copy package files
 COPY supertorrent/package.json .
-# If there's a lock file, copy it too, but we might not have one yet or it might be windows specific
-# COPY supertorrent/package-lock.json .
 
-# Install dependencies
-RUN npm install
+# Install dependencies inside the container to ensure correct architecture
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY supertorrent/ .
+
+# Rebuild native modules just in case (fixes ERR_DLOPEN_FAILED for node-datachannel)
+RUN npm rebuild
 
 CMD ["node", "supernode/index.js"]

@@ -10,7 +10,7 @@
   "dependencies": {
     "@lightprotocol/compressed-token": "latest",
     "@lightprotocol/stateless.js": "latest",
-    "@solana/web3.js": "1.87.6",
+    "@solana/web3.js": "1.98.4",
     "bn.js": "^5.2.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",

@@ -52,3 +52,15 @@ export async function getLeaderboard() {
         return [];
     }
 }
+
+export async function getContent() {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/content`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.content || [];
+    } catch (e) {
+        console.error("Failed to fetch content", e);
+        return [];
+    }
+}

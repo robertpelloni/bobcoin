@@ -1,7 +1,7 @@
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  /* padding: 2rem; Remove padding here as it interferes with full width nav */
   text-align: center;
   font-family: 'Courier New', Courier, monospace;
 }
@@ -9,7 +9,19 @@
 body {
   background-color: #050505;
   color: #e0e0e0;
-  overflow: hidden;
+  margin: 0; /* Ensure no default margin */
+}
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .game-container {
@@ -17,9 +29,22 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: calc(100vh - 120px); /* Adjust for nav/footer */
+  width: 100%;
   background: radial-gradient(circle, #1a1a2e 0%, #000000 100%);
+  padding: 2rem 0;
 }
+
+.cyber-footer {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.9);
+  color: #555;
+  font-size: 0.8rem;
+  border-top: 1px solid #333;
+}
+
+/* Existing Game Styles */
 
 h1.glitch {
   color: #ff00ff;

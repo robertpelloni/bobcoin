@@ -56,6 +56,30 @@ class TorrentManager {
     }
 
     /**
+     * Returns detailed stats for all active torrents.
+     * @returns {Object[]}
+     */
+    getStats() {
+        const stats = [];
+        for (const torrent of this.storedFiles.values()) {
+            stats.push({
+                name: torrent.name,
+                infoHash: torrent.infoHash,
+                progress: torrent.progress,
+                downloaded: torrent.downloaded,
+                uploaded: torrent.uploaded,
+                downloadSpeed: torrent.downloadSpeed,
+                uploadSpeed: torrent.uploadSpeed,
+                peers: torrent.numPeers,
+                totalSize: torrent.length,
+                path: torrent.path,
+                timeRemaining: torrent.timeRemaining
+            });
+        }
+        return stats;
+    }
+
+    /**
      * Clean shutdown
      */
     destroy() {

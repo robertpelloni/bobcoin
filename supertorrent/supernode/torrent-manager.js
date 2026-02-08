@@ -1,4 +1,8 @@
 import WebTorrent from 'webtorrent';
+import fs from 'fs';
+import path from 'path';
+
+const CONFIG_FILE = 'torrents.json';
 
 /**
  * Real TorrentManager using WebTorrent
@@ -8,10 +12,55 @@ class TorrentManager {
     constructor() {
         this.client = new WebTorrent();
         this.storedFiles = new Map(); // infoHash -> torrent object
+        this.configPath = path.resolve(process.cwd(), CONFIG_FILE);
 
         this.client.on('error', (err) => {
             console.error('[TorrentManager] Client Error:', err.message);
         });
+
+        // Delay loading to allow constructor to finish
+        setTimeout(() => this.loadState(), 100);
+    }
+
+    /**
+     * Loads saved torrents from disk.
+     */
+    loadState() {
+        if (fs.existsSync(this.configPath)) {
+            try {
+                const data = fs.readFileSync(this.configPath, 'utf8');
+                const saved = JSON.parse(data);
+                if (Array.isArray(saved) && saved.length > 0) {
+                    console.log(`[TorrentManager] Loading ${saved.length} torrents from disk...`);
+                    saved.forEach(magnet => {
+                        this.client.add(magnet, { path: './storage' }, (torrent) => {
+                            console.log(`[TorrentManager] Restored: ${torrent.name}`);
+                            this.storedFiles.set(torrent.infoHash, torrent);
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('[TorrentManager] Failed to load state:', e);
+            }
+        } else {
+            console.log('[TorrentManager] No saved state found.');
+        }
+    }
+
+    /**
+     * Saves current torrent list to disk.
+     */
+    saveState() {
+        try {
+            const magnets = [];
+            for (const torrent of this.storedFiles.values()) {
+                if (torrent.magnetURI) magnets.push(torrent.magnetURI);
+            }
+            fs.writeFileSync(this.configPath, JSON.stringify(magnets, null, 2));
+            console.log(`[TorrentManager] Saved state (${magnets.length} torrents).`);
+        } catch (e) {
+            console.error('[TorrentManager] Failed to save state:', e);
+        }
     }
 
     /**
@@ -21,10 +70,13 @@ class TorrentManager {
     addFile(identifier) {
         return new Promise((resolve, reject) => {
             console.log(`[TorrentManager] Adding torrent: ${identifier.substring(0, 30)}...`);
+
             this.client.add(identifier, { path: './storage' }, (torrent) => {
                 console.log(`[TorrentManager] Torrent added: ${torrent.name}`);
                 console.log(`[TorrentManager] InfoHash: ${torrent.infoHash}`);
+
                 this.storedFiles.set(torrent.infoHash, torrent);
+                this.saveState();
 
                 torrent.on('download', (bytes) => {
                     // console.log(`[TorrentManager] Downloaded ${bytes} bytes`);
@@ -50,10 +102,10 @@ class TorrentManager {
         const torrent = this.storedFiles.get(infoHash);
         if (torrent) {
             console.log(`[TorrentManager] Removing torrent: ${torrent.name}`);
-            torrent.destroy(); // Stop downloading/seeding
+            // Note: torrent.destroy() is async but we don't await it here usually
+            torrent.destroy();
             this.storedFiles.delete(infoHash);
-            // Optionally delete files from disk? usually safer to keep them or ask user.
-            // keeping for now.
+            this.saveState();
             return true;
         }
         return false;

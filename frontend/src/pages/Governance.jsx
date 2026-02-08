@@ -1,36 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getProposals, castVote } from '../api'; // This must point to the api.js file we just updated
 import './Governance.css';
-
-const PROPOSALS = [
-    {
-        id: 1,
-        title: "BIP-001: Increase Ring Size to 24",
-        status: "Active",
-        votesFor: 15420,
-        votesAgainst: 3200,
-        endTime: "24h 12m"
-    },
-    {
-        id: 2,
-        title: "BIP-002: Whitelist 'Llama 3' for Storage Mining",
-        status: "Active",
-        votesFor: 8900,
-        votesAgainst: 1200,
-        endTime: "48h 05m"
-    },
-    {
-        id: 3,
-        title: "BIP-003: Reduce Block Time to 250ms",
-        status: "Passed",
-        votesFor: 50000,
-        votesAgainst: 500,
-        endTime: "Ended"
-    }
-];
 
 export function Governance() {
     const [balance] = useState(1250); // Mock balance
     const votingPower = Math.floor(Math.sqrt(balance)); // Quadratic Voting
+    const [proposals, setProposals] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const loadProposals = async () => {
+        try {
+            const data = await getProposals();
+            if (data && Array.isArray(data)) {
+                setProposals(data);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadProposals();
+        // Poll for updates
+        const interval = setInterval(loadProposals, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleVote = async (id, voteType) => {
+        // Optimistic update
+        setProposals(prev => prev.map(p => {
+            if (p.id === id) {
+                return {
+                    ...p,
+                    votesFor: voteType === 'yes' ? p.votesFor + votingPower : p.votesFor,
+                    votesAgainst: voteType === 'no' ? p.votesAgainst + votingPower : p.votesAgainst
+                };
+            }
+            return p;
+        }));
+
+        const result = await castVote(id, voteType, votingPower);
+        if (result && result.success) {
+            console.log("Vote confirmed!");
+            loadProposals();
+        } else {
+            alert("Vote failed or server unreachable");
+        }
+    };
 
     return (
         <div className="governance-container">
@@ -48,13 +66,13 @@ export function Governance() {
                 </div>
                 <div className="stat">
                     <span className="label">ACTIVE PROPOSALS</span>
-                    <span className="value">{PROPOSALS.filter(p => p.status === 'Active').length}</span>
+                    <span className="value">{proposals.filter(p => p.status === 'Active').length}</span>
                 </div>
             </div>
 
             <div className="proposals-list">
                 <h2>ACTIVE PROPOSALS</h2>
-                {PROPOSALS.map(prop => (
+                {loading ? <div className="loading">LOADING DAO...</div> : proposals.map(prop => (
                     <div key={prop.id} className={`proposal-card ${prop.status.toLowerCase()}`}>
                         <div className="prop-header">
                             <span className="prop-id">#{prop.id}</span>
@@ -63,7 +81,7 @@ export function Governance() {
                         <h3>{prop.title}</h3>
 
                         <div className="vote-bar">
-                            <div className="bar-for" style={{width: `${(prop.votesFor / (prop.votesFor + prop.votesAgainst)) * 100}%`}}></div>
+                            <div className="bar-for" style={{width: `${(prop.votesFor / (prop.votesFor + prop.votesAgainst + 0.0001)) * 100}%`}}></div>
                         </div>
                         <div className="vote-stats">
                             <span>YES: {prop.votesFor}</span>
@@ -73,8 +91,8 @@ export function Governance() {
                         <div className="prop-actions">
                             {prop.status === 'Active' ? (
                                 <>
-                                    <button className="vote-btn yes">VOTE YES</button>
-                                    <button className="vote-btn no">VOTE NO</button>
+                                    <button className="vote-btn yes" onClick={() => handleVote(prop.id, 'yes')}>VOTE YES</button>
+                                    <button className="vote-btn no" onClick={() => handleVote(prop.id, 'no')}>VOTE NO</button>
                                 </>
                             ) : (
                                 <span className="ended-msg">VOTING ENDED</span>

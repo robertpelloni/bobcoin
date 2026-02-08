@@ -19,6 +19,12 @@ const SECTIONS = {
                     <li><strong>Play = Work:</strong> Gamers mint tokens by generating ZK-Proofs of their skill ("Proof of Play").</li>
                     <li><strong>Privacy by Default:</strong> Stealth addresses and Ring Signatures protect user data.</li>
                 </ul>
+                <div className="system-status">
+                    <h4>CURRENT SYSTEM STATUS</h4>
+                    <p>ZK VERIFICATION: <span style={{color: '#0f0'}}>ACTIVE (SP1 RISC-V)</span></p>
+                    <p>SUPERNODE: <span style={{color: '#0f0'}}>ONLINE (WebTorrent)</span></p>
+                    <p>CONSENSUS: <span style={{color: '#0f0'}}>SOLANA DEVNET BRIDGE</span></p>
+                </div>
             </>
         )
     },

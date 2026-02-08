@@ -64,3 +64,29 @@ export async function getContent() {
         return [];
     }
 }
+
+export async function getProposals() {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/proposals`);
+        if (!response.ok) throw new Error("Failed to fetch proposals");
+        const data = await response.json();
+        return data.proposals || [];
+    } catch (e) {
+        console.error("Governance API Error:", e);
+        return [];
+    }
+}
+
+export async function castVote(proposalId, vote, votingPower) {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/vote`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proposalId, vote, votingPower })
+        });
+        return await response.json();
+    } catch (e) {
+        console.error("Vote API Error:", e);
+        return { error: e.message };
+    }
+}

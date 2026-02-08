@@ -5,6 +5,7 @@ import { Supernode } from './pages/Supernode';
 import { Wallet } from './pages/Wallet';
 import { Governance } from './pages/Governance';
 import { Manual } from './pages/Manual';
+import { SystemStatus } from './pages/SystemStatus';
 import './App.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
                     <Route path="/wallet" element={<Wallet />} />
                     <Route path="/governance" element={<Governance />} />
                     <Route path="/manual" element={<Manual />} />
+                    <Route path="/system" element={<SystemStatus />} />
                 </Route>
             </Routes>
         </BrowserRouter>

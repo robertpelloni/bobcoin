@@ -21,6 +21,9 @@ export function Navigation() {
                 <NavLink to="/manual" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <span className="icon">📖</span> MANUAL
                 </NavLink>
+                <NavLink to="/system" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                    <span className="icon">🖥️</span> SYSTEM
+                </NavLink>
             </div>
             <div className="nav-status">ONLINE</div>
         </nav>

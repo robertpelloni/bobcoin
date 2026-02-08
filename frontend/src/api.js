@@ -90,3 +90,17 @@ export async function castVote(proposalId, vote, votingPower) {
         return { error: e.message };
     }
 }
+
+export async function burnTokens(amount, reason) {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/burn`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, reason })
+        });
+        return await response.json();
+    } catch (e) {
+        console.error("Burn API Error:", e);
+        return { error: e.message };
+    }
+}

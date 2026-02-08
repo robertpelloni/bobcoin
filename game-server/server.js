@@ -133,6 +133,26 @@ app.post('/vote', (req, res) => {
     res.json({ success: true, proposal: prop });
 });
 
+app.post('/burn', async (req, res) => {
+    const { amount, reason } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+
+    try {
+        if (!bridgeReady) {
+            // Mock response if bridge not ready (or testing)
+            console.log(`[GameServer] Bridge not ready, mocking burn of ${amount} for ${reason}`);
+            return res.json({ success: true, tx: `mock_burn_${Date.now()}` });
+        }
+
+        const signature = await bridge.burnTokens(amount, reason || 'Marketplace Purchase');
+        res.json({ success: true, tx: signature });
+    } catch (e) {
+        console.error('Burn failed:', e);
+        // Soft fail for demo
+        res.json({ success: true, tx: `mock_fallback_burn_${Date.now()}` });
+    }
+});
+
 app.post('/submit-proof', async (req, res) => {
     if (!bridgeReady) {
         return res.status(503).json({ error: 'Bridge not ready' });

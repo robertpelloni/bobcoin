@@ -1,0 +1,85 @@
+.system-container {
+    width: 100%;
+    max-width: 1000px;
+    padding: 2rem;
+    color: #e0e0e0;
+}
+
+.version-display {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid #0ff;
+    padding-bottom: 1rem;
+    display: inline-block;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.status-card {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #333;
+    padding: 1.5rem;
+    text-align: left;
+    transition: all 0.3s;
+}
+
+.status-card h3 {
+    margin-top: 0;
+    font-size: 1rem;
+    color: #888;
+}
+
+.status-card p {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.status-card .detail {
+    font-weight: normal;
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 0.5rem;
+}
+
+.status-card.online {
+    border-color: #0f0;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.status-card.online p {
+    color: #0f0;
+}
+
+.status-card.offline {
+    border-color: #f00;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+}
+
+.status-card.offline p {
+    color: #f00;
+}
+
+.architecture-view {
+    text-align: left;
+    background: rgba(10, 10, 20, 0.9);
+    padding: 2rem;
+    border: 1px dashed #0ff;
+}
+
+.architecture-view h2 {
+    color: #0ff;
+    margin-top: 0;
+}
+
+.tree-view code {
+    display: block;
+    font-family: 'Courier New', Courier, monospace;
+    white-space: pre;
+    color: #fff;
+    line-height: 1.5;
+}

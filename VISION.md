@@ -59,13 +59,14 @@ Bobcoin leverages **Solana** for high throughput but integrates **Light Protocol
 -   [x] Solana Devnet Integration (Real Keys, Memo Transactions).
 -   [x] Game Prototype (Cyberpunk Clicker).
 
-### Phase II: The Decentralized Oracle (Current Frontier)
--   [ ] **ZK-Gameplay**: Replace the Game Server's specialized logic with Client-Side ZK Proofs.
--   [ ] **On-Chain Governance**: Supernodes vote on *which* torrents are valid for "Useful Stake" (creating a curated DAO registry).
+### Phase II: The Decentralized Oracle (Near Completion)
+-   [x] **ZK-Gameplay**: Integrated SP1 (Rust) Service to cryptographically verify game scores before minting.
+-   [x] **Live Governance**: DAO Voting implemented (Quadratic Voting, Proposal Persistence).
+-   [x] **Advanced Mechanics**: Rhythm Game replacing clicker; Marketplace for in-game economy.
 
-### Phase III: The Sovereign Network
+### Phase III: The Sovereign Network (Current Frontier)
 -   [ ] **Mainnet Launch**: Deploying the SPL Token contract.
--   [ ] **Storage Marketplace**: Users pay BOB tokens to have their files hosted by Supernodes.
+-   [ ] **Storage Marketplace**: Users pay BOB tokens to have their files hosted by Supernodes (Burn Mechanism).
 -   [ ] **Mobile Light Nodes**: "Mine" disk space on your phone while charging.
 
 ---

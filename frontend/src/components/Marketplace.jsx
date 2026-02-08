@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { burnTokens } from '../api';
 import './Marketplace.css';
 
 const DEFAULT_ITEMS = [
@@ -19,38 +20,47 @@ export function Marketplace() {
         if (saved && Array.isArray(saved) && saved.length > 0) {
             setItems(saved);
         } else {
-            // Initial load or reset
             setItems(DEFAULT_ITEMS);
         }
     }, []);
 
-    const handleBuy = (item) => {
+    const handleBuy = async (item) => {
         if (item.purchased) return;
         if (balance < item.price) {
             alert("Insufficient Funds!");
             return;
         }
 
-        if (confirm(`Buy ${item.name} for ${item.price} BOB?`)) {
-            // Update items state
-            const newItems = items.map(i =>
-                i.id === item.id ? { ...i, purchased: true } : i
-            );
-            setItems(newItems);
+        if (confirm(`Buy ${item.name} for ${item.price} BOB? (This will burn tokens)`)) {
+            setMessage('Processing Transaction...');
 
-            // Deduct balance
-            setBalance(prev => prev - item.price);
+            // Call Backend Burn
+            const result = await burnTokens(item.price, `Marketplace: ${item.name}`);
 
-            // Save to localStorage
-            localStorage.setItem('marketplace_items', JSON.stringify(newItems));
+            if (result.success) {
+                // Update items state
+                const newItems = items.map(i =>
+                    i.id === item.id ? { ...i, purchased: true } : i
+                );
+                setItems(newItems);
 
-            // Apply effect immediately (mock)
-            if (item.type === 'THEME') {
-                document.body.classList.add(item.id);
+                // Deduct balance
+                setBalance(prev => prev - item.price);
+
+                // Save to localStorage
+                localStorage.setItem('marketplace_items', JSON.stringify(newItems));
+
+                // Apply effect immediately (mock)
+                if (item.type === 'THEME') {
+                    document.body.classList.add(item.id);
+                }
+
+                setMessage(`PURCHASED: ${item.name} (TX: ${result.tx.slice(0, 8)}...)`);
+                setTimeout(() => setMessage(''), 3000);
+            } else {
+                alert("Transaction Failed: " + result.error);
+                setMessage('');
             }
-
-            setMessage(`PURCHASED: ${item.name}`);
-            setTimeout(() => setMessage(''), 3000);
         }
     };
 

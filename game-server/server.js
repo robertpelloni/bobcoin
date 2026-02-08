@@ -3,67 +3,24 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import BobcoinBridge from '../supertorrent/supernode/blockchain/bobcoin.js';
+import { initDatabase, getAllProposals, getProposalById, updateProposalVotes } from './database.js';
 
 const app = express();
 const PORT = 3000;
-const PROPOSALS_FILE = path.resolve(process.cwd(), 'proposals.json');
 const ZK_SERVICE_URL = process.env.ZK_SERVICE_URL || 'http://localhost:8080';
 
 app.use(cors());
 app.use(express.json());
 
-// Initialize Bridge
+// Initialize Bridge & DB
 const bridge = new BobcoinBridge();
 let bridgeReady = false;
 
-// Default Proposals
-const DEFAULT_PROPOSALS = [
-    {
-        id: 1,
-        title: "BIP-001: Increase Ring Size to 24",
-        status: "Active",
-        votesFor: 15420,
-        votesAgainst: 3200,
-        endTime: "24h 12m"
-    },
-    {
-        id: 2,
-        title: "BIP-002: Whitelist 'Llama 3' for Storage Mining",
-        status: "Active",
-        votesFor: 8900,
-        votesAgainst: 1200,
-        endTime: "48h 05m"
-    },
-    {
-        id: 3,
-        title: "BIP-003: Reduce Block Time to 250ms",
-        status: "Passed",
-        votesFor: 50000,
-        votesAgainst: 500,
-        endTime: "Ended"
-    }
-];
-
-// Load Proposals
-let proposals = DEFAULT_PROPOSALS;
-if (fs.existsSync(PROPOSALS_FILE)) {
-    try {
-        proposals = JSON.parse(fs.readFileSync(PROPOSALS_FILE, 'utf8'));
-    } catch (e) {
-        console.error('Failed to load proposals', e);
-    }
-}
-
-function saveProposals() {
-    try {
-        fs.writeFileSync(PROPOSALS_FILE, JSON.stringify(proposals, null, 2));
-    } catch (e) {
-        console.error('Failed to save proposals', e);
-    }
-}
-
 (async () => {
     try {
+        await initDatabase();
+        console.log('[GameServer] Database Initialized (SQLite).');
+
         console.log('[GameServer] Initializing Bobcoin Bridge...');
         await bridge.init();
         bridgeReady = true;
@@ -107,30 +64,40 @@ app.get('/content', async (req, res) => {
 });
 
 // Governance Endpoints
-app.get('/proposals', (req, res) => {
-    res.json({ proposals });
+app.get('/proposals', async (req, res) => {
+    try {
+        const proposals = await getAllProposals();
+        res.json({ proposals });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'DB Error' });
+    }
 });
 
-app.post('/vote', (req, res) => {
-    const { proposalId, vote, votingPower } = req.body; // vote: 'yes' | 'no'
+app.post('/vote', async (req, res) => {
+    const { proposalId, vote, votingPower } = req.body;
 
-    const prop = proposals.find(p => p.id === proposalId);
-    if (!prop) return res.status(404).json({ error: 'Proposal not found' });
-    if (prop.status !== 'Active') return res.status(400).json({ error: 'Voting ended' });
+    try {
+        const prop = await getProposalById(proposalId);
+        if (!prop) return res.status(404).json({ error: 'Proposal not found' });
+        if (prop.status !== 'Active') return res.status(400).json({ error: 'Voting ended' });
 
-    const power = votingPower || 1; // Default power
+        const power = votingPower || 1;
+        let newVotesFor = prop.votesFor;
+        let newVotesAgainst = prop.votesAgainst;
 
-    if (vote === 'yes') {
-        prop.votesFor += power;
-    } else if (vote === 'no') {
-        prop.votesAgainst += power;
-    } else {
-        return res.status(400).json({ error: 'Invalid vote' });
+        if (vote === 'yes') newVotesFor += power;
+        else if (vote === 'no') newVotesAgainst += power;
+        else return res.status(400).json({ error: 'Invalid vote' });
+
+        await updateProposalVotes(proposalId, newVotesFor, newVotesAgainst);
+
+        console.log(`[GameServer] Vote cast on #${proposalId}: ${vote.toUpperCase()} (+${power} VP)`);
+        res.json({ success: true, proposal: { ...prop, votesFor: newVotesFor, votesAgainst: newVotesAgainst } });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'DB Error' });
     }
-
-    saveProposals();
-    console.log(`[GameServer] Vote cast on #${proposalId}: ${vote.toUpperCase()} (+${power} VP)`);
-    res.json({ success: true, proposal: prop });
 });
 
 app.post('/burn', async (req, res) => {

@@ -11,6 +11,15 @@ export function SystemStatus() {
         supernode: 'Checking...',
         bridge: 'Checking...'
     });
+    const [buildInfo, setBuildInfo] = useState(null);
+
+    useEffect(() => {
+        // Fetch Build Info
+        fetch('/build-info.json')
+            .then(res => res.json())
+            .then(data => setBuildInfo(data))
+            .catch(e => console.error("Failed to load build info", e));
+    }, []);
 
     const checkHealth = async () => {
         // Game Server
@@ -76,13 +85,15 @@ export function SystemStatus() {
                 <h2>ARCHITECTURE OVERVIEW</h2>
                 <div className="tree-view">
                     <code>
-                        root/<br/>
-                        ├── 📁 frontend/ (React/Vite - This UI)<br/>
-                        ├── 📁 game-server/ (Node.js - API & Governance)<br/>
-                        ├── 📁 supertorrent/ (Node.js - Storage Node)<br/>
-                        └── 📁 proof-of-play/ (Rust - ZK Circuits)<br/>
+                        root/ [{buildInfo?.git.branch} @ {buildInfo?.git.hash}]<br/>
+                        {buildInfo?.modules.map(m => (
+                            <span key={m.name}>
+                                ├── 📁 {m.name}/ ({m.type} v{m.version})<br/>
+                            </span>
+                        ))}
                     </code>
                 </div>
+                {buildInfo && <p className="last-build">Last Build: {buildInfo.git.date}</p>}
             </div>
         </div>
     );

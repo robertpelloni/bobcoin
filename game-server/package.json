@@ -12,6 +12,7 @@
         "cors": "^2.8.6",
         "express": "^4.22.1",
         "rpc-websockets": "7.4.0",
+        "sqlite3": "^5.1.7",
         "supertorrent": "file:../supertorrent"
     }
 }

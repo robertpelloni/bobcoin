@@ -7,6 +7,7 @@ import { Governance } from './pages/Governance';
 import { Manual } from './pages/Manual';
 import { SystemStatus } from './pages/SystemStatus';
 import { Mobile } from './pages/Mobile';
+import { StorageMarket } from './pages/StorageMarket';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
                     <Route path="/supernode" element={<Supernode />} />
                     <Route path="/wallet" element={<Wallet />} />
                     <Route path="/governance" element={<Governance />} />
+                    <Route path="/market" element={<StorageMarket />} />
                     <Route path="/manual" element={<Manual />} />
                     <Route path="/system" element={<SystemStatus />} />
                     <Route path="/mobile" element={<Mobile />} />

@@ -10,6 +10,7 @@ const db = new sqlite3.Database(DB_PATH);
 export function initDatabase() {
     return new Promise((resolve, reject) => {
         db.serialize(() => {
+            // Proposals Table
             db.run(`
                 CREATE TABLE IF NOT EXISTS proposals (
                     id INTEGER PRIMARY KEY,
@@ -19,12 +20,23 @@ export function initDatabase() {
                     votesAgainst INTEGER DEFAULT 0,
                     endTime TEXT NOT NULL
                 )
+            `);
+
+            // Bids Table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS bids (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    magnet TEXT NOT NULL,
+                    amount INTEGER NOT NULL,
+                    status TEXT DEFAULT 'OPEN',
+                    acceptedBy TEXT
+                )
             `, async (err) => {
                 if (err) return reject(err);
 
-                // Check if empty, import JSON if needed
+                // Migration Logic for Proposals
                 db.get("SELECT count(*) as count FROM proposals", async (err, row) => {
-                    if (row.count === 0 && fs.existsSync(PROPOSALS_JSON)) {
+                    if (row && row.count === 0 && fs.existsSync(PROPOSALS_JSON)) {
                         console.log('[DB] Migrating from proposals.json...');
                         try {
                             const proposals = JSON.parse(fs.readFileSync(PROPOSALS_JSON, 'utf8'));
@@ -45,6 +57,7 @@ export function initDatabase() {
     });
 }
 
+// Proposals
 export function getAllProposals() {
     return new Promise((resolve, reject) => {
         db.all("SELECT * FROM proposals", (err, rows) => {
@@ -71,6 +84,42 @@ export function updateProposalVotes(id, votesFor, votesAgainst) {
             function(err) {
                 if (err) reject(err);
                 else resolve(this.changes);
+            }
+        );
+    });
+}
+
+// Market Bids
+export function createBid(magnet, amount) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            "INSERT INTO bids (magnet, amount) VALUES (?, ?)",
+            [magnet, amount],
+            function(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            }
+        );
+    });
+}
+
+export function getOpenBids() {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM bids WHERE status = 'OPEN'", (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
+
+export function acceptBid(id, nodeId) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            "UPDATE bids SET status = 'ACCEPTED', acceptedBy = ? WHERE id = ? AND status = 'OPEN'",
+            [nodeId, id],
+            function(err) {
+                if (err) reject(err);
+                else resolve(this.changes); // 1 if successful, 0 if already taken
             }
         );
     });

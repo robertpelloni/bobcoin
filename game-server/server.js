@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import BobcoinBridge from '../supertorrent/supernode/blockchain/bobcoin.js';
 import { initDatabase, getAllProposals, getProposalById, updateProposalVotes } from './database.js';
+import marketRouter from './market.js';
 
 const app = express();
 const PORT = 3000;
@@ -11,6 +12,8 @@ const ZK_SERVICE_URL = process.env.ZK_SERVICE_URL || 'http://localhost:8080';
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/market', marketRouter);
 
 // Initialize Bridge & DB
 const bridge = new BobcoinBridge();

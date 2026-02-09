@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { burnTokens } from '../api';
 import './Marketplace.css';
 
@@ -10,6 +11,7 @@ const DEFAULT_ITEMS = [
 ];
 
 export function Marketplace() {
+    const wallet = useWallet();
     const [items, setItems] = useState(DEFAULT_ITEMS);
     const [balance, setBalance] = useState(1250); // Mock balance for purchasing
     const [message, setMessage] = useState('');
@@ -35,7 +37,7 @@ export function Marketplace() {
             setMessage('Processing Transaction...');
 
             // Call Backend Burn
-            const result = await burnTokens(item.price, `Marketplace: ${item.name}`);
+            const result = await burnTokens(item.price, `Marketplace: ${item.name}`, wallet);
 
             if (result.success) {
                 // Update items state

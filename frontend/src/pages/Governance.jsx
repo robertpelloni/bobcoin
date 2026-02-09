@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { getProposals, castVote } from '../api'; // This must point to the api.js file we just updated
 import './Governance.css';
 
 export function Governance() {
+    const wallet = useWallet();
     const [balance] = useState(1250); // Mock balance
     const votingPower = Math.floor(Math.sqrt(balance)); // Quadratic Voting
     const [proposals, setProposals] = useState([]);
@@ -41,7 +43,7 @@ export function Governance() {
             return p;
         }));
 
-        const result = await castVote(id, voteType, votingPower);
+        const result = await castVote(id, voteType, votingPower, wallet);
         if (result && result.success) {
             console.log("Vote confirmed!");
             loadProposals();

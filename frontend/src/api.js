@@ -1,9 +1,15 @@
 
 const GAME_SERVER_URL = 'http://localhost:3001';
 
-export async function submitProof(score, perfects, greats) {
-    // Generate a simulated public key (In real app, connect to Phantom Wallet)
-    const playerId = 'PlayerOnePublicKey1111111111111111111111';
+// We now support an optional wallet provider for signing
+export async function submitProof(score, perfects, greats, wallet = null) {
+    // If wallet is provided, we can sign the payload
+    // For now, we just pass the public key if available
+    const playerId = wallet?.publicKey ? wallet.publicKey.toBase58() : 'PlayerOnePublicKey1111111111111111111111';
+
+    // In a real implementation, we would sign the message here:
+    // const message = new TextEncoder().encode(`Score:${score}`);
+    // const signature = await wallet.signMessage(message);
 
     const proof = {
         playerId,
@@ -12,7 +18,8 @@ export async function submitProof(score, perfects, greats) {
             perfects: Math.floor(score / 100), // Approximate for mock
             greats: 0
         },
-        proofBytes: 'mock_proof_from_frontend'
+        proofBytes: 'mock_proof_from_frontend',
+        // signature: signature ? bs58.encode(signature) : null
     };
 
     try {
@@ -77,12 +84,18 @@ export async function getProposals() {
     }
 }
 
-export async function castVote(proposalId, vote, votingPower) {
+export async function castVote(proposalId, vote, votingPower, wallet = null) {
+    // If wallet provided, sign vote
     try {
         const response = await fetch(`${GAME_SERVER_URL}/vote`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ proposalId, vote, votingPower })
+            body: JSON.stringify({
+                proposalId,
+                vote,
+                votingPower,
+                voter: wallet?.publicKey ? wallet.publicKey.toBase58() : 'anon'
+            })
         });
         return await response.json();
     } catch (e) {
@@ -91,12 +104,16 @@ export async function castVote(proposalId, vote, votingPower) {
     }
 }
 
-export async function burnTokens(amount, reason) {
+export async function burnTokens(amount, reason, wallet = null) {
     try {
         const response = await fetch(`${GAME_SERVER_URL}/burn`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount, reason })
+            body: JSON.stringify({
+                amount,
+                reason,
+                sender: wallet?.publicKey ? wallet.publicKey.toBase58() : 'anon'
+            })
         });
         return await response.json();
     } catch (e) {

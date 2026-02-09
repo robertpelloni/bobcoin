@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { RhythmGame } from '../components/RhythmGame';
 import { submitProof, getBankroll } from '../api';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
 
 export function Dashboard() {
+    const wallet = useWallet();
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [mintStatus, setMintStatus] = useState(null);
@@ -45,7 +47,7 @@ export function Dashboard() {
 
         setMintStatus('minting');
         try {
-            const result = await submitProof(score, 50, 10);
+            const result = await submitProof(score, 50, 10, wallet);
             if (result.success) {
                 setMintStatus('success');
                 setTxSignature(result.tx);

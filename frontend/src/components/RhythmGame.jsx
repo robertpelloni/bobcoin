@@ -1,21 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { Scene } from './game/Scene';
+import { ErrorBoundary } from 'react-error-boundary';
 import './RhythmGame.css';
 
 const LANES = ['D', 'F', 'J', 'K'];
-const SPEED = 5; // pixels per frame
+const SPEED = 0.1; // 3D units per frame
 const SPAWN_INTERVAL = 1000; // ms
-const HIT_ZONE_Y = 400; // Top of hit zone
-const HIT_ZONE_HEIGHT = 40; // Height of hit zone
+const HIT_ZONE_Y = -2; // 3D Y coord for hit line
+const HIT_TOLERANCE = 0.5; // +/- units
 
 export function RhythmGame({ onScoreUpdate }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [notes, setNotes] = useState([]);
-    const [feedback, setFeedback] = useState(null); // 'PERFECT', 'GOOD', 'MISS'
+    const [feedback, setFeedback] = useState(null);
 
-    // Use refs for values needed inside the animation loop to avoid stale closures
+    // Game Loop Refs
     const requestRef = useRef();
     const lastSpawnTime = useRef(0);
-    const notesRef = useRef([]); // Mirror state for the loop
+    const notesRef = useRef([]);
 
     // Keep ref in sync
     useEffect(() => {
@@ -28,14 +30,12 @@ export function RhythmGame({ onScoreUpdate }) {
             const newNote = {
                 id: Date.now() + Math.random(),
                 lane,
-                y: -50,
+                y: 5, // Start high in 3D space
                 hit: false
             };
-            // Update both state and ref
-            const updatedNotes = [...notesRef.current, newNote];
-            setNotes(updatedNotes);
-            notesRef.current = updatedNotes;
-
+            const updated = [...notesRef.current, newNote];
+            setNotes(updated);
+            notesRef.current = updated;
             lastSpawnTime.current = time;
         }
     };
@@ -45,18 +45,18 @@ export function RhythmGame({ onScoreUpdate }) {
 
         spawnNote(time);
 
-        // Move notes
         const currentNotes = notesRef.current;
         const nextNotes = [];
         let stateChanged = false;
 
         currentNotes.forEach(note => {
-            const nextY = note.y + SPEED;
+            // Move note down in 3D space
+            const nextY = note.y - SPEED; // Moving down is negative Y
 
-            // Miss logic: if past screen (500px)
-            if (nextY > 550) {
+            // Miss logic (below -3)
+            if (nextY < -3) {
                 stateChanged = true;
-                // Missed note, remove it
+                // Missed
             } else {
                 if (nextY !== note.y) stateChanged = true;
                 nextNotes.push({ ...note, y: nextY });
@@ -71,7 +71,6 @@ export function RhythmGame({ onScoreUpdate }) {
         requestRef.current = requestAnimationFrame(updateGame);
     };
 
-    // Start/Stop Loop
     useEffect(() => {
         if (isPlaying) {
             requestRef.current = requestAnimationFrame(updateGame);
@@ -81,7 +80,6 @@ export function RhythmGame({ onScoreUpdate }) {
         return () => cancelAnimationFrame(requestRef.current);
     }, [isPlaying]);
 
-    // Input Handling
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (!isPlaying) return;
@@ -89,39 +87,33 @@ export function RhythmGame({ onScoreUpdate }) {
             const laneIndex = LANES.indexOf(key);
             if (laneIndex === -1) return;
 
-            // Check for hit in current notes
             const currentNotes = notesRef.current;
-            const TARGET_Y = HIT_ZONE_Y + (HIT_ZONE_HEIGHT / 2); // 420
 
-            // Find first note in lane near target
+            // Find note in lane near hit zone
             const hitIndex = currentNotes.findIndex(n =>
                 n.lane === laneIndex &&
-                n.y > HIT_ZONE_Y - 20 && n.y < HIT_ZONE_Y + HIT_ZONE_HEIGHT + 20
+                Math.abs(n.y - HIT_ZONE_Y) < HIT_TOLERANCE
             );
 
             if (hitIndex !== -1) {
                 const note = currentNotes[hitIndex];
-                const diff = Math.abs(note.y - TARGET_Y);
+                const diff = Math.abs(note.y - HIT_ZONE_Y);
 
                 let score = 0;
                 let text = '';
 
-                if (diff < 15) {
+                if (diff < 0.2) {
                     score = 100;
                     text = 'PERFECT';
-                } else if (diff < 35) {
+                } else {
                     score = 50;
                     text = 'GOOD';
-                } else {
-                    score = 10;
-                    text = 'OK';
                 }
 
                 setFeedback(text);
                 setTimeout(() => setFeedback(null), 300);
                 onScoreUpdate(score);
 
-                // Remove note
                 const newNotes = [...currentNotes];
                 newNotes.splice(hitIndex, 1);
                 setNotes(newNotes);
@@ -133,45 +125,50 @@ export function RhythmGame({ onScoreUpdate }) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isPlaying, onScoreUpdate]);
 
+    function ErrorFallback({error}) {
+        return (
+            <div className="error-fallback" style={{color: 'red', textAlign: 'center', paddingTop: '2rem'}}>
+                <p>WebGL Error. Switching to 2D Mode.</p>
+                <div className="2d-lanes" style={{display: 'flex', height: '100%', position: 'absolute', top:0, left:0, width:'100%'}}>
+                    {LANES.map(k => <div key={k} style={{flex: 1, borderRight: '1px solid #333'}}></div>)}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="rhythm-game-container">
-            {LANES.map((k, i) => (
-                <div key={i} className="game-lane" style={{left: `${i * 25}%`}}></div>
-            ))}
-
-            <div className="hit-zone" style={{top: `${HIT_ZONE_Y}px`, height: `${HIT_ZONE_HEIGHT}px`}}></div>
-
-            <div className="key-labels">
-                {LANES.map(k => <div key={k} className="key-label">{k}</div>)}
+            {/* 3D Scene */}
+            <div className="canvas-wrapper">
+                <ErrorBoundary FallbackComponent={ErrorFallback}>
+                    <Suspense fallback={<div style={{color:'#0ff'}}>LOADING 3D...</div>}>
+                        <Scene notes={notes} />
+                    </Suspense>
+                </ErrorBoundary>
             </div>
 
-            {notes.map(note => (
-                <div
-                    key={note.id}
-                    className="note"
-                    style={{
-                        left: `${note.lane * 25}%`,
-                        top: `${note.y}px`,
-                        width: '25%'
-                    }}
-                />
-            ))}
-
-            {feedback && (
-                <div className={`feedback-text feedback-${feedback.toLowerCase()}`}>
-                    {feedback}
+            {/* UI Overlay */}
+            <div className="ui-overlay">
+                <div className="key-labels">
+                    {LANES.map(k => <div key={k} className="key-label">{k}</div>)}
                 </div>
-            )}
 
-            {!isPlaying && (
-                <div className="game-overlay">
-                    <h2>PROOF OF PLAY</h2>
-                    <p>Press D, F, J, K to match notes.</p>
-                    <button className="cyber-button" onClick={() => setIsPlaying(true)}>
-                        START MINING
-                    </button>
-                </div>
-            )}
+                {feedback && (
+                    <div className={`feedback-text feedback-${feedback.toLowerCase()}`}>
+                        {feedback}
+                    </div>
+                )}
+
+                {!isPlaying && (
+                    <div className="game-overlay">
+                        <h2>PROOF OF PLAY (WebGL)</h2>
+                        <p>Press D, F, J, K to match notes.</p>
+                        <button className="cyber-button" onClick={() => setIsPlaying(true)}>
+                            START MINING
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

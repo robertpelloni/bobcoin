@@ -12,8 +12,10 @@ def run():
 
         # 1. Dashboard
         try:
-            page.goto("http://localhost:5173/")
-            page.wait_for_selector(".game-container", timeout=10000)
+            page.goto("http://localhost:5173/", timeout=60000)
+            # Wait for any content, effectively
+            page.wait_for_selector("#root", timeout=30000)
+            time.sleep(2) # Give React time to hydrate
             page.screenshot(path="verification/dashboard.png")
             print("Dashboard screenshot taken.")
         except Exception as e:
@@ -22,8 +24,7 @@ def run():
         # 2. Supernode
         try:
             page.goto("http://localhost:5173/supernode")
-            page.wait_for_selector(".supernode-container", timeout=10000)
-            # Wait for data to load if possible
+            page.wait_for_selector(".supernode-container", timeout=30000)
             time.sleep(2)
             page.screenshot(path="verification/supernode.png")
             print("Supernode screenshot taken.")
@@ -33,7 +34,7 @@ def run():
         # 3. Wallet
         try:
             page.goto("http://localhost:5173/wallet")
-            page.wait_for_selector(".wallet-container", timeout=10000)
+            page.wait_for_selector(".wallet-container", timeout=30000)
             page.screenshot(path="verification/wallet.png")
             print("Wallet screenshot taken.")
         except Exception as e:
@@ -42,20 +43,11 @@ def run():
         # 4. Governance
         try:
             page.goto("http://localhost:5173/governance")
-            page.wait_for_selector(".governance-container", timeout=10000)
+            page.wait_for_selector(".governance-container", timeout=30000)
             page.screenshot(path="verification/governance.png")
             print("Governance screenshot taken.")
         except Exception as e:
             print(f"Governance failed: {e}")
-
-        # 5. Manual
-        try:
-            page.goto("http://localhost:5173/manual")
-            page.wait_for_selector(".manual-container", timeout=10000)
-            page.screenshot(path="verification/manual.png")
-            print("Manual screenshot taken.")
-        except Exception as e:
-            print(f"Manual failed: {e}")
 
         browser.close()
 

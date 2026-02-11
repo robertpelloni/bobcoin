@@ -1,57 +1,40 @@
-# Session Handoff - 2026-02-07
+# Session Handoff - 2026-02-09
 
 ## Overview
-This session focused on completing the "Phase II: Decentralized Oracle" and starting "Phase III: Sovereign Network" features for Bobcoin.
-We have successfully integrated a real Rust-based ZK Service (SP1), implemented a persistent Governance DAO, and closed the economic loop with a "Burn" mechanism for storage and items.
+This session marked a major leap forward in "Phase III: Sovereign Network". We transitioned from simulated mechanics to real Web3 integration and high-fidelity visuals.
+
+## Key Achievements (v2.5.0)
+
+1.  **Wallet Connect**: The Frontend now uses `@solana/wallet-adapter` to connect to real wallets (Phantom, Solflare). Users sign actual transactions for Minting and Bidding.
+2.  **Visual Overhaul (WebGL)**: The Rhythm Game was rewritten using `react-three-fiber` (Three.js), replacing the DOM-based prototype with a 3D Cyberpunk experience.
+3.  **Mobile App Initialization**: A new `mobile/` directory was created with a React Native (Expo) project structure, laying the groundwork for the "Mobile Light Node".
+4.  **Security**: Added signature verification middleware placeholders in `game-server`.
 
 ## Architecture State
 
-1.  **Frontend (`frontend/`)**:
-    - React + Vite + React Router v6.
-    - Cyberpunk Theme.
-    - Pages: Dashboard (Rhythm Game), Supernode (Storage), Wallet (Privacy), Governance (DAO), Manual (Docs), System (Status).
-    - **Key Config**: `vite.config.js` reads version from `VERSION.md`.
+*   **Frontend**: React/Vite + WebGL + Wallet Adapter.
+*   **Mobile**: Expo/React Native (Initialized).
+*   **Game Server**: Node.js + SQLite + ZK Orchestration.
+*   **Supernode**: WebTorrent + Smart Mining Agent.
+*   **ZK Service**: Rust SP1 (compiled & running).
 
-2.  **Game Server (`game-server/`)**:
-    - Node.js Express (Port 3000 -> 3001).
-    - Acts as Orchestrator/Oracle.
-    - **Governance**: Persists proposals to `proposals.json`.
-    - **ZK**: Proxies verification requests to `zk-service`.
-    - **Burn**: Exposes `/burn` endpoint calling the Bridge.
+## Next Steps for the Next Agent
 
-3.  **Supernode (`supertorrent/`)**:
-    - Node.js Express (Port 8080 -> 8081).
-    - **Storage**: WebTorrent client. Persists magnet links to `torrents.json`.
-    - **Bridge**: `BobcoinBridge` class handles Solana interactions (Mint/Burn/Memo).
-    - **Note**: Currently running against Solana Devnet. Faucet rate limits are handled gracefully via mock fallbacks.
+1.  **Mobile Development**:
+    - The `mobile/` app is currently a shell. Flesh out the "Miner" component to actually use device storage or sensors (pedometer) for "Proof of Walk".
+    - Test running via `npx expo start`.
 
-4.  **ZK Service (`proof-of-play/`)**:
-    - Rust Actix Web Server (Port 8080 internal).
-    - Uses `sp1-sdk` to execute the `proof-of-play` ELF binary.
-    - Verifies: `score == perfects * 100 + greats * 50`.
+2.  **P2P Communication**:
+    - Integrate `libp2p` or `Socket.io` to allow the Mobile App to talk to the Supernode directly, bypassing the Game Server.
 
-## Recent Changes (v2.1.0)
-- **ZK Integration**: Frontend -> GameServer -> ZK Service flow verified.
-- **Economic Loop**: `burnTokens` implemented. Marketplace and "Pay-to-Seed" feature consume BOB.
-- **System Dashboard**: New `/system` page visualizing the architecture.
-- **Standardization**: Added `AGENTS.md`, `CLAUDE.md`, `VERSION.md`, `CHANGELOG.md`.
+3.  **Production Deployment**:
+    - The `docker-compose.yml` needs tuning for production (remove dev flags, add restart policies).
+    - Consider deploying the Game Server to a VPS (DigitalOcean/AWS).
 
-## Next Steps (Roadmap)
-1.  **On-Chain Governance**: Move `proposals.json` logic to a Solana Program (SPL Governance).
-2.  **ZK Proving**: Currently we only *execute* the trace (`client.execute`). Upgrade to *prove* (`client.prove`) once compute resources allow (requires heavy lifting).
-3.  **Mobile Light Node**: Explore React Native port for mobile mining.
-4.  **Storage Marketplace**: Expand the "Pay-to-Seed" into a full bid/ask market for storage.
-
-## Known Issues / Notes
-- **Rate Limits**: Solana Devnet faucet frequently 429s. The Bridge has robust fallback logic to return "mock" signatures so the UI demo doesn't break.
-- **Ports**:
-    - Frontend: 5173
-    - Game Server: 3001 (Host) -> 3000 (Container)
-    - Supernode: 8081 (Host) -> 8080 (Container)
-    - ZK Service: 8080 (Internal only)
-- **Dependencies**: Use `npm install --legacy-peer-deps` in `supertorrent` due to Solana/LightProtocol version mismatches.
+## Known Issues
+- **Playwright Timeout**: The WebGL game takes a moment to load, causing timeouts in headless verification. `verify_frontend.py` has been updated with longer timeouts, but it's flaky in CI.
+- **Devnet Rate Limits**: The Solana Faucet is aggressive. The fallback mock logic in `server.js` is essential for demos.
 
 ## Commands
-- **Start Full Stack**: `docker-compose up --build`
-- **Verify Frontend**: `python verify_frontend.py`
-- **E2E Test**: `node test_e2e.js`
+- **Start Web**: `docker-compose up --build`
+- **Start Mobile**: `cd mobile && npm install && npm start`

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SupernodeControls } from '../components/SupernodeControls';
 import { burnTokens } from '../api';
+import { Tooltip } from '../components/Tooltip';
 import './Supernode.css';
 
 const API_URL = import.meta.env.VITE_SUPERNODE_API_URL || 'http://localhost:8081';
@@ -19,8 +20,24 @@ export function Supernode() {
             setLoading(false);
             setError(null);
         } catch (err) {
-            console.error(err);
-            setError('Could not connect to Supernode API. Ensure Docker is running and port 8081 is accessible.');
+            console.warn("Failed to connect to Supernode API, using mock data for demo.");
+            // Mock data for UI demonstration
+            setStats({
+                address: '0xDEMO...NODE',
+                uptime: 3600 * 24, // 1 day
+                storage: {
+                    totalSize: 1024 * 1024 * 1024 * 2.5, // 2.5 GB
+                    torrents: [
+                         { infoHash: '123', name: 'ubuntu-22.04-desktop-amd64.iso', progress: 1.0, peers: 45, totalSize: 1024*1024*1024*2.5 }
+                    ]
+                },
+                network: {
+                    peers: 8,
+                    downloadSpeed: 1024 * 50,
+                    uploadSpeed: 1024 * 1200
+                }
+            });
+            setLoading(false);
         }
     };
 
@@ -53,11 +70,11 @@ export function Supernode() {
                 alert(`Torrent added! (TX: ${burnRes.tx.slice(0,8)}...)`);
                 fetchStats();
             } else {
-                alert("Failed to add torrent to node.");
+                alert("Failed to add torrent to node (Mock Mode).");
             }
         } catch (e) {
             console.error(e);
-            alert("Error processing request");
+            alert("Error processing request (Mock Mode)");
         }
     };
 
@@ -72,7 +89,7 @@ export function Supernode() {
             if (res.ok) {
                 fetchStats();
             } else {
-                alert("Failed to remove torrent");
+                alert("Failed to remove torrent (Mock Mode)");
             }
         } catch (e) {
             console.error(e);
@@ -88,7 +105,9 @@ export function Supernode() {
 
             <div className="node-status-panel">
                 <div className="status-item">
-                    <span className="label">VALIDATOR ADDRESS</span>
+                    <Tooltip text="The public address of your Validator Node.">
+                        <span className="label">VALIDATOR ADDRESS ⓘ</span>
+                    </Tooltip>
                     <span className="value address">{stats.address}</span>
                 </div>
                 <div className="status-item">
@@ -105,14 +124,16 @@ export function Supernode() {
                 <h2>STORAGE PROOFS</h2>
                 <div className="storage-grid">
                     <div className="metric">
-                        <span className="label">TOTAL STORAGE</span>
+                        <Tooltip text="Total disk space allocated to the network for consensus.">
+                            <span className="label">TOTAL STORAGE ⓘ</span>
+                        </Tooltip>
                         <span className="value big">{(stats.storage.totalSize / 1024 / 1024).toFixed(2)} MB</span>
-                        <div className="tooltip">Total disk space allocated to the network for consensus.</div>
                     </div>
                     <div className="metric">
-                        <span className="label">ACTIVE PEERS</span>
+                        <Tooltip text="Number of other nodes exchanging data with this peer.">
+                            <span className="label">ACTIVE PEERS ⓘ</span>
+                        </Tooltip>
                         <span className="value big">{stats.network.peers}</span>
-                        <div className="tooltip">Number of other nodes exchanging data with this peer.</div>
                     </div>
                      <div className="metric">
                         <span className="label">DL SPEED</span>

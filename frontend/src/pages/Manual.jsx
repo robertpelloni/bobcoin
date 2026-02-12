@@ -69,40 +69,63 @@ const SECTIONS = {
             </>
         )
     },
-    CONTRACTS: {
-        title: "3. SMART CONTRACTS",
+    MINING: {
+        title: "3. HOW TO MINE (SUPERNODE)",
         content: (
             <>
-                <h2>GAMING-OPTIMIZED VM</h2>
-                <p>
-                    Bobcoin utilizes a UTXO-based VM (inspired by Fuel) designed for
-                    <strong>parallel execution</strong> and high-performance gaming logic.
-                </p>
-                <h3>FEATURES</h3>
+                <h2>SUPERNODE MINING</h2>
+                <p>Mining in Bobcoin is not about solving useless hashes. It is about providing utility to the network.</p>
+                <h3>REQUIREMENTS</h3>
                 <ul>
-                    <li><strong>Predicates:</strong> Stateless scripts for gas-efficient conditions.</li>
-                    <li><strong>Native Assets:</strong> Tokens are first-class citizens, not just smart contract entries.</li>
-                    <li><strong>Cheating Prevention:</strong> Native support for Commit-Reveal schemes and ZK-Score verification.</li>
+                    <li><strong>Disk Space:</strong> At least 1TB recommended for seeding data.</li>
+                    <li><strong>Bandwidth:</strong> High upload speed for serving data chunks to peers.</li>
+                    <li><strong>Stake:</strong> A minimum collateral is required to become a validator.</li>
                 </ul>
-            </>
-        )
-    },
-    CONSENSUS: {
-        title: "4. HYBRID CONSENSUS",
-        content: (
-            <>
-                <h2>THE "ARCADE" CONSENSUS</h2>
-                <p>A novel combination of three mechanisms:</p>
+                <h3>INSTRUCTIONS</h3>
                 <ol>
-                    <li><strong>The Spine (Avalanche):</strong> Provides sub-second finality.</li>
-                    <li><strong>The Filter (Proof-of-Storage):</strong> Only useful nodes (Seeding Data) can vote. Sybil resistance via physical resource provisioning.</li>
-                    <li><strong>The Mint (Proof-of-Play):</strong> Token distribution is driven by human skill, verified by ZK-Proofs.</li>
+                    <li>Go to the <strong>SUPERNODE</strong> page.</li>
+                    <li>Click <strong>START MINING</strong> to initialize your node.</li>
+                    <li>The node will automatically bid on storage contracts available in the Marketplace.</li>
+                    <li>Once a contract is accepted, your node will download and seed the data.</li>
+                    <li>You earn rewards periodically as long as you maintain >99% uptime.</li>
                 </ol>
             </>
         )
     },
+    MARKET: {
+        title: "4. STORAGE MARKETPLACE",
+        content: (
+            <>
+                <h2>DECENTRALIZED STORAGE MARKET</h2>
+                <p>
+                    The Marketplace is where users post data they want stored, and Supernodes bid to store it.
+                </p>
+                <h3>FOR USERS</h3>
+                <p>Post a bid with the data size, duration, and price you are willing to pay.</p>
+                <h3>FOR MINERS</h3>
+                <p>Supernodes automatically scan the market for profitable deals based on their configuration.</p>
+                <p className="highlight">All deals are secured by smart contracts on the Bobcoin chain.</p>
+            </>
+        )
+    },
+    GOV: {
+        title: "5. GOVERNANCE (DAO)",
+        content: (
+            <>
+                <h2>COMMUNITY GOVERNANCE</h2>
+                <p>Bobcoin is owned by its users. The DAO allows token holders to vote on protocol upgrades.</p>
+                <h3>VOTING PROCESS</h3>
+                <ul>
+                    <li><strong>Proposals:</strong> Any holder with >1% supply can propose a change.</li>
+                    <li><strong>Voting:</strong> Votes are weighted by token holdings (1 Token = 1 Vote).</li>
+                    <li><strong>Execution:</strong> Passed proposals are automatically enacted by the on-chain governance module.</li>
+                </ul>
+                <p>Visit the <strong>GOVERNANCE</strong> page to view active proposals and cast your vote.</p>
+            </>
+        )
+    },
     TOKENOMICS: {
-        title: "5. TOKENOMICS",
+        title: "6. TOKENOMICS",
         content: (
             <>
                 <h2>FAIR DISTRIBUTION</h2>

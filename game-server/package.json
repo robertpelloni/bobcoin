@@ -12,6 +12,7 @@
         "cors": "^2.8.6",
         "express": "^4.22.1",
         "rpc-websockets": "7.4.0",
+        "socket.io": "^4.8.3",
         "sqlite3": "^5.1.7",
         "supertorrent": "file:../supertorrent",
         "tweetnacl": "^1.0.3"

@@ -1,13 +1,46 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { burnTokens } from '../api';
+import { Tooltip } from './Tooltip';
 import './Marketplace.css';
 
 const DEFAULT_ITEMS = [
-    { id: 'theme_neon', name: 'NEON THEME', type: 'THEME', price: 500, purchased: false, icon: '🎨' },
-    { id: 'theme_matrix', name: 'MATRIX THEME', type: 'THEME', price: 1000, purchased: false, icon: '🖥️' },
-    { id: 'music_dnb', name: 'DNB TRACK PACK', type: 'MUSIC', price: 750, purchased: false, icon: '🎵' },
-    { id: 'boost_2x', name: '2X SCORE BOOST (1H)', type: 'BOOST', price: 2000, purchased: false, icon: '⚡' },
+    {
+        id: 'theme_neon',
+        name: 'NEON THEME',
+        type: 'THEME',
+        price: 500,
+        purchased: false,
+        icon: '🎨',
+        desc: "Applies a high-contrast neon theme to the dashboard."
+    },
+    {
+        id: 'theme_matrix',
+        name: 'MATRIX THEME',
+        type: 'THEME',
+        price: 1000,
+        purchased: false,
+        icon: '🖥️',
+        desc: "Transforms the UI into a falling code matrix."
+    },
+    {
+        id: 'music_dnb',
+        name: 'DNB TRACK PACK',
+        type: 'MUSIC',
+        price: 750,
+        purchased: false,
+        icon: '🎵',
+        desc: "Unlocks 3 new Drum & Bass tracks for the rhythm game."
+    },
+    {
+        id: 'boost_2x',
+        name: '2X SCORE BOOST',
+        type: 'BOOST',
+        price: 2000,
+        purchased: false,
+        icon: '⚡',
+        desc: "Doubles all points earned for the next 1 hour."
+    },
 ];
 
 export function Marketplace() {
@@ -76,28 +109,30 @@ export function Marketplace() {
 
             <div className="items-grid">
                 {items.map(item => (
-                    <div key={item.id} className={`market-item ${item.purchased ? 'purchased' : ''}`}>
-                        <div className="item-icon">
-                            {item.icon}
+                    <Tooltip key={item.id} text={item.desc}>
+                        <div className={`market-item ${item.purchased ? 'purchased' : ''}`}>
+                            <div className="item-icon">
+                                {item.icon}
+                            </div>
+                            <div className="item-details">
+                                <h3>{item.name}</h3>
+                                <span className="item-type">{item.type}</span>
+                            </div>
+                            <button
+                                className="cyber-button small"
+                                onClick={(e) => { e.stopPropagation(); handleBuy(item); }}
+                                disabled={item.purchased}
+                                style={{
+                                    fontSize: '0.8rem',
+                                    padding: '0.5rem',
+                                    opacity: item.purchased ? 0.5 : 1,
+                                    cursor: item.purchased ? 'default' : 'pointer'
+                                }}
+                            >
+                                {item.purchased ? 'OWNED' : `${item.price} BOB`}
+                            </button>
                         </div>
-                        <div className="item-details">
-                            <h3>{item.name}</h3>
-                            <span className="item-type">{item.type}</span>
-                        </div>
-                        <button
-                            className="cyber-button small"
-                            onClick={() => handleBuy(item)}
-                            disabled={item.purchased}
-                            style={{
-                                fontSize: '0.8rem',
-                                padding: '0.5rem',
-                                opacity: item.purchased ? 0.5 : 1,
-                                cursor: item.purchased ? 'default' : 'pointer'
-                            }}
-                        >
-                            {item.purchased ? 'OWNED' : `${item.price} BOB`}
-                        </button>
-                    </div>
+                    </Tooltip>
                 ))}
             </div>
 

@@ -1,19 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import fs from 'fs';
 import path from 'path';
 
 // Read version from ../VERSION.md
-// In ESM, we can't use __dirname easily, but we can assume we are running from project root or frontend root.
-// We'll try to find VERSION.md relative to process.cwd()
 let version = '0.0.0';
 try {
     const versionPath = path.resolve(process.cwd(), '../VERSION.md');
     if (fs.existsSync(versionPath)) {
         version = fs.readFileSync(versionPath, 'utf8').trim();
     } else {
-        // Fallback for when running inside frontend folder
-        const localVersionPath = path.resolve(process.cwd(), 'VERSION.md'); // If copied
+        const localVersionPath = path.resolve(process.cwd(), 'VERSION.md');
          if (fs.existsSync(localVersionPath)) {
             version = fs.readFileSync(localVersionPath, 'utf8').trim();
         }
@@ -24,7 +22,19 @@ try {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react()],
+    plugins: [
+        react(),
+        nodePolyfills({
+            // To polyfill `node:` protocol imports.
+            protocolImports: true,
+            // To polyfill global variables.
+            globals: {
+                Buffer: true,
+                global: true,
+                process: true,
+            },
+        }),
+    ],
     define: {
         __APP_VERSION__: JSON.stringify(version)
     }

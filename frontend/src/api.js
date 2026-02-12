@@ -1,5 +1,5 @@
 
-const GAME_SERVER_URL = 'http://localhost:3001';
+const GAME_SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // We now support an optional wallet provider for signing
 export async function submitProof(score, perfects, greats, wallet = null) {
@@ -31,16 +31,18 @@ export async function submitProof(score, perfects, greats, wallet = null) {
             body: JSON.stringify({ proof })
         });
 
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
         return await response.json();
     } catch (e) {
         console.error("API Error:", e);
-        throw e;
+        return { error: e.message };
     }
 }
 
 export async function getBankroll() {
     try {
         const response = await fetch(`${GAME_SERVER_URL}/bankroll`);
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const data = await response.json();
         return data.balance;
     } catch (e) {
@@ -52,6 +54,7 @@ export async function getBankroll() {
 export async function getLeaderboard() {
     try {
         const response = await fetch(`${GAME_SERVER_URL}/leaderboard`);
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const data = await response.json();
         return data.leaderboard || [];
     } catch (e) {
@@ -63,7 +66,7 @@ export async function getLeaderboard() {
 export async function getContent() {
     try {
         const response = await fetch(`${GAME_SERVER_URL}/content`);
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
         const data = await response.json();
         return data.content || [];
     } catch (e) {
@@ -97,6 +100,7 @@ export async function castVote(proposalId, vote, votingPower, wallet = null) {
                 voter: wallet?.publicKey ? wallet.publicKey.toBase58() : 'anon'
             })
         });
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
         return await response.json();
     } catch (e) {
         console.error("Vote API Error:", e);
@@ -115,6 +119,7 @@ export async function burnTokens(amount, reason, wallet = null) {
                 sender: wallet?.publicKey ? wallet.publicKey.toBase58() : 'anon'
             })
         });
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
         return await response.json();
     } catch (e) {
         console.error("Burn API Error:", e);

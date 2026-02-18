@@ -8,11 +8,13 @@ import { Manual } from './pages/Manual';
 import { SystemStatus } from './pages/SystemStatus';
 import { Mobile } from './pages/Mobile';
 import { StorageMarket } from './pages/StorageMarket';
+import { ThemeToggle } from './components/ThemeToggle';
 import './App.css';
 
 function App() {
     return (
         <BrowserRouter>
+            <ThemeToggle />
             <Routes>
                 <Route element={<Layout />}>
                     <Route path="/" element={<Dashboard />} />

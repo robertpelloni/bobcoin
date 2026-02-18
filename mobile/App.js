@@ -7,10 +7,14 @@ const API_URL = 'http://localhost:3001'; // In emulator, use 10.0.2.2 or tunnel
 export default function App() {
   const [mining, setMining] = useState(false);
   const [balance, setBalance] = useState(0.0000);
+  const [hashRate, setHashRate] = useState(0);
   const [globalBankroll, setGlobalBankroll] = useState(0);
   const [logs, setLogs] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Mining Graph Data
+  const [graphData, setGraphData] = useState(new Array(20).fill(10));
 
   // Fetch Global Stats
   useEffect(() => {
@@ -47,26 +51,57 @@ export default function App() {
     let interval;
     if (mining) {
       interval = setInterval(async () => {
-        // Simulate local mining + network ping
         try {
-            // In a real app, this would submit a PoW hash
-            // const res = await fetch(`${API_URL}/mobile/ping`, { method: 'POST' });
+            // Simulate Variable Hashrate
+            const currentHash = Math.floor(Math.random() * 50) + 100; // 100-150 H/s
+            setHashRate(currentHash);
 
+            // Update Graph
+            setGraphData(prev => {
+                const newData = [...prev.slice(1), currentHash];
+                return newData;
+            });
+
+            // Simulate Reward
             setBalance(b => b + 0.0001);
-            setLogs(l => [`[MINING] Block #${Math.floor(Math.random() * 9999)} verified.`, ...l].slice(0, 8));
+
+            if (Math.random() > 0.7) {
+                 setLogs(l => [`[MINING] Block #${Math.floor(Math.random() * 9999)} verified (${currentHash} H/s)`, ...l].slice(0, 8));
+            }
         } catch (e) {
-            setLogs(l => [`[ERROR] Network unreachable.`, ...l].slice(0, 8));
+            setLogs(l => [`[ERROR] Mining Loop Error.`, ...l].slice(0, 8));
         }
-      }, 2000);
+      }, 1000);
+    } else {
+        setHashRate(0);
     }
     return () => clearInterval(interval);
   }, [mining]);
+
+  // Simple ASCII Graph
+  const renderGraph = () => {
+      if (!mining) return <Text style={{color: '#555', textAlign: 'center', marginTop: 20}}>MINING INACTIVE</Text>;
+
+      const max = Math.max(...graphData, 150);
+      const min = Math.min(...graphData, 0);
+
+      return (
+          <View style={styles.graphContainer}>
+              {graphData.map((val, i) => {
+                  const height = ((val - min) / (max - min)) * 50 + 10;
+                  return (
+                      <View key={i} style={[styles.bar, {height, backgroundColor: i === graphData.length-1 ? '#fff' : '#0ff'}]} />
+                  );
+              })}
+          </View>
+      )
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>BOBCOIN</Text>
-        <Text style={styles.subtitle}>MOBILE LIGHT NODE v1.0</Text>
+        <Text style={styles.subtitle}>MOBILE LIGHT NODE v1.1</Text>
       </View>
 
       <ScrollView style={styles.scrollContent}>
@@ -74,6 +109,7 @@ export default function App() {
         <View style={styles.card}>
             <Text style={styles.label}>LOCAL BALANCE</Text>
             <Text style={styles.value}>{balance.toFixed(4)} <Text style={styles.currency}>BOB</Text></Text>
+            <Text style={styles.hashRate}>{mining ? `${hashRate} H/s` : 'IDLE'}</Text>
         </View>
 
         {/* Global Stats */}
@@ -98,6 +134,12 @@ export default function App() {
             </Text>
             {mining && <ActivityIndicator color="#0ff" style={{marginLeft: 10}} />}
         </TouchableOpacity>
+
+        {/* Visual Graph */}
+        <View style={styles.graphBox}>
+            <Text style={styles.label}>HASHRATE MONITOR</Text>
+            {renderGraph()}
+        </View>
 
         {/* Console Logs */}
         <View style={styles.logContainer}>
@@ -184,6 +226,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  hashRate: {
+      color: '#0f0',
+      fontSize: 14,
+      fontFamily: 'monospace',
+      marginTop: 5,
+      textAlign: 'right'
+  },
   currency: {
     fontSize: 14,
     color: '#0ff',
@@ -254,5 +303,26 @@ const styles = StyleSheet.create({
   leaderScore: {
     color: '#0ff',
     fontWeight: 'bold',
+  },
+  graphBox: {
+      height: 100,
+      backgroundColor: '#111',
+      borderColor: '#333',
+      borderWidth: 1,
+      marginBottom: 20,
+      padding: 10,
+      justifyContent: 'flex-end'
+  },
+  graphContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      height: 70
+  },
+  bar: {
+      width: 8,
+      backgroundColor: '#0ff',
+      borderTopLeftRadius: 2,
+      borderTopRightRadius: 2
   }
 });

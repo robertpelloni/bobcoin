@@ -22,6 +22,9 @@ app.use('/market', marketRouter);
 const bridge = new BobcoinBridge();
 let bridgeReady = false;
 
+// Simple In-Memory Chat Store
+const chatMessages = [];
+
 (async () => {
     try {
         await initDatabase();
@@ -73,6 +76,28 @@ app.get('/content', async (req, res) => {
     }
     const content = await bridge.getRegisteredContent(10);
     res.json({ content });
+});
+
+// Chat Endpoints
+app.get('/chat', (req, res) => {
+    res.json({ messages: chatMessages.slice(-50) }); // Return last 50
+});
+
+app.post('/chat', (req, res) => {
+    const { user, text } = req.body;
+    if (!user || !text) return res.status(400).json({ error: 'Missing fields' });
+
+    const msg = {
+        id: Date.now(),
+        user: user.slice(0, 15), // Truncate name
+        text: text.slice(0, 140), // Tweet length
+        timestamp: new Date().toLocaleTimeString()
+    };
+
+    chatMessages.push(msg);
+    if (chatMessages.length > 100) chatMessages.shift(); // Keep buffer small
+
+    res.json({ success: true, message: msg });
 });
 
 // Governance Endpoints

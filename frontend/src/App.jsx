@@ -9,9 +9,12 @@ import { SystemStatus } from './pages/SystemStatus';
 import { Mobile } from './pages/Mobile';
 import { StorageMarket } from './pages/StorageMarket';
 import { ThemeToggle } from './components/ThemeToggle';
+import { useSoundEffects } from './hooks/useSoundEffects';
 import './App.css';
 
 function App() {
+    useSoundEffects(); // Initialize global UI sounds
+
     return (
         <BrowserRouter>
             <ThemeToggle />

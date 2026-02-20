@@ -1,10 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import { Navigation } from './Navigation';
-// import '../App.css'; // App.css is imported in main.jsx usually, check that.
+import { NewsTicker } from './NewsTicker';
 
 export function Layout() {
     return (
         <div className="app-layout">
+            <NewsTicker />
             <Navigation />
             <main className="content-container">
                 <Outlet />

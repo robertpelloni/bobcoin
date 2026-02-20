@@ -4,6 +4,7 @@ import { RhythmGame } from '../components/RhythmGame';
 import { submitProof, getBankroll } from '../api';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
+import { Trollbox } from '../components/Trollbox';
 
 export function Dashboard() {
     const wallet = useWallet();
@@ -104,7 +105,15 @@ export function Dashboard() {
                     </div>
                 )}
 
-                <Leaderboard mintStatus={mintStatus} />
+                <div className="dashboard-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div className="left-col">
+                        <Leaderboard mintStatus={mintStatus} />
+                    </div>
+                    <div className="right-col">
+                        <Trollbox />
+                    </div>
+                </div>
+
                 <Marketplace />
             </div>
         </div>

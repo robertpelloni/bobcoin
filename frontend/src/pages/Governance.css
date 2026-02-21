@@ -1,0 +1,167 @@
+.governance-container {
+    width: 100%;
+    max-width: 900px;
+    padding: 2rem;
+    color: #e0e0e0;
+}
+
+.stats-bar {
+    display: flex;
+    justify-content: space-around;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #333;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.stat.highlight .value {
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff;
+}
+
+.stat .label {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 0.5rem;
+}
+
+.stat .value {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.stat .tooltip {
+    visibility: hidden;
+    position: absolute;
+    bottom: 100%;
+    background: #000;
+    border: 1px solid #fff;
+    padding: 0.5rem;
+    width: 200px;
+    font-size: 0.8rem;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.stat:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.proposal-card {
+    background: rgba(20, 20, 30, 0.8);
+    border: 1px solid #333;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+    transition: transform 0.2s;
+}
+
+.proposal-card:hover {
+    transform: translateX(10px);
+    border-color: #0ff;
+}
+
+.prop-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.prop-id {
+    color: #888;
+}
+
+.status-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.status-badge.active {
+    background: #0f0;
+    color: #000;
+}
+
+.status-badge.passed {
+    background: #555;
+    color: #ccc;
+}
+
+.vote-bar {
+    height: 10px;
+    background: #ff0055;
+    margin: 1rem 0 0.5rem 0;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.bar-for {
+    height: 100%;
+    background: #0f0;
+}
+
+.vote-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 1.5rem;
+}
+
+.prop-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.vote-btn {
+    padding: 0.5rem 1.5rem;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.vote-btn:hover {
+    opacity: 0.8;
+}
+
+.vote-btn.yes {
+    background: #0f0;
+    color: #000;
+}
+
+.vote-btn.no {
+    background: #ff0055;
+    color: #fff;
+}
+
+.time-left {
+    margin-left: auto;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.info-panel {
+    margin-top: 3rem;
+    padding: 2rem;
+    border: 1px dashed #555;
+    background: rgba(0,0,0,0.3);
+    text-align: left;
+}
+
+.info-panel h3 {
+    color: #0ff;
+    margin-bottom: 1rem;
+}

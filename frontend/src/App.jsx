@@ -10,10 +10,20 @@ import { Mobile } from './pages/Mobile';
 import { StorageMarket } from './pages/StorageMarket';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useSoundEffects } from './hooks/useSoundEffects';
+import { useKonamiCode } from './hooks/useKonamiCode';
+import { useEffect } from 'react';
 import './App.css';
 
 function App() {
-    useSoundEffects(); // Initialize global UI sounds
+    useSoundEffects();
+    const konami = useKonamiCode();
+
+    useEffect(() => {
+        if (konami) {
+            alert("CHEAT CODE ACTIVATED: GOD MODE (Theme Unlocked)");
+            document.body.classList.add('god-mode');
+        }
+    }, [konami]);
 
     return (
         <BrowserRouter>

@@ -147,6 +147,18 @@ const SECTIONS = {
 export function Manual() {
     const [activeSection, setActiveSection] = useState('INTRO');
 
+    const downloadWhitepaper = () => {
+        const text = `BOBCOIN WHITEPAPER v2.0\n\n${Object.values(SECTIONS).map(s => s.title + '\n' + s.content.props.children.map(c => c.props.children).flat().join('')).join('\n\n')}`;
+        const blob = new Blob([text], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Bobcoin_Whitepaper.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
     return (
         <div className="manual-container">
             <div className="manual-sidebar">
@@ -160,6 +172,9 @@ export function Manual() {
                         {SECTIONS[key].title}
                     </button>
                 ))}
+                <button className="cyber-button small" style={{marginTop: '2rem'}} onClick={downloadWhitepaper}>
+                    📥 DOWNLOAD WHITEPAPER
+                </button>
             </div>
             <div className="manual-content">
                 <div className="content-scroll">

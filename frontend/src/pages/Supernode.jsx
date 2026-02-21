@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SupernodeControls } from '../components/SupernodeControls';
+import { burnTokens } from '../api';
 import './Supernode.css';
 
 const API_URL = import.meta.env.VITE_SUPERNODE_API_URL || 'http://localhost:8081';
@@ -30,21 +31,33 @@ export function Supernode() {
     }, []);
 
     const handleAddTorrent = async (magnet) => {
+        const FEE = 100;
+        if (!confirm(`Seeding a new file requires burning ${FEE} BOB. Proceed?`)) return;
+
         try {
+            // 1. Pay Fee
+            const burnRes = await burnTokens(FEE, `Storage Request: ${magnet.slice(0, 20)}...`);
+            if (!burnRes.success) {
+                alert("Payment failed: " + burnRes.error);
+                return;
+            }
+            console.log(`Burn Confirmed: ${burnRes.tx}`);
+
+            // 2. Add Torrent
             const res = await fetch(`${API_URL}/add-torrent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ magnet })
             });
             if (res.ok) {
-                alert("Torrent added!");
+                alert(`Torrent added! (TX: ${burnRes.tx.slice(0,8)}...)`);
                 fetchStats();
             } else {
-                alert("Failed to add torrent");
+                alert("Failed to add torrent to node.");
             }
         } catch (e) {
             console.error(e);
-            alert("Error adding torrent");
+            alert("Error processing request");
         }
     };
 

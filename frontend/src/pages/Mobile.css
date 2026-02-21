@@ -1,0 +1,49 @@
+.mobile-container {
+    width: 100%;
+    max-width: 800px;
+    padding: 2rem;
+    color: #e0e0e0;
+}
+
+.construction-notice {
+    border: 2px dashed #ff0055;
+    background: rgba(255, 0, 85, 0.1);
+    padding: 2rem;
+    margin-bottom: 3rem;
+    animation: pulse 2s infinite;
+}
+
+.construction-notice .icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.construction-notice h2 {
+    color: #ff0055;
+    margin-top: 0;
+}
+
+.roadmap-preview {
+    text-align: left;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #333;
+    padding: 2rem;
+}
+
+.roadmap-preview h3 {
+    color: #0ff;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.roadmap-preview li {
+    margin-bottom: 0.5rem;
+    color: #ccc;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 rgba(255, 0, 85, 0); }
+    50% { box-shadow: 0 0 20px rgba(255, 0, 85, 0.3); }
+    100% { box-shadow: 0 0 0 rgba(255, 0, 85, 0); }
+}

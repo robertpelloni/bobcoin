@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-02-08T06:51:26.632Z",
+  "git": {
+    "hash": "466ac44",
+    "branch": "jules-17671185137558577810-b8f20294",
+    "date": "Thu Feb 5 17:09:47 2026 -0500"
+  },
+  "modules": [
+    {
+      "name": "frontend",
+      "path": "frontend",
+      "version": "0.0.0",
+      "type": "Node.js"
+    },
+    {
+      "name": "game-server",
+      "path": "game-server",
+      "version": "1.0.0",
+      "type": "Node.js"
+    },
+    {
+      "name": "supertorrent",
+      "path": "supertorrent",
+      "version": "1.0.0",
+      "type": "Node.js"
+    },
+    {
+      "name": "proof-of-play",
+      "path": "proof-of-play",
+      "version": "0.0.0",
+      "type": "Rust"
+    }
+  ]
+}

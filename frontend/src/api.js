@@ -87,6 +87,35 @@ export async function getProposals() {
     }
 }
 
+export async function getQuests() {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/quests`);
+        if (!response.ok) throw new Error("Failed to fetch quests");
+        const data = await response.json();
+        return data.quests || [];
+    } catch (e) {
+        console.error("Quests API Error:", e);
+        return [];
+    }
+}
+
+export async function claimQuest(questId, wallet) {
+    try {
+        const response = await fetch(`${GAME_SERVER_URL}/quests/claim`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                questId,
+                playerId: wallet?.publicKey ? wallet.publicKey.toBase58() : 'anon'
+            })
+        });
+        return await response.json();
+    } catch (e) {
+        console.error("Quest Claim Error:", e);
+        return { success: false };
+    }
+}
+
 export async function castVote(proposalId, vote, votingPower, wallet = null) {
     // If wallet provided, sign vote
     try {

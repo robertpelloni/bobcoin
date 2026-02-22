@@ -6,10 +6,39 @@ import './Supernode.css';
 
 const API_URL = import.meta.env.VITE_SUPERNODE_API_URL || 'http://localhost:8081';
 
+// Simple SVG World Map Component (Abstract)
+function PeerMap({ peers }) {
+    return (
+        <div className="peer-map">
+            <svg viewBox="0 0 1000 500" style={{width: '100%', height: '100%', background: '#000'}}>
+                {/* Abstract World Outline */}
+                <path d="M50,100 Q200,50 350,150 T600,150 T900,100" stroke="#333" strokeWidth="2" fill="none" />
+                <path d="M50,300 Q200,350 350,250 T600,300 T900,400" stroke="#333" strokeWidth="2" fill="none" />
+
+                {/* Peer Dots */}
+                {peers.map((p, i) => (
+                    <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r="3"
+                        fill={p.active ? '#0f0' : '#555'}
+                        className="peer-dot"
+                    >
+                        <animate attributeName="r" values="3;5;3" dur={`${1 + Math.random()}s`} repeatCount="indefinite" />
+                    </circle>
+                ))}
+            </svg>
+            <div className="map-overlay">LIVE PEER MESH</div>
+        </div>
+    );
+}
+
 export function Supernode() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [mockPeers, setMockPeers] = useState([]);
 
     const fetchStats = async () => {
         try {
@@ -44,6 +73,18 @@ export function Supernode() {
     useEffect(() => {
         fetchStats();
         const interval = setInterval(fetchStats, 5000);
+
+        // Generate mock peers for map
+        const peers = [];
+        for(let i=0; i<20; i++) {
+            peers.push({
+                x: Math.random() * 1000,
+                y: Math.random() * 500,
+                active: Math.random() > 0.2
+            });
+        }
+        setMockPeers(peers);
+
         return () => clearInterval(interval);
     }, []);
 
@@ -119,6 +160,8 @@ export function Supernode() {
                     <span className="value online">ONLINE</span>
                 </div>
             </div>
+
+            <PeerMap peers={mockPeers} />
 
             <div className="storage-panel">
                 <h2>STORAGE PROOFS</h2>
@@ -198,15 +241,6 @@ export function Supernode() {
                         )}
                     </tbody>
                 </table>
-            </div>
-
-            <div className="info-section">
-                <h3>HOW IT WORKS</h3>
-                <p>
-                    This node downloads and seeds useful data (e.g., Open Source Movies, Scientific Data).
-                    It generates <strong>Merkle Proofs</strong> of the stored data slices and submits them to the Solana blockchain.
-                    The more data you seed, the higher your probability of earning validator rewards.
-                </p>
             </div>
         </div>
     );

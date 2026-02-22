@@ -31,8 +31,31 @@ export function initDatabase() {
                     status TEXT DEFAULT 'OPEN',
                     acceptedBy TEXT
                 )
+            `);
+
+            // Quests Table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS quests (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    target INTEGER NOT NULL,
+                    reward INTEGER NOT NULL,
+                    type TEXT NOT NULL
+                )
             `, async (err) => {
                 if (err) return reject(err);
+
+                // Seed Default Quests if empty
+                db.get("SELECT count(*) as count FROM quests", async (err, row) => {
+                    if (row && row.count === 0) {
+                        console.log('[DB] Seeding daily quests...');
+                        const stmt = db.prepare("INSERT INTO quests (title, target, reward, type) VALUES (?, ?, ?, ?)");
+                        stmt.run("Score 10,000 Points", 10000, 50, "SCORE");
+                        stmt.run("Mint 1 Token", 1, 100, "MINT");
+                        stmt.run("Seed 1 File", 1, 200, "SEED");
+                        stmt.finalize();
+                    }
+                });
 
                 // Migration Logic for Proposals
                 db.get("SELECT count(*) as count FROM proposals", async (err, row) => {
@@ -122,5 +145,15 @@ export function acceptBid(id, nodeId) {
                 else resolve(this.changes); // 1 if successful, 0 if already taken
             }
         );
+    });
+}
+
+// Quests
+export function getQuests() {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM quests", (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
     });
 }

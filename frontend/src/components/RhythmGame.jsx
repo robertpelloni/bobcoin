@@ -13,6 +13,7 @@ const HIT_TOLERANCE = 1.5; // +/- units (Perspective makes this tricky, need len
 
 export function RhythmGame({ onScoreUpdate }) {
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isAutoPlay, setIsAutoPlay] = useState(false);
     const [notes, setNotes] = useState([]);
     const [feedback, setFeedback] = useState(null);
 
@@ -28,8 +29,14 @@ export function RhythmGame({ onScoreUpdate }) {
 
     const startGame = () => {
         setIsPlaying(true);
+        setIsAutoPlay(false);
         synth.init(); // Initialize Audio Context
-        // const stopAmbience = synth.playAmbience().stop; // Optional: Play drone
+    };
+
+    const startAutoPlay = () => {
+        setIsPlaying(true);
+        setIsAutoPlay(true);
+        synth.init();
     };
 
     const spawnNote = (time) => {
@@ -61,9 +68,21 @@ export function RhythmGame({ onScoreUpdate }) {
             // Move note forward (Positive Z)
             const nextZ = note.z + SPEED;
 
+            // Auto Play Logic
+            if (isAutoPlay && !note.hit && Math.abs(nextZ - HIT_ZONE_Z) < 0.2) {
+                // Perfect hit
+                synth.playHit();
+                // setFeedback('AUTO'); // Optional
+                // setTimeout(() => setFeedback(null), 100);
+                note.hit = true;
+                // Don't add to nextNotes (remove it)
+                stateChanged = true;
+                return;
+            }
+
             // Miss logic (past camera > 2)
             if (nextZ > 2) {
-                if (!note.hit) {
+                if (!note.hit && !isAutoPlay) {
                     onScoreUpdate(-10); // Penalty for miss
                     synth.playMiss();
                 }
@@ -94,7 +113,7 @@ export function RhythmGame({ onScoreUpdate }) {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (!isPlaying) return;
+            if (!isPlaying || isAutoPlay) return; // Disable input in AutoPlay
             const key = e.key.toUpperCase();
             const laneIndex = LANES.indexOf(key);
             if (laneIndex === -1) return;
@@ -142,7 +161,7 @@ export function RhythmGame({ onScoreUpdate }) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPlaying, onScoreUpdate]);
+    }, [isPlaying, onScoreUpdate, isAutoPlay]);
 
     function ErrorFallback({error}) {
         console.error(error);
@@ -179,13 +198,20 @@ export function RhythmGame({ onScoreUpdate }) {
                     </div>
                 )}
 
+                {isAutoPlay && <div className="autoplay-indicator">VISUALIZER MODE</div>}
+
                 {!isPlaying && (
                     <div className="game-overlay">
-                        <h2>PROOF OF PLAY v2.0</h2>
+                        <h2>PROOF OF PLAY v2.1</h2>
                         <p>Press D, F, J, K to match notes.</p>
-                        <button className="cyber-button" onClick={startGame}>
-                            START MINING
-                        </button>
+                        <div className="button-group">
+                            <button className="cyber-button" onClick={startGame}>
+                                START MINING
+                            </button>
+                            <button className="cyber-button secondary" onClick={startAutoPlay}>
+                                AUTO / VISUALIZER
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

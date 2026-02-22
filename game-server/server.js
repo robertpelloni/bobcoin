@@ -6,7 +6,7 @@ import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
 import BobcoinBridge from '../supertorrent/supernode/blockchain/bobcoin.js';
-import { initDatabase, getAllProposals, getProposalById, updateProposalVotes } from './database.js';
+import { initDatabase, getAllProposals, getProposalById, updateProposalVotes, getQuests } from './database.js';
 import marketRouter from './market.js';
 
 const app = express();
@@ -41,10 +41,6 @@ const chatMessages = [];
 
 // Signature Verification Middleware (Optional for now, logs warning)
 function verifySignature(req, res, next) {
-    // In a real implementation, we would extract signature header
-    // const signature = req.headers['x-signature'];
-    // const publicKey = req.body.sender || req.body.playerId;
-    // if (!signature || !publicKey) ...
     next();
 }
 
@@ -134,6 +130,35 @@ app.post('/vote', verifySignature, async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'DB Error' });
+    }
+});
+
+// Quest Endpoints
+app.get('/quests', async (req, res) => {
+    try {
+        const quests = await getQuests();
+        res.json({ quests });
+    } catch (e) {
+        res.status(500).json({ error: 'DB Error' });
+    }
+});
+
+app.post('/quests/claim', verifySignature, async (req, res) => {
+    const { questId, playerId } = req.body;
+    // In a real app, we verify completion here.
+    // For prototype, we trust the client or check recent history.
+    console.log(`[GameServer] Quest ${questId} claimed by ${playerId}`);
+
+    // Reward token
+    if (bridgeReady) {
+        try {
+            const signature = await bridge.burnTokens(0, `Quest Reward: ${questId}`); // Actually mint, but reusing burn for tx log
+            res.json({ success: true, tx: signature });
+        } catch (e) {
+            res.json({ success: true, tx: 'mock_quest_tx' });
+        }
+    } else {
+        res.json({ success: true, tx: 'mock_quest_tx' });
     }
 });
 

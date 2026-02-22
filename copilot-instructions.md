@@ -1,8 +1,5 @@
-# GitHub Copilot Instructions
+See `docs/UNIVERSAL_INSTRUCTIONS.md` for the master instructions.
 
-Please refer to `docs/AI_INSTRUCTIONS.md` for the Universal Project Directives.
-
-**Context**:
-- This is a Cyberpunk-themed Blockchain Game/Protocol.
-- Style: Neon, Dark Mode, Glitch Effects.
-- Tech: React, Express, Solana, Rust (SP1).
+## Copilot Notes
+- Suggest code completions that align with `react-three-fiber` v8 syntax.
+- Avoid suggesting Python code unless specifically asked for scripts.

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { getBankroll } from '../api'; // Use for real balance
 import './Wallet.css';
 
 const MOCK_HISTORY = [
@@ -14,6 +15,18 @@ export function Wallet() {
     const { publicKey } = useWallet();
     const [history, setHistory] = useState(MOCK_HISTORY);
     const [showKeys, setShowKeys] = useState(false);
+    const [realBalance, setRealBalance] = useState(0);
+    const [transferMode, setTransferMode] = useState('SEND'); // SEND or RECEIVE
+    const [recipient, setRecipient] = useState('');
+    const [amount, setAmount] = useState('');
+
+    // Fetch real balance if connected
+    useEffect(() => {
+        if (publicKey) {
+            getBankroll().then(b => setRealBalance(b)); // Currently fetches server bankroll as proxy for "network"
+            // In a real app, we'd fetch specific user balance via RPC
+        }
+    }, [publicKey]);
 
     const toggleDecode = (id) => {
         setHistory(history.map(tx => {
@@ -22,6 +35,13 @@ export function Wallet() {
             }
             return tx;
         }));
+    };
+
+    const handleTransfer = (e) => {
+        e.preventDefault();
+        alert(`Initiating Privacy Transfer: ${amount} BOB to ${recipient} (Mocked)`);
+        setRecipient('');
+        setAmount('');
     };
 
     return (
@@ -37,7 +57,7 @@ export function Wallet() {
                 <div className="balance-display">
                     <span className="currency">BOB</span>
                     <span className="amount">
-                        {publicKey ? '1,250.50' : '---.--'}
+                        {publicKey ? (realBalance > 0 ? realBalance.toFixed(4) : '1,250.50') : '---.--'}
                     </span>
                 </div>
 
@@ -54,6 +74,32 @@ export function Wallet() {
 
             {publicKey && (
                 <>
+                    <div className="action-panel">
+                        <div className="tabs">
+                            <button className={transferMode === 'SEND' ? 'active' : ''} onClick={() => setTransferMode('SEND')}>SEND</button>
+                            <button className={transferMode === 'RECEIVE' ? 'active' : ''} onClick={() => setTransferMode('RECEIVE')}>RECEIVE</button>
+                        </div>
+
+                        {transferMode === 'SEND' ? (
+                            <form onSubmit={handleTransfer} className="transfer-form">
+                                <div className="input-group">
+                                    <label>RECIPIENT (STEALTH ADDRESS)</label>
+                                    <input type="text" placeholder="bob1q..." value={recipient} onChange={e => setRecipient(e.target.value)} />
+                                </div>
+                                <div className="input-group">
+                                    <label>AMOUNT</label>
+                                    <input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
+                                </div>
+                                <button type="submit" className="cyber-button full-width">SIGN & TRANSFER (RING CT)</button>
+                            </form>
+                        ) : (
+                            <div className="receive-box">
+                                <div className="qr-placeholder">[ QR CODE GENERATOR ]</div>
+                                <p>Share this one-time stealth address to receive funds privately.</p>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="settings-grid">
                         <div className="setting-card">
                             <h3>KEY MANAGEMENT</h3>

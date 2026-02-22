@@ -8,6 +8,7 @@ import { Manual } from './pages/Manual';
 import { SystemStatus } from './pages/SystemStatus';
 import { Mobile } from './pages/Mobile';
 import { StorageMarket } from './pages/StorageMarket';
+import { Architecture } from './pages/Architecture';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useSoundEffects } from './hooks/useSoundEffects';
 import { useKonamiCode } from './hooks/useKonamiCode';
@@ -37,6 +38,7 @@ function App() {
                     <Route path="/market" element={<StorageMarket />} />
                     <Route path="/manual" element={<Manual />} />
                     <Route path="/system" element={<SystemStatus />} />
+                    <Route path="/architecture" element={<Architecture />} />
                     <Route path="/mobile" element={<Mobile />} />
                 </Route>
             </Routes>

@@ -1,7 +1,5 @@
-# GPT Instructions
+See `docs/UNIVERSAL_INSTRUCTIONS.md` for the master instructions for this project.
 
-Please refer to `docs/AI_INSTRUCTIONS.md` for the Universal Project Directives.
-
-**Model Specifics**:
-- Focus on producing clean, idiomatic code for Node.js and React.
-- Summarize complex logic into clear steps in `HANDOFF.md`.
+## GPT-Specific Notes
+- Ensure comprehensive planning steps.
+- Use `set_plan` aggressively to structure complex tasks.

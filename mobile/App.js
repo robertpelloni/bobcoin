@@ -4,43 +4,150 @@ import { useState, useEffect } from 'react';
 
 const API_URL = 'http://localhost:3001'; // In emulator, use 10.0.2.2 or tunnel
 
+// Components
+const MiningScreen = ({ mining, setMining, balance, hashRate, logs, globalBankroll, leaderboard }) => {
+    // Graph Logic embedded
+    const [graphData, setGraphData] = useState(new Array(20).fill(10));
+
+    useEffect(() => {
+        if(mining && hashRate > 0) {
+            setGraphData(prev => [...prev.slice(1), hashRate]);
+        }
+    }, [mining, hashRate]);
+
+    const renderGraph = () => {
+        if (!mining) return <Text style={{color: '#555', textAlign: 'center', marginTop: 20}}>MINING INACTIVE</Text>;
+        const max = Math.max(...graphData, 150);
+        const min = Math.min(...graphData, 0);
+        return (
+            <View style={styles.graphContainer}>
+                {graphData.map((val, i) => {
+                    const height = ((val - min) / (max - min)) * 50 + 10;
+                    return <View key={i} style={[styles.bar, {height, backgroundColor: i === graphData.length-1 ? '#fff' : '#0ff'}]} />;
+                })}
+            </View>
+        )
+    };
+
+    return (
+        <ScrollView style={styles.scrollContent}>
+            <View style={styles.card}>
+                <Text style={styles.label}>LOCAL BALANCE</Text>
+                <Text style={styles.value}>{balance.toFixed(4)} <Text style={styles.currency}>BOB</Text></Text>
+                <Text style={styles.hashRate}>{mining ? `${hashRate} H/s` : 'IDLE'}</Text>
+            </View>
+
+            <View style={styles.row}>
+                <View style={[styles.card, {flex: 1, marginRight: 10}]}>
+                    <Text style={styles.label}>GLOBAL BANKROLL</Text>
+                    <Text style={styles.statValue}>{globalBankroll.toFixed(2)}</Text>
+                </View>
+                <View style={[styles.card, {flex: 1}]}>
+                    <Text style={styles.label}>NETWORK STATUS</Text>
+                    <Text style={[styles.statValue, {color: '#0f0'}]}>ONLINE</Text>
+                </View>
+            </View>
+
+            <TouchableOpacity
+                style={[styles.button, mining ? styles.buttonActive : null]}
+                onPress={() => setMining(!mining)}
+            >
+                <Text style={styles.buttonText}>{mining ? 'STOP MINING' : 'START MINING'}</Text>
+                {mining && <ActivityIndicator color="#0ff" style={{marginLeft: 10}} />}
+            </TouchableOpacity>
+
+            <View style={styles.graphBox}>
+                <Text style={styles.label}>HASHRATE MONITOR</Text>
+                {renderGraph()}
+            </View>
+
+            <View style={styles.logContainer}>
+                <Text style={styles.label}>SYSTEM LOGS</Text>
+                {logs.map((log, i) => <Text key={i} style={styles.logText}>{log}</Text>)}
+            </View>
+        </ScrollView>
+    );
+};
+
+const QuestsScreen = () => {
+    const [quests, setQuests] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${API_URL}/quests`)
+            .then(res => res.json())
+            .then(data => setQuests(data.quests || []))
+            .catch(err => console.log(err))
+            .finally(() => setLoading(false));
+    }, []);
+
+    return (
+        <ScrollView style={styles.scrollContent}>
+            <Text style={styles.sectionTitle}>DAILY BOUNTIES</Text>
+            {loading ? <Text style={{color:'#888'}}>Loading...</Text> : quests.map(q => (
+                <View key={q.id} style={styles.card}>
+                    <View style={{flexDirection:'row', justifyContent:'space-between'}}>
+                        <Text style={{color:'#fff', fontWeight:'bold'}}>{q.title}</Text>
+                        <Text style={{color:'#0f0'}}>+{q.reward} BOB</Text>
+                    </View>
+                    <Text style={{color:'#888', fontSize:12, marginTop:5}}>Target: {q.target}</Text>
+                    <TouchableOpacity style={[styles.button, {marginTop:10, padding:10, marginBottom:0}]}>
+                        <Text style={[styles.buttonText, {fontSize:12}]}>CLAIM</Text>
+                    </TouchableOpacity>
+                </View>
+            ))}
+        </ScrollView>
+    );
+};
+
+const WalletScreen = ({ balance }) => {
+    return (
+        <ScrollView style={styles.scrollContent}>
+            <View style={styles.card}>
+                <Text style={styles.label}>TOTAL ASSETS</Text>
+                <Text style={styles.value}>{balance.toFixed(4)} <Text style={styles.currency}>BOB</Text></Text>
+            </View>
+
+            <View style={[styles.card, {alignItems:'center', padding:40}]}>
+                <View style={{width:200, height:200, backgroundColor:'#fff', marginBottom:20}}></View>
+                <Text style={{color:'#888', fontFamily:'monospace', textAlign:'center'}}>
+                    0x71C7656EC7ab88b098defB751B7401B5f6d8976F
+                </Text>
+                <TouchableOpacity style={[styles.button, {marginTop:20, width:'100%', marginBottom:0}]}>
+                    <Text style={styles.buttonText}>COPY ADDRESS</Text>
+                </TouchableOpacity>
+            </View>
+        </ScrollView>
+    );
+};
+
 export default function App() {
+  const [tab, setTab] = useState('MINING');
   const [mining, setMining] = useState(false);
   const [balance, setBalance] = useState(0.0000);
   const [hashRate, setHashRate] = useState(0);
   const [globalBankroll, setGlobalBankroll] = useState(0);
   const [logs, setLogs] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // Mining Graph Data
-  const [graphData, setGraphData] = useState(new Array(20).fill(10));
 
   // Fetch Global Stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        setLoading(true);
-        // Fetch Bankroll
         const bRes = await fetch(`${API_URL}/bankroll`);
         if (bRes.ok) {
             const bData = await bRes.json();
             setGlobalBankroll(bData.balance);
         }
-
-        // Fetch Leaderboard
         const lRes = await fetch(`${API_URL}/leaderboard`);
         if (lRes.ok) {
             const lData = await lRes.json();
             setLeaderboard(lData.leaderboard || []);
         }
       } catch (e) {
-        setLogs(l => [`[ERROR] Connection Failed: ${e.message}`, ...l].slice(0, 5));
-      } finally {
-        setLoading(false);
+        setLogs(l => [`[ERROR] Connection Failed`, ...l].slice(0, 5));
       }
     };
-
     fetchStats();
     const interval = setInterval(fetchStats, 10000);
     return () => clearInterval(interval);
@@ -52,25 +159,13 @@ export default function App() {
     if (mining) {
       interval = setInterval(async () => {
         try {
-            // Simulate Variable Hashrate
-            const currentHash = Math.floor(Math.random() * 50) + 100; // 100-150 H/s
+            const currentHash = Math.floor(Math.random() * 50) + 100;
             setHashRate(currentHash);
-
-            // Update Graph
-            setGraphData(prev => {
-                const newData = [...prev.slice(1), currentHash];
-                return newData;
-            });
-
-            // Simulate Reward
             setBalance(b => b + 0.0001);
-
             if (Math.random() > 0.7) {
-                 setLogs(l => [`[MINING] Block #${Math.floor(Math.random() * 9999)} verified (${currentHash} H/s)`, ...l].slice(0, 8));
+                 setLogs(l => [`[MINING] Block verified (${currentHash} H/s)`, ...l].slice(0, 8));
             }
-        } catch (e) {
-            setLogs(l => [`[ERROR] Mining Loop Error.`, ...l].slice(0, 8));
-        }
+        } catch (e) {}
       }, 1000);
     } else {
         setHashRate(0);
@@ -78,94 +173,32 @@ export default function App() {
     return () => clearInterval(interval);
   }, [mining]);
 
-  // Simple ASCII Graph
-  const renderGraph = () => {
-      if (!mining) return <Text style={{color: '#555', textAlign: 'center', marginTop: 20}}>MINING INACTIVE</Text>;
-
-      const max = Math.max(...graphData, 150);
-      const min = Math.min(...graphData, 0);
-
-      return (
-          <View style={styles.graphContainer}>
-              {graphData.map((val, i) => {
-                  const height = ((val - min) / (max - min)) * 50 + 10;
-                  return (
-                      <View key={i} style={[styles.bar, {height, backgroundColor: i === graphData.length-1 ? '#fff' : '#0ff'}]} />
-                  );
-              })}
-          </View>
-      )
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>BOBCOIN</Text>
-        <Text style={styles.subtitle}>MOBILE LIGHT NODE v1.1</Text>
+        <Text style={styles.subtitle}>MOBILE LIGHT NODE v2.0</Text>
       </View>
 
-      <ScrollView style={styles.scrollContent}>
-        {/* Wallet Card */}
-        <View style={styles.card}>
-            <Text style={styles.label}>LOCAL BALANCE</Text>
-            <Text style={styles.value}>{balance.toFixed(4)} <Text style={styles.currency}>BOB</Text></Text>
-            <Text style={styles.hashRate}>{mining ? `${hashRate} H/s` : 'IDLE'}</Text>
-        </View>
+      <View style={styles.content}>
+          {tab === 'MINING' && (
+              <MiningScreen
+                mining={mining} setMining={setMining}
+                balance={balance} hashRate={hashRate}
+                logs={logs} globalBankroll={globalBankroll}
+              />
+          )}
+          {tab === 'QUESTS' && <QuestsScreen />}
+          {tab === 'WALLET' && <WalletScreen balance={balance} />}
+      </View>
 
-        {/* Global Stats */}
-        <View style={styles.row}>
-            <View style={[styles.card, {flex: 1, marginRight: 10}]}>
-                <Text style={styles.label}>GLOBAL BANKROLL</Text>
-                <Text style={styles.statValue}>{globalBankroll.toFixed(2)}</Text>
-            </View>
-            <View style={[styles.card, {flex: 1}]}>
-                <Text style={styles.label}>NETWORK STATUS</Text>
-                <Text style={[styles.statValue, {color: '#0f0'}]}>ONLINE</Text>
-            </View>
-        </View>
-
-        {/* Mining Control */}
-        <TouchableOpacity
-            style={[styles.button, mining ? styles.buttonActive : null]}
-            onPress={() => setMining(!mining)}
-        >
-            <Text style={styles.buttonText}>
-            {mining ? 'STOP MINING' : 'START MINING'}
-            </Text>
-            {mining && <ActivityIndicator color="#0ff" style={{marginLeft: 10}} />}
-        </TouchableOpacity>
-
-        {/* Visual Graph */}
-        <View style={styles.graphBox}>
-            <Text style={styles.label}>HASHRATE MONITOR</Text>
-            {renderGraph()}
-        </View>
-
-        {/* Console Logs */}
-        <View style={styles.logContainer}>
-            <Text style={styles.label}>SYSTEM LOGS</Text>
-            {logs.map((log, i) => (
-            <Text key={i} style={styles.logText}>{log}</Text>
-            ))}
-            {logs.length === 0 && <Text style={{color:'#555'}}>Ready to initialize...</Text>}
-        </View>
-
-        {/* Leaderboard Teaser */}
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>TOP MINERS</Text>
-            {leaderboard.length > 0 ? (
-                leaderboard.slice(0, 3).map((p, i) => (
-                    <View key={i} style={styles.leaderRow}>
-                        <Text style={styles.leaderRank}>#{i+1}</Text>
-                        <Text style={styles.leaderName}>{p.player.substring(0, 10)}...</Text>
-                        <Text style={styles.leaderScore}>{p.score}</Text>
-                    </View>
-                ))
-            ) : (
-                <Text style={{color: '#555', fontStyle: 'italic'}}>Fetching network data...</Text>
-            )}
-        </View>
-      </ScrollView>
+      <View style={styles.tabBar}>
+          {['MINING', 'QUESTS', 'WALLET'].map(t => (
+              <TouchableOpacity key={t} style={[styles.tabItem, tab === t ? styles.tabActive : null]} onPress={() => setTab(t)}>
+                  <Text style={[styles.tabText, tab === t ? styles.tabTextActive : null]}>{t}</Text>
+              </TouchableOpacity>
+          ))}
+      </View>
 
       <StatusBar style="light" />
     </View>
@@ -180,14 +213,42 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
+  },
+  content: {
+      flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
   },
+  tabBar: {
+      flexDirection: 'row',
+      borderTopWidth: 1,
+      borderTopColor: '#333',
+      height: 60,
+      backgroundColor: '#111',
+  },
+  tabItem: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  tabActive: {
+      borderTopWidth: 2,
+      borderTopColor: '#0ff',
+      backgroundColor: '#1a1a1a',
+  },
+  tabText: {
+      color: '#555',
+      fontSize: 12,
+      fontWeight: 'bold',
+  },
+  tabTextActive: {
+      color: '#0ff',
+  },
   title: {
     color: '#0ff',
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 'bold',
     letterSpacing: 4,
     textShadowColor: '#0ff',
@@ -195,7 +256,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: '#ff00ff',
-    fontSize: 14,
+    fontSize: 12,
     letterSpacing: 2,
   },
   card: {
@@ -273,9 +334,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginBottom: 3,
   },
-  section: {
-    marginBottom: 30,
-  },
   sectionTitle: {
     color: '#fff',
     fontSize: 16,
@@ -283,26 +341,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333',
     paddingBottom: 5,
     marginBottom: 10,
-  },
-  leaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-  },
-  leaderRank: {
-    color: '#ff00ff',
-    width: 30,
-    fontWeight: 'bold',
-  },
-  leaderName: {
-    color: '#ccc',
-    flex: 1,
-  },
-  leaderScore: {
-    color: '#0ff',
-    fontWeight: 'bold',
+    marginTop: 10,
   },
   graphBox: {
       height: 100,

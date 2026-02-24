@@ -6,7 +6,7 @@ import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
 import BobcoinBridge from '../supertorrent/supernode/blockchain/bobcoin.js';
-import { initDatabase, getAllProposals, getProposalById, updateProposalVotes, getQuests } from './database.js';
+import { initDatabase, getAllProposals, getProposalById, updateProposalVotes, getQuests, getChatMessages, addChatMessage } from './database.js';
 import marketRouter from './market.js';
 
 const app = express();
@@ -21,9 +21,6 @@ app.use('/market', marketRouter);
 // Initialize Bridge & DB
 const bridge = new BobcoinBridge();
 let bridgeReady = false;
-
-// Simple In-Memory Chat Store
-const chatMessages = [];
 
 (async () => {
     try {
@@ -75,25 +72,27 @@ app.get('/content', async (req, res) => {
 });
 
 // Chat Endpoints
-app.get('/chat', (req, res) => {
-    res.json({ messages: chatMessages.slice(-50) }); // Return last 50
+app.get('/chat', async (req, res) => {
+    try {
+        const messages = await getChatMessages(50);
+        res.json({ messages });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'DB Error' });
+    }
 });
 
-app.post('/chat', (req, res) => {
+app.post('/chat', async (req, res) => {
     const { user, text } = req.body;
     if (!user || !text) return res.status(400).json({ error: 'Missing fields' });
 
-    const msg = {
-        id: Date.now(),
-        user: user.slice(0, 15), // Truncate name
-        text: text.slice(0, 140), // Tweet length
-        timestamp: new Date().toLocaleTimeString()
-    };
-
-    chatMessages.push(msg);
-    if (chatMessages.length > 100) chatMessages.shift(); // Keep buffer small
-
-    res.json({ success: true, message: msg });
+    try {
+        const msg = await addChatMessage(user.slice(0, 15), text.slice(0, 140));
+        res.json({ success: true, message: msg });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'DB Error' });
+    }
 });
 
 // Governance Endpoints
@@ -145,14 +144,11 @@ app.get('/quests', async (req, res) => {
 
 app.post('/quests/claim', verifySignature, async (req, res) => {
     const { questId, playerId } = req.body;
-    // In a real app, we verify completion here.
-    // For prototype, we trust the client or check recent history.
     console.log(`[GameServer] Quest ${questId} claimed by ${playerId}`);
 
-    // Reward token
     if (bridgeReady) {
         try {
-            const signature = await bridge.burnTokens(0, `Quest Reward: ${questId}`); // Actually mint, but reusing burn for tx log
+            const signature = await bridge.burnTokens(0, `Quest Reward: ${questId}`);
             res.json({ success: true, tx: signature });
         } catch (e) {
             res.json({ success: true, tx: 'mock_quest_tx' });
@@ -194,7 +190,7 @@ app.post('/submit-proof', verifySignature, async (req, res) => {
     console.log(`[GameServer] Received Proof from ${proof.playerId}. Score: ${proof.publicValues.score}`);
 
     try {
-        // 1. ZK Verification (Phase 13)
+        // 1. ZK Verification
         let zkVerified = false;
         try {
             console.log(`[GameServer] Requesting ZK Verification from ${ZK_SERVICE_URL}...`);

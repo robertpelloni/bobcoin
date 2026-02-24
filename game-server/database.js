@@ -42,6 +42,16 @@ export function initDatabase() {
                     reward INTEGER NOT NULL,
                     type TEXT NOT NULL
                 )
+            `);
+
+            // Chat Messages Table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user TEXT NOT NULL,
+                    text TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+                )
             `, async (err) => {
                 if (err) return reject(err);
 
@@ -155,5 +165,29 @@ export function getQuests() {
             if (err) reject(err);
             else resolve(rows);
         });
+    });
+}
+
+// Chat
+export function getChatMessages(limit = 50) {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM messages ORDER BY id DESC LIMIT ?", [limit], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows.reverse()); // Return oldest first
+        });
+    });
+}
+
+export function addChatMessage(user, text) {
+    return new Promise((resolve, reject) => {
+        const timestamp = new Date().toLocaleTimeString();
+        db.run(
+            "INSERT INTO messages (user, text, timestamp) VALUES (?, ?, ?)",
+            [user, text, timestamp],
+            function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID, user, text, timestamp });
+            }
+        );
     });
 }

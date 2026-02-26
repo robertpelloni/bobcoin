@@ -1,0 +1,109 @@
+.storage-market-container {
+    width: 100%;
+    max-width: 900px;
+    padding: 2rem;
+    color: #e0e0e0;
+}
+
+.market-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #0ff;
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.market-header h1 {
+    font-size: 2.5rem;
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+.create-bid-section {
+    background: rgba(20, 20, 30, 0.8);
+    border: 1px solid #333;
+    padding: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.create-bid-section h2 {
+    color: #0f0;
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.bid-form {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 0.5rem;
+}
+
+.bids-list {
+    text-align: left;
+}
+
+.bids-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(0,0,0,0.6);
+}
+
+.bids-table th {
+    text-align: left;
+    padding: 1rem;
+    color: #0ff;
+    border-bottom: 1px solid #333;
+}
+
+.bids-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #333;
+}
+
+.magnet-link {
+    font-family: monospace;
+    color: #aaa;
+    word-break: break-all;
+    max-width: 300px;
+    font-size: 0.8rem;
+}
+
+.bid-amount {
+    color: #0f0;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.bid-status {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.bid-status.open {
+    background: rgba(0, 255, 0, 0.1);
+    color: #0f0;
+    border: 1px solid #0f0;
+}
+
+.bid-status.accepted {
+    background: rgba(85, 85, 85, 0.3);
+    color: #aaa;
+    border: 1px solid #555;
+}

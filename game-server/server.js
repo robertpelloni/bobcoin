@@ -190,7 +190,7 @@ app.post('/submit-proof', verifySignature, async (req, res) => {
     console.log(`[GameServer] Received Proof from ${proof.playerId}. Score: ${proof.publicValues.score}`);
 
     try {
-        // 1. ZK Verification
+        // 1. ZK Verification via SP1 Rust Service
         let zkVerified = false;
         try {
             console.log(`[GameServer] Requesting ZK Verification from ${ZK_SERVICE_URL}...`);
@@ -204,6 +204,7 @@ app.post('/submit-proof', verifySignature, async (req, res) => {
                 const zkResult = await zkResponse.json();
                 if (zkResult.success) {
                     zkVerified = true;
+                    console.log('[GameServer] ZK Verification Passed ✅ (via SP1 Execution Trace)');
                 } else {
                     throw new Error(`ZK Verification Failed: ${zkResult.error}`);
                 }
@@ -211,11 +212,15 @@ app.post('/submit-proof', verifySignature, async (req, res) => {
                 console.warn('[GameServer] ZK Service unavailable or error. status:', zkResponse.status);
             }
         } catch (zkErr) {
-            console.error('[GameServer] ZK Service Error:', zkErr.message);
+            console.error('[GameServer] ZK Service Error (Is it running?):', zkErr.message);
         }
 
-        // 2. Bridge Verification
-        const isValid = await bridge.verifyGameScoreProof(proof);
+        // 2. Legacy/Bridge Fallback Verification
+        let isValid = false;
+        if (!zkVerified) {
+            console.log('[GameServer] Falling back to optimistic score validation...');
+            isValid = await bridge.verifyGameScoreProof(proof);
+        }
 
         if (!isValid && !zkVerified) {
             console.log('[GameServer] Proof Rejected ❌');

@@ -1,46 +1,28 @@
-# Proof of Play (SP1 Circuit)
+# Bobcoin Zero-Knowledge Verification Service
 
-This directory contains the Zero-Knowledge Circuit for Bobcoin's "Proof of Play" mechanism.
-It is built using [SP1](https://github.com/succinctlabs/sp1), a zkVM that proves the execution of Rust programs.
+This module utilizes the **SP1 zkVM** (RISC-V) to verify "Proof of Play" game scores off-chain.
 
-## Prerequisites
+## Architecture
 
-You need the SP1 toolchain installed to compile this program for the RISC-V zkVM.
+-   **`program/`**: Contains the Rust code that is compiled into a RISC-V ELF binary. This program takes game inputs (perfects, greats, misses) and calculates the final score, committing it to the public output.
+-   **`script/`**: Contains an Actix-Web server that acts as the Verifier node. It receives proof submissions from the `game-server`, decodes them, and uses the SP1 SDK to verify that the public outputs match the submitted score.
 
+## Current Status (Phase 3)
+
+The service is currently running in **"Server-Side Proving / Execution"** mode.
+Instead of verifying a cryptographic SNARK sent from the browser (which is computationally heavy for a web client prototype), the `script` server receives the raw game inputs, executes the ELF binary using the `sp1_sdk` to ensure the logic holds, and verifies the resulting committed score against the requested reward.
+
+## Running the Service
+
+The service is automatically built and run via Docker Compose (`zk-service`).
+
+If running locally:
 ```bash
-curl -L https://sp1.succinct.xyz | bash
-source $HOME/.bashrc
-sp1up
-```
+# 1. Build the RISC-V ELF Program
+cd program
+cargo prove build --output-directory elf
 
-## Building
-
-To compile the program into an ELF binary executable by the SP1 zkVM:
-
-```bash
-cargo prove build
-```
-
-This will output the ELF to `elf/riscv32im-succinct-zkvm-elf`.
-
-## Logic
-
-The program (`src/main.rs`) validates that a claimed game score matches the individual judgment counts (Perfects, Greats, Misses).
-It ensures:
-1. `score == perfects * 100 + greats * 50`
-2. `score <= 1,000,000`
-
-If valid, it commits the score and a boolean `true` to the public output.
-
-## Integration (Game Server)
-
-The `game-server` directory contains a Node.js Host application that:
-1.  Accepts proofs (simulated or real) via HTTP POST.
-2.  Verifies the public values match the score.
-3.  Interacts with the `supertorrent` bridge to mint tokens.
-
-To run the Verifier:
-```bash
-cd ../game-server
-npm start
+# 2. Run the Verification Server
+cd ../script
+cargo run --release
 ```

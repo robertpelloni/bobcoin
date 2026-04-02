@@ -42,7 +42,7 @@ We have successfully implemented the Mobile Light Node functional simulation in 
 4.  **Storage Marketplace**: Expand the "Pay-to-Seed" into a full bid/ask market for storage, bridging the new `StorageMarket.jsx` with the Supernode accept logic.
 
 ## Known Issues / Notes
-- **Missing Backend Services**: The root directory is currently missing the main Express entry points (`server.js`) for the game-server and supertorrent due to what appears to be a repository desync or an incomplete AI commit in a previous session. A mock API is filling the gap.
+- **Mock APIs:** The backend servers have been restored, but the frontend still relies on `api.js` mocks for `burnTokens` and `mintTokens`. The next step is to remove these mocks and connect to the live backend endpoints.
 - **Rate Limits**: Solana Devnet faucet frequently 429s. The Bridge has robust fallback logic to return "mock" signatures so the UI demo doesn't break.
 - **Dependencies**: Use `npm install --legacy-peer-deps` in `supertorrent` due to Solana/LightProtocol version mismatches.
 

@@ -20,10 +20,10 @@
 - [ ] **Full Backend Integration:** Remove frontend mock APIs and connect UI components to the live, restored backend services.
 - [ ] **On-Chain Governance:** Migrate SQLite `proposals` logic to an SPL Governance Program on Solana.
 - [ ] **Full ZK Proving:** Upgrade SP1 ZK Service from `client.execute()` to `client.prove()` to generate actual cryptographic traces.
-- [ ] **Decentralized Storage Market:** Connect the Supernode WebTorrent client fully to the new `StorageMarket.jsx` to create a decentralized bid/ask order book for file hosting.
+- [ ] **Decentralized Storage Market (Bobtorrent):** Connect the Supernode WebTorrent client fully to the new `StorageMarket.jsx` to create a decentralized bid/ask order book for file hosting.
 
-## Phase IV: The Sovereign Mainnet (Upcoming)
-- [ ] **Mobile Light Node Native:** Port the React-based mobile simulator to a true React Native application utilizing device APIs (HealthKit for steps, Background tasks for storage).
-- [ ] **Block Lattice Consensus:** Begin sunsetting the Solana Bridge in favor of a native Avalanche-style Block Lattice consensus.
-- [ ] **WASM Consensus Micro-Validators:** Port `bobcoin-consensus` to WebAssembly so any user running the 'bobzilla' browser can act as a micro-validator.
-- [ ] **No-Code Unity/Unreal SDKs:** Create drop-in plugins for game developers to integrate Proof-of-Play minting without writing smart contracts.
+## Phase IV: The Sovereign Mainnet & Arcade Hardware (Upcoming)
+- [ ] **Arcade Hardware Integration:** Hardcode Bobsgame/Bobmania physical arcade machines to act as anchor Supernodes for the Bobtorrent network.
+- [ ] **Block Lattice & DAG Consensus:** Sunset the Solana Bridge. Implement an Asynchronous Block Lattice (Nano style) combined with a DAG for 60,000+ TPS feeless microtransactions.
+- [ ] **SPoRA Consensus (Proof of Access):** Implement Succinct Proof of Random Access (Arweave style) so nodes must prove they hold Bobtorrent files to mine the next block.
+- [ ] **Fully Homomorphic Encryption (FHE):** Integrate FHE capabilities into the network to allow the execution of private smart contracts without decrypting balances or game logic.

@@ -11,6 +11,24 @@ services:
       - NODE_ENV=production
     restart: always
 
+  zk-service:
+    build:
+      context: .
+      dockerfile: proof-of-play/Dockerfile
+    volumes:
+      - ./proof-of-play:/app
+    # Override CMD to run the server instead of just building
+    # We must ensure the ELF is built first.
+    # For dev, we can chain commands: build program -> run script/server
+    command: >
+      bash -c "
+        cd program && cargo prove build --output-directory elf &&
+        cd ../script && cargo run --release
+      "
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
   game-server:
     build:
       context: .
@@ -19,8 +37,11 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=production
+      - ZK_SERVICE_URL=http://zk-service:8080
     depends_on:
       - supernode
+      - zk-service
+    restart: always
 
   frontend:
     build:
@@ -30,20 +51,4 @@ services:
       - "5174:5173"
     environment:
       - VITE_API_URL=http://localhost:3001
-
-  zk-service:
-    build:
-      context: .
-      dockerfile: proof-of-play/Dockerfile
-    volumes:
-      - ./proof-of-play:/app
-    # Override CMD to run the server instead of just building
-    # We must ensure the ELF is built first. 
-    # For dev, we can chain commands: build program -> run script/server
-    command: >
-      bash -c "
-        cd program && cargo prove build --output-directory elf &&
-        cd ../script && cargo run --release
-      "
-    ports:
-      - "8080:8080"
+      - VITE_SUPERNODE_API_URL=http://localhost:8081

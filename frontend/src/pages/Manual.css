@@ -1,0 +1,255 @@
+.manual-container {
+    display: flex;
+    gap: 2rem;
+    height: 80vh;
+    padding: 1rem;
+}
+
+.manual-sidebar {
+    width: 250px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #0ff;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    background: #0ff;
+    color: #000;
+    padding: 1rem;
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid #000;
+}
+
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.sidebar-btn {
+    background: transparent;
+    color: #888;
+    border: none;
+    border-bottom: 1px solid #222;
+    padding: 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar-btn:hover {
+    background: #111;
+    color: #0ff;
+}
+
+.sidebar-btn.active {
+    background: rgba(0, 255, 255, 0.1);
+    color: #0ff;
+    border-left: 3px solid #0ff;
+}
+
+.btn-icon {
+    font-size: 1.2rem;
+    filter: grayscale(100%) brightness(200%); /* Make emojis look more cyber */
+}
+
+.sidebar-btn.active .btn-icon {
+    filter: none;
+}
+
+.download-btn {
+    margin: 1rem;
+    padding: 1rem;
+    border-color: #ffd700;
+    color: #ffd700;
+}
+
+.manual-content {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #333;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.content-scroll {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 1rem;
+}
+
+.datalog-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed #555;
+    padding-bottom: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.8rem;
+    color: #555;
+}
+
+.status {
+    color: #0f0;
+}
+
+/* Typography & Layout inside Manual */
+.manual-content h2 {
+    color: #0ff;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.manual-content h3 {
+    color: #ff00ff;
+    margin-top: 2rem;
+}
+
+.manual-content .highlight {
+    color: #ffd700;
+    font-style: italic;
+    border-left: 2px solid #ffd700;
+    padding-left: 1rem;
+}
+
+.terminal-box {
+    background: #111;
+    border: 1px solid #333;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    font-family: 'Courier New', monospace;
+    color: #0f0;
+}
+
+.terminal-box.warning {
+    border-color: #ff0055;
+    color: #ff0055;
+}
+
+.pillar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.pillar-card {
+    background: #111;
+    border: 1px solid #333;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.pillar-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.pillar-card h4 {
+    color: #0ff;
+    margin: 0 0 0.5rem 0;
+}
+
+.market-split {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.market-side {
+    flex: 1;
+    background: #111;
+    padding: 1.5rem;
+    border: 1px dashed #555;
+}
+
+.cyber-list {
+    list-style-type: none;
+    counter-reset: custom-counter;
+    padding: 0;
+}
+
+.cyber-list li {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+    position: relative;
+}
+
+.cyber-list li::before {
+    counter-increment: custom-counter;
+    content: "0" counter(custom-counter) ".";
+    position: absolute;
+    left: 0;
+    color: #ff00ff;
+    font-weight: bold;
+}
+
+.tokenomics-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.chart-bar {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding-left: 1rem;
+    color: #000;
+    font-weight: bold;
+    font-size: 0.8rem;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+}
+
+/* Light Mode Overrides */
+body.light-mode .manual-sidebar {
+    background: #f5f5f5;
+    border-color: #ccc;
+}
+
+body.light-mode .sidebar-header {
+    background: #00cccc;
+    color: #fff;
+}
+
+body.light-mode .sidebar-btn {
+    border-bottom-color: #ddd;
+    color: #555;
+}
+
+body.light-mode .sidebar-btn:hover {
+    background: #eee;
+    color: #00cccc;
+}
+
+body.light-mode .sidebar-btn.active {
+    background: #e0ffff;
+    color: #00cccc;
+    border-left-color: #00cccc;
+}
+
+body.light-mode .terminal-box {
+    background: #fff;
+    border-color: #ccc;
+    color: #333;
+}
+
+body.light-mode .terminal-box.warning {
+    background: #fff0f0;
+    border-color: #cc0000;
+    color: #cc0000;
+}
+
+body.light-mode .pillar-card,
+body.light-mode .market-side {
+    background: #fff;
+    border-color: #ddd;
+}

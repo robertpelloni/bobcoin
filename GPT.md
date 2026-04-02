@@ -1,0 +1,5 @@
+See `docs/UNIVERSAL_INSTRUCTIONS.md` for the master instructions for this project.
+
+## GPT-Specific Notes
+- Ensure comprehensive planning steps.
+- Use `set_plan` aggressively to structure complex tasks.

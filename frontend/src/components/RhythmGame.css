@@ -1,0 +1,36 @@
+/* ... existing styles ... */
+
+.rhythm-game-container {
+    /* ... */
+}
+
+/* Add these: */
+.button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.cyber-button.secondary {
+    border-color: #ff00ff;
+    color: #ff00ff;
+}
+
+.cyber-button.secondary:hover {
+    background: rgba(255, 0, 255, 0.2);
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+}
+
+.autoplay-indicator {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ff00ff;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    border: 1px solid #ff00ff;
+    padding: 0.5rem 1rem;
+    background: rgba(0,0,0,0.8);
+    animation: pulse 2s infinite;
+}

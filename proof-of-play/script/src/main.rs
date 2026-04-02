@@ -3,7 +3,9 @@ use sp1_sdk::{ProverClient, SP1Stdin};
 use serde::{Deserialize, Serialize};
 
 // Compile-time ELF embedding
-const ELF: &[u8] = include_bytes!("../../program/elf/riscv32im-succinct-zkvm-elf");
+// The ELF file name depends on the binary name in Cargo.toml.
+// It seems it generated 'proof-of-play' instead of 'riscv32im-succinct-zkvm-elf'
+const ELF: &[u8] = include_bytes!("../../program/elf/proof-of-play");
 
 #[derive(Serialize, Deserialize, Debug)]
 struct GameStats {

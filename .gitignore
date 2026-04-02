@@ -1,8 +1,12 @@
-research/forest
-research/solana
 node_modules/
-target/
-dist/
-.env
 .DS_Store
+*.sqlite
+*.sqlite3
 *.log
+verification/*.png
+proof-of-play/target/
+frontend/dist/
+frontend/.vite/
+mobile/.expo/
+mobile/web-build/
+*.env

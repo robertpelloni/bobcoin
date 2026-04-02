@@ -31,6 +31,17 @@ export function initDatabase() {
                     status TEXT DEFAULT 'OPEN',
                     acceptedBy TEXT
                 )
+            `);
+
+            // Votes Table (to prevent double voting and track voter power)
+            db.run(`
+                CREATE TABLE IF NOT EXISTS votes (
+                    proposal_id INTEGER,
+                    voter_id TEXT,
+                    vote_type TEXT,
+                    power REAL,
+                    PRIMARY KEY (proposal_id, voter_id)
+                )
             `, async (err) => {
                 if (err) return reject(err);
 
@@ -86,6 +97,48 @@ export function updateProposalVotes(id, votesFor, votesAgainst) {
                 else resolve(this.changes);
             }
         );
+    });
+}
+
+export function castVote(proposalId, voterId, voteType, power) {
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+            
+            db.run(
+                "INSERT INTO votes (proposal_id, voter_id, vote_type, power) VALUES (?, ?, ?, ?)",
+                [proposalId, voterId, voteType, power],
+                function(err) {
+                    if (err) {
+                        db.run("ROLLBACK");
+                        return reject(err);
+                    }
+                    
+                    const voteCol = voteType === 'FOR' ? 'votesFor' : 'votesAgainst';
+                    db.run(
+                        `UPDATE proposals SET ${voteCol} = ${voteCol} + ? WHERE id = ?`,
+                        [power, proposalId],
+                        (err) => {
+                            if (err) {
+                                db.run("ROLLBACK");
+                                return reject(err);
+                            }
+                            db.run("COMMIT");
+                            resolve();
+                        }
+                    );
+                }
+            );
+        });
+    });
+}
+
+export function getVotesByProposal(proposalId) {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM votes WHERE proposal_id = ?", [proposalId], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
     });
 }
 

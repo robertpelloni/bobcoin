@@ -20,6 +20,40 @@ initDatabase().catch(err => {
 // Mount the marketplace router
 app.use('/market', marketRouter);
 
+// Governance Endpoints
+app.get('/proposals', async (req, res) => {
+    try {
+        const { getAllProposals } = await import('./database.js');
+        const proposals = await getAllProposals();
+        res.json(proposals);
+    } catch (e) {
+        res.status(500).json({ error: 'DB Error' });
+    }
+});
+
+app.post('/proposals/:id/vote', async (req, res) => {
+    const { id } = req.params;
+    const { voterId, voteType, power } = req.body;
+    try {
+        const { castVote } = await import('./database.js');
+        await castVote(parseInt(id), voterId, voteType, power);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message || 'DB Error' });
+    }
+});
+
+app.get('/proposals/:id/votes', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { getVotesByProposal } = await import('./database.js');
+        const votes = await getVotesByProposal(parseInt(id));
+        res.json(votes);
+    } catch (e) {
+        res.status(500).json({ error: 'DB Error' });
+    }
+});
+
 // Health Check
 app.get('/status', (req, res) => {
     res.json({ status: 'online', service: 'Game Server orchestrator', version: '2.4.0' });

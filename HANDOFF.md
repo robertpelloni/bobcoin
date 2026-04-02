@@ -1,23 +1,24 @@
-# Session Handoff - 2026-02-07
+# Session Handoff - 2026-04-01
 
 ## Overview
-This session focused on completing the "Phase II: Decentralized Oracle" and starting "Phase III: Sovereign Network" features for Bobcoin.
-We have successfully integrated a real Rust-based ZK Service (SP1), implemented a persistent Governance DAO, and closed the economic loop with a "Burn" mechanism for storage and items.
+This session focused on continuing "Phase III: Sovereign Network" features for Bobcoin.
+We have successfully implemented the Mobile Light Node functional simulation in the frontend, updating the placeholder to feature Proof of Walk (step counter) and Background Storage Mining.
 
 ## Architecture State
 
 1.  **Frontend (`frontend/`)**:
     - React + Vite + React Router v6.
     - Cyberpunk Theme.
-    - Pages: Dashboard (Rhythm Game), Supernode (Storage), Wallet (Privacy), Governance (DAO), Manual (Docs), System (Status).
+    - Pages: Dashboard (Rhythm Game), Supernode (Storage), Wallet (Privacy), Governance (DAO), Manual (Docs), System (Status), **Mobile (Light Node Simulator)**.
     - **Key Config**: `vite.config.js` reads version from `VERSION.md`.
+    - **Mock API**: Added `api.js` to simulate `mintTokens` and `burnTokens` while backend is being reconstructed.
 
 2.  **Game Server (`game-server/`)**:
     - Node.js Express (Port 3000 -> 3001).
     - Acts as Orchestrator/Oracle.
-    - **Governance**: Persists proposals to `proposals.json`.
+    - **Governance**: Persists proposals to SQLite (`database.sqlite`).
     - **ZK**: Proxies verification requests to `zk-service`.
-    - **Burn**: Exposes `/burn` endpoint calling the Bridge.
+    - **Market**: Manages active bids for storage marketplace (`market.js`).
 
 3.  **Supernode (`supertorrent/`)**:
     - Node.js Express (Port 8080 -> 8081).
@@ -30,25 +31,19 @@ We have successfully integrated a real Rust-based ZK Service (SP1), implemented 
     - Uses `sp1-sdk` to execute the `proof-of-play` ELF binary.
     - Verifies: `score == perfects * 100 + greats * 50`.
 
-## Recent Changes (v2.1.0)
-- **ZK Integration**: Frontend -> GameServer -> ZK Service flow verified.
-- **Economic Loop**: `burnTokens` implemented. Marketplace and "Pay-to-Seed" feature consume BOB.
-- **System Dashboard**: New `/system` page visualizing the architecture.
-- **Standardization**: Added `AGENTS.md`, `CLAUDE.md`, `VERSION.md`, `CHANGELOG.md`.
+## Recent Changes (v2.3.0)
+- **Mobile Light Node**: Replaced placeholder UI with functional simulated UI for step-counting (Proof of Walk) and background storage mining.
+- **Frontend API Mock**: Added missing `api.js` wrapper to support UI development until the full express backend is re-synced.
 
 ## Next Steps (Roadmap)
-1.  **On-Chain Governance**: Move `proposals.json` logic to a Solana Program (SPL Governance).
+1.  **On-Chain Governance**: Move `proposals.json`/SQLite logic to a Solana Program (SPL Governance).
 2.  **ZK Proving**: Currently we only *execute* the trace (`client.execute`). Upgrade to *prove* (`client.prove`) once compute resources allow (requires heavy lifting).
-3.  **Mobile Light Node**: Explore React Native port for mobile mining.
-4.  **Storage Marketplace**: Expand the "Pay-to-Seed" into a full bid/ask market for storage.
+3.  **Mobile Light Node**: Port the React simulation to an actual React Native application for physical device mining.
+4.  **Storage Marketplace**: Expand the "Pay-to-Seed" into a full bid/ask market for storage, bridging the new `StorageMarket.jsx` with the Supernode accept logic.
 
 ## Known Issues / Notes
+- **Missing Backend Services**: The root directory is currently missing the main Express entry points (`server.js`) for the game-server and supertorrent due to what appears to be a repository desync or an incomplete AI commit in a previous session. A mock API is filling the gap.
 - **Rate Limits**: Solana Devnet faucet frequently 429s. The Bridge has robust fallback logic to return "mock" signatures so the UI demo doesn't break.
-- **Ports**:
-    - Frontend: 5173
-    - Game Server: 3001 (Host) -> 3000 (Container)
-    - Supernode: 8081 (Host) -> 8080 (Container)
-    - ZK Service: 8080 (Internal only)
 - **Dependencies**: Use `npm install --legacy-peer-deps` in `supertorrent` due to Solana/LightProtocol version mismatches.
 
 ## Commands

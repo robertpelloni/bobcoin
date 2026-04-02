@@ -1,9 +1,8 @@
 # Immediate Action Items & Bug Fixes
 
 ## Critical Backend Infrastructure
-- [x] **Restore `game-server/server.js`:** The primary Express entry point for the game server is missing from the repository. Needs to be recreated to handle `/submit-proof`, `/burn`, and mount the `market.js` router.
-- [x] **Restore `supertorrent/server.js` (or entry point):** Verify and restore the Express server for the Supernode that handles `/stats`, `/add-torrent`, and `/remove-torrent`.
-- [ ] **Remove Mock APIs:** Once backend servers are restored, remove `frontend/src/api.js` mocks and reconnect UI components (`Mobile.jsx`, `StorageMarket.jsx`) to actual endpoints.
+- [ ] **Remove Mock APIs:** Now that backend servers are restored, the highest priority is to remove `frontend/src/api.js` mocks and reconnect UI components (`Governance.jsx`, `Wallet.jsx`, `Mobile.jsx`, `StorageMarket.jsx`) to the actual `localhost:3001` endpoints.
+- [ ] **Update E2E Test:** Refactor `test_e2e.js` to call the real backend endpoints and verify the full, un-mocked application flow.
 
 ## Enhancements & Refactoring
 - [ ] **Error Handling:** Add robust global error boundaries in the React frontend.

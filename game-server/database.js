@@ -52,6 +52,16 @@ export function initDatabase() {
                     text TEXT NOT NULL,
                     timestamp TEXT NOT NULL
                 )
+            `);
+
+            // Users Table (Profiles)
+            db.run(`
+                CREATE TABLE IF NOT EXISTS users (
+                    pubkey TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    avatar TEXT DEFAULT '🤖',
+                    created_at TEXT NOT NULL
+                )
             `, async (err) => {
                 if (err) return reject(err);
 
@@ -187,6 +197,34 @@ export function addChatMessage(user, text) {
             function(err) {
                 if (err) reject(err);
                 else resolve({ id: this.lastID, user, text, timestamp });
+            }
+        );
+    });
+}
+
+// Users (Profiles)
+export function getUser(pubkey) {
+    return new Promise((resolve, reject) => {
+        db.get("SELECT * FROM users WHERE pubkey = ?", [pubkey], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+export function updateUserProfile(pubkey, username, avatar) {
+    return new Promise((resolve, reject) => {
+        const now = new Date().toISOString();
+        db.run(
+            `INSERT INTO users (pubkey, username, avatar, created_at)
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT(pubkey) DO UPDATE SET
+             username = excluded.username,
+             avatar = excluded.avatar`,
+            [pubkey, username, avatar, now],
+            function(err) {
+                if (err) reject(err);
+                else resolve({ success: true });
             }
         );
     });

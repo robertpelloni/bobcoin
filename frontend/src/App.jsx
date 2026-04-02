@@ -11,6 +11,7 @@ import { StorageMarket } from './pages/StorageMarket';
 import { Architecture } from './pages/Architecture';
 import { Explorer } from './pages/Explorer';
 import { ThemeToggle } from './components/ThemeToggle';
+import { AudioControls } from './components/AudioControls';
 import { useSoundEffects } from './hooks/useSoundEffects';
 import { useKonamiCode } from './hooks/useKonamiCode';
 import { useEffect } from 'react';
@@ -30,6 +31,7 @@ function App() {
     return (
         <BrowserRouter>
             <ThemeToggle />
+            <AudioControls />
             <Routes>
                 <Route element={<Layout />}>
                     <Route path="/" element={<Dashboard />} />

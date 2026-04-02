@@ -1,28 +1,38 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { Scene } from './game/Scene';
 import { ErrorBoundary } from 'react-error-boundary';
-import { synth } from '../utils/synth'; // Import Audio Engine
+import { synth } from '../utils/synth';
 import './RhythmGame.css';
 
 const LANES = ['D', 'F', 'J', 'K'];
-const SPEED = 0.15; // 3D units per frame (Z-axis)
-const SPAWN_INTERVAL = 800; // ms
-const SPAWN_Z = -20; // Start far away
-const HIT_ZONE_Z = 0; // Target line at Z=0
-const HIT_TOLERANCE = 1.5; // +/- units (Perspective makes this tricky, need lenient zone)
+const SPEED = 0.15;
+const SPAWN_INTERVAL = 800;
+const SPAWN_Z = -20;
+const HIT_ZONE_Z = 0;
+const HIT_TOLERANCE = 1.5;
 
 export function RhythmGame({ onScoreUpdate }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isAutoPlay, setIsAutoPlay] = useState(false);
     const [notes, setNotes] = useState([]);
     const [feedback, setFeedback] = useState(null);
+    const [activeTheme, setActiveTheme] = useState('theme_neon'); // Default
 
-    // Game Loop Refs
+    // Check local storage for equipped theme
+    useEffect(() => {
+        const saved = JSON.parse(localStorage.getItem('marketplace_items'));
+        if (saved) {
+            const equippedTheme = saved.find(i => i.type === 'THEME' && i.purchased);
+            if (equippedTheme) {
+                setActiveTheme(equippedTheme.id);
+            }
+        }
+    }, []);
+
     const requestRef = useRef();
     const lastSpawnTime = useRef(0);
     const notesRef = useRef([]);
 
-    // Keep ref in sync
     useEffect(() => {
         notesRef.current = notes;
     }, [notes]);
@@ -30,7 +40,7 @@ export function RhythmGame({ onScoreUpdate }) {
     const startGame = () => {
         setIsPlaying(true);
         setIsAutoPlay(false);
-        synth.init(); // Initialize Audio Context
+        synth.init();
     };
 
     const startAutoPlay = () => {
@@ -42,12 +52,7 @@ export function RhythmGame({ onScoreUpdate }) {
     const spawnNote = (time) => {
         if (time - lastSpawnTime.current > SPAWN_INTERVAL) {
             const lane = Math.floor(Math.random() * 4);
-            const newNote = {
-                id: Date.now() + Math.random(),
-                lane,
-                z: SPAWN_Z, // Start deep in screen
-                hit: false
-            };
+            const newNote = { id: Date.now() + Math.random(), lane, z: SPAWN_Z, hit: false };
             const updated = [...notesRef.current, newNote];
             setNotes(updated);
             notesRef.current = updated;
@@ -65,29 +70,21 @@ export function RhythmGame({ onScoreUpdate }) {
         let stateChanged = false;
 
         currentNotes.forEach(note => {
-            // Move note forward (Positive Z)
             const nextZ = note.z + SPEED;
 
-            // Auto Play Logic
             if (isAutoPlay && !note.hit && Math.abs(nextZ - HIT_ZONE_Z) < 0.2) {
-                // Perfect hit
                 synth.playHit();
-                // setFeedback('AUTO'); // Optional
-                // setTimeout(() => setFeedback(null), 100);
                 note.hit = true;
-                // Don't add to nextNotes (remove it)
                 stateChanged = true;
                 return;
             }
 
-            // Miss logic (past camera > 2)
             if (nextZ > 2) {
                 if (!note.hit && !isAutoPlay) {
-                    onScoreUpdate(-10); // Penalty for miss
+                    onScoreUpdate(-10);
                     synth.playMiss();
                 }
                 stateChanged = true;
-                // Remove note
             } else {
                 if (nextZ !== note.z) stateChanged = true;
                 nextNotes.push({ ...note, z: nextZ });
@@ -113,17 +110,15 @@ export function RhythmGame({ onScoreUpdate }) {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (!isPlaying || isAutoPlay) return; // Disable input in AutoPlay
+            if (!isPlaying || isAutoPlay) return;
             const key = e.key.toUpperCase();
             const laneIndex = LANES.indexOf(key);
             if (laneIndex === -1) return;
 
             const currentNotes = notesRef.current;
 
-            // Find note in lane near hit zone (Z=0)
             const hitIndex = currentNotes.findIndex(n =>
-                n.lane === laneIndex &&
-                Math.abs(n.z - HIT_ZONE_Z) < HIT_TOLERANCE
+                n.lane === laneIndex && Math.abs(n.z - HIT_ZONE_Z) < HIT_TOLERANCE
             );
 
             if (hitIndex !== -1) {
@@ -136,26 +131,21 @@ export function RhythmGame({ onScoreUpdate }) {
                 if (diff < 0.5) {
                     score = 100;
                     text = 'PERFECT';
-                    synth.playHit(); // Clear synth sound
+                    synth.playHit();
                 } else {
                     score = 50;
                     text = 'GOOD';
-                    synth.playHit(); // Standard hit
+                    synth.playHit();
                 }
 
                 setFeedback(text);
                 setTimeout(() => setFeedback(null), 300);
                 onScoreUpdate(score);
 
-                // Mark visually as hit or remove immediately?
-                // Let's remove for cleaner gameplay
                 const newNotes = [...currentNotes];
                 newNotes.splice(hitIndex, 1);
                 setNotes(newNotes);
                 notesRef.current = newNotes;
-            } else {
-                // Misfire (optional penalty)
-                // onScoreUpdate(-5);
             }
         };
 
@@ -167,26 +157,21 @@ export function RhythmGame({ onScoreUpdate }) {
         console.error(error);
         return (
             <div className="error-fallback" style={{color: 'red', textAlign: 'center', paddingTop: '2rem'}}>
-                <p>WebGL Error. Switching to 2D Mode.</p>
-                <div className="2d-lanes" style={{display: 'flex', height: '100%', position: 'absolute', top:0, left:0, width:'100%'}}>
-                    {LANES.map(k => <div key={k} style={{flex: 1, borderRight: '1px solid #333'}}></div>)}
-                </div>
+                <p>WebGL Error.</p>
             </div>
         )
     }
 
     return (
         <div className="rhythm-game-container">
-            {/* 3D Scene */}
             <div className="canvas-wrapper">
                 <ErrorBoundary FallbackComponent={ErrorFallback}>
                     <Suspense fallback={<div style={{color:'#0ff'}}>LOADING 3D...</div>}>
-                        <Scene notes={notes} />
+                        <Scene notes={notes} activeTheme={activeTheme} />
                     </Suspense>
                 </ErrorBoundary>
             </div>
 
-            {/* UI Overlay */}
             <div className="ui-overlay">
                 <div className="key-labels">
                     {LANES.map(k => <div key={k} className="key-label">{k}</div>)}
@@ -202,7 +187,7 @@ export function RhythmGame({ onScoreUpdate }) {
 
                 {!isPlaying && (
                     <div className="game-overlay">
-                        <h2>PROOF OF PLAY v2.1</h2>
+                        <h2>PROOF OF PLAY v2.4</h2>
                         <p>Press D, F, J, K to match notes.</p>
                         <div className="button-group">
                             <button className="cyber-button" onClick={startGame}>

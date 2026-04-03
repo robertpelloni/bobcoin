@@ -39,6 +39,9 @@ export function Navigation() {
                 <NavLink to="/gallery" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <span className="icon">🖼️</span> GALLERY
                 </NavLink>
+                <NavLink to="/staking" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                    <span className="icon">🥩</span> STAKING
+                </NavLink>
                 <NavLink to="/market" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <span className="icon">📦</span> MARKET
                 </NavLink>

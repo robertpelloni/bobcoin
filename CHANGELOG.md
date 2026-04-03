@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2026-04-03
+
+### Added
+- **Native Staking & Yield**: Implemented on-chain staking with `stake_lock` and `stake_unlock` block types. Staked funds are exempt from demurrage and provide a **2x multiplier to Voting Power** in the DAO.
+- **Staking Dashboard** (`/staking`): A high-fidelity Cyberpunk UI for managing liquid vs. staked balances, with real-time APY estimation.
+- **Consensus Invariants**: Hardened `Lattice.js` to strictly enforce `staked_balance` preservation across all standard transaction types (send, receive, vote, etc.), preventing unauthorized balance mutation.
+- **LATTICE_VALIDATOR Achievement**: A new on-chain milestone unlocked upon the first successful staking event.
+- **Atomic Swap Hardening**: Improved the `/swap` UI with explicit validation for secret hash lengths and liquid balance checks.
+
 ## [3.5.0] - 2026-04-03
 
 ### Added

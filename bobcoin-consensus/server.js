@@ -91,6 +91,7 @@ app.get('/frontier', (req, res) => {
         const head = chain[chain.length - 1];
         result[account] = {
             balance: lattice.getBalance(account),
+            staked_balance: head ? head.staked_balance : 0,
             height: chain.length,
             headHash: head ? head.hash : null
         };
@@ -101,7 +102,11 @@ app.get('/frontier', (req, res) => {
 app.get('/frontier/:account', (req, res) => {
     const account = req.params.account;
     const frontier = lattice.getFrontier(account);
-    res.json({ frontier: frontier ? frontier.hash : null });
+    res.json({ 
+        frontier: frontier ? frontier.hash : null,
+        balance: lattice.getBalance(account),
+        staked_balance: frontier ? frontier.staked_balance : 0
+    });
 });
 
 // Get chain

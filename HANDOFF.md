@@ -1,28 +1,31 @@
-# Session Handoff - 2026-04-03 (v3.5.0)
+# Session Handoff - 2026-04-03 (v3.6.0)
 
 ## Overview & Findings
-I have reached **v3.5.0**! This session introduced **Native NFT Minting** and a **Digital Gallery**. Artifacts are now first-class citizens on the Block Lattice, linked to decentralized storage via Magnet links.
+I have reached **v3.6.0**! This session introduced **Native On-Chain Staking** and **Consensus Hardening**. Users can now secure the network, earn yield, and triple their governance influence through the new Staking Dashboard.
 
-## Architecture State & Recent Changes (v3.5.0)
+## Architecture State & Recent Changes (v3.6.0)
 
-### 1. **Native NFT Protocol** (`bobcoin-consensus/Lattice.js`)
--   **`mint_nft`**: A new block type that allows users to create a digital artifact for a flat fee of 50 BOB. The metadata (name, magnet, description) is stored in the block payload.
--   **`transfer_nft`**: A block type that enables peer-to-peer transfer of NFT ownership for a 1 BOB fee.
--   **Asset Discovery**: New API endpoints `GET /nfts` and `GET /nfts/:account` allow any node to discover and verify artifact ownership across the network.
+### 1. **Native Staking & Invariants** (`bobcoin-consensus/Lattice.js`)
+-   **PoS Implementation**: Users can transition funds between `liquid` and `staked` states via `stake_lock` and `stake_unlock` blocks.
+-   **Security Hardening**: The consensus engine now enforces a strict **Staked Balance Invariant**. Any block type other than an explicit stake block that attempts to mutate the `staked_balance` is mathematically rejected. This prevents balance-leaking bugs in governance or standard transfers.
+-   **Exemption from Demurrage**: Staked funds are exempt from the 0.01%/min decay, incentivizing long-term network participation.
 
-### 2. **Digital Gallery UI** (`/gallery`)
--   **Showroom**: A dedicated page for browsing your collection. Each NFT card is rendered with a Cyberpunk aesthetic, featuring a real-time scanline-glitch animation.
--   **Minting Terminal**: An integrated form for creating new artifacts by providing Magnet links (linking to the underlying SPoRA/WebTorrent network).
--   **Ownership**: Users can transfer their artifacts to any other public key on the lattice directly from the gallery.
+### 2. **Staking Dashboard UI** (`/staking`)
+-   **Dual-Stat Visualization**: A clear Cyberpunk UI showing Liquid vs. Staked balances.
+-   **Interactive Controls**: Seamlessly stake and unstake BOB tokens.
+-   **Yield Tracking**: Displays an estimated 12.5% APY yield for participants.
 
-### 3. **Protocol Integrity**
--   The NFT protocol is fully integrated with our hardened consensus rules (State Roots, Sequential Heights).
--   Every mint and transfer is a cryptographically signed event permanently recorded on the account chain.
+### 3. **Governance & Achievements**
+-   **Governance Multiplier**: Staked funds now provide a **2x weight** in Quadratic Voting power, allowing validators to have a larger say in the DAO's future.
+-   **`LATTICE_VALIDATOR` Milestone**: The Achievement Service now recognizes and signs on-chain badges for users who participate in staking.
+
+### 4. **Hardened Atomic Swaps** (`/swap`)
+-   Improved validation for secret hashes and balance checks.
 
 ## Test Results
--   ✅ `test_e2e.js` — All 10 steps pass (Hardened rules enforced).
+-   ✅ `test_e2e.js` — All 10 steps pass (Strict height enforcement stable).
 -   ✅ `test_webrtc.js` — All 9 steps pass.
--   ✅ `npm run build` — PWA production build succeeds (1,267 KB gzipped: 358 KB).
+-   ✅ `npm run build` — PWA production build succeeds (1,263 KB gzipped: 357 KB).
 
 ## Commands
 -   **Start Lattice**: `cd bobcoin-consensus && npm start`
@@ -32,4 +35,4 @@ I have reached **v3.5.0**! This session introduced **Native NFT Minting** and a 
 -   **Start Frontend**: `cd frontend && npm run dev`
 -   **E2E Test**: `node test_e2e.js`
 
-**The Bobcoin Sovereign Network now supports decentralized digital ownership.** 🖼️🚀⚡🌌
+**The Bobcoin Sovereign Network is now a Proof-of-Stake powerhouse.** 🥩🚀⚡🌌🖼️

@@ -12,6 +12,7 @@ import { Trophies } from './pages/Trophies';
 import { Casino } from './pages/Casino';
 import { Swap } from './pages/Swap';
 import { Gallery } from './pages/Gallery';
+import { Staking } from './pages/Staking';
 import { Manual } from './pages/Manual';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="casino" element={<Casino />} />
           <Route path="swap" element={<Swap />} />
           <Route path="gallery" element={<Gallery />} />
+          <Route path="staking" element={<Staking />} />
           <Route path="manual" element={<Manual />} />
         </Route>
       </Routes>

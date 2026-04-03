@@ -12,57 +12,77 @@ export function Wallet() {
     const [balance, setBalance] = useState(0.00);
     const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
-    const [keypair, setKeypair] = useState(null);
-    const [accountIndex, setAccountIndex] = useState(0);
-    const [activeAccounts, setActiveAccounts] = useState([]); 
-    const [isScanning, setIsScanning] = useState(false);
-    const [pending, setPending] = useState([]);
-    
-    // Guardian State
-    const [pendingBlock, setPendingBlock] = useState(null);
-    const [onGuardianConfirm, setOnGuardianConfirm] = useState(null);
-
-    // Backup Vault State
-    const [showBackup, setShowBackup] = useState(false);
-    const [importSeed, setImportSeed] = useState('');
-    const [contacts, setContacts] = useState(() => {
-        const stored = localStorage.getItem('bobcoin_contacts');
-        return stored ? JSON.parse(stored) : {};
-    });
-    const [contactName, setContactName] = useState('');
-    const [contactAddr, setContactAddr] = useState('');
-    const [showContacts, setShowContacts] = useState(false);
+    // Vault Lockdown State
+    const [isLocked, setIsLocked] = useState(false);
+    const [password, setPassword] = useState('');
+    const [vaultData, setVaultData] = useState(null);
 
     useEffect(() => {
-        localStorage.setItem('bobcoin_contacts', JSON.stringify(contacts));
-    }, [contacts]);
+        // Load encrypted or plain wallet
+        let stored = localStorage.getItem('bobcoin_wallet');
+        if (!stored) {
+            setIsGenerating(true);
+            return;
+        }
 
-    // Gamified Onboarding State
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [typedEntropy, setTypedEntropy] = useState('');
-    const entropyTarget = 'CYPHERPUNK_PROTOCOL_INITIALIZED';
-    const entropyRef = useRef('');
-
-    useEffect(() => {
-        const fetchState = async () => {
-            if (!keypair) return;
-            try {
-                const res = await getLatticeChain(keypair.publicKey);
-                const chain = res.chain || [];
-                if (chain.length > 0) {
-                    const latest = chain[chain.length - 1];
-                    setBalance(latest.balance);
-                } else {
-                    setBalance(0);
-                }
-                setHistory([...chain].reverse());
-                
-                const pendingRes = await getLatticePending(keypair.publicKey);
-                setPending(pendingRes.pending || []);
-            } catch (e) {
-                console.error("Wallet Fetch Error:", e);
+        try {
+            const parsed = JSON.parse(stored);
+            if (parsed.ciphertext) {
+                setVaultData(parsed);
+                setIsLocked(true);
+            } else {
+                setKeypair(parsed);
             }
-        };
+        } catch (e) {
+            setIsGenerating(true);
+        }
+    }, []);
+
+    const handleUnlock = async () => {
+        try {
+            const { decryptVault } = await import('../cryptoUtils');
+            const plainKeys = await decryptVault(vaultData, password);
+            setKeypair(plainKeys);
+            setIsLocked(false);
+            setPassword('');
+        } catch (e) {
+            alert("Incorrect Sovereign Password");
+        }
+    };
+
+    const handleOnboardingComplete = async (kp, initialPassword) => {
+        if (!initialPassword) return alert("Password required to encrypt vault.");
+        const { encryptVault } = await import('../cryptoUtils');
+        const encrypted = await encryptVault(kp, initialPassword);
+        localStorage.setItem('bobcoin_wallet', JSON.stringify(encrypted));
+        setVaultData(encrypted);
+        setKeypair(kp);
+        setIsGenerating(false);
+        checkAndUnlock('GIBSON_HACKER', kp, []);
+        checkAndUnlock('VAULT_MASTER', kp, []);
+    };
+
+    const fetchState = async () => {
+        if (!keypair) return;
+        try {
+            const res = await getLatticeChain(keypair.publicKey);
+            const chain = res.chain || [];
+            if (chain.length > 0) {
+                const latest = chain[chain.length - 1];
+                setBalance(latest.balance);
+            } else {
+                setBalance(0);
+            }
+            setHistory([...chain].reverse());
+            
+            const pendingRes = await getLatticePending(keypair.publicKey);
+            setPending(pendingRes.pending || []);
+        } catch (e) {
+            console.error("Wallet Fetch Error:", e);
+        }
+    };
+
+    useEffect(() => {
         fetchState();
         const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
@@ -113,18 +133,6 @@ export function Wallet() {
             scanForAccounts();
         }
     }, [keypair?.mnemonic]);
-
-    useEffect(() => {
-        // Load or generate Lattice wallet
-        let kp = null;
-        let storedKeys = localStorage.getItem('bobcoin_wallet');
-        if (!storedKeys) {
-            setIsGenerating(true);
-            return;
-        } else {
-            setKeypair(JSON.parse(storedKeys));
-        }
-    }, []);
 
     const claimPending = async (pend) => {
         try {

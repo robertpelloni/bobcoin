@@ -32,6 +32,7 @@ export function Staking() {
         const newKp = await deriveKeypair(master.mnemonic, index);
         setKeypair(newKp);
         fetchData(newKp.publicKey);
+        checkAndUnlock('LATTICE_TREASURER', newKp, []);
     };
 
     const fetchData = async (pubkey) => {

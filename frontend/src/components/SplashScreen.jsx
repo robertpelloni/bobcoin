@@ -37,7 +37,7 @@ export function SplashScreen({ onComplete }) {
                 <div className="version-tag">SOVEREIGN_OS v8.0.0 // MAINNET_ALPHA</div>
                 
                 <div className="boot-terminal">
-                    <div className="status-line">> {status}</div>
+                    <div className="status-line">&gt; {status}</div>
                     <div className="progress-bar-container">
                         <div className="progress-bar-fill" style={{width: `${progress}%`}}></div>
                     </div>

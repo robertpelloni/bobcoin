@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getLatticeFrontier, deriveKeypair } from '../api';
+import { getLatticeFrontier } from '../api';
+import { deriveKeypair } from '../cryptoUtils';
 
 export function AccountSelector({ currentAccount, onAccountChange }) {
     const [activeAccounts, setActiveAccounts] = useState([]);

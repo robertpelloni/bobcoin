@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.sqlite
+*.log
+.env
+.DS_Store
+frontend/dist/
+*_wallet.json
+wallet.json
+build-info.json

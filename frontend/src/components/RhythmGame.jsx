@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import SimplePeer from 'simple-peer';
+import { API_URL } from '../api';
 import './RhythmGame.css';
 
 const LANES = ['D', 'F', 'J', 'K'];
@@ -7,20 +9,101 @@ const SPAWN_INTERVAL = 1000; // ms
 const HIT_ZONE_Y = 400; // Top of hit zone
 const HIT_ZONE_HEIGHT = 40; // Height of hit zone
 
-export function RhythmGame({ onScoreUpdate }) {
+export function RhythmGame({ onScoreUpdate, onLogEvent }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [notes, setNotes] = useState([]);
     const [feedback, setFeedback] = useState(null); // 'PERFECT', 'GOOD', 'MISS'
+    
+    // WebRTC Matchmaking State
+    const [matchStatus, setMatchStatus] = useState('DISCONNECTED'); // DISCONNECTED, SEARCHING, CONNECTED
+    const [opponentScore, setOpponentScore] = useState(0);
+    const peerRef = useRef(null);
+    const wsRef = useRef(null);
 
     // Use refs for values needed inside the animation loop to avoid stale closures
     const requestRef = useRef();
     const lastSpawnTime = useRef(0);
     const notesRef = useRef([]); // Mirror state for the loop
+    const scoreRef = useRef(0); // To broadcast live score
 
     // Keep ref in sync
     useEffect(() => {
         notesRef.current = notes;
     }, [notes]);
+
+    const initMatchmaking = () => {
+        setMatchStatus('SEARCHING');
+        const wsUrl = API_URL.replace('http', 'ws');
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            console.log('[WebRTC] Connected to signaling server');
+            ws.send(JSON.stringify({ type: 'FIND_MATCH' }));
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'MATCH_FOUND') {
+                console.log(`[WebRTC] Match found! Initiator: ${data.initiator}`);
+                setMatchStatus('CONNECTING');
+                
+                // Initialize WebRTC peer
+                const peer = new SimplePeer({
+                    initiator: data.initiator,
+                    trickle: false
+                });
+
+                peer.on('signal', (signal) => {
+                    // Send WebRTC offer/answer back to signaling server
+                    ws.send(JSON.stringify({ type: 'SIGNAL', signal }));
+                });
+
+                peer.on('connect', () => {
+                    console.log('[WebRTC] P2P DIRECT CONNECTION ESTABLISHED!');
+                    setMatchStatus('IN_GAME');
+                    setIsPlaying(true);
+                });
+
+                peer.on('data', (data) => {
+                    // Received data directly from opponent (Decentralized!)
+                    try {
+                        const msg = JSON.parse(data.toString());
+                        if (msg.type === 'SCORE_UPDATE') {
+                            setOpponentScore(msg.score);
+                        }
+                    } catch(e) {}
+                });
+
+                peer.on('close', () => {
+                    console.log('[WebRTC] Opponent Disconnected');
+                    setMatchStatus('DISCONNECTED');
+                    setIsPlaying(false);
+                    peer.destroy();
+                });
+
+                peerRef.current = peer;
+            } else if (data.type === 'SIGNAL') {
+                // Receive WebRTC offer/answer from signaling server
+                if (peerRef.current) {
+                    peerRef.current.signal(data.signal);
+                }
+            } else if (data.type === 'OPPONENT_DISCONNECTED') {
+                setMatchStatus('DISCONNECTED');
+                if (peerRef.current) peerRef.current.destroy();
+            }
+        };
+
+        ws.onclose = () => {
+            setMatchStatus('DISCONNECTED');
+        };
+    };
+
+    const broadcastScore = (newScore) => {
+        if (peerRef.current && peerRef.current.connected) {
+            peerRef.current.send(JSON.stringify({ type: 'SCORE_UPDATE', score: newScore }));
+        }
+    };
 
     const spawnNote = (time) => {
         if (time - lastSpawnTime.current > SPAWN_INTERVAL) {
@@ -119,7 +202,11 @@ export function RhythmGame({ onScoreUpdate }) {
 
                 setFeedback(text);
                 setTimeout(() => setFeedback(null), 300);
+                
+                scoreRef.current += score;
                 onScoreUpdate(score);
+                broadcastScore(scoreRef.current);
+                
                 if (onLogEvent) onLogEvent({ time: Date.now(), key, diff, result: text });
 
                 // Remove note
@@ -128,6 +215,13 @@ export function RhythmGame({ onScoreUpdate }) {
                 setNotes(newNotes);
                 notesRef.current = newNotes;
             } else {
+                setFeedback('MISS');
+                setTimeout(() => setFeedback(null), 300);
+                
+                scoreRef.current -= 10;
+                onScoreUpdate(-10);
+                broadcastScore(scoreRef.current);
+                
                 if (onLogEvent) onLogEvent({ time: Date.now(), key, diff: null, result: 'MISS' });
             }
         };
@@ -138,6 +232,18 @@ export function RhythmGame({ onScoreUpdate }) {
 
     return (
         <div className="rhythm-game-container">
+            <div className="matchmaking-panel" style={{position: 'absolute', top: '-60px', left: 0, width: '100%', display: 'flex', justifyContent: 'space-between', color: '#0ff', fontFamily: 'monospace', zIndex: 10}}>
+                {matchStatus !== 'IN_GAME' ? (
+                    <button className="cyber-button small" onClick={initMatchmaking} disabled={matchStatus === 'SEARCHING' || matchStatus === 'CONNECTING'}>
+                        {matchStatus === 'DISCONNECTED' ? 'FIND MATCH (P2P)' : matchStatus === 'SEARCHING' ? 'SEARCHING FOR PEER...' : 'CONNECTING...'}
+                    </button>
+                ) : (
+                    <div style={{background: '#000', border: '1px solid #f0f', padding: '0.5rem', color: '#f0f'}}>
+                        OPPONENT SCORE: {opponentScore}
+                    </div>
+                )}
+            </div>
+
             {LANES.map((k, i) => (
                 <div key={i} className="game-lane" style={{left: `${i * 25}%`}}></div>
             ))}

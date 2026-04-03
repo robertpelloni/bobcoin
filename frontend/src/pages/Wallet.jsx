@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, LATTICE_URL } from '../api';
+import { useState, useEffect, useRef } from 'react';
+import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL } from '../api';
 import { generateKeypair, encryptMemo, decryptMemo } from '../cryptoUtils';
 import { Block } from '../Block';
 import './Wallet.css';
@@ -12,15 +12,20 @@ export function Wallet() {
     const [showKeys, setShowKeys] = useState(false);
     const [keypair, setKeypair] = useState(null);
     const [pending, setPending] = useState([]);
+    
+    // Gamified Onboarding State
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [typedEntropy, setTypedEntropy] = useState('');
+    const entropyTarget = 'CYPHERPUNK_PROTOCOL_INITIALIZED';
+    const entropyRef = useRef('');
 
     useEffect(() => {
         // Load or generate Lattice wallet
-        let kp;
+        let kp = null;
         let storedKeys = localStorage.getItem('bobcoin_wallet');
         if (!storedKeys) {
-            kp = generateKeypair();
-            localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
-            setKeypair(kp);
+            setIsGenerating(true);
+            return; // Don't start polling yet!
         } else {
             kp = JSON.parse(storedKeys);
             setKeypair(kp);
@@ -71,12 +76,24 @@ export function Wallet() {
             const newBalance = balance + pend.amount;
 
             // 4. Create Block
+            const { hashData } = await import('../cryptoUtils');
+            const baseHash = previousHash || (await hashData(keypair.publicKey));
+            const expectedChallenge = parseInt(baseHash.substr(0, 8), 16);
+            let sporaProof = null;
+            try {
+                sporaProof = await getSporaProof(expectedChallenge);
+            } catch (e) {
+                alert("SPoRA Failed: You must be running an active Supernode seeding the Bobtorrent Anchors to claim funds.");
+                return;
+            }
+
             const block = new Block({
                 type,
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
-                link: pend.hash // Link is the send block hash we are claiming
+                link: pend.hash, // Link is the send block hash we are claiming
+                spora: sporaProof
             });
 
             // 5. Sign and Submit
@@ -174,6 +191,48 @@ export function Wallet() {
             return tx;
         }));
     };
+
+    useEffect(() => {
+        if (!isGenerating) return;
+
+        const handleType = (e) => {
+            // Ignore modifiers
+            if (e.key.length > 1) return;
+
+            // Generate "hacky" visual feedback and build entropy string
+            const newChar = String.fromCharCode(33 + Math.floor(Math.random() * 94));
+            
+            entropyRef.current += newChar;
+            setTypedEntropy(entropyRef.current);
+
+            // Once the user has typed enough characters, finalize generation
+            if (entropyRef.current.length >= 64) {
+                const kp = generateKeypair();
+                localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+                setKeypair(kp);
+                setIsGenerating(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleType);
+        return () => window.removeEventListener('keydown', handleType);
+    }, [isGenerating]);
+
+    if (isGenerating) {
+        return (
+            <div className="wallet-container" style={{display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh'}}>
+                <h1 className="glitch" data-text="INITIALIZE WALLET">INITIALIZE WALLET</h1>
+                <p style={{color: '#ff0055', marginBottom: '2rem'}}>MASH KEYBOARD TO GENERATE ED25519 ENTROPY SEED</p>
+                <div style={{background: '#000', border: '1px solid #0ff', padding: '1rem', width: '100%', maxWidth: '600px', minHeight: '150px', fontFamily: 'monospace', color: '#0f0', wordBreak: 'break-all', boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)'}}>
+                    {typedEntropy}
+                    <span className="cursor" style={{animation: 'blink 1s infinite'}}>█</span>
+                </div>
+                <div className="progress-bar" style={{width: '100%', maxWidth: '600px', background: '#111', marginTop: '1rem', height: '10px'}}>
+                    <div className="fill" style={{background: '#0ff', height: '100%', width: `${(typedEntropy.length / 64) * 100}%`, transition: 'width 0.1s'}}></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="wallet-container">

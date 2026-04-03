@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { WebSocketServer } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -282,6 +283,55 @@ app.get('/transactions', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`[Game Server] Listening on internal port ${PORT}`);
+});
+
+// --- WebRTC Matchmaking (Signaling Server) ---
+const wss = new WebSocketServer({ server });
+let waitingPlayer = null;
+
+wss.on('connection', (ws) => {
+    console.log('[Matchmaker] New player connected');
+    
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            
+            if (data.type === 'FIND_MATCH') {
+                if (waitingPlayer && waitingPlayer !== ws && waitingPlayer.readyState === 1) {
+                    // Match found!
+                    console.log('[Matchmaker] Match found! Initiating WebRTC handshakes...');
+                    
+                    // Tell waiting player to create an offer (Initiator)
+                    waitingPlayer.send(JSON.stringify({ type: 'MATCH_FOUND', initiator: true }));
+                    waitingPlayer.opponent = ws;
+                    
+                    // Tell new player to wait for offer (Receiver)
+                    ws.send(JSON.stringify({ type: 'MATCH_FOUND', initiator: false }));
+                    ws.opponent = waitingPlayer;
+                    
+                    waitingPlayer = null;
+                } else {
+                    console.log('[Matchmaker] Player added to waiting queue.');
+                    waitingPlayer = ws;
+                }
+            } else if (data.type === 'SIGNAL') {
+                // Relay WebRTC signals (SDP / ICE candidates) to opponent
+                if (ws.opponent && ws.opponent.readyState === 1) {
+                    ws.opponent.send(JSON.stringify({ type: 'SIGNAL', signal: data.signal }));
+                }
+            }
+        } catch (e) {
+            console.error('[Matchmaker Error]', e);
+        }
+    });
+
+    ws.on('close', () => {
+        if (waitingPlayer === ws) waitingPlayer = null;
+        if (ws.opponent) {
+            try { ws.opponent.send(JSON.stringify({ type: 'OPPONENT_DISCONNECTED' })); } catch(e){}
+            ws.opponent.opponent = null;
+        }
+    });
 });

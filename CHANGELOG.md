@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-04-03
+
+### Added
+- **WebRTC P2P Multiplayer Matchmaking**: Implemented a full WebSocket signaling server embedded in the Game Server (`game-server/server.js`) that brokers WebRTC peer-to-peer connections between rhythm game players. The signaling flow supports `FIND_MATCH` queuing, `MATCH_FOUND` initiator/receiver role assignment, bidirectional SDP offer/answer relay, ICE candidate forwarding, and `OPPONENT_DISCONNECTED` notifications.
+- **Browser WebRTC Client**: Upgraded `RhythmGame.jsx` with `simple-peer` WebRTC integration. Players can click "FIND MATCH (P2P)" to enter the matchmaking queue. Once matched, both players' games start simultaneously and live score updates stream directly peer-to-peer without touching any server!
+- **Node.js Polyfills for Vite**: Added `buffer`/`process`/`global` polyfills in `main.jsx` to support `simple-peer`'s Node.js dependencies in the browser bundle.
+- **WebRTC Integration Test** (`test_webrtc.js`): 9-step test covering player connection, queue mechanics, SDP offer/answer relay, ICE candidate forwarding, disconnect notifications, and re-queue/rematch flow. All tests pass.
+
 ## [2.6.16] - 2026-04-03
 
 ### Added

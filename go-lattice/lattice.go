@@ -366,3 +366,36 @@ func (l *Lattice) GetBalance(account string, ts int64) float64 {
 	decay := head.Balance * l.DemurrageRate * float64(elapsed)
 	return math.Max(0, head.Balance-decay)
 }
+
+/**
+ * Perform a full cryptographic audit of the entire ledger
+ */
+func (l *Lattice) AuditState() error {
+	fmt.Println("[Lattice] Initiating Global Consensus Audit...")
+	
+	// Temporarily clear in-memory state and rebuild from blocks
+	// (In production, this would be done on a shadow-lattice first)
+	l.StateHash = "0000000000000000000000000000000000000000000000000000000000000000"
+	
+	for account, chain := range l.Chains {
+		for i, block := range chain {
+			// 1. Signature Verification
+			if !block.Verify() {
+				return fmt.Errorf("audit failed: invalid signature on block %s", block.Hash[:8])
+			}
+			// 2. Height Verification
+			if block.Height != i {
+				return fmt.Errorf("audit failed: height gap detected in account %s", account[:8])
+			}
+			
+			// Update cumulative state hash
+			h := sha256.New()
+			h.Write([]byte(l.StateHash + block.Hash))
+			l.StateHash = hex.EncodeToString(h.Sum(nil))
+		}
+	}
+	
+	l.MerkleRoot = l.CalculateMerkleRoot()
+	fmt.Printf("[Lattice] Audit Complete. Verified Integrity of %d chains. New Root: %s\n", len(l.Chains), l.MerkleRoot[:16])
+	return nil
+}

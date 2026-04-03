@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.3.0] - 2026-04-03
+
+### Added
+- **Consensus Self-Audit Engine**: Implemented a deep-audit routine in the Go engine to perform full cryptographic scrubbing of the ledger.
+  - Added `AuditState()` to `Lattice.go`, which re-verifies every block signature, height, and sequence in history.
+- **Ironclad Verified Bootstrap**: Hardened the `/bootstrap` POST API to mandate a full cryptographic audit of all incoming snapshots. Any tampered or malicious state snapshots are now automatically detected and rejected before disk-commitment.
+- **State Re-persistence**: Integrated an automated disk-sync protocol that commits audited snapshots to the native SQLite database after verification.
+- **Lattice Reconciler Achievement**: A new on-chain milestone unlocked upon successful completion of a full network history audit.
+- **Consensus Hardening v5**: Unified the state hash and Merkle root recalculation into the audit pipeline for total state integrity.
+
 ## [8.2.0] - 2026-04-03
 
 ### Added

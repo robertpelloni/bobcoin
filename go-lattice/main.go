@@ -187,6 +187,44 @@ func gossipLoop() {
 }
 
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var snapshot struct {
+			Chains    map[string][]*Block `json:"chains"`
+			Blocks    map[string]*Block   `json:"blocks"`
+			StateHash string              `json:"stateHash"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&snapshot); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		lattice.mu.Lock()
+		defer lattice.mu.Unlock()
+
+		fmt.Println("[Bootstrap] Received network snapshot. Commencing security audit...")
+		
+		// Load into memory
+		lattice.Chains = snapshot.Chains
+		lattice.Blocks = snapshot.Blocks
+		
+		// Perform Deep Audit
+		if err := lattice.AuditState(); err != nil {
+			fmt.Printf("[Bootstrap Error] Snapshot Rejected: %v\n", err)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Cryptographic audit failed: Malicious or corrupted snapshot."})
+			return
+		}
+
+		// Re-persist audited blocks to disk
+		for _, chain := range lattice.Chains {
+			for _, b := range chain {
+				db.SaveBlock(b)
+			}
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "stateHash": lattice.StateHash, "merkleRoot": lattice.MerkleRoot})
+		return
+	}
+	
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(lattice)

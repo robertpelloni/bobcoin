@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-04-03
+
+### Added
+- **Web Audio Synthesizer** (`audio/AudioEngine.js`): Pure mathematical waveform synthesis via the Web Audio API. No audio files — all sounds generated from oscillators, filters, and gain envelopes. Includes:
+  - `playHitSound(lane, quality)` — Pentatonic synth blips pitched by lane, with filter sweeps. PERFECT notes ring at higher octave.
+  - `playMissSound()` — Dissonant sawtooth buzz for missed notes.
+  - `playMatchSound()` — C-E-G major arpeggio chime when WebRTC match is found.
+  - `playBlockConfirmedSound()` — High-pitched rising ping for new block confirmations.
+  - `startAmbientDrone()` — Sub-bass + detuned triangle pad with LFO wobble. Starts when game begins, fades on stop.
+- **Real-Time Block Activity Feed**: WebSocket server embedded in Lattice (`bobcoin-consensus/server.js`) broadcasts `NEW_BLOCK` events to all connected clients. `LiveFeed.jsx` component renders a scrolling, color-coded feed of every block hitting the lattice in real-time, with connection status indicator and audio toggle.
+- **Dashboard Integration**: `LiveFeed` component mounted on the main Dashboard page below the Leaderboard and Marketplace.
+
 ## [2.8.0] - 2026-04-03
 
 ### Added

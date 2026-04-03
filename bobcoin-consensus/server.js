@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -51,6 +52,17 @@ app.post('/process', (req, res) => {
         lattice.processBlock(block);
 
         console.log(`[Lattice] Processed ${block.type} block for ${block.account.substr(0, 8)}...`);
+        
+        // Broadcast to all WebSocket clients
+        broadcastBlock({
+            type: block.type,
+            account: block.account,
+            hash: block.hash,
+            balance: block.balance,
+            timestamp: block.timestamp,
+            link: block.link
+        });
+        
         res.json({ success: true, hash: block.hash });
 
     } catch (e) {
@@ -115,6 +127,35 @@ app.get('/market/bids', (req, res) => {
     res.json({ bids: Object.values(lattice.marketBids).filter(b => b.status === 'OPEN') });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`[Lattice Node] Operating asynchronously on port ${PORT}`);
 });
+
+// --- Real-Time Block Feed via WebSocket ---
+const wss = new WebSocketServer({ server });
+const wsClients = new Set();
+
+wss.on('connection', (ws) => {
+    wsClients.add(ws);
+    console.log(`[WS] Block feed client connected. Total: ${wsClients.size}`);
+    
+    // Send current stats on connect
+    const accounts = Object.keys(lattice.chains).length;
+    let totalBlocks = 0;
+    for (const chain of Object.values(lattice.chains)) totalBlocks += chain.length;
+    ws.send(JSON.stringify({ type: 'STATS', accounts, totalBlocks }));
+    
+    ws.on('close', () => {
+        wsClients.delete(ws);
+    });
+});
+
+// Broadcast new blocks to all connected clients
+function broadcastBlock(block) {
+    const msg = JSON.stringify({ type: 'NEW_BLOCK', block });
+    for (const client of wsClients) {
+        if (client.readyState === 1) {
+            client.send(msg);
+        }
+    }
+}

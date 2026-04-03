@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import SimplePeer from 'simple-peer';
 import { API_URL } from '../api';
+import { playHitSound, playMatchSound, startAmbientDrone } from '../audio/AudioEngine';
 import './RhythmGame.css';
 
 const LANES = ['D', 'F', 'J', 'K'];
@@ -63,6 +64,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
                     console.log('[WebRTC] P2P DIRECT CONNECTION ESTABLISHED!');
                     setMatchStatus('IN_GAME');
                     setIsPlaying(true);
+                    playMatchSound();
                 });
 
                 peer.on('data', (data) => {
@@ -155,13 +157,19 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
     };
 
     // Start/Stop Loop
+    const droneStopRef = useRef(null);
     useEffect(() => {
         if (isPlaying) {
             requestRef.current = requestAnimationFrame(updateGame);
+            droneStopRef.current = startAmbientDrone();
         } else {
             cancelAnimationFrame(requestRef.current);
+            if (droneStopRef.current) { droneStopRef.current(); droneStopRef.current = null; }
         }
-        return () => cancelAnimationFrame(requestRef.current);
+        return () => {
+            cancelAnimationFrame(requestRef.current);
+            if (droneStopRef.current) { droneStopRef.current(); droneStopRef.current = null; }
+        };
     }, [isPlaying]);
 
     // Input Handling
@@ -202,6 +210,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
 
                 setFeedback(text);
                 setTimeout(() => setFeedback(null), 300);
+                playHitSound(note.lane, text);
                 
                 scoreRef.current += score;
                 onScoreUpdate(score);
@@ -217,6 +226,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
             } else {
                 setFeedback('MISS');
                 setTimeout(() => setFeedback(null), 300);
+                playHitSound(0, 'MISS');
                 
                 scoreRef.current -= 10;
                 onScoreUpdate(-10);

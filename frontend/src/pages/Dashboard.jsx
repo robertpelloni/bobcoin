@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { RhythmGame } from '../components/RhythmGame';
+import { LiveFeed } from '../components/LiveFeed';
 import { submitProof, getBankroll, submitFHEOracle } from '../api';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
@@ -149,6 +150,7 @@ export function Dashboard() {
 
                 <Leaderboard mintStatus={mintStatus} />
                 <Marketplace />
+                <LiveFeed />
             </div>
         </div>
     );

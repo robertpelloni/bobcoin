@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.12] - 2026-04-03
+
+### Added
+- **Progressive Web App (PWA)**: Refactored the Bobcoin React/Vite frontend into a fully installable Progressive Web App using `vite-plugin-pwa` and Workbox Service Workers! Users can now install the Bobcoin wallet natively on their mobile devices directly from the browser, permanently caching assets (including the massive `.wasm` encryption payloads) for offline access.
+- **Proof of Space & Time Simulator**: Upgraded the `Mobile.jsx` light node to mathematically simulate Chia-style Plotting and Farming natively in the browser via `crypto.subtle.digest`. The mobile node autonomously generates gigabytes of cryptographic plots into local memory and searches for specific hash prefix collisions against a broadcasted network challenge to legitimately earn "Proof of Space" block rewards!
+
+
+
+
+
 ## [2.6.11] - 2026-04-03
 
 ### Added

@@ -1,42 +1,97 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { mintTokens } from '../api';
 import './Mobile.css';
+
+// Utility for hashing in the browser
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export function Mobile() {
     const [miningActive, setMiningActive] = useState(false);
     const [steps, setSteps] = useState(0);
     const [storageMined, setStorageMined] = useState(0); // in MB
     const [bobEarned, setBobEarned] = useState(0);
+    const [plotCount, setPlotCount] = useState(0);
+    const [currentChallenge, setCurrentChallenge] = useState('');
+    
+    // In-memory "hard drive" for Proof of Space
+    const plotData = useRef(new Map());
 
-    // Simulate Step Counter (Proof of Walk)
+    // Proof of Walk (Mocked step counter)
     useEffect(() => {
         let interval;
         if (miningActive) {
             interval = setInterval(() => {
                 setSteps(prev => {
                     const newSteps = prev + Math.floor(Math.random() * 3) + 1;
-                    // Every 100 steps = 1 BOB minted (mock logic)
-                    if (newSteps % 100 < prev % 100) {
-                        mintTokens(1, 'Proof of Walk: 100 Steps').then(() => {
-                            setBobEarned(b => b + 1);
+                    if (newSteps % 200 < prev % 200) {
+                        // Every 200 steps, simulate a small reward
+                        mintTokens(0.1, 'Proof of Walk: 200 Steps').then(() => {
+                            setBobEarned(b => b + 0.1);
                         });
                     }
                     return newSteps;
                 });
-                
-                setStorageMined(prev => {
-                    const newStorage = prev + (Math.random() * 0.5);
-                    // Every 50 MB = 1 BOB minted (mock logic)
-                    if (newStorage % 50 < prev % 50) {
-                        mintTokens(1, 'Background Storage Mining: 50MB').then(() => {
-                            setBobEarned(b => b + 1);
-                        });
-                    }
-                    return newStorage;
-                });
             }, 2000);
         }
         return () => clearInterval(interval);
+    }, [miningActive]);
+
+    // Proof of Space (Chia-style Plotting & Farming)
+    useEffect(() => {
+        let isFarming = miningActive;
+        let plotTimeout;
+        
+        const farm = async () => {
+            if (!isFarming) return;
+
+            // 1. PLOTTING: Generate new cryptographic plots in memory to simulate allocating storage
+            for (let i = 0; i < 500; i++) {
+                const newPlotSeed = Math.random().toString(36) + Date.now();
+                const plotHash = await sha256(newPlotSeed);
+                plotData.current.set(plotHash.substring(0, 3), plotHash);
+            }
+            
+            setPlotCount(plotData.current.size);
+            setStorageMined(plotData.current.size * 0.05); // Assume each plot chunk represents 50KB
+
+            // 2. FARMING: Network broadcasts a random challenge
+            const networkChallenge = await sha256(Date.now().toString());
+            const challengePrefix = networkChallenge.substring(0, 3);
+            setCurrentChallenge(challengePrefix);
+
+            // 3. SCAN: Check if our hard drive (plotData) contains the winning hash
+            if (plotData.current.has(challengePrefix)) {
+                const proofOfSpace = plotData.current.get(challengePrefix);
+                console.log(`[PoST] Bingo! Plot matched challenge ${challengePrefix} -> ${proofOfSpace}`);
+                
+                // We won the block! Submit the proof of space to the Oracle/Lattice
+                // Clear the plot to prevent double-spending the same proof
+                plotData.current.delete(challengePrefix);
+
+                mintTokens(1, `Proof of Space Won: ${proofOfSpace.substring(0, 10)}...`).then((res) => {
+                    if (res && res.success) {
+                        setBobEarned(b => b + 1);
+                    }
+                });
+            }
+
+            // Loop
+            plotTimeout = setTimeout(farm, 1000);
+        };
+
+        if (miningActive) {
+            farm();
+        }
+
+        return () => {
+            isFarming = false;
+            clearTimeout(plotTimeout);
+        };
     }, [miningActive]);
 
     return (
@@ -83,10 +138,12 @@ export function Mobile() {
             </div>
 
             <div className="network-info">
-                <h3>NETWORK SYNC</h3>
+                <h3>NETWORK SYNC (PoST)</h3>
                 <p>Node ID: <span>mob_{Math.random().toString(36).substr(2, 6)}</span></p>
+                <p>Current Challenge: <span style={{fontFamily: 'monospace', color: '#0ff'}}>{currentChallenge || 'WAITING...'}</span></p>
+                <p>Local Plots (Hashes): <span style={{fontFamily: 'monospace'}}>{plotCount}</span></p>
                 <p>Peers Connected: <span>{miningActive ? Math.floor(Math.random() * 5) + 1 : 0}</span></p>
-                <p>Battery Temp: <span>{miningActive ? '34°C' : '28°C'}</span></p>
+                <p>Battery Temp: <span style={{color: miningActive ? '#ff0055' : '#0f0'}}>{miningActive ? '38°C' : '28°C'}</span></p>
             </div>
         </div>
     );

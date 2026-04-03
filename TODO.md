@@ -7,7 +7,7 @@
 
 ## Enhancements & Refactoring
 - [x] **Error Handling:** Added a robust global `ErrorBoundary` in the React frontend to catch and gracefully display component crashes.
-- [ ] **Configuration:** Move hardcoded ports (`3000`, `3001`, `8080`, `8081`) into centralized `.env` or configuration files.
+- [x] **Configuration:** Moved hardcoded ports (`3001`, `8081`, `4000`) into a centralized `.env` configuration file at the workspace root, integrated via `dotenv` across all backend Node.js microservices and Vite environment variables.
 - [ ] **Database Migrations:** Formalize SQLite schema migrations in the game-server rather than running them ad-hoc on startup.
 - [ ] **Rate Limiting:** Implement proper retry logic and backoff on the frontend for when the Solana Devnet Faucet hits a 429 Error.
 

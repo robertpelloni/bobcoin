@@ -4,9 +4,15 @@ import WebTorrent from 'webtorrent';
 import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 8081; // Using 8081 directly to match standard docker mapping
+const PORT = process.env.SUPERNODE_PORT || 8081;
 const GAME_SERVER_URL = process.env.GAME_SERVER_URL || 'http://localhost:3001';
 const NODE_ID = "sn_" + Math.random().toString(36).substr(2, 9);
 const client = new WebTorrent();

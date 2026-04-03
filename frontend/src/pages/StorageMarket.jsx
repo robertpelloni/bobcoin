@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { burnTokens } from '../api';
+import { burnTokens, API_URL } from '../api';
 import './StorageMarket.css';
-
-const API_URL = 'http://localhost:3001'; // Game Server
 
 export function StorageMarket() {
     const [bids, setBids] = useState([]);

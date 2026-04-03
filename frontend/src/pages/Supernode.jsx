@@ -3,7 +3,7 @@ import { SupernodeControls } from '../components/SupernodeControls';
 import { burnTokens } from '../api';
 import './Supernode.css';
 
-const API_URL = import.meta.env.VITE_SUPERNODE_API_URL || 'http://localhost:8081';
+const API_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8081';
 
 export function Supernode() {
     const [stats, setStats] = useState(null);

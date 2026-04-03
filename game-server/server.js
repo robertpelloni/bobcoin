@@ -1,11 +1,61 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import marketRouter from './market.js';
 import { initDatabase } from './database.js';
+import { Block } from '../bobcoin-consensus/Block.js';
+import { generateKeypair } from '../bobcoin-consensus/cryptoUtils.js';
+
+// Generate a runtime "System / Bridge" wallet for the Game Server
+const SYSTEM_WALLET = generateKeypair();
+let systemBalance = 1000000; // Starting supply
+let systemFrontier = null;
+
+// Helper to interact with the Lattice Network
+const LATTICE_URL = process.env.LATTICE_URL || 'http://localhost:4000';
+
+async function broadcastBlock(block) {
+    const res = await fetch(`${LATTICE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block })
+    });
+    return await res.json();
+}
+
+// Open the System Chain on boot
+async function initializeSystemChain() {
+    try {
+        const genesisBlock = new Block({
+            type: 'open',
+            account: SYSTEM_WALLET.publicKey,
+            previous: null,
+            balance: systemBalance,
+            link: 'SYSTEM_GENESIS'
+        });
+        genesisBlock.signBlock(SYSTEM_WALLET.privateKey);
+        
+        const res = await broadcastBlock(genesisBlock);
+        if (res.success) {
+            systemFrontier = res.hash;
+            console.log(`[Game Server] Initialized Lattice Genesis Chain. Wallet: ${SYSTEM_WALLET.publicKey.substr(0, 16)}...`);
+        }
+    } catch (e) {
+        console.warn(`[Game Server] Failed to bootstrap Lattice Chain. Is consensus node running?`);
+    }
+}
+initializeSystemChain();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.GAME_SERVER_PORT || 3001;
 const ZK_SERVICE_URL = process.env.ZK_SERVICE_URL || 'http://localhost:8080';
 
 app.use(cors());
@@ -133,25 +183,44 @@ app.post('/burn', async (req, res) => {
     res.json({ success: true, tx });
 });
 
-// Generic Mint Endpoint
+// Generic Mint Endpoint (System Sending to User)
 app.post('/mint', async (req, res) => {
     const { amount, reason } = req.body;
     console.log(`[Game Server] Minting ${amount} BOB for: ${reason}`);
     
     if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
 
-    // Simulate Solana Devnet Bridge Call
-    const tx = 'tx_mint_' + Math.random().toString(36).substr(2, 9);
-    const hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
+    let hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
 
     try {
+        // Broadcast send block to Lattice
+        if (systemFrontier) {
+            systemBalance -= amount;
+            const sendBlock = new Block({
+                type: 'send',
+                account: SYSTEM_WALLET.publicKey,
+                previous: systemFrontier,
+                balance: systemBalance,
+                link: 'user_wallet_placeholder' // In a real app, this is the user's public key
+            });
+            sendBlock.signBlock(SYSTEM_WALLET.privateKey);
+            const latticeRes = await broadcastBlock(sendBlock);
+            if (latticeRes.success) {
+                systemFrontier = sendBlock.hash;
+                hash = sendBlock.hash;
+                console.log(`[Lattice] System sent ${amount} BOB. TX: ${hash}`);
+            }
+        }
+        
+        // Record Mint Transaction locally for UI
+        const tx = 'tx_mint_' + Math.random().toString(36).substr(2, 9);
         const { recordTransaction } = await import('./database.js');
         await recordTransaction(tx, 'MINT', amount, hash);
+        res.json({ success: true, tx, hash });
     } catch (e) {
-        console.error("DB Error recording mint:", e);
+        console.error("Lattice/DB Error recording mint:", e);
+        res.status(500).json({ success: false, error: 'Internal Error' });
     }
-
-    res.json({ success: true, tx });
 });
 
 // Transactions Endpoint

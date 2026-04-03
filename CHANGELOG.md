@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.4] - 2026-04-02
+
+### Added
+- **Consensus Integration**: Integrated the `game-server` directly with the new Node.js `bobcoin-consensus` Block Lattice. The server now dynamically generates an Ed25519 keypair and signs real cryptographic Send blocks when users trigger a "Mint" event, finalizing the sunset of the mock Solana bridge.
+- **Configuration**: Implemented workspace-wide `.env` configuration, cleanly moving hardcoded ports and URLs into centralized environment variables loaded by Vite and Express.
+
+
+
+
+
 ## [2.6.3] - 2026-04-02
 
 ### Added

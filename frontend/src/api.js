@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+export const API_URL = import.meta.env.VITE_GAME_SERVER_URL || 'http://localhost:3001';
 
 export const burnTokens = async (amount, reason) => {
     try {

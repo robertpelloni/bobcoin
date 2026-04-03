@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2026-04-03
+
+### Added
+- **Ironclad Go-Lattice Persistence**: Implemented native SQLite persistence for the Go consensus engine.
+  - Used `modernc.org/sqlite` (pure Go implementation) for cross-platform portability.
+  - Integrated Atomic Commits to ensure disk consistency during block processing.
+  - Developed a **Cold Boot Recovery** routine that rebuilds the in-memory account chains and network state hash from the physical database on startup.
+- **Frontend Backend-Shift**: Updated the React/Vite PWA (`api.js`) to default all Lattice operations to the new high-performance Go Node on port **4001**.
+- **Go State Expansion**: Ported state management for `mint_nft`, `data_anchor`, and `multisig_create` to the Go engine.
+
 ## [5.0.0-alpha] - 2026-04-03
 
 ### Ported

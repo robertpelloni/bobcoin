@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-var lattice = NewLattice()
+var db = NewDBManager("lattice.sqlite")
+var lattice = NewLattice(db)
 
 func main() {
 	port := os.Getenv("LATTICE_PORT")
@@ -45,7 +46,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := lattice.ProcessBlock(payload.Block); err != nil {
+	if err := lattice.ProcessBlock(payload.Block, false); err != nil {
 		fmt.Printf("[Lattice Error] %v\n", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
 		return

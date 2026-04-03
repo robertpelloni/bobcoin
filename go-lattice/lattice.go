@@ -17,42 +17,58 @@ type PendingTx struct {
 
 type Lattice struct {
 	mu         sync.RWMutex
+	db         *DBManager
 	Chains     map[string][]*Block
 	Blocks     map[string]*Block
 	Pending    map[string][]*PendingTx
+	Proposals  map[string]interface{}
+	MarketBids map[string]interface{}
+	Nfts       map[string]interface{}
+	Anchors    map[string]interface{}
+	Multisigs  map[string]interface{}
 	StateHash  string
 	DemurrageRate float64
 }
 
-func NewLattice() *Lattice {
-	return &Lattice{
+func NewLattice(db *DBManager) *Lattice {
+	l := &Lattice{
+		db:         db,
 		Chains:     make(map[string][]*Block),
 		Blocks:     make(map[string]*Block),
 		Pending:    make(map[string][]*PendingTx),
+		Proposals:  make(map[string]interface{}),
+		MarketBids: make(map[string]interface{}),
+		Nfts:       make(map[string]interface{}),
+		Anchors:    make(map[string]interface{}),
+		Multisigs:  make(map[string]interface{}),
 		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
 		DemurrageRate: 0.0001 / 60000,
 	}
+
+	// Cold Boot Recovery
+	l.Recovery()
+	return l
 }
 
-func (l *Lattice) GetBalance(account string, ts int64) float64 {
-	chain, ok := l.Chains[account]
-	if !ok || len(chain) == 0 {
-		return 0
+func (l *Lattice) Recovery() {
+	fmt.Println("[Lattice] Initializing Cold Boot Recovery...")
+	blocks, err := l.db.LoadAllBlocks()
+	if err != nil {
+		fmt.Printf("[Recovery Error] %v\n", err)
+		return
 	}
-	head := chain[len(chain)-1]
-	
-	// Apply Demurrage
-	elapsed := ts - head.Timestamp
-	if elapsed <= 0 {
-		return head.Balance
+
+	for _, b := range blocks {
+		l.ProcessBlock(b, true) // Pass true to skip re-persistence during recovery
 	}
-	decay := head.Balance * l.DemurrageRate * float64(elapsed)
-	return math.Max(0, head.Balance-decay)
+	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", len(blocks), l.StateHash[:16])
 }
 
-func (l *Lattice) ProcessBlock(block *Block) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
+	if !isRecovery {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+	}
 
 	// 1. Signature Verification
 	if !block.Verify() {
@@ -93,9 +109,44 @@ func (l *Lattice) ProcessBlock(block *Block) error {
 	h.Write([]byte(l.StateHash + block.Hash))
 	l.StateHash = hex.EncodeToString(h.Sum(nil))
 
-	// 5. Commit
+	// 5. Commit In-Memory
 	l.Chains[block.Account] = append(l.Chains[block.Account], block)
 	l.Blocks[block.Hash] = block
 
+	// 6. Type-Specific State Updates (Proposals, NFTs, etc)
+	if block.Type == "mint_nft" {
+		l.Nfts[block.Hash] = block.Payload
+	} else if block.Type == "data_anchor" {
+		l.Anchors[block.Hash] = block.Payload
+	} else if block.Type == "multisig_create" {
+		l.Multisigs[block.Hash] = block.Payload
+	}
+
+	// 7. Persist to Disk
+	if !isRecovery {
+		if err := l.db.SaveBlock(block); err != nil {
+			return fmt.Errorf("failed to persist block: %v", err)
+		}
+	}
+
 	return nil
+}
+
+func (l *Lattice) GetBalance(account string, ts int64) float64 {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	
+	chain, ok := l.Chains[account]
+	if !ok || len(chain) == 0 {
+		return 0
+	}
+	head := chain[len(chain)-1]
+	
+	// Apply Demurrage
+	elapsed := ts - head.Timestamp
+	if elapsed <= 0 {
+		return head.Balance
+	}
+	decay := head.Balance * l.DemurrageRate * float64(elapsed)
+	return math.Max(0, head.Balance-decay)
 }

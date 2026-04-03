@@ -41,7 +41,8 @@ app.post('/process', (req, res) => {
             previous: blockData.previous,
             balance: blockData.balance,
             link: blockData.link,
-            spora: blockData.spora
+            spora: blockData.spora,
+            payload: blockData.payload
         });
         block.timestamp = blockData.timestamp;
         block.hash = blockData.hash;
@@ -83,6 +84,17 @@ app.get('/chain/:account', (req, res) => {
     const account = req.params.account;
     const chain = lattice.chains[account] || [];
     res.json({ chain });
+});
+
+// Governance Endpoints
+app.get('/proposals', (req, res) => {
+    res.json(Object.values(lattice.proposals));
+});
+
+app.get('/votes/:proposalHash', (req, res) => {
+    const proposalHash = req.params.proposalHash;
+    const votes = lattice.votes[proposalHash] || {};
+    res.json(votes);
 });
 
 app.listen(PORT, () => {

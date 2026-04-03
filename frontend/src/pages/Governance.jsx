@@ -1,58 +1,150 @@
 import { useState, useEffect } from 'react';
-import { getProposals, castVote } from '../api'; // This must point to the api.js file we just updated
+import { getProposals, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api'; 
+import { generateKeypair } from '../cryptoUtils';
+import { Block } from '../Block';
 import './Governance.css';
 
 export function Governance() {
-    const [balance] = useState(1250); // Mock balance
-    const votingPower = Math.floor(Math.sqrt(balance)); // Quadratic Voting
+    const [balance, setBalance] = useState(0);
+    const [votingPower, setVotingPower] = useState(0);
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    const loadProposals = async () => {
-        try {
-            const data = await getProposals();
-            if (data && Array.isArray(data)) {
-                setProposals(data);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [keypair, setKeypair] = useState(null);
 
     useEffect(() => {
+        let kp;
+        let storedKeys = localStorage.getItem('bobcoin_wallet');
+        if (!storedKeys) {
+            kp = generateKeypair();
+            localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+            setKeypair(kp);
+        } else {
+            kp = JSON.parse(storedKeys);
+            setKeypair(kp);
+        }
+
+        const loadProposals = async () => {
+            try {
+                const data = await getProposals();
+                if (data && Array.isArray(data)) {
+                    setProposals(data);
+                }
+
+                if (kp) {
+                    const balRes = await fetch(`${LATTICE_URL}/balance/${kp.publicKey}`);
+                    const balData = await balRes.json();
+                    setBalance(balData.balance || 0);
+                    setVotingPower(Math.sqrt(balData.balance || 0));
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadProposals();
-        // Poll for updates
         const interval = setInterval(loadProposals, 5000);
         return () => clearInterval(interval);
     }, []);
 
     const handleVote = async (id, voteType) => {
-        // Optimistic update
-        setProposals(prev => prev.map(p => {
-            if (p.id === id) {
-                return {
-                    ...p,
-                    votesFor: voteType === 'yes' ? p.votesFor + votingPower : p.votesFor,
-                    votesAgainst: voteType === 'no' ? p.votesAgainst + votingPower : p.votesAgainst
-                };
-            }
-            return p;
-        }));
+        if (!confirm(`Cast vote ${voteType.toUpperCase()} on proposal ${id.slice(0, 8)}... with power ${votingPower.toFixed(2)}?`)) return;
 
-        const result = await castVote(id, voteType, votingPower);
-        if (result && result.success) {
-            console.log("Vote confirmed!");
-            loadProposals();
-        } else {
-            alert("Vote failed or server unreachable");
+        try {
+            const frontRes = await getLatticeFrontier(keypair.publicKey);
+            const previousHash = frontRes.frontier;
+            if (!previousHash) throw new Error("Wallet not initialized on network (no frontier).");
+
+            const expectedChallenge = parseInt(previousHash.substr(0, 8), 16);
+            let sporaProof = null;
+            try {
+                sporaProof = await getSporaProof(expectedChallenge);
+            } catch (e) {
+                alert("SPoRA Failed: You must be running an active Supernode seeding the Bobtorrent Anchors to vote.");
+                return;
+            }
+
+            const voteBlock = new Block({
+                type: 'vote',
+                account: keypair.publicKey,
+                previous: previousHash,
+                balance: balance, // Voting is free
+                link: id, // Link is the proposal hash
+                spora: sporaProof,
+                payload: { vote: voteType === 'yes' ? 'FOR' : 'AGAINST' }
+            });
+
+            await voteBlock.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(voteBlock);
+
+            if (res.success) {
+                alert(`Vote cast successfully! TX: ${res.hash}`);
+            } else {
+                alert("Voting failed: " + res.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error casting vote: " + e.message);
+        }
+    };
+
+    const handleCreateProposal = async (e) => {
+        e.preventDefault();
+        const title = prompt("Enter proposal title (costs 10 BOB):");
+        if (!title) return;
+        
+        if (balance < 10) {
+            alert("Insufficient funds! Proposals cost exactly 10 BOB.");
+            return;
+        }
+
+        try {
+            const frontRes = await getLatticeFrontier(keypair.publicKey);
+            const previousHash = frontRes.frontier;
+            if (!previousHash) throw new Error("Wallet not initialized on network (no frontier).");
+
+            const expectedChallenge = parseInt(previousHash.substr(0, 8), 16);
+            let sporaProof = null;
+            try {
+                sporaProof = await getSporaProof(expectedChallenge);
+            } catch (err) {
+                alert("SPoRA Failed: You must be running an active Supernode seeding the Bobtorrent Anchors.");
+                return;
+            }
+
+            const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+            const proposalBlock = new Block({
+                type: 'proposal',
+                account: keypair.publicKey,
+                previous: previousHash,
+                balance: balance - 10,
+                link: 'DAO_PROPOSAL',
+                spora: sporaProof,
+                payload: { title, endTime }
+            });
+
+            await proposalBlock.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(proposalBlock);
+
+            if (res.success) {
+                alert(`Proposal Created! TX: ${res.hash}`);
+            } else {
+                alert("Proposal failed: " + res.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error creating proposal: " + err.message);
         }
     };
 
     return (
         <div className="governance-container">
-            <h1 className="glitch" data-text="DAO GOVERNANCE">DAO GOVERNANCE</h1>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <h1 className="glitch" data-text="DAO GOVERNANCE">DAO GOVERNANCE</h1>
+                <button className="cyber-button" onClick={handleCreateProposal} title="Create a new DAO proposal on the Lattice. Costs 10 BOB.">NEW PROPOSAL</button>
+            </div>
 
             <div className="stats-bar">
                 <div className="stat">
@@ -75,7 +167,7 @@ export function Governance() {
                 {loading ? <div className="loading">LOADING DAO...</div> : proposals.map(prop => (
                     <div key={prop.id} className={`proposal-card ${prop.status.toLowerCase()}`}>
                         <div className="prop-header">
-                            <span className="prop-id">#{prop.id}</span>
+                            <span className="prop-id">#{prop.id.slice(0, 8)}...</span>
                             <span className={`status-badge ${prop.status.toLowerCase()}`}>{prop.status}</span>
                         </div>
                         <h3>{prop.title}</h3>

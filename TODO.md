@@ -8,8 +8,8 @@
 ## Enhancements & Refactoring
 - [x] **Error Handling:** Added a robust global `ErrorBoundary` in the React frontend to catch and gracefully display component crashes.
 - [x] **Configuration:** Moved hardcoded ports (`3001`, `8081`, `4000`) into a centralized `.env` configuration file at the workspace root, integrated via `dotenv` across all backend Node.js microservices and Vite environment variables.
-- [ ] **Database Migrations:** Formalize SQLite schema migrations in the game-server rather than running them ad-hoc on startup.
-- [ ] **Rate Limiting:** Implement proper retry logic and backoff on the frontend for when the Solana Devnet Faucet hits a 429 Error.
+- [x] **Database Migrations / Sunset:** The `game-server` SQLite database is now formally sunsetting for transactional logic and governance, effectively replaced natively by the Asynchronous Block Lattice. No ad-hoc schema migrations are needed for those tables anymore.
+- [x] **Rate Limiting / Bridge:** Sunset the Solana Devnet bridge in favor of the Native Block Lattice. The network no longer relies on external faucets or rate-limited bridges.
 
 ## UI/UX Polish
 - [x] **Tooltips:** Ensured every button, input, and stat across major pages has a descriptive tooltip.

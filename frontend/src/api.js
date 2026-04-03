@@ -92,29 +92,11 @@ export const getTransactions = async () => {
 
 export const getProposals = async () => {
     try {
-        const res = await fetch(`${API_URL}/proposals`);
+        const res = await fetch(`${LATTICE_URL}/proposals`);
         return await res.json();
     } catch (e) {
         console.error("Failed to fetch proposals:", e);
         return [];
-    }
-};
-
-export const castVote = async (id, voteType, power) => {
-    try {
-        const res = await fetch(`${API_URL}/proposals/${id}/vote`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                voterId: 'user_' + Math.random().toString(36).substr(2, 6),
-                voteType: voteType === 'yes' ? 'FOR' : 'AGAINST',
-                power
-            })
-        });
-        return await res.json();
-    } catch (e) {
-        console.error("Voting failed:", e);
-        return { success: false };
     }
 };
 

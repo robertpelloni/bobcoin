@@ -1,13 +1,14 @@
 import { hash, sign, verify } from './cryptoUtils.js';
 
 export class Block {
-    constructor({ type, account, previous, balance, link, spora = null }) {
-        this.type = type;         // 'open', 'send', 'receive'
+    constructor({ type, account, previous, balance, link, spora = null, payload = null }) {
+        this.type = type;         // 'open', 'send', 'receive', 'proposal', 'vote'
         this.account = account;   // Public key of the chain owner
         this.previous = previous; // Hash of the previous block (null if 'open')
         this.balance = balance;   // Resulting balance after this block
-        this.link = link;         // 'send' -> destination account, 'receive' -> send block hash
+        this.link = link;         // 'send' -> destination, 'receive' -> send hash, 'vote' -> proposal hash
         this.spora = spora;       // SPoRA proof object: { infoHash, challenge, chunkHash }
+        this.payload = payload;   // Custom JSON payload for governance/smart contracts
         this.timestamp = Date.now();
         
         this.hash = this.calculateHash();
@@ -21,7 +22,8 @@ export class Block {
             (this.previous || '') +
             this.balance.toString() +
             this.link +
-            (this.spora ? JSON.stringify(this.spora) : '')
+            (this.spora ? JSON.stringify(this.spora) : '') +
+            (this.payload ? JSON.stringify(this.payload) : '')
         );
     }
 

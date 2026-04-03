@@ -102,7 +102,73 @@ async function testFlow() {
         const balRes = await fetch(`${LATTICE_URL}/balance/${userWallet.publicKey}`);
         const balData = await balRes.json();
         console.log(`✅ Final Wallet Balance on Lattice: ${balData.balance} BOB`);
-        console.log("=== TEST COMPLETE ===");
+    // 6. User Creates a Governance Proposal
+    console.log("\n6. User creates a DAO Proposal...");
+    const proposalTitle = "Burn 50% of System Supply";
+    const endTime = new Date(Date.now() + 86400000).toISOString();
+    
+    const propSporaRes = await fetch(`http://localhost:8081/spora/${parseInt(receiveData.hash.substr(0, 8), 16)}`);
+    const propSporaData = await propSporaRes.json();
+
+    const proposalBlock = new Block({
+        type: 'proposal',
+        account: userWallet.publicKey,
+        previous: receiveData.hash,
+        balance: balData.balance - 10, // Costs 10 BOB
+        link: 'DAO_PROPOSAL',
+        spora: propSporaData.spora,
+        payload: { title: proposalTitle, endTime }
+    });
+    await proposalBlock.signBlock(userWallet.privateKey);
+    
+    const propRes = await fetch(`${LATTICE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block: proposalBlock })
+    });
+    const propData = await propRes.json();
+    if (propData.success) {
+        console.log(`✅ Proposal Created! Hash: ${propData.hash}`);
+    } else {
+        console.error("❌ Proposal Failed:", propData.error);
+        process.exit(1);
+    }
+
+    // 7. User Votes on their own Proposal
+    console.log("7. User casts Quadratic Vote 'FOR' their proposal...");
+    const voteSporaRes = await fetch(`http://localhost:8081/spora/${parseInt(propData.hash.substr(0, 8), 16)}`);
+    const voteSporaData = await voteSporaRes.json();
+
+    const voteBlock = new Block({
+        type: 'vote',
+        account: userWallet.publicKey,
+        previous: propData.hash,
+        balance: balData.balance - 10, // Balance remains the same
+        link: propData.hash,
+        spora: voteSporaData.spora,
+        payload: { vote: 'FOR' }
+    });
+    await voteBlock.signBlock(userWallet.privateKey);
+
+    const voteRes = await fetch(`${LATTICE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block: voteBlock })
+    });
+    const voteData = await voteRes.json();
+    
+    if (voteData.success) {
+        console.log(`✅ Vote Cast! Hash: ${voteData.hash}`);
+        const fetchProp = await fetch(`${LATTICE_URL}/proposals`);
+        const fetchPropData = await fetchProp.json();
+        console.log("Current Proposals State:");
+        console.log(fetchPropData);
+        console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
+    } else {
+        console.error("❌ Vote Failed:", voteData.error);
+        process.exit(1);
+    }
+    
     } else {
         console.error("❌ Failed to process receive block:", receiveData.error);
         process.exit(1);

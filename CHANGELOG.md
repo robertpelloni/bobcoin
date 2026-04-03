@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.7] - 2026-04-03
+
+### Added
+- **Native Lattice Governance**: Completely eradicated the traditional SQLite backend dependency for DAO Proposals. Users can now generate cryptographic `proposal` and `vote` blocks, and broadcast them directly to the `bobcoin-consensus` engine!
+- **Quadratic Voting**: Natively implemented quadratic voting power calculated dynamically based on a user’s balance (`Math.sqrt(balance)`) during a `vote` block submission to mathematically resist whale dominance without a centralized authority.
+- **Complete Sovereign E2E Validation**: The `test_e2e.js` suite now perfectly validates a user’s ability to mathematically verify a zero-knowledge proof, receive funds via SPoRA, generate a community governance proposal, and lock in a vote on their own proposal in less than 2 seconds over the Lattice.
+
+
+
+
+
 ## [2.6.6] - 2026-04-03
 
 ### Added

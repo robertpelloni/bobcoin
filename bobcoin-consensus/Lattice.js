@@ -12,6 +12,10 @@ export class Lattice {
         // Tracks unreceived 'send' blocks (pending incoming transactions)
         // Maps recipient address to an array of send block hashes
         this.pending = {};
+        
+        // On-chain Governance State
+        this.proposals = {};
+        this.votes = {}; // Maps proposal_hash to { account: vote_weight }
     }
 
     /**
@@ -73,8 +77,9 @@ export class Lattice {
         }
 
         // Verify state transitions based on type
+        const previousBalance = frontier ? frontier.balance : 0;
+
         if (block.type === 'send') {
-            const previousBalance = frontier ? frontier.balance : 0;
             if (block.balance >= previousBalance) throw new Error("Send block must decrease balance");
             
             const amount = previousBalance - block.balance;
@@ -87,7 +92,6 @@ export class Lattice {
         } else if (block.type === 'receive' || block.type === 'open') {
             // GENESIS BYPASS
             if (block.type === 'open' && block.link === 'SYSTEM_GENESIS' && Object.keys(this.chains).length === 0) {
-                // Allow the very first block of the network to be an open block linking to SYSTEM_GENESIS
                 if (!this.chains[account]) this.chains[account] = [];
                 this.chains[account].push(block);
                 this.blocks[block.hash] = block;
@@ -101,13 +105,56 @@ export class Lattice {
             
             if (!pendingTx) throw new Error("Pending send block not found or already received");
 
-            const previousBalance = frontier ? frontier.balance : 0;
             const expectedBalance = previousBalance + pendingTx.amount;
-            
             if (block.balance !== expectedBalance) throw new Error("Invalid receive balance");
 
             // Remove from pending
             this.pending[account] = pendingList.filter(p => p.hash !== sendBlockHash);
+
+        } else if (block.type === 'proposal') {
+            // A proposal costs exactly 10 BOB
+            if (block.balance !== previousBalance - 10) throw new Error("Proposal creation costs exactly 10 BOB");
+            
+            if (!block.payload || !block.payload.title || !block.payload.endTime) {
+                throw new Error("Invalid proposal payload");
+            }
+
+            this.proposals[block.hash] = {
+                id: block.hash,
+                proposer: account,
+                title: block.payload.title,
+                status: 'Active',
+                votesFor: 0,
+                votesAgainst: 0,
+                endTime: block.payload.endTime,
+                timestamp: block.timestamp
+            };
+            this.votes[block.hash] = {}; // Initialize vote tracker
+        } else if (block.type === 'vote') {
+            // Vote costs 0 BOB
+            if (block.balance !== previousBalance) throw new Error("Vote block must not change balance");
+            
+            const proposalHash = block.link;
+            const proposal = this.proposals[proposalHash];
+            if (!proposal) throw new Error("Target proposal not found");
+            if (proposal.status !== 'Active' || Date.now() > new Date(proposal.endTime).getTime()) {
+                throw new Error("Proposal is closed");
+            }
+
+            const voteType = block.payload.vote; // 'FOR' or 'AGAINST'
+            if (voteType !== 'FOR' && voteType !== 'AGAINST') throw new Error("Invalid vote type");
+
+            if (this.votes[proposalHash][account]) {
+                throw new Error("Account has already voted on this proposal");
+            }
+
+            // Quadratic Voting power based on balance at the time of vote
+            const power = Math.sqrt(block.balance);
+            this.votes[proposalHash][account] = { type: voteType, power };
+
+            if (voteType === 'FOR') proposal.votesFor += power;
+            else proposal.votesAgainst += power;
+
         } else {
             throw new Error("Invalid block type");
         }

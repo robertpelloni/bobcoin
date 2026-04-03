@@ -40,10 +40,12 @@ type LiquidityPool struct {
 }
 
 type PeerInfo struct {
-	URL      string `json:"url"`
-	Latency  int64  `json:"latency"` // in milliseconds
-	LastSeen int64  `json:"lastSeen"`
-	Status   string `json:"status"`
+	URL        string `json:"url"`
+	Latency    int64  `json:"latency"` // in milliseconds
+	LastSeen   int64  `json:"lastSeen"`
+	Status     string `json:"status"`
+	MerkleRoot string `json:"merkleRoot"`
+	Blocks     int    `json:"blocks"`
 }
 
 type Lattice struct {
@@ -61,6 +63,7 @@ type Lattice struct {
 	Peers      map[string]*PeerInfo      // URL -> Stats
 	StateHash  string
 	MerkleRoot string                   // God-Hash of all account states
+	QuorumScore float64                 // % of network in agreement
 	DemurrageRate float64
 }
 
@@ -79,6 +82,7 @@ func NewLattice(db *DBManager) *Lattice {
 		Peers:      make(map[string]*PeerInfo),
 		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
 		MerkleRoot: "0000000000000000000000000000000000000000000000000000000000000000",
+		QuorumScore: 100.0,
 		DemurrageRate: 0.0001 / 60000,
 	}
 

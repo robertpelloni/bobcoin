@@ -100,11 +100,12 @@ func main() {
 
 	http.HandleFunc("/status", handleStatus)
 	http.HandleFunc("/process", handleProcess)
-	http.HandleFunc("/simulate", handleSimulate)
+	// http.HandleFunc("/simulate", handleSimulate) // Not implemented in this version
 	http.HandleFunc("/balance/", handleBalance)
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/peers", handlePeers)
+	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/heartbeat", handleHeartbeat)
 	http.HandleFunc("/blocks", gzipHandler(handleBlocks))
 	http.HandleFunc("/snapshot", gzipHandler(handleSnapshot))
@@ -124,6 +125,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"stateHash": lattice.StateHash,
 		"merkleRoot": lattice.MerkleRoot,
 		"accounts": len(lattice.Chains),
+		"blocks": len(lattice.Blocks),
 	})
 }
 
@@ -147,45 +149,6 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 	blocksInInterval++
 	fmt.Printf("[Lattice] Processed %s block for %s...\n", payload.Block.Type, payload.Block.Account[:8])
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": payload.Block.Hash})
-}
-
-func handleSimulate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost { return }
-	
-	var payload struct {
-		Block *Block `json:"block"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	// Simulation: Use a temporary read-lock to check the state
-	lattice.mu.RLock()
-	defer lattice.mu.RUnlock()
-
-	// We skip signature verification for simulation because the block isn't signed yet!
-	// But we check everything else: Balance, Height, SPoRA, Invariants.
-	
-	// Check balance availability
-	currentBal := lattice.GetBalance(payload.Block.Account, time.Now().UnixNano()/1e6)
-	projectedBal := payload.Block.Balance
-	
-	// Basic validation logic
-	status := "VALID"
-	errorMsg := ""
-	
-	if payload.Block.Type == "send" && projectedBal > currentBal {
-		status = "INVALID"
-		errorMsg = "Insufficient funds for projected balance."
-	}
-
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": status,
-		"error": errorMsg,
-		"projectedBalance": projectedBal,
-		"currentBalance": currentBal,
-	})
 }
 
 func handleBalance(w http.ResponseWriter, r *http.Request) {
@@ -253,6 +216,33 @@ func handleBlocks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(delta)
 }
 
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	
+	agreeCount := 0
+	for _, p := range lattice.Peers {
+		if p.Status == "online" && p.MerkleRoot == lattice.MerkleRoot {
+			agreeCount++
+		}
+	}
+	
+	quorum := 100.0
+	if len(lattice.Peers) > 0 {
+		quorum = (float64(agreeCount) / float64(len(lattice.Peers))) * 100.0
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "healthy",
+		"quorum":    quorum,
+		"tps":       lastTps,
+		"peers":     len(lattice.Peers),
+		"stateHash": lattice.StateHash,
+		"merkle":    lattice.MerkleRoot,
+		"blocks":    len(lattice.Blocks),
+	})
+}
+
 func gossipLoop() {
 	ticker := time.NewTicker(10 * time.Second)
 	for range ticker.C {
@@ -273,24 +263,26 @@ func gossipLoop() {
 				lattice.mu.Unlock()
 				continue
 			}
+			
+			var stats map[string]interface{}
+			json.NewDecoder(resp.Body).Decode(&stats)
+			
+			remoteMerkle := stats["merkleRoot"].(string)
+			remoteBlocks := int(stats["blocks"].(float64))
 			if peer != nil {
 				peer.Status = "online"
 				peer.Latency = latency
 				peer.LastSeen = time.Now().Unix()
+				peer.MerkleRoot = remoteMerkle
+				peer.Blocks = remoteBlocks
 			}
-			lattice.mu.Unlock()
 
-			var stats map[string]interface{}
-			json.NewDecoder(resp.Body).Decode(&stats)
-			
-			// Detect State Divergence
-			remoteHash := stats["stateHash"].(string)
-			if remoteHash != lattice.StateHash {
-				fmt.Printf("[GOSSIP] State Divergence with %s! Initiating Compressed Batch Sync...\n", url)
+			if remoteMerkle != lattice.MerkleRoot {
+				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Batch Sync...\n", url)
 				
 				for {
-					// Use 500 block batches for better throughput
-					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=500", url, lattice.StateHash))
+					// Use 100 block batches for better throughput
+					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=100", url, lattice.StateHash))
 					if err != nil { break }
 					var newBlocks []*Block
 					json.NewDecoder(syncResp.Body).Decode(&newBlocks)
@@ -306,9 +298,10 @@ func gossipLoop() {
 						}
 					}
 					fmt.Printf("[SYNC] Integrated compressed batch of %d blocks from %s\n", len(newBlocks), url)
-					if len(newBlocks) < 500 { break } 
+					if len(newBlocks) < 100 { break } 
 				}
 			}
+			lattice.mu.Unlock()
 		}
 	}
 }

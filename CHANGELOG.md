@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.7.0] - 2026-04-03
+
+### Added
+- **Sovereign Address Book**: Implemented a local contact management system in `Wallet.jsx`.
+  - Users can now save human-readable aliases for public keys to prevent transaction errors.
+  - Added a "USE" shortcut to quickly populate the Send and DEX forms from the address book.
+  - Persistence integrated with browser local storage for persistent, sovereign contact management.
+- **Lattice Diplomat Achievement**: A new on-chain milestone for users who build a network of sovereign contacts.
+- **UX Hardening pass**: Optimized the wallet settings grid for mobile and added clear tooltips for contact management.
+
 ## [6.6.0] - 2026-04-03
 
 ### Added

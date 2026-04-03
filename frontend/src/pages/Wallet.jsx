@@ -18,6 +18,17 @@ export function Wallet() {
     // Backup Vault State
     const [showBackup, setShowBackup] = useState(false);
     const [importSeed, setImportSeed] = useState('');
+    const [contacts, setContacts] = useState(() => {
+        const stored = localStorage.getItem('bobcoin_contacts');
+        return stored ? JSON.parse(stored) : {};
+    });
+    const [contactName, setContactName] = useState('');
+    const [contactAddr, setContactAddr] = useState('');
+    const [showContacts, setShowContacts] = useState(false);
+
+    useEffect(() => {
+        localStorage.setItem('bobcoin_contacts', JSON.stringify(contacts));
+    }, [contacts]);
 
     // Gamified Onboarding State
     const [isGenerating, setIsGenerating] = useState(false);
@@ -234,6 +245,20 @@ export function Wallet() {
         return () => window.removeEventListener('keydown', handleType);
     }, [isGenerating]);
 
+    const handleAddContact = () => {
+        if (!contactName || !contactAddr) return;
+        setContacts(prev => ({ ...prev, [contactAddr]: contactName }));
+        setContactName('');
+        setContactAddr('');
+        if (Object.keys(contacts).length >= 4) checkAndUnlock('LATTICE_DIPLOMAT', keypair, []);
+    };
+
+    const handleDeleteContact = (addr) => {
+        const newContacts = { ...contacts };
+        delete newContacts[addr];
+        setContacts(newContacts);
+    };
+
     if (isGenerating) {
         return (
             <div className="wallet-container" style={{display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh'}}>
@@ -436,7 +461,36 @@ export function Wallet() {
                         }} style={{fontSize: '0.8rem', padding: '0.5rem'}} title="Open the Secure Backup Vault.">
                             {showBackup ? 'CLOSE VAULT' : 'BACKUP VAULT'}
                         </button>
+                        <button className="cyber-button secondary" onClick={() => setShowContacts(!showContacts)} style={{fontSize: '0.8rem', padding: '0.5rem'}} title="Manage your sovereign contacts.">
+                            {showContacts ? 'CLOSE CONTACTS' : 'ADDRESS BOOK'}
+                        </button>
                     </div>
+
+                    {showContacts && (
+                        <div className="address-book" style={{background: '#050505', border: '1px solid #0ff', padding: '1.5rem', marginTop: '1.5rem', textAlign: 'left', width: '100%'}}>
+                            <h3 style={{color: '#0ff', marginTop: 0}}>SOVEREIGN CONTACTS</h3>
+                            <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+                                <input className="cyber-input" style={{flex: 1}} placeholder="Name..." value={contactName} onChange={e => setContactName(e.target.value)} />
+                                <input className="cyber-input" style={{flex: 2}} placeholder="Public Key..." value={contactAddr} onChange={e => setContactAddr(e.target.value)} />
+                                <button className="cyber-button small" onClick={handleAddContact}>ADD</button>
+                            </div>
+                            <div className="contact-list" style={{maxHeight: '200px', overflowY: 'auto'}}>
+                                {Object.entries(contacts).map(([addr, name]) => (
+                                    <div key={addr} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111', padding: '0.5rem', marginBottom: '0.4rem', borderLeft: '2px solid #0ff'}}>
+                                        <div>
+                                            <div style={{color: '#fff', fontSize: '0.85rem'}}>{name}</div>
+                                            <div style={{color: '#444', fontSize: '0.7rem', fontFamily: 'monospace'}}>{addr.slice(0, 16)}...</div>
+                                        </div>
+                                        <div style={{display: 'flex', gap: '0.5rem'}}>
+                                            <button className="cyber-button small" onClick={() => setSendAddress(addr)}>USE</button>
+                                            <button className="cyber-button small secondary" onClick={() => handleDeleteContact(addr)}>DEL</button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {Object.keys(contacts).length === 0 && <p style={{color: '#444', fontSize: '0.8rem'}}>NO CONTACTS SAVED.</p>}
+                            </div>
+                        </div>
+                    )}
 
                     {showBackup && (
                         <div className="backup-vault" style={{background: '#050505', border: '1px solid #ff0055', padding: '1.5rem', marginTop: '1.5rem', textAlign: 'left', width: '100%'}}>

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.2.0] - 2026-04-03
+
+### Added
+- **The Consensus Matrix**: Implemented a real-time, peer-aware **3D Network Mesh Visualizer** in the system console. 
+  - The visualizer now dynamicallly maps the global P2P gossip topology using `@react-three/fiber`.
+  - Peers are rendered as pulsing network nodes in 3D space, connected by authorized consensus bridges.
+  - Implemented 3D text labeling for peer identification within the Matrix.
+- **Lattice Visionary Achievement**: A final visual milestone unlocked for users who successfully map the network mesh.
+- **Performance GPU Hardening**: Optimized the 3D rendering pipeline to handle multiple dynamic peer nodes without impacting mobile performance.
+
 ## [7.1.0] - 2026-04-03
 
 ### Added

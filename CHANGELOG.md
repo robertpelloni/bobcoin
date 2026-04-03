@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] - 2026-04-03
+
+### Added
+- **Consensus P2P Gossip**: Implemented a node discovery and health protocol in the Go consensus engine.
+  - Added a background `gossipLoop` routine that periodically pings registered peers.
+  - Implemented state root comparison to detect ledger forks or data divergence.
+  - Added `/peers` API endpoints for dynamic network registration.
+- **Network Topology UI**: Upgraded the `SystemStatus` dashboard with a live Peer List. Users can now manually add peer URLs (e.g., `:4002`) and monitor their connection status and reported state roots.
+- **Go Engine Expansion (v3)**: Added a thread-safe `Peers` map to the `Lattice` struct with JSON discovery support.
+
 ## [5.3.0] - 2026-04-03
 
 ### Added

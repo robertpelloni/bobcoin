@@ -50,6 +50,7 @@ type Lattice struct {
 	Anchors    map[string]interface{}
 	Multisigs  map[string]*MultisigVault
 	Pools      map[string]*LiquidityPool // PairName -> Pool
+	Peers      map[string]string        // URL -> NodeID
 	StateHash  string
 	DemurrageRate float64
 }
@@ -66,6 +67,7 @@ func NewLattice(db *DBManager) *Lattice {
 		Anchors:    make(map[string]interface{}),
 		Multisigs:  make(map[string]*MultisigVault),
 		Pools:      make(map[string]*LiquidityPool),
+		Peers:      make(map[string]string),
 		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
 		DemurrageRate: 0.0001 / 60000,
 	}

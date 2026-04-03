@@ -14,6 +14,7 @@ export function SystemStatus() {
         supernode: 'Checking...',
         lattice: 'Checking...'
     });
+    const [peers, setPeers] = useState({});
     const [buildInfo, setBuildInfo] = useState(null);
     const [syncing, setSyncing] = useState(false);
 
@@ -23,7 +24,32 @@ export function SystemStatus() {
             .then(res => res.json())
             .then(data => setBuildInfo(data))
             .catch(e => console.error("Failed to load build info", e));
+        
+        fetchPeers();
     }, []);
+
+    const fetchPeers = async () => {
+        try {
+            const res = await fetch(`${LATTICE_URL}/peers`);
+            const data = await res.json();
+            setPeers(data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleAddPeer = async () => {
+        const url = prompt("Enter Peer Node URL (e.g. http://localhost:4001):");
+        if (!url) return;
+        try {
+            await fetch(`${LATTICE_URL}/peers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            fetchPeers();
+        } catch(e) { alert(e.message); }
+    };
 
     const handleExport = async () => {
         try {
@@ -115,7 +141,20 @@ export function SystemStatus() {
             <CyberGrid3D />
 
             <div className="network-sync-panel" style={{background: 'rgba(0,255,255,0.05)', border: '1px solid #0ff', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left'}}>
-                <h3 style={{color: '#0ff', marginTop: 0}}>LATTICE STATE DISCOVERY</h3>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                    <h3 style={{color: '#0ff', margin: 0}}>LATTICE STATE DISCOVERY</h3>
+                    <button className="cyber-button small" onClick={handleAddPeer}>ADD PEER</button>
+                </div>
+                
+                <div className="peer-list" style={{marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                    {Object.keys(peers).map(url => (
+                        <div key={url} style={{background: '#111', border: '1px solid #333', padding: '0.4rem 0.8rem', fontSize: '0.7rem', color: '#0f0'}}>
+                            🔗 {url}
+                        </div>
+                    ))}
+                    {Object.keys(peers).length === 0 && <span style={{color: '#444', fontSize: '0.7rem'}}>NO PEERS REGISTERED</span>}
+                </div>
+
                 <p style={{color: '#888', fontSize: '0.8rem'}}>Export the current network history or bootstrap your local node from a snapshot.</p>
                 <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
                     <button className="cyber-button small" onClick={handleExport}>EXPORT STATE (.JSON)</button>

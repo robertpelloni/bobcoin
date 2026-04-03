@@ -21,7 +21,10 @@ func main() {
 	http.HandleFunc("/balance/", handleBalance)
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pools", handlePools)
+	http.HandleFunc("/peers", handlePeers)
 	http.HandleFunc("/bootstrap", handleBootstrap)
+
+	go gossipLoop()
 
 	fmt.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -81,6 +84,44 @@ func handlePools(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(lattice.Pools)
+}
+
+func handlePeers(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var payload struct { URL string `json:"url"` }
+		json.NewDecoder(r.Body).Decode(&payload)
+		lattice.mu.Lock()
+		lattice.Peers[payload.URL] = "discovering"
+		lattice.mu.Unlock()
+		w.WriteHeader(200)
+		return
+	}
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	json.NewEncoder(w).Encode(lattice.Peers)
+}
+
+func gossipLoop() {
+	ticker := time.NewTicker(10 * time.Second)
+	for range ticker.C {
+		lattice.mu.RLock()
+		peerURLs := make([]string, 0, len(lattice.Peers))
+		for url := range lattice.Peers { peerURLs = append(peerURLs, url) }
+		lattice.mu.RUnlock()
+
+		for _, url := range peerURLs {
+			resp, err := http.Get(url + "/status")
+			if err != nil { continue }
+			var stats map[string]interface{}
+			json.NewDecoder(resp.Body).Decode(&stats)
+			
+			// Detect State Divergence
+			remoteHash := stats["stateHash"].(string)
+			if remoteHash != lattice.StateHash {
+				fmt.Printf("[GOSSIP] State Divergence detected with %s! Remote: %s..., Local: %s...\n", url, remoteHash[:8], lattice.StateHash[:8])
+			}
+		}
+	}
 }
 
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {

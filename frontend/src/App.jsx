@@ -14,6 +14,7 @@ import { Swap } from './pages/Swap';
 import { Gallery } from './pages/Gallery';
 import { Staking } from './pages/Staking';
 import { DEX } from './pages/DEX';
+import { Vault } from './pages/Vault';
 import { Manual } from './pages/Manual';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
           <Route path="gallery" element={<Gallery />} />
           <Route path="staking" element={<Staking />} />
           <Route path="dex" element={<DEX />} />
+          <Route path="vault" element={<Vault />} />
           <Route path="manual" element={<Manual />} />
         </Route>
       </Routes>

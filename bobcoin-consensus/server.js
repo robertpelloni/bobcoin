@@ -142,6 +142,10 @@ app.get('/nfts', (req, res) => {
     res.json({ nfts: Object.values(lattice.nfts) });
 });
 
+app.get('/anchors', (req, res) => {
+    res.json({ anchors: Object.values(lattice.anchors) });
+});
+
 const server = app.listen(PORT, () => {
     console.log(`[Lattice Node] Operating asynchronously on port ${PORT}`);
 });

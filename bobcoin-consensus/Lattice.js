@@ -21,6 +21,7 @@ export class Lattice {
         this.marketBids = {}; // Maps bid_hash to { creator, magnet, amount, status: 'OPEN' | 'ACCEPTED' }
         this.swaps = {};      // Maps secretHash to { sender, recipient, amount, expiry }
         this.nfts = {};       // Maps nftId to { owner, metadata }
+        this.anchors = {};    // Maps anchorId to { owner, magnet, size }
         
         // Demurrage Constant (e.g., 1% decay per 365 days = ~3.17e-10 per second)
         // For this prototype, we'll use a visible 0.01% decay per minute for testing
@@ -339,6 +340,24 @@ export class Lattice {
             if (!recipient) throw new Error("Recipient required for NFT transfer");
             
             nft.owner = recipient;
+
+        } else if (block.type === 'data_anchor') {
+            // Anchoring data costs a fee proportional to size
+            const amount = previousBalance - block.balance;
+            if (amount <= 0) throw new Error("Data anchor must pay storage fee");
+            
+            if (!block.payload || !block.payload.magnet || !block.payload.name) {
+                throw new Error("Invalid data anchor metadata");
+            }
+            
+            this.anchors[block.hash] = {
+                id: block.hash,
+                owner: account,
+                name: block.payload.name,
+                magnet: block.payload.magnet,
+                size: block.payload.size || 0,
+                timestamp: block.timestamp
+            };
 
         } else if (block.type === 'stake_lock') {
             // Locking funds for staking

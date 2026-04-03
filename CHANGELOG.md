@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-04-03
+
+### Added
+- **Cyber-Vault UI** (`/vault`): A new permanent storage dashboard. Users can drag and drop files to anchor them to the Block Lattice. 
+- **Data Anchor Protocol**: Implemented `data_anchor` block type in `Lattice.js` to record decentralized file metadata on-chain.
+- **Supernode Upload API**: Integrated `multer` into `supertorrent/server.js` and added a `/upload` endpoint for receiving and seeding user-provided assets.
+- **DATA_ARCHITECT Achievement**: A new on-chain milestone for anchoring the first data artifact.
+- **Lattice API expansion**: Added `GET /anchors` to support global archive discovery.
+
 ## [3.7.0] - 2026-04-03
 
 ### Added

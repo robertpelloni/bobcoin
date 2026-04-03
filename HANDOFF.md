@@ -1,23 +1,24 @@
-# Session Handoff - 2026-04-03 (v3.7.0)
+# Session Handoff - 2026-04-03 (v3.8.0)
 
 ## Overview & Findings
-I have reached **v3.7.0**! This session introduced **Wallet Hardening (Mnemonic Seeds)** and the **Sovereign DEX**. Users are no longer at risk of losing funds from browser cache clearing, and they have a direct interface for trustless token swapping.
+I have reached **v3.8.0**! This session introduced **The Cyber-Vault**, a decentralized permanent storage interface. Users can now anchor physical data to the Block Lattice, completing the SPoRA feedback loop.
 
-## Architecture State & Recent Changes (v3.7.0)
+## Architecture State & Recent Changes (v3.8.0)
 
-### 1. **Mnemonic Seed Phrases** (`bobcoin-consensus/cryptoUtils.js` + `frontend/src/cryptoUtils.js`)
--   **Deterministic Derivation**: Implemented a seed-based key derivation engine. Both signing (Ed25519) and encryption (X25519) keys are now derived from a single 12-word mnemonic.
--   **Generator**: A pseudo-mnemonic generator provides 12 words from a fixed list for prototype consistency.
--   **Restoration**: Users can now import their 12 words to restore their exact public key and transaction history on any device.
+### 1. **Data Anchoring Protocol** (`bobcoin-consensus/Lattice.js`)
+-   **`data_anchor`**: A new block type that records file metadata (name, size, magnet link) on-chain.
+-   **Storage Fee**: Anchoring data requires a 10 BOB fee (simulated) to discourage network bloat.
+-   **Global Archive**: New API endpoint `GET /anchors` allows the UI to render every file anchored to the network.
 
-### 2. **Sovereign DEX UI** (`/dex`)
--   **Swap Dashboard**: A new high-fidelity page for exchanging BOB for simulated assets.
--   **HTLC Integration**: The DEX logic is designed to use the underlying `swap_lock` HTLC protocol (v3.4.0) to ensure swaps are trustless.
--   **Price Feed**: A static price estimator provides real-time BOB/sSOL rates.
+### 2. **Supernode Uploads** (`supertorrent/server.js`)
+-   **Multer Integration**: The Supernode now supports multipart/form-data uploads.
+-   **WebTorrent Seeding**: When a user uploads a file to `/upload`, the supernode immediately starts seeding it. It returns a Magnet URI which is then anchored to the lattice by the frontend.
+-   **Persistence**: This creates a permanent, decentralized link between the account chain and the physical data.
 
-### 3. **The Backup Vault** (`Wallet.jsx`)
--   **Secure UI**: A dedicated "Vault" panel for viewing the current seed and importing old ones.
--   **Achievement**: Opening the vault triggers the `CRYPTOGRAPHER` milestone, encouraging users to secure their keys.
+### 3. **Cyber-Vault UI** (`/vault`)
+-   **Drag & Drop**: A user-friendly interface for uploading and anchoring data.
+-   **Network Archive**: A scrolling list of every file permanently stored on the Bobcoin network.
+-   **Achievement**: Anchoring data triggers the `DATA_ARCHITECT` milestone.
 
 ## Test Results
 -   ✅ `test_e2e.js` — All 10 steps pass.
@@ -31,4 +32,4 @@ I have reached **v3.7.0**! This session introduced **Wallet Hardening (Mnemonic 
 -   **Start Frontend**: `cd frontend && npm run dev`
 -   **E2E Test**: `node test_e2e.js`
 
-**The Bobcoin Wallet is now production-hardened.** 🛡️🚀⚡🌌📈
+**The Bobcoin Sovereign Network now supports permanent data storage.** 📦🚀⚡🌌🖼️

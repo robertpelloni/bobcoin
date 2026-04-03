@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import WebTorrent from 'webtorrent';
+import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
@@ -14,6 +15,11 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.SUPERNODE_PORT || 8081;
+const upload = multer({ dest: 'uploads/' });
+
+// Create uploads dir if not exists
+if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+
 const LATTICE_URL = process.env.LATTICE_URL || 'http://localhost:4000';
 const NODE_ID = "sn_" + Math.random().toString(36).substr(2, 9);
 const client = new WebTorrent();
@@ -204,6 +210,23 @@ app.get('/spora/:challenge', (req, res) => {
             challenge: parseInt(challenge, 10),
             chunkHash
         }
+    });
+});
+
+// Endpoint to upload a file and start seeding it
+app.post('/upload', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const filePath = req.file.path;
+    client.seed(filePath, { name: req.file.originalname }, (torrent) => {
+        console.log(`[Supernode] Seeding new file: ${torrent.name} (${torrent.magnetURI})`);
+        res.json({
+            success: true,
+            name: torrent.name,
+            magnet: torrent.magnetURI,
+            infoHash: torrent.infoHash,
+            size: req.file.size
+        });
     });
 });
 

@@ -143,11 +143,73 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	h.Write([]byte(l.StateHash + block.Hash))
 	l.StateHash = hex.EncodeToString(h.Sum(nil))
 
-	// 5. Commit In-Memory
+	// 5. Consensus Rules (Balance, etc)
+	epsilon := 0.001
+	prevBalance := 0.0
+	if head != nil {
+		prevBalance = head.Balance
+		// Apply Demurrage
+		elapsed := block.Timestamp - head.Timestamp
+		if elapsed > 0 {
+			decay := prevBalance * l.DemurrageRate * float64(elapsed)
+			prevBalance = math.Max(0, prevBalance-decay)
+		}
+	}
+
+	if block.Type == "send" {
+		if block.Balance > prevBalance+epsilon {
+			return fmt.Errorf("insufficient balance for send")
+		}
+		amount := prevBalance - block.Balance
+		
+		// If recipient is a multisig, update its balance
+		if vault, ok := l.Multisigs[block.Link]; ok {
+			vault.Balance += amount
+		} else {
+			// Standard account pending
+			l.Pending[block.Link] = append(l.Pending[block.Link], &PendingTx{
+				Hash:   block.Hash,
+				Amount: amount,
+				Sender: block.Account,
+			})
+		}
+	} else if block.Type == "receive" {
+		list := l.Pending[block.Account]
+		found := false
+		var amount float64
+		for i, p := range list {
+			if p.Hash == block.Link {
+				amount = p.Amount
+				l.Pending[block.Account] = append(list[:i], list[i+1:]...)
+				found = true
+				break
+			}
+		}
+		if !found { return fmt.Errorf("pending send block not found") }
+		if math.Abs(block.Balance - (prevBalance + amount)) > epsilon {
+			return fmt.Errorf("invalid receive balance")
+		}
+	} else if block.Type == "proposal" {
+		if math.Abs(block.Balance - (prevBalance - 10)) > epsilon {
+			return fmt.Errorf("proposal costs 10 BOB")
+		}
+	} else if block.Type == "market_bid" {
+		if block.Balance > prevBalance+epsilon { return fmt.Errorf("market bid must decrease balance") }
+	} else if block.Type == "stake_lock" {
+		amount := prevBalance - block.Balance
+		if amount <= 0 { return errors.New("stake lock must decrease liquid balance") }
+		if math.Abs(block.StakedBalance - (prevStaked + amount)) > epsilon { return errors.New("invalid staked balance") }
+	} else if block.Type == "stake_unlock" {
+		amount := block.Balance - prevBalance
+		if amount <= 0 { return errors.New("stake unlock must increase liquid balance") }
+		if math.Abs(block.StakedBalance - (prevStaked - amount)) > epsilon { return errors.New("invalid staked balance") }
+	}
+
+	// 6. Commit In-Memory
 	l.Chains[block.Account] = append(l.Chains[block.Account], block)
 	l.Blocks[block.Hash] = block
 
-	// 6. Type-Specific State Updates (Proposals, NFTs, etc)
+	// 7. Type-Specific State Updates (NFTs, Multisig, etc)
 	if block.Type == "mint_nft" {
 		l.Nfts[block.Hash] = block.Payload
 	} else if block.Type == "data_anchor" {
@@ -170,9 +232,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload := block.Payload.(map[string]interface{})
 		vaultAddr := payload["vault"].(string)
 		vault := l.Multisigs[vaultAddr]
-		if vault == nil {
-			return fmt.Errorf("vault not found")
-		}
+		if vault == nil { return fmt.Errorf("vault not found") }
 
 		vault.PendingProposals[block.Hash] = &Proposal{
 			ID:         block.Hash,
@@ -186,23 +246,23 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		vaultAddr := payload["vault"].(string)
 		proposalID := payload["proposalID"].(string)
 		vault := l.Multisigs[vaultAddr]
-		if vault == nil {
-			return fmt.Errorf("vault not found")
-		}
+		if vault == nil { return fmt.Errorf("vault not found") }
 		prop := vault.PendingProposals[proposalID]
-		if prop == nil {
-			return fmt.Errorf("proposal not found")
-		}
+		if prop == nil { return fmt.Errorf("proposal not found") }
 
-		// Prevent double-signing
 		for _, s := range prop.Signatures {
 			if s == block.Account { return fmt.Errorf("already signed") }
 		}
-
 		prop.Signatures = append(prop.Signatures, block.Account)
+		
 		if len(prop.Signatures) >= vault.Threshold {
+			if vault.Balance < prop.Amount { return fmt.Errorf("insufficient vault balance") }
 			prop.Executed = true
-			fmt.Printf("[Lattice] Multi-Sig Proposal %s EXECUTED!\n", prop.ID[:8])
+			vault.Balance -= prop.Amount
+			l.Pending[prop.Recipient] = append(l.Pending[prop.Recipient], &PendingTx{
+				Hash: prop.ID, Amount: prop.Amount, Sender: vaultAddr,
+			})
+			fmt.Printf("[Lattice] Multisig proposal executed: %s\n", prop.ID[:8])
 		}
 	} else if block.Type == "amm_swap" {
 		payload := block.Payload.(map[string]interface{})
@@ -223,7 +283,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		pool.ReserveB -= dy
 	}
 
-	// 7. Persist to Disk
+	// 8. Persist to Disk
 	if !isRecovery {
 		if err := l.db.SaveBlock(block); err != nil {
 			return fmt.Errorf("failed to persist block: %v", err)

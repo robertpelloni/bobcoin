@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.6.0] - 2026-04-03
+
+### Added
+- **Institutional Multi-Sig Hardening**: 
+  - Overhauled the Go consensus engine to handle collective transaction execution.
+  - Implemented logic to trustlessly move funds from shared vaults only when the cryptographic threshold is met.
+  - Added real-time signature tracking and validation for pending proposals.
+  - Fixed fund reception for multi-sig vault addresses.
+- **Multi-Sig UI Upgrade**: Added high-fidelity "Pending Proposals" interface to the `/multisig` page, allowing participants to view, sign, and execute shared transactions.
+- **Production Consensus Shift**: Officially switched the entire ecosystem to target the high-performance Go-Lattice node on port 4001 by default.
+- **Lattice Go Consensus Parity**: Ported the remaining balance transfer logic (send, receive, proposal costs) from the legacy Node.js engine to the Go engine for 100% protocol compliance.
+
 ## [5.5.0] - 2026-04-03
 
 ### Added

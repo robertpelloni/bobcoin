@@ -21,15 +21,21 @@ export function MultiSig() {
     }, []);
 
     const fetchData = async (pubkey) => {
-        const resBal = await getLatticeFrontier(pubkey);
-        setBalance(resBal.balance || 0);
+        setLoading(true);
+        try {
+            const resBal = await getLatticeFrontier(pubkey);
+            setBalance(resBal.balance || 0);
 
-        const resAll = await fetch(`${LATTICE_URL}/multisigs`).then(r => r.json());
-        // Filter multisigs where I am a participant
-        const filtered = Object.entries(resAll.multisigs || {})
-            .map(([addr, data]) => ({ addr, ...data }))
-            .filter(m => m.participants.includes(pubkey));
-        setMyMultisigs(filtered);
+            const resAll = await fetch(`${LATTICE_URL}/multisigs`).then(r => r.json());
+            const filtered = Object.entries(resAll.multisigs || {})
+                .map(([addr, data]) => ({ addr, ...data }))
+                .filter(m => m.participants.includes(pubkey));
+            setMyMultisigs(filtered);
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCreate = async () => {
@@ -68,6 +74,64 @@ export function MultiSig() {
         setLoading(false);
     };
 
+    const handlePropose = async (vaultAddr) => {
+        const recipient = prompt("Enter recipient public key:");
+        const amount = Number(prompt("Enter amount to send (BOB):"));
+        if (!recipient || isNaN(amount)) return;
+
+        setLoading(true);
+        try {
+            const frontier = await getLatticeFrontier(keypair.publicKey);
+            const chain = await getLatticeChain(keypair.publicKey);
+            
+            const block = new Block({
+                type: 'multisig_propose',
+                account: keypair.publicKey,
+                previous: frontier.frontier,
+                balance: balance, // Proposing is free for the individual
+                staked_balance: frontier.staked_balance || 0,
+                link: vaultAddr,
+                payload: { vault: vaultAddr, recipient, amount },
+                height: chain.chain.length
+            });
+
+            await block.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(block);
+            if (res.success) {
+                alert("Transaction Proposed! Collecting signatures...");
+                fetchData(keypair.publicKey);
+            }
+        } catch(e) { alert(e.message); }
+        setLoading(false);
+    };
+
+    const handleApprove = async (vaultAddr, proposalID) => {
+        setLoading(true);
+        try {
+            const frontier = await getLatticeFrontier(keypair.publicKey);
+            const chain = await getLatticeChain(keypair.publicKey);
+            
+            const block = new Block({
+                type: 'multisig_approve',
+                account: keypair.publicKey,
+                previous: frontier.frontier,
+                balance: balance,
+                staked_balance: frontier.staked_balance || 0,
+                link: vaultAddr,
+                payload: { vault: vaultAddr, proposalID },
+                height: chain.chain.length
+            });
+
+            await block.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(block);
+            if (res.success) {
+                alert("Approval Signed & Broadcasted!");
+                fetchData(keypair.publicKey);
+            }
+        } catch(e) { alert(e.message); }
+        setLoading(false);
+    };
+
     return (
         <div className="multisig-container">
             <h1 className="glitch" data-text="SHARED VAULTS">SHARED VAULTS</h1>
@@ -75,7 +139,10 @@ export function MultiSig() {
 
             <div className="multisig-grid">
                 <div className="create-panel">
-                    <h2>INITIALIZE NEW VAULT</h2>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                        <h2 style={{margin: 0}}>INITIALIZE NEW VAULT</h2>
+                        <button className="cyber-button small" onClick={() => fetchData(keypair.publicKey)}>REFRESH</button>
+                    </div>
                     <p className="fee">CREATION FEE: 100.00 BOB</p>
                     <div className="field">
                         <label>PARTICIPANT PUBKEYS (COMMA SEPARATED)</label>
@@ -97,7 +164,25 @@ export function MultiSig() {
                                     <span className="vault-addr">ADDR: {v.addr.substring(0, 16)}...</span>
                                     <span className="vault-threshold">{v.threshold}-of-{v.participants.length}</span>
                                 </div>
-                                <div className="vault-participants">
+                                
+                                <div className="vault-proposals" style={{marginTop: '1rem', borderTop: '1px solid #222', paddingTop: '1rem'}}>
+                                    <h4>PENDING PROPOSALS</h4>
+                                    {Object.values(v.pendingProposals || {}).map(p => (
+                                        <div key={p.id} className="proposal-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111', padding: '0.5rem', marginBottom: '0.5rem'}}>
+                                            <div style={{fontSize: '0.8rem'}}>
+                                                <span style={{color: '#ff0055'}}>{p.amount} BOB</span> → {p.recipient.substring(0,8)}...
+                                                <div style={{color: '#666', fontSize: '0.7rem'}}>SIGS: {p.signatures.length}/{v.threshold}</div>
+                                            </div>
+                                            {!p.signatures.includes(keypair.publicKey) && !p.executed && (
+                                                <button className="cyber-button small" onClick={() => handleApprove(v.addr, p.id)}>APPROVE</button>
+                                            )}
+                                            {p.executed && <span style={{color: '#0f0', fontSize: '0.7rem'}}>EXECUTED</span>}
+                                        </div>
+                                    ))}
+                                    <button className="cyber-button small secondary" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => handlePropose(v.addr)}>NEW PROPOSAL</button>
+                                </div>
+
+                                <div className="vault-participants" style={{marginTop: '1rem', borderTop: '1px solid #222', paddingTop: '0.5rem'}}>
                                     {v.participants.map(p => (
                                         <div key={p} className="p-row">{p.substring(0, 8)}...</div>
                                     ))}

@@ -76,9 +76,11 @@ function NetworkGrid() {
 }
 
 export function CyberGrid3D() {
+    const isMobile = window.innerWidth < 768;
+
     return (
-        <div style={{ position: 'relative', width: '100%', height: '400px', marginBottom: '2rem', border: '1px solid #333', background: 'radial-gradient(circle at center, #111 0%, #000 100%)' }}>
-            <Canvas camera={{ position: [0, 0, 6], fov: 60 }}>
+        <div style={{ position: 'relative', width: '100%', height: isMobile ? '200px' : '400px', marginBottom: '2rem', border: '1px solid #333', background: 'radial-gradient(circle at center, #111 0%, #000 100%)' }}>
+            <Canvas camera={{ position: [0, 0, 6], fov: isMobile ? 80 : 60 }}>
                 <ambientLight intensity={0.5} />
                 <NetworkGrid />
             </Canvas>

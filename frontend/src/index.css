@@ -95,3 +95,32 @@ body {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Global Mobile Hardening */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+        padding-bottom: 70px; /* Space for mobile-nav */
+    }
+
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.4rem; }
+
+    .game-container, .wallet-container, .system-container, .dex-container, .trophy-container, .gallery-container, .vault-container, .multisig-container {
+        padding: 1rem !important;
+    }
+
+    /* Fix Grid Overflows */
+    .status-grid, .explorer-grid, .swap-grid, .multisig-grid, .gallery-layout {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+
+    .mint-panel {
+        width: 100% !important;
+    }
+    
+    .cyber-button {
+        padding: 0.8rem 1.2rem;
+    }
+}

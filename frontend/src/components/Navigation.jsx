@@ -2,6 +2,26 @@ import { NavLink } from 'react-router-dom';
 import './Navigation.css';
 
 export function Navigation() {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    if (isMobile) {
+        return (
+            <nav className="mobile-nav">
+                <NavLink to="/" className="mobile-item"><span className="icon">🎮</span></NavLink>
+                <NavLink to="/wallet" className="mobile-item"><span className="icon">🔒</span></NavLink>
+                <NavLink to="/dex" className="mobile-item"><span className="icon">📈</span></NavLink>
+                <NavLink to="/casino" className="mobile-item"><span className="icon">🎰</span></NavLink>
+                <NavLink to="/system" className="mobile-item"><span className="icon">⚙️</span></NavLink>
+            </nav>
+        );
+    }
+
     return (
         <nav className="cyber-nav">
             <div className="nav-brand">BOBCOIN_NET</div>

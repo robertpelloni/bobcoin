@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0] - 2026-04-03
+
+### Added
+- **Dynamic Mobile Navigation**: Implemented a fixed bottom-navigation system for small screens. Replaced the global sidebar on mobile with a sleek, thumb-friendly icon bar for core arcade actions.
+- **Global Responsive Audit**: Performed a full CSS hardening pass across the PWA. 
+  - Overhauled grids for the **Explorer**, **DEX**, **Shared Vaults**, and **Staking** to support single-column reflow.
+  - Implemented global mobile font-scaling and container padding overrides.
+- **Mobile-Optimized 3D Topology**: Updated the `@react-three/fiber` visualizer to dynamically scale resolution and FOV on handheld devices, ensuring high frame rates on mobile GPUs.
+- **Mobile Warrior Achievement**: A new on-chain milestone unlocked for users accessing the Sovereign Network via mobile devices.
+
 ## [6.1.0] - 2026-04-03
 
 ### Added

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2026-04-03
+
+### Added
+- **BIP-44 HD Wallet Support**: Hardened the wallet infrastructure with Hierarchical Deterministic (HD) account derivation.
+  - Users can now derive an infinite sequence of sub-accounts from a single 12-word master seed.
+  - Implemented standard-compliant derivation paths (e.g., `m/44'/1337'/x'`) in both Go and JavaScript.
+- **Multi-Account UI**: Added a sleek account-switcher to the Privacy Vault. Users can now manage multiple independent lattice chains without clearing their browser session.
+- **HD Architect Achievement**: A new on-chain milestone unlocked upon the successful derivation of a sub-account.
+- **Consensus Hardening v4**: Standardized key derivation across all client runtimes to ensure identical account addresses from the same seed.
+
 ## [6.4.0] - 2026-04-03
 
 ### Added

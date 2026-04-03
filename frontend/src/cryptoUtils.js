@@ -14,10 +14,11 @@ export function generateMnemonic() {
 }
 
 /**
- * Derive deterministic keypair from a seed string (mnemonic)
+ * Derive deterministic keypair from a seed string (mnemonic) and account index (BIP-44 style)
  */
-export async function deriveKeypair(mnemonic) {
-    const msgBuffer = new TextEncoder().encode(mnemonic);
+export async function deriveKeypair(mnemonic, index = 0) {
+    const derivationPath = `m/44'/1337'/${index}'`;
+    const msgBuffer = new TextEncoder().encode(mnemonic + derivationPath);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     const seed = new Uint8Array(hashBuffer);
     const kp = nacl.sign.keyPair.fromSeed(seed);
@@ -28,7 +29,9 @@ export async function deriveKeypair(mnemonic) {
         privateKey: bs58.encode(kp.secretKey),
         boxPublicKey: bs58.encode(boxKp.publicKey),
         boxPrivateKey: bs58.encode(boxKp.secretKey),
-        mnemonic: mnemonic
+        mnemonic: mnemonic,
+        index: index,
+        derivationPath: derivationPath
     };
 }
 

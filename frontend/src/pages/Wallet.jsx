@@ -12,6 +12,7 @@ export function Wallet() {
     const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
     const [keypair, setKeypair] = useState(null);
+    const [accountIndex, setAccountIndex] = useState(0);
     const [pending, setPending] = useState([]);
     
     // Backup Vault State
@@ -25,47 +26,48 @@ export function Wallet() {
     const entropyRef = useRef('');
 
     useEffect(() => {
+        const fetchState = async () => {
+            if (!keypair) return;
+            try {
+                const res = await getLatticeChain(keypair.publicKey);
+                const chain = res.chain || [];
+                if (chain.length > 0) {
+                    const latest = chain[chain.length - 1];
+                    setBalance(latest.balance);
+                } else {
+                    setBalance(0);
+                }
+                setHistory([...chain].reverse());
+                
+                const pendingRes = await getLatticePending(keypair.publicKey);
+                setPending(pendingRes.pending || []);
+            } catch (e) {
+                console.error("Wallet Fetch Error:", e);
+            }
+        };
+        fetchState();
+        const interval = setInterval(fetchState, 5000);
+        return () => clearInterval(interval);
+    }, [keypair]);
+
+    const handleSwitchAccount = async (newIndex) => {
+        if (!keypair?.mnemonic) return;
+        setAccountIndex(newIndex);
+        const newKp = await deriveKeypair(keypair.mnemonic, newIndex);
+        setKeypair(newKp);
+        if (newIndex > 0) checkAndUnlock('HD_ARCHITECT', newKp, []);
+    };
+
+    useEffect(() => {
         // Load or generate Lattice wallet
         let kp = null;
         let storedKeys = localStorage.getItem('bobcoin_wallet');
         if (!storedKeys) {
             setIsGenerating(true);
-            return; // Don't start polling yet!
+            return;
         } else {
-            kp = JSON.parse(storedKeys);
-            setKeypair(kp);
+            setKeypair(JSON.parse(storedKeys));
         }
-
-        const fetchState = async () => {
-            // 1. Fetch system transactions for global history
-            const txs = await getTransactions();
-            if (txs && txs.length > 0) {
-                setHistory(txs.map(tx => ({ ...tx, decoded: false })));
-            } else {
-                setHistory([]); 
-            }
-
-            // 2. Fetch pending lattice blocks for this wallet
-            if (kp) {
-                const pendRes = await getLatticePending(kp.publicKey);
-                if (pendRes && pendRes.pending) {
-                    setPending(pendRes.pending);
-                }
-                
-                // Fetch our own local balance from our chain, not the global TXs
-                const frontRes = await getLatticeFrontier(kp.publicKey);
-                if (frontRes && frontRes.frontier) {
-                    const balRes = await fetch(`${LATTICE_URL}/balance/${kp.publicKey}`);
-                    const balData = await balRes.json();
-                    setBalance(balData.balance || 0.00);
-                }
-            }
-        };
-        fetchState();
-        
-        // Polling for updates
-        const interval = setInterval(fetchState, 5000);
-        return () => clearInterval(interval);
     }, []);
 
     const claimPending = async (pend) => {
@@ -272,6 +274,25 @@ export function Wallet() {
                     <span className="amount">
                         {privacyMode ? '****.**' : balance.toFixed(2)}
                     </span>
+                </div>
+
+                <div className="account-switcher" style={{marginTop: '1.5rem', borderTop: '1px solid #222', paddingTop: '1rem', textAlign: 'left'}}>
+                    <label style={{fontSize: '0.7rem', color: '#666', letterSpacing: '1px'}}>SUB-ACCOUNT (BIP-44)</label>
+                    <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap'}}>
+                        {[0, 1, 2, 3, 4].map(idx => (
+                            <button 
+                                key={idx} 
+                                className={`cyber-button small ${accountIndex === idx ? 'active' : 'secondary'}`}
+                                onClick={() => handleSwitchAccount(idx)}
+                                style={{fontSize: '0.7rem', minWidth: '40px'}}
+                            >
+                                #{idx}
+                            </button>
+                        ))}
+                    </div>
+                    <div style={{marginTop: '0.5rem', fontSize: '0.6rem', color: '#444', fontFamily: 'monospace'}}>
+                        PATH: {keypair?.derivationPath || 'm/44\'/1337\'/0\''}
+                    </div>
                 </div>
 
                 <div className="address-section">

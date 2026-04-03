@@ -97,6 +97,11 @@ app.get('/votes/:proposalHash', (req, res) => {
     res.json(votes);
 });
 
+// Market Endpoints
+app.get('/market/bids', (req, res) => {
+    res.json({ bids: Object.values(lattice.marketBids).filter(b => b.status === 'OPEN') });
+});
+
 app.listen(PORT, () => {
     console.log(`[Lattice Node] Operating asynchronously on port ${PORT}`);
 });

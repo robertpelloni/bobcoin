@@ -46,6 +46,18 @@ export const getLatticeFrontier = async (publicKey) => {
     }
 };
 
+// Market Bids from Lattice
+export const getMarketBids = async () => {
+    try {
+        const res = await fetch(`${LATTICE_URL}/market/bids`);
+        const data = await res.json();
+        return data.bids || [];
+    } catch (e) {
+        console.error("Failed to fetch market bids:", e);
+        return [];
+    }
+};
+
 export const burnTokens = async (amount, reason) => {
     try {
         const res = await fetch(`${API_URL}/burn`, {

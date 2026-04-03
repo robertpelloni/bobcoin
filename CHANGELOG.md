@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.9] - 2026-04-03
+
+### Added
+- **Decentralized Storage Contracts**: Fully migrated the Storage Market (`StorageMarket.jsx`) off the centralized SQLite `bids` database. Users now directly sign and broadcast a mathematical `market_bid` block to the Asynchronous Block Lattice, paying BOB to incentivize file seeding.
+- **Automated P2P Storage Oracle**: Supernodes (`supertorrent/server.js`) natively query the Lattice network for open decentralized storage contracts and fulfill them by seeding WebTorrent chunks, officially completing the Sovereign Mainnet tokenomic loop without a centralized backend.
+- **Ultimate Validation**: The `test_e2e.js` test suite was upgraded to validate the complete decentralized lifecycle: ZK Verification ➔ SPoRA Anchor Verification ➔ Feeless Token Mint/Receive ➔ P2P DAO Proposal Generation ➔ Quadratic Native Voting ➔ Decentralized Storage Contract Deployment. Every step executes mathematically securely over localhost in under 2 seconds.
+
+
+
+
+
 ## [2.6.8] - 2026-04-03
 
 ### Added

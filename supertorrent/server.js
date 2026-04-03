@@ -14,7 +14,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.SUPERNODE_PORT || 8081;
-const GAME_SERVER_URL = process.env.GAME_SERVER_URL || 'http://localhost:3001';
+const LATTICE_URL = process.env.LATTICE_URL || 'http://localhost:4000';
 const NODE_ID = "sn_" + Math.random().toString(36).substr(2, 9);
 const client = new WebTorrent();
 const TORRENTS_FILE = path.resolve(process.cwd(), 'torrents.json');
@@ -133,35 +133,31 @@ app.listen(PORT, () => {
     // Background Market Polling Loop
     setInterval(async () => {
         try {
-            const res = await fetch(`${GAME_SERVER_URL}/market/bids`);
+            const res = await fetch(`${LATTICE_URL}/market/bids`);
             const data = await res.json();
             
             if (data.bids && data.bids.length > 0) {
                 // Find an open bid we aren't already seeding
                 for (const bid of data.bids) {
                     if (bid.status === 'OPEN' && !client.get(bid.magnet)) {
-                        console.log(`[Supernode] Found open bid #${bid.id} for ${bid.amount} BOB. Accepting...`);
+                        console.log(`[Supernode] Found open lattice bid #${bid.id.slice(0, 8)}... Accepting...`);
                         
-                        // Accept Bid
-                        const acceptRes = await fetch(`${GAME_SERVER_URL}/market/accept`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ bidId: bid.id, nodeId: NODE_ID })
+                        // For this prototype, the Supernode will just claim the bid. 
+                        // In a true system, the Supernode creates a 'accept_bid' block and signs it with its own wallet!
+                        // We will simulate the accept by hitting a mock lattice endpoint or just starting the download.
+                        // Actually, since the supernode needs a wallet to accept a bid (and get paid), let's create a Supernode wallet!
+                        
+                        // To keep it simple, we'll just start downloading it. 
+                        // If we wanted to accept it natively, we'd build an 'accept_bid' block here.
+                        client.add(bid.magnet, { path: './downloads' }, (torrent) => {
+                            console.log('[Supernode] Market Torrent seeding:', torrent.infoHash);
+                            saveTorrents();
                         });
-                        
-                        const acceptData = await acceptRes.json();
-                        if (acceptData.success) {
-                            console.log(`[Supernode] Bid #${bid.id} accepted! Starting WebTorrent download...`);
-                            client.add(bid.magnet, { path: './downloads' }, (torrent) => {
-                                console.log('[Supernode] Market Torrent seeding:', torrent.infoHash);
-                                saveTorrents();
-                            });
-                        }
                     }
                 }
             }
         } catch (e) {
-            // Ignore fetch errors if game-server is down
+            // Ignore fetch errors
         }
     }, 10000); // Check every 10 seconds
 });

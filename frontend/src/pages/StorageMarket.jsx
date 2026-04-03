@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { burnTokens, API_URL } from '../api';
+import { getMarketBids, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api';
+import { generateKeypair } from '../cryptoUtils';
+import { Block } from '../Block';
 import './StorageMarket.css';
 
 export function StorageMarket() {
@@ -7,12 +9,13 @@ export function StorageMarket() {
     const [magnet, setMagnet] = useState('');
     const [amount, setAmount] = useState(50);
     const [loading, setLoading] = useState(true);
+    const [keypair, setKeypair] = useState(null);
+    const [balance, setBalance] = useState(0);
 
     const fetchBids = async () => {
         try {
-            const res = await fetch(`${API_URL}/market/bids`);
-            const data = await res.json();
-            if (data.bids) setBids(data.bids);
+            const data = await getMarketBids();
+            setBids(data);
         } catch (e) {
             console.error("Failed to fetch bids", e);
         } finally {
@@ -21,42 +24,79 @@ export function StorageMarket() {
     };
 
     useEffect(() => {
+        let kp;
+        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        if (!storedKeys) {
+            kp = generateKeypair();
+            localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+            setKeypair(kp);
+        } else {
+            kp = JSON.parse(storedKeys);
+            setKeypair(kp);
+        }
+
+        const fetchBal = async () => {
+            if (kp) {
+                try {
+                    const res = await fetch(`${LATTICE_URL}/balance/${kp.publicKey}`);
+                    const data = await res.json();
+                    setBalance(data.balance || 0);
+                } catch(e) {}
+            }
+        };
+
         fetchBids();
-        const interval = setInterval(fetchBids, 5000);
+        fetchBal();
+        const interval = setInterval(() => { fetchBids(); fetchBal(); }, 5000);
         return () => clearInterval(interval);
     }, []);
 
     const handleCreateBid = async (e) => {
         e.preventDefault();
         if (!magnet || amount <= 0) return;
-
-        if (!confirm(`Create Bid: Pay ${amount} BOB to host this file?`)) return;
+        if (balance < amount) {
+            alert(`Insufficient funds. Your balance is ${balance} BOB.`);
+            return;
+        }
+        if (!confirm(`Create Decentralized Storage Contract: Pay ${amount} BOB to host this file?`)) return;
 
         try {
-            // 1. Burn tokens (Simulate escrow/payment)
-            const burnRes = await burnTokens(amount, `Bid Creation: ${magnet.slice(0, 15)}...`);
-            if (!burnRes.success) {
-                alert("Payment Failed: " + burnRes.error);
+            const frontRes = await getLatticeFrontier(keypair.publicKey);
+            const previousHash = frontRes.frontier;
+            if (!previousHash) throw new Error("Wallet not initialized on network (no frontier).");
+
+            const expectedChallenge = parseInt(previousHash.substr(0, 8), 16);
+            let sporaProof = null;
+            try {
+                sporaProof = await getSporaProof(expectedChallenge);
+            } catch (err) {
+                alert("SPoRA Failed: You must be running an active Supernode seeding the Bobtorrent Anchors.");
                 return;
             }
 
-            // 2. Create Bid in DB
-            const res = await fetch(`${API_URL}/market/bid`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ magnet, amount })
+            const bidBlock = new Block({
+                type: 'market_bid',
+                account: keypair.publicKey,
+                previous: previousHash,
+                balance: balance - amount,
+                link: 'STORAGE_MARKET',
+                spora: sporaProof,
+                payload: { magnet }
             });
 
-            if (res.ok) {
-                alert("Bid Placed Successfully!");
+            await bidBlock.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(bidBlock);
+
+            if (res.success) {
+                alert(`Bid Placed on the Lattice! Hash: ${res.hash}`);
                 setMagnet('');
                 fetchBids();
             } else {
-                alert("Failed to place bid");
+                alert("Failed to place bid: " + res.error);
             }
-        } catch (e) {
-            console.error(e);
-            alert("Error creating bid");
+        } catch (err) {
+            console.error(err);
+            alert("Error creating bid: " + err.message);
         }
     };
 
@@ -113,7 +153,7 @@ export function StorageMarket() {
                         <tbody>
                             {bids.map(bid => (
                                 <tr key={bid.id}>
-                                    <td>#{bid.id}</td>
+                                    <td>#{bid.id.slice(0, 8)}...</td>
                                     <td className="magnet-link">{bid.magnet}</td>
                                     <td className="bid-amount">{bid.amount} BOB</td>
                                     <td><span className={`bid-status ${bid.status.toLowerCase()}`}>{bid.status}</span></td>

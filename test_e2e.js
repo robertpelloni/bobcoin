@@ -163,9 +163,53 @@ async function testFlow() {
         const fetchPropData = await fetchProp.json();
         console.log("Current Proposals State:");
         console.log(fetchPropData);
-        console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
     } else {
         console.error("❌ Vote Failed:", voteData.error);
+        process.exit(1);
+    }
+
+    // 8. User Creates a Storage Market Bid
+    console.log("\n8. User creates a Storage Market Bid...");
+    const marketMagnet = "magnet:?xt=urn:btih:3333333333333333333333333333333333333333";
+    
+    // We need their latest frontier after the vote
+    const postVoteFrontierRes = await fetch(`${LATTICE_URL}/frontier/${userWallet.publicKey}`);
+    const postVoteFrontier = await postVoteFrontierRes.json();
+    
+    const expectedBidChallenge = parseInt(postVoteFrontier.frontier.substr(0, 8), 16);
+    const bidSporaRes = await fetch(`http://localhost:8081/spora/${expectedBidChallenge}`);
+    const bidSporaData = await bidSporaRes.json();
+
+    const bidBlock = new Block({
+        type: 'market_bid',
+        account: userWallet.publicKey,
+        previous: postVoteFrontier.frontier,
+        balance: balData.balance - 10, // Vote was free, so 50 - 10 (proposal) = 40. Now bid costs 20.
+        link: 'STORAGE_MARKET',
+        spora: bidSporaData.spora,
+        payload: { magnet: marketMagnet }
+    });
+    // Wait, the balance math is 50 (start) - 10 (proposal) - 0 (vote) = 40. We want to bid 20. So final balance 20!
+    bidBlock.balance = 20;
+
+    await bidBlock.signBlock(userWallet.privateKey);
+    
+    const bidRes = await fetch(`${LATTICE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block: bidBlock })
+    });
+    const bidData = await bidRes.json();
+    
+    if (bidData.success) {
+        console.log(`✅ Market Bid Created! Hash: ${bidData.hash}`);
+        const fetchBids = await fetch(`${LATTICE_URL}/market/bids`);
+        const fetchBidsData = await fetchBids.json();
+        console.log("Current Market Bids:");
+        console.log(fetchBidsData);
+        console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
+    } else {
+        console.error("❌ Market Bid Failed:", bidData.error);
         process.exit(1);
     }
     

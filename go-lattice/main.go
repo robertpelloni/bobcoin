@@ -22,6 +22,7 @@ func main() {
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/peers", handlePeers)
+	http.HandleFunc("/blocks", handleBlocks)
 	http.HandleFunc("/bootstrap", handleBootstrap)
 
 	go gossipLoop()
@@ -91,7 +92,7 @@ func handlePeers(w http.ResponseWriter, r *http.Request) {
 		var payload struct { URL string `json:"url"` }
 		json.NewDecoder(r.Body).Decode(&payload)
 		lattice.mu.Lock()
-		lattice.Peers[payload.URL] = "discovering"
+		lattice.Peers[payload.URL] = "connected"
 		lattice.mu.Unlock()
 		w.WriteHeader(200)
 		return
@@ -99,6 +100,28 @@ func handlePeers(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(lattice.Peers)
+}
+
+func handleBlocks(w http.ResponseWriter, r *http.Request) {
+	after := r.URL.Query().Get("after")
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+
+	var delta []*Block
+	found := false
+	if after == "" { found = true }
+
+	// Simple linear scan for prototype (In production, use index)
+	// We'll return blocks in order of creation
+	allBlocks, _ := db.LoadAllBlocks()
+	for _, b := range allBlocks {
+		if found {
+			delta = append(delta, b)
+		} else if b.Hash == after {
+			found = true
+		}
+	}
+	json.NewEncoder(w).Encode(delta)
 }
 
 func gossipLoop() {
@@ -118,7 +141,25 @@ func gossipLoop() {
 			// Detect State Divergence
 			remoteHash := stats["stateHash"].(string)
 			if remoteHash != lattice.StateHash {
-				fmt.Printf("[GOSSIP] State Divergence detected with %s! Remote: %s..., Local: %s...\n", url, remoteHash[:8], lattice.StateHash[:8])
+				fmt.Printf("[GOSSIP] State Divergence detected with %s! Attempting Auto-Sync...\n", url)
+				
+				// Fetch missing blocks
+				// We'll sync by finding the first common block or start from genesis
+				// For this alpha, we just fetch blocks we don't have
+				syncResp, err := http.Get(url + "/blocks")
+				if err != nil { continue }
+				var newBlocks []*Block
+				json.NewDecoder(syncResp.Body).Decode(&newBlocks)
+
+				for _, b := range newBlocks {
+					lattice.mu.RLock()
+					_, exists := lattice.Blocks[b.Hash]
+					lattice.mu.RUnlock()
+					if !exists {
+						fmt.Printf("[SYNC] Integrating block %s from %s\n", b.Hash[:8], url)
+						lattice.ProcessBlock(b, false)
+					}
+				}
 			}
 		}
 	}

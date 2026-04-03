@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.5.0] - 2026-04-03
+
+### Added
+- **P2P Automatic Consensus Syncing**: Implemented a self-healing protocol for Go nodes to achieve global ledger consistency.
+  - Added `GET /blocks` endpoint for delta-based history retrieval.
+  - Upgraded the gossip loop to automatically initiate a `sync-fetch` upon detecting state root divergence.
+  - Integrated cryptographic block validation during sync to prevent malicious peer-injection.
+- **Network Root Visualization**: Upgraded the `SystemStatus` UI to display the real-time Network State Hash (Root), providing immediate proof of consensus across the network mesh.
+- **Improved Peer Discovery**: Enhanced the registration and status tracking of network peers.
+
 ## [5.4.0] - 2026-04-03
 
 ### Added

@@ -15,6 +15,7 @@ export function SystemStatus() {
         lattice: 'Checking...'
     });
     const [peers, setPeers] = useState({});
+    const [networkRoot, setNetworkRoot] = useState('0x...');
     const [buildInfo, setBuildInfo] = useState(null);
     const [syncing, setSyncing] = useState(false);
 
@@ -115,8 +116,10 @@ export function SystemStatus() {
 
         // Lattice API
         try {
-            await fetch('http://localhost:4000/status');
+            const res = await fetch(`${LATTICE_URL}/status`);
+            const data = await res.json();
             setServices(s => ({ ...s, lattice: 'ONLINE' }));
+            setNetworkRoot(data.stateHash);
         } catch {
             setServices(s => ({ ...s, lattice: 'OFFLINE' }));
         }
@@ -143,7 +146,10 @@ export function SystemStatus() {
             <div className="network-sync-panel" style={{background: 'rgba(0,255,255,0.05)', border: '1px solid #0ff', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
                     <h3 style={{color: '#0ff', margin: 0}}>LATTICE STATE DISCOVERY</h3>
-                    <button className="cyber-button small" onClick={handleAddPeer}>ADD PEER</button>
+                    <div style={{textAlign: 'right'}}>
+                        <div style={{fontSize: '0.6rem', color: '#888'}}>CURRENT NETWORK ROOT</div>
+                        <div style={{fontFamily: 'monospace', fontSize: '0.8rem', color: '#ff0055'}}>{networkRoot.substring(0, 32)}...</div>
+                    </div>
                 </div>
                 
                 <div className="peer-list" style={{marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
@@ -154,6 +160,8 @@ export function SystemStatus() {
                     ))}
                     {Object.keys(peers).length === 0 && <span style={{color: '#444', fontSize: '0.7rem'}}>NO PEERS REGISTERED</span>}
                 </div>
+
+                <button className="cyber-button small" style={{marginBottom: '1rem'}} onClick={handleAddPeer}>REGISTER NEW PEER</button>
 
                 <p style={{color: '#888', fontSize: '0.8rem'}}>Export the current network history or bootstrap your local node from a snapshot.</p>
                 <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>

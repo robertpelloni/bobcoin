@@ -155,6 +155,18 @@ app.get('/multisig/:account', (req, res) => {
     res.json(lattice.multisigs[account] || { error: 'Multisig not found' });
 });
 
+// Full state bootstrap for new nodes
+app.get('/bootstrap', (req, res) => {
+    res.json(lattice.getStateSnapshot());
+});
+
+app.post('/bootstrap', (req, res) => {
+    const snapshot = req.body;
+    if (!snapshot || !snapshot.stateHash) return res.status(400).json({ error: 'Invalid snapshot' });
+    lattice.loadStateSnapshot(snapshot);
+    res.json({ success: true, stateHash: lattice.stateHash });
+});
+
 const server = app.listen(PORT, () => {
     console.log(`[Lattice Node] Operating asynchronously on port ${PORT}`);
 });

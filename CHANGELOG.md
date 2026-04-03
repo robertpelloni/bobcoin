@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-04-03
+
+### Added
+- **Sovereign Mainnet State Sync**: Implemented full cryptographic state serialization in `Lattice.js`. Nodes can now export their entire history (`getStateSnapshot`) and bootstrap from snapshots (`loadStateSnapshot`).
+- **Bootstrap API**: Added `/bootstrap` endpoints to the Lattice server for rapid network synchronization and history retrieval.
+- **Lattice State Discovery UI**: Upgraded the `SystemStatus` dashboard with a "Network Sync" panel. Users can now export the global network state as a JSON artifact or import a snapshot to bootstrap their local environment.
+- **Lattice Historian Achievement**: A new on-chain milestone unlocked when a user exports the network history to ensure its preservation.
+- **Consensus Hardening v3**: The state snapshot includes the cumulative `stateHash`, ensuring that bootstrapped nodes arrive at the exact same network root.
+
 ## [3.9.0] - 2026-04-03
 
 ### Added

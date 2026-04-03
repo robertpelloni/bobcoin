@@ -35,6 +35,43 @@ export class Lattice {
     }
 
     /**
+     * Generate a full cryptographic snapshot of the network state
+     */
+    getStateSnapshot() {
+        return {
+            chains: this.chains,
+            blocks: this.blocks,
+            pending: this.pending,
+            proposals: this.proposals,
+            votes: this.votes,
+            marketBids: this.marketBids,
+            swaps: this.swaps,
+            nfts: this.nfts,
+            anchors: this.anchors,
+            multisigs: this.multisigs,
+            stateHash: this.stateHash,
+            timestamp: Date.now()
+        };
+    }
+
+    /**
+     * Load state from a snapshot
+     */
+    loadStateSnapshot(snapshot) {
+        this.chains = snapshot.chains || {};
+        this.blocks = snapshot.blocks || {};
+        this.pending = snapshot.pending || {};
+        this.proposals = snapshot.proposals || {};
+        this.votes = snapshot.votes || {};
+        this.marketBids = snapshot.marketBids || {};
+        this.swaps = snapshot.swaps || {};
+        this.nfts = snapshot.nfts || {};
+        this.anchors = snapshot.anchors || {};
+        this.multisigs = snapshot.multisigs || {};
+        this.stateHash = snapshot.stateHash || '0'.repeat(64);
+    }
+
+    /**
      * Calculate balance after demurrage decay based on time elapsed
      */
     applyDemurrage(balance, lastTimestamp, currentTimestamp) {

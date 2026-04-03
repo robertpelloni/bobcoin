@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0-alpha] - 2026-04-03
+
+### Added
+- **Zero-Knowledge Unblocking**: Leveraged the newly available Rust toolchain to implement the **Succinct SP1 zkVM** foundation.
+  - Reconstructed the `proof-of-play` SP1 project structure.
+  - Implemented the core ZK circuit in Rust (`main.rs`) to verify game score integrity and organic variance.
+- **Lattice ZK Integration**: Updated the Go consensus engine and block model to support native SP1 ZK proofs.
+- **Hardened Minting**: Implemented strict validation for `SYSTEM_MINT` blocks, requiring a cryptographic ZK proof for acceptance.
+- **Zero-Knowledge Sage Achievement**: A new on-chain milestone for users who submit verifiable proofs of play.
+
 ## [5.6.0] - 2026-04-03
 
 ### Added

@@ -20,6 +20,7 @@ type Block struct {
 	Height        int         `json:"height"`
 	Link          string      `json:"link"`
 	Spora         *SporaProof `json:"spora"`
+	ZKProof       string      `json:"zk_proof"` // RISC-V SP1 Proof
 	Payload       interface{} `json:"payload"`
 	Timestamp     int64       `json:"timestamp"`
 	Hash          string      `json:"hash"`

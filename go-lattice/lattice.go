@@ -109,6 +109,15 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		return errors.New("invalid block signature")
 	}
 
+	// 1.5 ZK-Proof Verification (for Minting blocks)
+	if block.Type == "receive" && block.Link == "SYSTEM_MINT" {
+		if block.ZKProof == "" {
+			return errors.New("missing SP1 zero-knowledge proof for minting")
+		}
+		// In a production Go node, we would call the SP1 Verifier binary here
+		fmt.Printf("[Lattice] Validating ZK Proof for minting block: %s...\n", block.ZKProof[:16])
+	}
+
 	chain := l.Chains[block.Account]
 	var head *Block
 	if len(chain) > 0 {

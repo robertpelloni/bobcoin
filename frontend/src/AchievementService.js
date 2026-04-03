@@ -13,6 +13,7 @@ export const ACHIEVEMENTS = {
     CRYPTOGRAPHER: { id: 'CRYPTOGRAPHER', title: 'Master Cryptographer', desc: 'Secured the sovereign identity via mnemonic backup.', icon: '🔐', color: '#ff0055' },
     DATA_ARCHITECT: { id: 'DATA_ARCHITECT', title: 'Data Architect', desc: 'Anchored permanent data to the Block Lattice.', icon: '📦', color: '#0ff' },
     LIQUIDITY_PROVIDER: { id: 'LIQUIDITY_PROVIDER', title: 'Liquidity Provider', desc: 'Bootstrapped the on-chain AMM pools.', icon: '🌊', color: '#0f0' },
+    ZK_SAGE: { id: 'ZK_SAGE', title: 'Zero-Knowledge Sage', desc: 'Submitted a mathematically proven game score via SP1.', icon: '🕵️‍♂️', color: '#f0f' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
 };
 

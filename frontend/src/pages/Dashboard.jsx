@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
+import { SignConfirmModal } from '../components/SignConfirmModal';
 import { submitProof, getBankroll, submitFHEOracle } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { Leaderboard } from '../components/Leaderboard';
@@ -13,6 +14,7 @@ export function Dashboard() {
     const [mintStatus, setMintStatus] = useState(null);
     const [fheStatus, setFheStatus] = useState(null);
     const [txSignature, setTxSignature] = useState('');
+    const [pendingBlock, setPendingBlock] = useState(null);
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
     const replayLog = useRef([]);

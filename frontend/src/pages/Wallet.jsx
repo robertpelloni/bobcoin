@@ -3,6 +3,7 @@ import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBl
 import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
+import { SignConfirmModal } from '../components/SignConfirmModal';
 import './Wallet.css';
 
 export function Wallet() {
@@ -13,10 +14,14 @@ export function Wallet() {
     const [showKeys, setShowKeys] = useState(false);
     const [keypair, setKeypair] = useState(null);
     const [accountIndex, setAccountIndex] = useState(0);
-    const [activeAccounts, setActiveAccounts] = useState([]); // List of indices with balance/activity
+    const [activeAccounts, setActiveAccounts] = useState([]); 
     const [isScanning, setIsScanning] = useState(false);
     const [pending, setPending] = useState([]);
     
+    // Guardian State
+    const [pendingBlock, setPendingBlock] = useState(null);
+    const [onGuardianConfirm, setOnGuardianConfirm] = useState(null);
+
     // Backup Vault State
     const [showBackup, setShowBackup] = useState(false);
     const [importSeed, setImportSeed] = useState('');
@@ -224,19 +229,27 @@ export function Wallet() {
                 balance: newBalance,
                 link: sendAddress,
                 spora: sporaProof,
-                payload: payload
+                payload: payload,
+                height: (await getLatticeChain(keypair.publicKey)).chain.length
             });
 
-            await sendBlock.signBlock(keypair.privateKey);
-            const res = await submitLatticeBlock(sendBlock);
+            // Trigger Guardian Review
+            setPendingBlock(sendBlock);
+            setOnGuardianConfirm(() => async () => {
+                await sendBlock.signBlock(keypair.privateKey);
+                const res = await submitLatticeBlock(sendBlock);
 
-            if (res.success) {
-                alert(`Sent ${sendAmount} BOB! TX: ${res.hash}`);
-                setBalance(newBalance);
-                setSendAddress('');
-            } else {
-                alert("Transaction failed: " + res.error);
-            }
+                if (res.success) {
+                    alert(`Sent ${sendAmount} BOB! TX: ${res.hash}`);
+                    setBalance(newBalance);
+                    setSendAddress('');
+                    checkAndUnlock('LATTICE_GUARDIAN', keypair, []);
+                } else {
+                    alert("Transaction failed: " + res.error);
+                }
+                setPendingBlock(null);
+            });
+
         } catch (e) {
             console.error(e);
             alert("Error sending funds: " + e.message);
@@ -674,6 +687,12 @@ export function Wallet() {
                     </tbody>
                 </table>
             </div>
+
+            <SignConfirmModal 
+                block={pendingBlock} 
+                onConfirm={onGuardianConfirm} 
+                onCancel={() => setPendingBlock(null)} 
+            />
         </div>
     );
 }

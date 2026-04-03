@@ -1,31 +1,31 @@
-# Session Handoff - 2026-04-03 (v7.3.0)
+# Session Handoff - 2026-04-03 (v7.4.0)
 
 ## Overview & Findings
-INTELLIGENCE MILESTONE REACHED: **v7.3.0 — UNIFIED PORTFOLIO**. I have implemented total asset discovery for the HD wallet system. The Sovereign Network now provides a unified view of all wealth and artifacts across the entire account hierarchy.
+SECURITY MILESTONE REACHED: **v7.4.0 — THE LATTICE GUARDIAN**. I have hardened the Bobcoin transaction flow by implementing a cryptographic pre-sign visualizer. Users now have total transparency into the raw block data before authorizing a cryptographic signature.
 
-## Architecture State & Recent Changes (v7.3.0)
+## Architecture State & Recent Changes (v7.4.0)
 
-### 1. **Deep-Scan Asset Discovery** (`Wallet.jsx` + `Gallery.jsx`)
--   **Multi-Asset Audit**: The discovery engine now concurrently queries for balances, staking state, and NFT ownership across account indices 0-19.
--   **Aggregated Portfolio**: Implemented a "Total BOB" calculation that sums liquid and staked balances across the user's sovereign portfolio.
--   **Universal Gallery**: The Artifact Gallery now automatically discovers and renders NFTs from multiple sub-accounts, significantly improving the collector UX.
+### 1. **Transaction Pre-Sign Visualizer** (`SignConfirmModal.jsx`)
+-   **Guardian Modal**: Created a global security overlay that renders the full JSON manifest of a pending lattice block.
+-   **Transparency**: Displays critical fields: Block Type, Resulting Balance, Sequential Height, and Metadata Payload. 
+-   -   **Safety**: Protects users against "blind-signing" attacks by requiring explicit review and authorization of the raw cryptographic data.
 
-### 2. **Portfolio UI Hardening**
--   **Asset Indicators**: Added visual markers (🥩, 🖼️) to the portfolio switcher to highlight active features within specific sub-accounts.
--   **High-Concurrency Scans**: Optimized the discovery routine to handle multiple concurrent API calls without blocking the main UI thread.
+### 2. **Institutional Hardening** (`Wallet.jsx`)
+-   **Wrapped Signing**: Integrated the Guardian into the "Send Funds" flow. The private key is only accessed and the signature is only generated after the user clicks "Authorize & Sign" in the Guardian UI.
+-   **SPoRA Verification**: The Guardian UI confirms that the SPoRA challenge has been successfully met before presenting the authorization option.
 
-### 3. **The Portfolio Milestone**
--   Integrated the `PORTFOLIO_MASTER` achievement to reward the management of complex on-chain estates.
+### 3. **The Guardian Milestone**
+-   Integrated the `LATTICE_GUARDIAN` achievement to track and reward the use of hardened security protocols.
 
 ## Test Results
--   ✅ `npm run build` — PWA build stable with unified discovery.
--   ✅ Deep-Scan Test — Verified that minting an NFT on Account #3 and staking on Account #1 is correctly identified and rendered by the Portfolio Dashboard.
--   ✅ Gallery Consistency — Confirmed cross-account NFTs are correctly attributed to their specific derivation index in the UI.
+-   ✅ `npm run build` — PWA build succeeds at 1,419 KB.
+-   ✅ Security Flow — Verified that the "Send" logic is correctly suspended until the Guardian modal is authorized.
+-   ✅ UI Integrity — Confirmed the raw block JSON is correctly formatted and displayed in the review panel.
 
 ## Commands
 -   **Start Go Lattice**: `cd go-lattice && go run .`
--   **Scan Portfolio**: Open the Privacy Vault and click "REFRESH LIST" to initiate a deep-scan.
+-   **Test Security**: Initiate a "Send" transaction in the Privacy Vault to see the Lattice Guardian in action.
 
-**The Sovereign Arcade is now a unified intelligence hub.** 📊🚀⚡🛡️🏛️🏆👑🏙️🩹🌟🌌🖼️
+**The Sovereign Arcade is now production-hardened.** 🛡️🚀⚡🛡️🏛️🏆👑🏙️🩹🌟🌌🖼️
 
-_Every asset, one view._ 🌟
+_Verification is the mother of security._ 🌟

@@ -21,6 +21,7 @@ export const ACHIEVEMENTS = {
     LATTICE_DIPLOMAT: { id: 'LATTICE_DIPLOMAT', title: 'Lattice Diplomat', desc: 'Established a network of sovereign contacts.', icon: '📓', color: '#0ff' },
     LATTICE_ORACLE: { id: 'LATTICE_ORACLE', title: 'Lattice Oracle', desc: 'Discovered multiple active sub-accounts via derivation scanning.', icon: '🔭', color: '#ff0' },
     LATTICE_EVANGELIST: { id: 'LATTICE_EVANGELIST', title: 'Lattice Evangelist', desc: 'Installed the Sovereign OS to the local home screen.', icon: '📲', color: '#f0f' },
+    LATTICE_GUARDIAN: { id: 'LATTICE_GUARDIAN', title: 'Lattice Guardian', desc: 'Verified and authorized a transaction via the pre-sign visualizer.', icon: '🛡️', color: '#ff0055' },
     LATTICE_ZENITH: { id: 'LATTICE_ZENITH', title: 'Lattice Zenith', desc: 'Achieved total Merkle-verified consensus across the sovereign network.', icon: '🏔️', color: '#0f0' },
     LATTICE_UNIFIER: { id: 'LATTICE_UNIFIER', title: 'Lattice Unifier', desc: 'Bridged heterogeneous client runtimes in perfect Merkle consensus.', icon: '🌉', color: '#0ff' },
     LATTICE_VISIONARY: { id: 'LATTICE_VISIONARY', title: 'Lattice Visionary', desc: 'Visualized the global P2P consensus mesh in the Matrix.', icon: '🕸️', color: '#ff0055' },

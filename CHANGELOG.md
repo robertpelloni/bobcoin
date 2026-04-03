@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.4.0] - 2026-04-03
+
+### Added
+- **The Lattice Guardian**: Implemented a cryptographic pre-sign visualizer for transaction hardening.
+  - Added a global `SignConfirmModal` to intercept and review raw block data (Type, Balance, Height, Payload) before signing.
+  - Hardened the "Send Funds" flow in `Wallet.jsx` with an explicit authorization step.
+  - Integrated a real-time SPoRA status indicator into the signing dashboard to confirm mining health.
+- **Institutional Hardening**: Protected users against "blind-signing" attacks by rendering the full JSON manifest of pending transactions.
+- **Lattice Guardian Achievement**: A new on-chain milestone unlocked upon the first successful transaction authorization through the Guardian.
+
 ## [7.3.0] - 2026-04-03
 
 ### Added

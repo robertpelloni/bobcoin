@@ -2,12 +2,14 @@ package main
 
 import (
 	"compress/gzip"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"sync"
@@ -105,6 +107,7 @@ func main() {
 	http.HandleFunc("/peers", handlePeers)
 	http.HandleFunc("/heartbeat", handleHeartbeat)
 	http.HandleFunc("/blocks", gzipHandler(handleBlocks))
+	http.HandleFunc("/snapshot", gzipHandler(handleSnapshot))
 	http.HandleFunc("/bootstrap", gzipHandler(handleBootstrap))
 
 	go gossipLoop()
@@ -307,6 +310,41 @@ func gossipLoop() {
 				}
 			}
 		}
+	}
+}
+
+func handleSnapshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		lattice.mu.Lock()
+		defer lattice.mu.Unlock()
+		
+		fmt.Println("[Snapshot] Received binary state. Commencing binary import...")
+		
+		// Use GOB decoder to restore state
+		err := gob.NewDecoder(r.Body).Decode(lattice)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		
+		// Perform Deep Audit to verify the binary state
+		if err := lattice.AuditState(); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
+			return
+		}
+		
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "stateHash": lattice.StateHash})
+		return
+	}
+
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	
+	// Export state in binary GOB format
+	w.Header().Set("Content-Type", "application/octet-stream")
+	err := gob.NewEncoder(w).Encode(lattice)
+	if err != nil {
+		fmt.Printf("[Snapshot Error] %v\n", err)
 	}
 }
 

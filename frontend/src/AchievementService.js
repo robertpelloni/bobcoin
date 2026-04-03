@@ -17,6 +17,7 @@ export const ACHIEVEMENTS = {
     LATTICE_CRYPTOGRAPHER: { id: 'LATTICE_CRYPTOGRAPHER', title: 'Lattice Cryptographer', desc: 'Minted supply using a native RISC-V zero-knowledge proof.', icon: '🔐', color: '#0ff' },
     LATTICE_SCHOLAR: { id: 'LATTICE_SCHOLAR', title: 'Lattice Scholar', desc: 'Mastered the Sovereign Network protocols.', icon: '📖', color: '#0ff' },
     LATTICE_OPTIMIZER: { id: 'LATTICE_OPTIMIZER', title: 'Lattice Optimizer', desc: 'Achieved high-performance consensus synchronization.', icon: '⚡', color: '#0f0' },
+    LATTICE_OPERATOR: { id: 'LATTICE_OPERATOR', title: 'Lattice Operator', desc: 'Monitored the real-time health and heartbeat of the sovereign mesh.', icon: '💓', color: '#ff0055' },
     LATTICE_CONSOLIDATOR: { id: 'LATTICE_CONSOLIDATOR', title: 'Lattice Consolidator', desc: 'Synchronized a massive cryptographic batch of network history.', icon: '📦', color: '#f80' },
     LATTICE_SPEEDSTER: { id: 'LATTICE_SPEEDSTER', title: 'Lattice Speedster', desc: 'Successfully synchronized a compressed block-batch with the mesh.', icon: '🚀', color: '#0ff' },
     HD_ARCHITECT: { id: 'HD_ARCHITECT', title: 'HD Architect', desc: 'Implemented BIP-44 Hierarchical Deterministic account derivation.', icon: '🗝️', color: '#f0f' },

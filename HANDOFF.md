@@ -1,31 +1,34 @@
-# Session Handoff - 2026-04-03 (v8.5.0)
+# Session Handoff - 2026-04-03 (v8.4.0)
 
 ## Overview & Findings
-SECURITY MILESTONE REACHED: **v8.5.0 — THE SOVEREIGN PROPHET**. I have implemented on-chain transaction simulation to prevent consensus errors and enhance user security. The Lattice Guardian now provides a "projected state" view before any signature is authorized.
+OBSERVABILITY MILESTONE REACHED: **v8.4.0 — THE SOVEREIGN HEARTBEAT**. I have implemented a real-time telemetry protocol for the Bobcoin network. The Go consensus engine now streams live performance metrics to the PWA, providing total transparency into the network's vitality.
 
-## Architecture State & Recent Changes (v8.5.0)
+## Architecture State & Recent Changes (v8.4.0)
 
-### 1. **Transaction Simulation Engine** (`go-lattice/main.go`)
--   **Pre-Consensus Validation**: Added a `/simulate` endpoint to the Go node. It executes all `ProcessBlock` rules (except signature verification) against the current state.
--   **State Projection**: Calculates the account balance *after* the proposed transaction, allowing the client to verify the outcome of a complex AMM swap or transfer.
+### 1. **Heartbeat Protocol** (`go-lattice/main.go`)
+-   **WebSocket Streaming**: Integrated `gorilla/websocket` into the Go node to broadcast real-time metrics.
+-   **Live Metrics**: The node now calculates and streams:
+    -   **TPS (Transactions Per Second)**: Calculated on a 2-second rolling interval.
+    -   **Merkle Root**: The current state of the global ledger.
+    -   **Network Stats**: Total blocks and active peer count.
 
-### 2. **Prophetic Guardian UI** (`SignConfirmModal.jsx`)
--   **Real-Time Audit**: The Guardian now automatically invokes the simulation engine upon being triggered. 
--   **Visual Proof**: Renders the "Projected Balance" and a "VALID/INVALID" status light based on the node's feedback.
--   **Safety Lock**: Prevents users from signing blocks that would be rejected by the network, preserving the integrity of the account chain.
+### 2. **Lattice Pulse UI** (`Layout.jsx`)
+-   **Header Widget**: Added a persistent heartbeat monitor to the application header. 
+-   **Visual Pulse**: Implemented a neon green "Pulse" animation that indicates active connectivity to the Go consensus node.
+-   **Real-Time Feedback**: Users see live throughput and cryptographic state updates without manual refreshing.
 
-### 3. **The Prophet Milestone**
--   Integrated the `LATTICE_PROPHET` achievement to reward the use of advanced simulation tools in the decentralized economy.
+### 3. **The Operator Milestone**
+-   Integrated the `LATTICE_OPERATOR` achievement to reward users who monitor and maintain the health of the sovereign mesh.
 
 ## Test Results
--   ✅ `go build` — Simulation engine stable.
--   ✅ Failure Test — Confirmed the "Authorize" button is disabled and an error message is shown when attempting to send more BOB than the current balance.
--   ✅ `npm run build` — Production PWA build succeeds at 1,428 KB.
+-   ✅ `npm run build` — Production PWA build succeeds at 1,429 KB.
+-   ✅ WebSocket Stability — Confirmed the `/heartbeat` connection remains stable and correctly broadcasts during high-traffic block processing.
+-   ✅ Metric Accuracy — Verified that the TPS counter correctly reflects incoming `process` calls.
 
 ## Commands
 -   **Start Go Lattice**: `cd go-lattice && go run .`
--   **Simulate Future**: Initiate any transaction in the PWA to see the projected balance in the Guardian.
+-   **Monitor Pulse**: Look at the top-left of the PWA header for the live heartbeat widget.
 
-**The Sovereign OS can now see the future.** 🔮🚀⚡🛡️🏛️🏆👑🏙️🩹🌟🌌🖼️
+**The Sovereign OS now has a pulse.** 💓🚀⚡🛡️🏛️🏆👑🏙️🩹🌟🌌🖼️
 
-_Predict the math, secure the wealth._ 🌟
+_Vitality is the sign of a healthy network._ 🌟

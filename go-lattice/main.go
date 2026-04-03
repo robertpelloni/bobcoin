@@ -10,7 +10,62 @@ import (
 	"os"
 	"strings"
 	"time"
+	"sync"
+	"github.com/gorilla/websocket"
 )
+
+var (
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+	clients   = make(map[*websocket.Conn]bool)
+	clientsMu sync.Mutex
+	
+	blocksInInterval int
+	lastTps          float64
+)
+
+func broadcastHeartbeat() {
+	ticker := time.NewTicker(2 * time.Second)
+	for range ticker.C {
+		lattice.mu.RLock()
+		lastTps = float64(blocksInInterval) / 2.0
+		blocksInInterval = 0
+		
+		heartbeat := map[string]interface{}{
+			"tps":        lastTps,
+			"merkleRoot": lattice.MerkleRoot,
+			"peers":      len(lattice.Peers),
+			"blocks":     len(lattice.Blocks),
+			"stateHash":  lattice.StateHash,
+			"timestamp":  time.Now().Unix(),
+		}
+		lattice.mu.RUnlock()
+
+		msg, _ := json.Marshal(heartbeat)
+		
+		clientsMu.Lock()
+		for client := range clients {
+			err := client.WriteMessage(websocket.TextMessage, msg)
+			if err != nil {
+				client.Close()
+				delete(clients, client)
+			}
+		}
+		clientsMu.Unlock()
+	}
+}
+
+func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	clientsMu.Lock()
+	clients[conn] = true
+	clientsMu.Unlock()
+}
+
 
 type gzipResponseWriter struct {
 	io.Writer
@@ -48,10 +103,12 @@ func main() {
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/peers", handlePeers)
+	http.HandleFunc("/heartbeat", handleHeartbeat)
 	http.HandleFunc("/blocks", gzipHandler(handleBlocks))
 	http.HandleFunc("/bootstrap", gzipHandler(handleBootstrap))
 
 	go gossipLoop()
+	go broadcastHeartbeat()
 
 	fmt.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -84,6 +141,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	blocksInInterval++
 	fmt.Printf("[Lattice] Processed %s block for %s...\n", payload.Block.Type, payload.Block.Account[:8])
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": payload.Block.Hash})
 }

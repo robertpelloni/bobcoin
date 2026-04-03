@@ -6,6 +6,7 @@ import { deriveKeypair } from '../cryptoUtils';
 
 export function Layout() {
     const [netWorth, setNetWorth] = useState(0);
+    const [heartbeat, setHeartbeat] = useState(null);
 
     const calculateNetWorth = async () => {
         const stored = localStorage.getItem('bobcoin_wallet');
@@ -23,13 +24,34 @@ export function Layout() {
     useEffect(() => {
         calculateNetWorth();
         const interval = setInterval(calculateNetWorth, 30000);
-        return () => clearInterval(interval);
+        
+        // --- Heartbeat Listener ---
+        const wsUrl = LATTICE_URL.replace('http', 'ws') + '/heartbeat';
+        const ws = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            setHeartbeat(data);
+        };
+
+        return () => {
+            clearInterval(interval);
+            ws.close();
+        };
     }, []);
 
     return (
         <div className="app-layout">
             <header className="sovereign-header" style={{display: 'flex', justifyContent: 'space-between', padding: '1rem 2rem', background: '#000', borderBottom: '1px solid #333'}}>
-                <span style={{color: '#ff0055', fontSize: '0.7rem', letterSpacing: '2px', fontWeight: 'bold'}}>NETWORK: MAINNET_V7</span>
+                <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem'}}>
+                    <span style={{color: '#ff0055', fontSize: '0.7rem', letterSpacing: '2px', fontWeight: 'bold'}}>NETWORK: MAINNET_V7</span>
+                    {heartbeat && (
+                        <div className="heartbeat-widget" style={{display: 'flex', alignItems: 'center', gap: '10px', borderLeft: '1px solid #222', paddingLeft: '1.5rem'}}>
+                            <div className="pulse-dot" style={{width: '6px', height: '6px', background: '#0f0', borderRadius: '50%', boxShadow: '0 0 8px #0f0'}}></div>
+                            <span style={{color: '#0f0', fontSize: '0.65rem', fontFamily: 'monospace'}}>TPS: {heartbeat.tps.toFixed(2)}</span>
+                            <span style={{color: '#888', fontSize: '0.65rem', fontFamily: 'monospace'}}>MERKLE: {heartbeat.merkleRoot.slice(0, 8)}...</span>
+                        </div>
+                    )}
+                </div>
                 <div style={{textAlign: 'right'}}>
                     <span style={{color: '#666', fontSize: '0.6rem', marginRight: '10px'}}>TOTAL PORTFOLIO:</span>
                     <span className="neon-text" style={{fontWeight: 'bold', fontSize: '1.1rem'}}>{netWorth.toFixed(2)} BOB</span>

@@ -154,9 +154,11 @@ export function SystemStatus() {
                 </div>
                 
                 <div className="peer-list" style={{marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
-                    {Object.keys(peers).map(url => (
-                        <div key={url} style={{background: '#111', border: '1px solid #333', padding: '0.4rem 0.8rem', fontSize: '0.7rem', color: '#0f0'}}>
-                            🔗 {url}
+                    {Object.values(peers).map(p => (
+                        <div key={p.url} style={{background: '#111', border: `1px solid ${p.status === 'online' ? '#0f0' : '#f00'}`, padding: '0.4rem 0.8rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                            <span style={{color: p.status === 'online' ? '#0f0' : '#f00'}}>●</span>
+                            <span style={{color: '#fff'}}>{p.url}</span>
+                            <span style={{color: '#888', fontFamily: 'monospace'}}>[{p.latency}ms]</span>
                         </div>
                     ))}
                     {Object.keys(peers).length === 0 && <span style={{color: '#444', fontSize: '0.7rem'}}>NO PEERS REGISTERED</span>}

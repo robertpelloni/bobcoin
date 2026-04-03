@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.0] - 2026-04-03
+
+### Added
+- **Consensus Optimization**: Optimized the Go consensus engine for high-throughput block retrieval.
+  - Implemented `LoadBlocksAfter` in `database.go` using indexed SQLite queries to replace linear scans.
+  - Upgraded the `/blocks` API to support efficient delta retrieval via the `after` parameter.
+- **Peer Latency Tracking**: Integrated real-time Round-Trip Time (RTT) measurement into the gossip loop.
+  - Nodes now track and report the latency (ms) and status (online/offline) of all registered peers.
+- **System Performance UI**: Upgraded the `SystemStatus` dashboard to display peer ping times and health indicators.
+- **Lattice Optimizer Achievement**: A new on-chain milestone for maintaining a high-performance, synchronized network node.
+
 ## [6.2.0] - 2026-04-03
 
 ### Added

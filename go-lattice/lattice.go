@@ -38,6 +38,13 @@ type LiquidityPool struct {
 	TotalShares  float64 `json:"totalShares"`
 }
 
+type PeerInfo struct {
+	URL      string `json:"url"`
+	Latency  int64  `json:"latency"` // in milliseconds
+	LastSeen int64  `json:"lastSeen"`
+	Status   string `json:"status"`
+}
+
 type Lattice struct {
 	mu         sync.RWMutex
 	db         *DBManager
@@ -50,7 +57,7 @@ type Lattice struct {
 	Anchors    map[string]interface{}
 	Multisigs  map[string]*MultisigVault
 	Pools      map[string]*LiquidityPool // PairName -> Pool
-	Peers      map[string]string        // URL -> NodeID
+	Peers      map[string]*PeerInfo      // URL -> Stats
 	StateHash  string
 	DemurrageRate float64
 }
@@ -67,7 +74,7 @@ func NewLattice(db *DBManager) *Lattice {
 		Anchors:    make(map[string]interface{}),
 		Multisigs:  make(map[string]*MultisigVault),
 		Pools:      make(map[string]*LiquidityPool),
-		Peers:      make(map[string]string),
+		Peers:      make(map[string]*PeerInfo),
 		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
 		DemurrageRate: 0.0001 / 60000,
 	}

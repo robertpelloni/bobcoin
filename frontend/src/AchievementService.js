@@ -15,6 +15,7 @@ export const ACHIEVEMENTS = {
     LIQUIDITY_PROVIDER: { id: 'LIQUIDITY_PROVIDER', title: 'Liquidity Provider', desc: 'Bootstrapped the on-chain AMM pools.', icon: '🌊', color: '#0f0' },
     ZK_SAGE: { id: 'ZK_SAGE', title: 'Zero-Knowledge Sage', desc: 'Submitted a mathematically proven game score via SP1.', icon: '🕵️‍♂️', color: '#f0f' },
     LATTICE_SCHOLAR: { id: 'LATTICE_SCHOLAR', title: 'Lattice Scholar', desc: 'Mastered the Sovereign Network protocols.', icon: '📖', color: '#0ff' },
+    LATTICE_OPTIMIZER: { id: 'LATTICE_OPTIMIZER', title: 'Lattice Optimizer', desc: 'Achieved high-performance consensus synchronization.', icon: '⚡', color: '#0f0' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
     MOBILE_WARRIOR: { id: 'MOBILE_WARRIOR', title: 'Mobile Warrior', desc: 'Deployed the Sovereign Arcade on a handheld device.', icon: '📱', color: '#0ff' },
 };

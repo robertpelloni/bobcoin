@@ -92,7 +92,7 @@ func handlePeers(w http.ResponseWriter, r *http.Request) {
 		var payload struct { URL string `json:"url"` }
 		json.NewDecoder(r.Body).Decode(&payload)
 		lattice.mu.Lock()
-		lattice.Peers[payload.URL] = "connected"
+		lattice.Peers[payload.URL] = &PeerInfo{URL: payload.URL, Status: "connected"}
 		lattice.mu.Unlock()
 		w.WriteHeader(200)
 		return
@@ -107,19 +107,10 @@ func handleBlocks(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 
-	var delta []*Block
-	found := false
-	if after == "" { found = true }
-
-	// Simple linear scan for prototype (In production, use index)
-	// We'll return blocks in order of creation
-	allBlocks, _ := db.LoadAllBlocks()
-	for _, b := range allBlocks {
-		if found {
-			delta = append(delta, b)
-		} else if b.Hash == after {
-			found = true
-		}
+	delta, err := db.LoadBlocksAfter(after)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
 	}
 	json.NewEncoder(w).Encode(delta)
 }
@@ -133,20 +124,32 @@ func gossipLoop() {
 		lattice.mu.RUnlock()
 
 		for _, url := range peerURLs {
+			start := time.Now()
 			resp, err := http.Get(url + "/status")
-			if err != nil { continue }
+			latency := time.Since(start).Milliseconds()
+			
+			lattice.mu.Lock()
+			peer := lattice.Peers[url]
+			if err != nil {
+				if peer != nil { peer.Status = "offline" }
+				lattice.mu.Unlock()
+				continue
+			}
+			if peer != nil {
+				peer.Status = "online"
+				peer.Latency = latency
+				peer.LastSeen = time.Now().Unix()
+			}
+			lattice.mu.Unlock()
+
 			var stats map[string]interface{}
 			json.NewDecoder(resp.Body).Decode(&stats)
 			
 			// Detect State Divergence
 			remoteHash := stats["stateHash"].(string)
 			if remoteHash != lattice.StateHash {
-				fmt.Printf("[GOSSIP] State Divergence detected with %s! Attempting Auto-Sync...\n", url)
-				
-				// Fetch missing blocks
-				// We'll sync by finding the first common block or start from genesis
-				// For this alpha, we just fetch blocks we don't have
-				syncResp, err := http.Get(url + "/blocks")
+				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Sync...\n", url)
+				syncResp, err := http.Get(url + "/blocks?after=" + lattice.StateHash)
 				if err != nil { continue }
 				var newBlocks []*Block
 				json.NewDecoder(syncResp.Body).Decode(&newBlocks)
@@ -156,7 +159,6 @@ func gossipLoop() {
 					_, exists := lattice.Blocks[b.Hash]
 					lattice.mu.RUnlock()
 					if !exists {
-						fmt.Printf("[SYNC] Integrating block %s from %s\n", b.Hash[:8], url)
 						lattice.ProcessBlock(b, false)
 					}
 				}

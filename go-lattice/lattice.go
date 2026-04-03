@@ -59,6 +59,7 @@ type Lattice struct {
 	Pools      map[string]*LiquidityPool // PairName -> Pool
 	Peers      map[string]*PeerInfo      // URL -> Stats
 	StateHash  string
+	MerkleRoot string                   // God-Hash of all account states
 	DemurrageRate float64
 }
 
@@ -76,6 +77,7 @@ func NewLattice(db *DBManager) *Lattice {
 		Pools:      make(map[string]*LiquidityPool),
 		Peers:      make(map[string]*PeerInfo),
 		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
+		MerkleRoot: "0000000000000000000000000000000000000000000000000000000000000000",
 		DemurrageRate: 0.0001 / 60000,
 	}
 
@@ -305,6 +307,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return fmt.Errorf("failed to persist block: %v", err)
 		}
 	}
+
+	// 9. Update State Merkle Tree
+	l.MerkleRoot = l.CalculateMerkleRoot()
 
 	return nil
 }

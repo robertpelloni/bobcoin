@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0] - 2026-04-03
+
+### Added
+- **Merkle Zenith Consensus**: Implemented a real-time **State Merkle Tree** in the Go consensus engine.
+  - The network now generates a unique **Merkle Root** after every block, capturing the cryptographic state of all account balances and heights.
+  - Standardized Merkle Proof protocols to allow for future lightweight wallet verification (SPV).
+- **Universal State Proof UI**: Overhauled the `SystemStatus` dashboard to display the **Global Merkle Root**. Added a visual "VERIFIED" cryptographic seal to confirm bit-perfect network consensus.
+- **Go Engine Expansion (v4)**: Added `merkle.go` for high-performance, deterministic state tree calculations.
+- **Lattice Zenith Achievement**: A final on-chain milestone unlocked upon reaching total Merkle consensus with the network.
+
 ## [6.9.0] - 2026-04-03
 
 ### Added

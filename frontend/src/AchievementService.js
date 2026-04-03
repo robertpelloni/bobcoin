@@ -21,6 +21,7 @@ export const ACHIEVEMENTS = {
     LATTICE_DIPLOMAT: { id: 'LATTICE_DIPLOMAT', title: 'Lattice Diplomat', desc: 'Established a network of sovereign contacts.', icon: '📓', color: '#0ff' },
     LATTICE_ORACLE: { id: 'LATTICE_ORACLE', title: 'Lattice Oracle', desc: 'Discovered multiple active sub-accounts via derivation scanning.', icon: '🔭', color: '#ff0' },
     LATTICE_EVANGELIST: { id: 'LATTICE_EVANGELIST', title: 'Lattice Evangelist', desc: 'Installed the Sovereign OS to the local home screen.', icon: '📲', color: '#f0f' },
+    LATTICE_ZENITH: { id: 'LATTICE_ZENITH', title: 'Lattice Zenith', desc: 'Achieved total Merkle-verified consensus across the sovereign network.', icon: '🏔️', color: '#0f0' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
     CLIENT_DIVERSIFIER: { id: 'CLIENT_DIVERSIFIER', title: 'Client Diversifier', desc: 'Maintained network consensus across multiple client types.', icon: '🌉', color: '#f0f' },
     MOBILE_WARRIOR: { id: 'MOBILE_WARRIOR', title: 'Mobile Warrior', desc: 'Deployed the Sovereign Arcade on a handheld device.', icon: '📱', color: '#0ff' },

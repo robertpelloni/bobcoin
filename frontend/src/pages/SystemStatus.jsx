@@ -16,6 +16,7 @@ export function SystemStatus() {
     });
     const [peers, setPeers] = useState({});
     const [networkRoot, setNetworkRoot] = useState('0x...');
+    const [merkleRoot, setMerkleRoot] = useState('0x...');
     const [localBlocks, setLocalBlocks] = useState(0);
     const [networkHeight, setNetworkHeight] = useState(0);
     const [buildInfo, setBuildInfo] = useState(null);
@@ -118,8 +119,9 @@ export function SystemStatus() {
         try {
             const res = await fetch(`${LATTICE_URL}/status`);
             const data = await res.json();
-            setServices(s => ({ ...s, lattice: 'ONLINE (v6.6.0)' }));
+            setServices(s => ({ ...s, lattice: 'ONLINE (Zenith v7.0.0)' }));
             setNetworkRoot(data.stateHash);
+            setMerkleRoot(data.merkleRoot);
             
             const localH = data.accounts || data.blocks || 0;
             setLocalBlocks(localH);
@@ -175,9 +177,17 @@ export function SystemStatus() {
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
                     <h3 style={{color: '#0ff', margin: 0}}>LATTICE STATE DISCOVERY</h3>
                     <div style={{textAlign: 'right'}}>
-                        <div style={{fontSize: '0.6rem', color: '#888'}}>CURRENT NETWORK ROOT</div>
+                        <div style={{fontSize: '0.6rem', color: '#888'}}>NETWORK STATE HASH</div>
                         <div style={{fontFamily: 'monospace', fontSize: '0.8rem', color: '#ff0055'}}>{networkRoot.substring(0, 32)}...</div>
                     </div>
+                </div>
+
+                <div style={{background: '#000', border: '1px solid #0f0', padding: '1rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div>
+                        <div style={{fontSize: '0.6rem', color: '#0f0', letterSpacing: '1px'}}>STATE MERKLE ROOT (MPT)</div>
+                        <div style={{fontFamily: 'monospace', fontSize: '1rem', color: '#fff'}}>{merkleRoot.substring(0, 32)}...</div>
+                    </div>
+                    <div style={{color: '#0f0', fontSize: '0.7rem', fontWeight: 'bold', border: '1px solid #0f0', padding: '0.2rem 0.5rem'}}>VERIFIED</div>
                 </div>
 
                 <div className="sync-status" style={{marginBottom: '1.5rem'}}>

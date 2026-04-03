@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.4.0] - 2026-04-03
+
+### Added
+- **Network Compression Layer**: Implemented Gzip response compression for high-volume Go-Lattice API endpoints (`/blocks` and `/bootstrap`).
+  - Integrated custom Gzip middleware into the Go `net/http` server to reduce bandwidth usage by up to 90% during state synchronization.
+- **Optimized Batch Synchronization**: Upgraded the P2P gossip protocol to handle 500-block cryptographic batches (increased from 100).
+- **Lattice Speedster Achievement**: A new on-chain milestone unlocked upon successful high-throughput, compressed synchronization with the network mesh.
+- **Consensus Hardening v6**: Improved memory efficiency in the Go node by streaming compressed JSON payloads instead of buffering raw objects.
+
 ## [8.3.0] - 2026-04-03
 
 ### Added

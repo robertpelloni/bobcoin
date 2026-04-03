@@ -1,13 +1,38 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
+
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func gzipHandler(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			h(w, r)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+		h(gzipResponseWriter{Writer: gz, ResponseWriter: w}, r)
+	}
+}
 
 var db = NewDBManager("lattice.sqlite")
 var lattice = NewLattice(db)
@@ -22,8 +47,8 @@ func main() {
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/peers", handlePeers)
-	http.HandleFunc("/blocks", handleBlocks)
-	http.HandleFunc("/bootstrap", handleBootstrap)
+	http.HandleFunc("/blocks", gzipHandler(handleBlocks))
+	http.HandleFunc("/bootstrap", gzipHandler(handleBootstrap))
 
 	go gossipLoop()
 
@@ -160,10 +185,11 @@ func gossipLoop() {
 			// Detect State Divergence
 			remoteHash := stats["stateHash"].(string)
 			if remoteHash != lattice.StateHash {
-				fmt.Printf("[GOSSIP] State Divergence with %s! Initiating Batch Sync...\n", url)
+				fmt.Printf("[GOSSIP] State Divergence with %s! Initiating Compressed Batch Sync...\n", url)
 				
 				for {
-					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=100", url, lattice.StateHash))
+					// Use 500 block batches for better throughput
+					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=500", url, lattice.StateHash))
 					if err != nil { break }
 					var newBlocks []*Block
 					json.NewDecoder(syncResp.Body).Decode(&newBlocks)
@@ -178,8 +204,8 @@ func gossipLoop() {
 							lattice.ProcessBlock(b, false)
 						}
 					}
-					fmt.Printf("[SYNC] Integrated batch of %d blocks from %s\n", len(newBlocks), url)
-					if len(newBlocks) < 100 { break } // Finished syncing
+					fmt.Printf("[SYNC] Integrated compressed batch of %d blocks from %s\n", len(newBlocks), url)
+					if len(newBlocks) < 500 { break } 
 				}
 			}
 		}

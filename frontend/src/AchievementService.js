@@ -18,6 +18,7 @@ export const ACHIEVEMENTS = {
     LATTICE_SCHOLAR: { id: 'LATTICE_SCHOLAR', title: 'Lattice Scholar', desc: 'Mastered the Sovereign Network protocols.', icon: '📖', color: '#0ff' },
     LATTICE_OPTIMIZER: { id: 'LATTICE_OPTIMIZER', title: 'Lattice Optimizer', desc: 'Achieved high-performance consensus synchronization.', icon: '⚡', color: '#0f0' },
     LATTICE_CONSOLIDATOR: { id: 'LATTICE_CONSOLIDATOR', title: 'Lattice Consolidator', desc: 'Synchronized a massive cryptographic batch of network history.', icon: '📦', color: '#f80' },
+    LATTICE_SPEEDSTER: { id: 'LATTICE_SPEEDSTER', title: 'Lattice Speedster', desc: 'Successfully synchronized a compressed block-batch with the mesh.', icon: '🚀', color: '#0ff' },
     HD_ARCHITECT: { id: 'HD_ARCHITECT', title: 'HD Architect', desc: 'Implemented BIP-44 Hierarchical Deterministic account derivation.', icon: '🗝️', color: '#f0f' },
     LATTICE_DIPLOMAT: { id: 'LATTICE_DIPLOMAT', title: 'Lattice Diplomat', desc: 'Established a network of sovereign contacts.', icon: '📓', color: '#0ff' },
     LATTICE_ORACLE: { id: 'LATTICE_ORACLE', title: 'Lattice Oracle', desc: 'Discovered multiple active sub-accounts via derivation scanning.', icon: '🔭', color: '#ff0' },

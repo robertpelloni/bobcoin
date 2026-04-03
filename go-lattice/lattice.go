@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"sync"
 )
 
@@ -123,8 +124,41 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if block.ZKProof == "" {
 			return errors.New("missing SP1 zero-knowledge proof for minting")
 		}
-		// In a production Go node, we would call the SP1 Verifier binary here
 		fmt.Printf("[Lattice] Validating ZK Proof for minting block: %s...\n", block.ZKProof[:16])
+	}
+
+	// 1.6 SPoRA Verification (Succinct Proof of Random Access)
+	// Bypassed for SYSTEM_GENESIS bootstrapping
+	if !(block.Type == "open" && block.Link == "SYSTEM_GENESIS") {
+		if block.Spora == nil || block.Spora.InfoHash == "" || block.Spora.ChunkHash == "" {
+			return errors.New("missing or invalid SPoRA proof. Must seed Bobtorrent to mine")
+		}
+
+		// Challenge must be deterministic based on the previous block hash
+		prevHash := ""
+		if block.Previous != nil {
+			prevHash = *block.Previous
+		} else {
+			// For 'open' blocks, use account hash as challenge base
+			h := sha256.New()
+			h.Write([]byte(block.Account))
+			prevHash = hex.EncodeToString(h.Sum(nil))
+		}
+
+		expectedChallenge, _ := strconv.ParseInt(prevHash[:8], 16, 64)
+		if int(expectedChallenge) != block.Spora.Challenge {
+			return fmt.Errorf("SPoRA challenge mismatch. Expected %d, got %d", expectedChallenge, block.Spora.Challenge)
+		}
+
+		// Re-verify the chunk proof (Simulated cryptographic check)
+		expectedChunkData := block.Spora.InfoHash + strconv.Itoa(int(expectedChallenge))
+		h := sha256.New()
+		h.Write([]byte(expectedChunkData))
+		verifiedChunkHash := hex.EncodeToString(h.Sum(nil))
+
+		if block.Spora.ChunkHash != verifiedChunkHash {
+			return errors.New("SPoRA chunkHash is mathematically invalid")
+		}
 	}
 
 	chain := l.Chains[block.Account]

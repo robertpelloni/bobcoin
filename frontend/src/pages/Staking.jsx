@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { submitLatticeBlock, getLatticeFrontier, getLatticeChain } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
+import { AccountSelector } from '../components/AccountSelector';
+import { SignConfirmModal } from '../components/SignConfirmModal';
+import { deriveKeypair } from '../cryptoUtils';
 import './Staking.css';
 
 export function Staking() {
@@ -9,6 +12,8 @@ export function Staking() {
     const [stakedBalance, setStakedBalance] = useState(0);
     const [amount, setAmount] = useState(10);
     const [keypair, setKeypair] = useState(null);
+    const [pendingBlock, setPendingBlock] = useState(null);
+    const [onGuardianConfirm, setOnGuardianConfirm] = useState(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -19,6 +24,15 @@ export function Staking() {
             fetchData(kp.publicKey);
         }
     }, []);
+
+    const handleAccountChange = async (index) => {
+        const stored = localStorage.getItem('bobcoin_wallet');
+        if (!stored) return;
+        const master = JSON.parse(stored);
+        const newKp = await deriveKeypair(master.mnemonic, index);
+        setKeypair(newKp);
+        fetchData(newKp.publicKey);
+    };
 
     const fetchData = async (pubkey) => {
         const res = await getLatticeFrontier(pubkey);
@@ -44,16 +58,21 @@ export function Staking() {
             });
 
             await block.signBlock(keypair.privateKey);
-            const res = await submitLatticeBlock(block);
-            if (res.success) {
-                alert("Tokens Staked! Your voting power and yield have increased.");
-                fetchData(keypair.publicKey);
-                
-                // Unlock Achievement
-                checkAndUnlock('LATTICE_VALIDATOR', keypair, []);
-            } else {
-                alert("Stake failed: " + res.error);
-            }
+            
+            // Trigger Guardian Review
+            setPendingBlock(block);
+            setOnGuardianConfirm(() => async () => {
+                const res = await submitLatticeBlock(block);
+                if (res.success) {
+                    alert("Tokens Staked! Your voting power and yield have increased.");
+                    fetchData(keypair.publicKey);
+                    checkAndUnlock('LATTICE_VALIDATOR', keypair, []);
+                    checkAndUnlock('LATTICE_SENTINEL', keypair, []);
+                } else {
+                    alert("Stake failed: " + res.error);
+                }
+                setPendingBlock(null);
+            });
         } catch (e) {
             alert(e.message);
         }
@@ -78,13 +97,20 @@ export function Staking() {
             });
 
             await block.signBlock(keypair.privateKey);
-            const res = await submitLatticeBlock(block);
-            if (res.success) {
-                alert("Tokens Unstaked! Funds are now liquid.");
-                fetchData(keypair.publicKey);
-            } else {
-                alert("Unstake failed: " + res.error);
-            }
+            
+            // Trigger Guardian Review
+            setPendingBlock(block);
+            setOnGuardianConfirm(() => async () => {
+                const res = await submitLatticeBlock(block);
+                if (res.success) {
+                    alert("Tokens Unstaked! Funds are now liquid.");
+                    fetchData(keypair.publicKey);
+                    checkAndUnlock('LATTICE_SENTINEL', keypair, []);
+                } else {
+                    alert("Unstake failed: " + res.error);
+                }
+                setPendingBlock(null);
+            });
         } catch (e) {
             alert(e.message);
         }
@@ -97,6 +123,7 @@ export function Staking() {
             <p className="subtitle">SECURE THE NETWORK & EARN PROTOCOL YIELD</p>
 
             <div className="staking-grid">
+                <AccountSelector currentAccount={keypair} onAccountChange={handleAccountChange} />
                 <div className="stat-panel liquid">
                     <span className="label">LIQUID BALANCE</span>
                     <span className="value">{balance.toFixed(4)} BOB</span>
@@ -127,6 +154,12 @@ export function Staking() {
                 <div className="yield-value">12.5% APY</div>
                 <p>Rewards are distributed via network minting events and transaction fees.</p>
             </div>
+
+            <SignConfirmModal 
+                block={pendingBlock} 
+                onConfirm={onGuardianConfirm} 
+                onCancel={() => setPendingBlock(null)} 
+            />
         </div>
     );
 }

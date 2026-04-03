@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { submitLatticeBlock, getLatticeFrontier, getLatticeChain, LATTICE_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
+import { AccountSelector } from '../components/AccountSelector';
+import { SignConfirmModal } from '../components/SignConfirmModal';
+import { deriveKeypair } from '../cryptoUtils';
 import './DEX.css';
 
 export function DEX() {
@@ -11,6 +14,8 @@ export function DEX() {
     const [amount, setAmount] = useState(10);
     const [pools, setPools] = useState({});
     const [keypair, setKeypair] = useState(null);
+    const [pendingBlock, setPendingBlock] = useState(null);
+    const [onGuardianConfirm, setOnGuardianConfirm] = useState(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -21,6 +26,16 @@ export function DEX() {
             fetchData(kp.publicKey);
         }
     }, []);
+
+    const handleAccountChange = async (index) => {
+        const stored = localStorage.getItem('bobcoin_wallet');
+        if (!stored) return;
+        const master = JSON.parse(stored);
+        const newKp = await deriveKeypair(master.mnemonic, index);
+        setKeypair(newKp);
+        fetchData(newKp.publicKey);
+        checkAndUnlock('LATTICE_TREASURER', newKp, []);
+    };
 
     const fetchData = async (pubkey) => {
         const resBal = await getLatticeFrontier(pubkey);
@@ -61,14 +76,21 @@ export function DEX() {
             });
 
             await block.signBlock(keypair.privateKey);
-            const res = await submitLatticeBlock(block);
-            if (res.success) {
-                alert(`Swap Executed! You received ~${ret.toFixed(6)} sSOL.`);
-                fetchData(keypair.publicKey);
-                checkAndUnlock('LIQUIDITY_PROVIDER', keypair, []);
-            } else {
-                alert("Swap failed: " + res.error);
-            }
+            
+            // Trigger Guardian Review
+            setPendingBlock(block);
+            setOnGuardianConfirm(() => async () => {
+                const res = await submitLatticeBlock(block);
+                if (res.success) {
+                    alert(`Swap Executed! You received ~${ret.toFixed(6)} sSOL.`);
+                    fetchData(keypair.publicKey);
+                    checkAndUnlock('LIQUIDITY_PROVIDER', keypair, []);
+                    checkAndUnlock('LATTICE_SENTINEL', keypair, []);
+                } else {
+                    alert("Swap failed: " + res.error);
+                }
+                setPendingBlock(null);
+            });
         } catch (e) {
             alert(e.message);
         }
@@ -81,6 +103,8 @@ export function DEX() {
             <p className="subtitle">LATTICE-NATIVE AUTOMATED MARKET MAKER</p>
 
             <div className="dex-card">
+                <AccountSelector currentAccount={keypair} onAccountChange={handleAccountChange} />
+                
                 <div className="swap-box">
                     <div className="token-input">
                         <label>FROM</label>
@@ -113,6 +137,12 @@ export function DEX() {
             <div className="dex-footer">
                 ALL SWAPS ARE EXECUTED VIA ON-CHAIN HASHED TIME-LOCK CONTRACTS.
             </div>
+
+            <SignConfirmModal 
+                block={pendingBlock} 
+                onConfirm={onGuardianConfirm} 
+                onCancel={() => setPendingBlock(null)} 
+            />
         </div>
     );
 }

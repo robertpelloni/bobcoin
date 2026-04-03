@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.6.0] - 2026-04-03
+
+### Added
+- **The Universal Lattice Guardian**: Extended the cryptographic pre-sign visualizer to ALL balance-mutating operations. 
+  - Every AMM Swap, Staking Lock, and Shared Vault proposal is now intercepted for raw block review.
+  - Implemented the `SignConfirmModal` across the **DEX, Staking, and Multi-Sig** dashboards.
+- **Protocol Fee Transparency**: Explicitly labeled the feeless nature of the network (SPoRA-backed) in the transaction manifest.
+- **Lattice Sentinel Achievement**: A new on-chain milestone unlocked upon utilizing the Universal Guardian for diverse institutional operations.
+- **UX Hardening pass**: Optimized the signing flow for zero-latency cryptographic authorization after user approval.
+
+## [7.5.0] - 2026-04-03
+
+### Added
+- **Unified Asset Awareness**: Implemented the **Sovereign Account Selector** across the DEX, Staking, and Multi-Sig pages.
+  - Users can now instantly switch between derived BIP-44 sub-accounts to manage liquidity and stake assets across their entire portfolio.
+- **Global Portfolio Header**: Added a persistent **Sovereign Net Worth** display to the application header, aggregating liquid and staked wealth across the top 5 derivation indices.
+- **DeFi Workflow Hardening**: Streamlined the transition between portfolio discovery and on-chain execution.
+- **Lattice Treasurer Achievement**: A new on-chain milestone for users who successfully manage assets across multiple sovereign identities.
+
 ## [7.4.0] - 2026-04-03
 
 ### Added

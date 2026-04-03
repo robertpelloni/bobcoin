@@ -1,0 +1,222 @@
+.explorer-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.explorer-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid #0ff;
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-label {
+    color: #888;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.explorer-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.explorer-controls .cyber-input {
+    flex: 1;
+    min-width: 200px;
+}
+
+.auto-refresh-toggle {
+    color: #0ff;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auto-refresh-toggle input[type="checkbox"] {
+    accent-color: #0ff;
+}
+
+.explorer-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+    min-height: 500px;
+}
+
+.account-list h2,
+.chain-detail h2 {
+    color: #0ff;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    letter-spacing: 2px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.account-scroll,
+.block-scroll {
+    max-height: 600px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #0ff #111;
+}
+
+.account-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #222;
+    margin-bottom: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.85rem;
+}
+
+.account-row:hover {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: #0ff;
+}
+
+.account-row.selected {
+    background: rgba(0, 255, 255, 0.15);
+    border-color: #0ff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.account-key {
+    color: #0ff;
+    font-family: monospace;
+}
+
+.account-balance {
+    color: #0f0;
+    font-weight: bold;
+}
+
+.account-height {
+    color: #888;
+    font-size: 0.75rem;
+}
+
+.block-card {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.2s;
+}
+
+.block-card:hover {
+    border-color: #0ff;
+}
+
+.block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.block-type {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border: 1px solid;
+}
+
+.type-open { color: #0f0; border-color: #0f0; }
+.type-send { color: #ff0055; border-color: #ff0055; }
+.type-receive { color: #0ff; border-color: #0ff; }
+.type-proposal { color: #f0f; border-color: #f0f; }
+.type-vote { color: #ff0; border-color: #ff0; }
+.type-market_bid { color: #f80; border-color: #f80; }
+.type-accept_bid { color: #8f0; border-color: #8f0; }
+
+.block-index {
+    color: #555;
+    font-size: 0.8rem;
+}
+
+.block-field {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 0.8rem;
+}
+
+.field-label {
+    color: #666;
+    letter-spacing: 1px;
+    font-size: 0.7rem;
+    min-width: 80px;
+}
+
+.field-value {
+    color: #ccc;
+    font-family: monospace;
+    text-align: right;
+    word-break: break-all;
+}
+
+.field-value.hash {
+    color: #0ff;
+}
+
+.field-value.spora {
+    color: #f0f;
+}
+
+.field-value.payload {
+    color: #888;
+    font-size: 0.7rem;
+}
+
+.no-results {
+    color: #555;
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .explorer-stats {
+        grid-template-columns: 1fr;
+    }
+    .explorer-grid {
+        grid-template-columns: 1fr;
+    }
+    .explorer-controls {
+        flex-direction: column;
+    }
+    .account-row {
+        font-size: 0.75rem;
+    }
+}

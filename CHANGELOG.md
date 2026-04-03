@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-04-03
+
+### Added
+- **Block Explorer UI** (`/explorer`): Full-featured Cyberpunk block explorer page. Browse all lattice accounts, search by public key, click to inspect individual account chains with every block's hash, type, balance, amount, SPoRA proof, payload, and timestamp. Color-coded block types (open/send/receive/proposal/vote/market_bid/accept_bid). Auto-refresh toggle with 5-second polling. Network stats banner (accounts, total blocks, total value locked). Fully mobile responsive.
+- **Lattice `/frontier` API**: New global frontier endpoint returning all accounts with their balances, heights, and head hashes.
+- **Navigation**: Added 🔍 EXPLORER link to the Cyberpunk navbar.
+
 ## [2.7.0] - 2026-04-03
 
 ### Added

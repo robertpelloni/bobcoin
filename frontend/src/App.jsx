@@ -7,6 +7,7 @@ import { Mobile } from './pages/Mobile';
 import { StorageMarket } from './pages/StorageMarket';
 import { Supernode } from './pages/Supernode';
 import { SystemStatus } from './pages/SystemStatus';
+import { Explorer } from './pages/Explorer';
 import { Manual } from './pages/Manual';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
           <Route path="market" element={<StorageMarket />} />
           <Route path="supernode" element={<Supernode />} />
           <Route path="system" element={<SystemStatus />} />
+          <Route path="explorer" element={<Explorer />} />
           <Route path="manual" element={<Manual />} />
         </Route>
       </Routes>

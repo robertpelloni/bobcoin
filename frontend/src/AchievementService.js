@@ -19,6 +19,7 @@ export const ACHIEVEMENTS = {
     LATTICE_CONSOLIDATOR: { id: 'LATTICE_CONSOLIDATOR', title: 'Lattice Consolidator', desc: 'Synchronized a massive cryptographic batch of network history.', icon: '📦', color: '#f80' },
     HD_ARCHITECT: { id: 'HD_ARCHITECT', title: 'HD Architect', desc: 'Implemented BIP-44 Hierarchical Deterministic account derivation.', icon: '🗝️', color: '#f0f' },
     LATTICE_DIPLOMAT: { id: 'LATTICE_DIPLOMAT', title: 'Lattice Diplomat', desc: 'Established a network of sovereign contacts.', icon: '📓', color: '#0ff' },
+    LATTICE_EVANGELIST: { id: 'LATTICE_EVANGELIST', title: 'Lattice Evangelist', desc: 'Installed the Sovereign OS to the local home screen.', icon: '📲', color: '#f0f' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
     CLIENT_DIVERSIFIER: { id: 'CLIENT_DIVERSIFIER', title: 'Client Diversifier', desc: 'Maintained network consensus across multiple client types.', icon: '🌉', color: '#f0f' },
     MOBILE_WARRIOR: { id: 'MOBILE_WARRIOR', title: 'Mobile Warrior', desc: 'Deployed the Sovereign Arcade on a handheld device.', icon: '📱', color: '#0ff' },

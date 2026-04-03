@@ -150,9 +150,20 @@ export function SystemStatus() {
 
     const syncProgress = networkHeight > 0 ? (localBlocks / networkHeight) * 100 : 100;
 
+    const toggleFullScreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    };
+
     return (
         <div className="system-container">
-            <h1 className="glitch" data-text="SYSTEM STATUS">SYSTEM STATUS</h1>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <h1 className="glitch" data-text="SYSTEM STATUS">SYSTEM STATUS</h1>
+                <button className="cyber-button small" onClick={toggleFullScreen}>TOGGLE FULLSCREEN</button>
+            </div>
 
             <div className="version-display">
                 PROTOCOL VERSION: <span className="neon-text">{VERSION}</span>

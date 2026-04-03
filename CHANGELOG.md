@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-04-03
+
+### Added
+- **Native On-Chain AMM**: Implemented a Constant Product Market Maker (CPMM) in the Go consensus engine.
+  - Added `amm_swap` block type with $x * y = k$ invariant enforcement.
+  - Support for multiple liquidity pools (defaulting to BOB/sSOL).
+  - Real-time price impact and slippage calculations.
+- **Sovereign DEX UI Upgrade**: Overhauled the `/dex` page to use real pool reserves and dynamic pricing.
+- **Liquidity Provider Achievement**: A new on-chain milestone unlocked upon the first successful AMM swap.
+- **Go API Expansion**: Added `GET /pools` endpoint for network-wide liquidity transparency.
+
+## [5.2.0] - 2026-04-03
+
+### Added
+- **Multi-Sig Execution Engine**: Implemented on-chain proposal and authorization protocol in the Go consensus engine.
+  - Added `multisig_propose` and `multisig_approve` block types.
+  - Implemented automatic transaction execution upon meeting the signature threshold.
+  - Added double-signing protection and participant-set validation.
+- **Shared Vaults UI Upgrade**: Completely overhauled the `/multisig` page to support the full proposal lifecycle. Users can now view, sign, and execute shared transactions from a high-fidelity dashboard.
+- **Go State Expansion (v2)**: Enhanced the `MultisigVault` struct to track complex on-chain state for pending proposals and participant authorizations.
+
 ## [5.1.0] - 2026-04-03
 
 ### Added

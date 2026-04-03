@@ -15,6 +15,29 @@ type PendingTx struct {
 	Sender string  `json:"account"`
 }
 
+type MultisigVault struct {
+	Participants     []string            `json:"participants"`
+	Threshold        int                 `json:"threshold"`
+	Balance          float64             `json:"balance"`
+	PendingProposals map[string]*Proposal `json:"pendingProposals"`
+}
+
+type Proposal struct {
+	ID         string   `json:"id"`
+	Recipient  string   `json:"recipient"`
+	Amount     float64  `json:"amount"`
+	Signatures []string `json:"signatures"` // List of member pubkeys who signed
+	Executed   bool     `json:"executed"`
+}
+
+type LiquidityPool struct {
+	AssetA       string  `json:"assetA"` // Always BOB
+	AssetB       string  `json:"assetB"` // e.g., sSOL
+	ReserveA     float64 `json:"reserveA"`
+	ReserveB     float64 `json:"reserveB"`
+	TotalShares  float64 `json:"totalShares"`
+}
+
 type Lattice struct {
 	mu         sync.RWMutex
 	db         *DBManager
@@ -25,7 +48,8 @@ type Lattice struct {
 	MarketBids map[string]interface{}
 	Nfts       map[string]interface{}
 	Anchors    map[string]interface{}
-	Multisigs  map[string]interface{}
+	Multisigs  map[string]*MultisigVault
+	Pools      map[string]*LiquidityPool // PairName -> Pool
 	StateHash  string
 	DemurrageRate float64
 }
@@ -40,9 +64,17 @@ func NewLattice(db *DBManager) *Lattice {
 		MarketBids: make(map[string]interface{}),
 		Nfts:       make(map[string]interface{}),
 		Anchors:    make(map[string]interface{}),
-		Multisigs:  make(map[string]interface{}),
+		Multisigs:  make(map[string]*MultisigVault),
+		Pools:      make(map[string]*LiquidityPool),
 		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
 		DemurrageRate: 0.0001 / 60000,
+	}
+
+	// Initialize Default BOB/sSOL Pool
+	l.Pools["BOB/sSOL"] = &LiquidityPool{
+		AssetA: "BOB", AssetB: "sSOL",
+		ReserveA: 10000, ReserveB: 420, // Initial Bootstrapped Liquidity
+		TotalShares: 1000,
 	}
 
 	// Cold Boot Recovery
@@ -119,7 +151,74 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	} else if block.Type == "data_anchor" {
 		l.Anchors[block.Hash] = block.Payload
 	} else if block.Type == "multisig_create" {
-		l.Multisigs[block.Hash] = block.Payload
+		payload := block.Payload.(map[string]interface{})
+		partsRaw := payload["participants"].([]interface{})
+		var participants []string
+		for _, p := range partsRaw {
+			participants = append(participants, p.(string))
+		}
+
+		l.Multisigs[block.Hash] = &MultisigVault{
+			Participants:     participants,
+			Threshold:        int(payload["threshold"].(float64)),
+			Balance:          0,
+			PendingProposals: make(map[string]*Proposal),
+		}
+	} else if block.Type == "multisig_propose" {
+		payload := block.Payload.(map[string]interface{})
+		vaultAddr := payload["vault"].(string)
+		vault := l.Multisigs[vaultAddr]
+		if vault == nil {
+			return fmt.Errorf("vault not found")
+		}
+
+		vault.PendingProposals[block.Hash] = &Proposal{
+			ID:         block.Hash,
+			Recipient:  payload["recipient"].(string),
+			Amount:     payload["amount"].(float64),
+			Signatures: []string{block.Account},
+			Executed:   false,
+		}
+	} else if block.Type == "multisig_approve" {
+		payload := block.Payload.(map[string]interface{})
+		vaultAddr := payload["vault"].(string)
+		proposalID := payload["proposalID"].(string)
+		vault := l.Multisigs[vaultAddr]
+		if vault == nil {
+			return fmt.Errorf("vault not found")
+		}
+		prop := vault.PendingProposals[proposalID]
+		if prop == nil {
+			return fmt.Errorf("proposal not found")
+		}
+
+		// Prevent double-signing
+		for _, s := range prop.Signatures {
+			if s == block.Account { return fmt.Errorf("already signed") }
+		}
+
+		prop.Signatures = append(prop.Signatures, block.Account)
+		if len(prop.Signatures) >= vault.Threshold {
+			prop.Executed = true
+			fmt.Printf("[Lattice] Multi-Sig Proposal %s EXECUTED!\n", prop.ID[:8])
+		}
+	} else if block.Type == "amm_swap" {
+		payload := block.Payload.(map[string]interface{})
+		pair := payload["pair"].(string)
+		pool := l.Pools[pair]
+		if pool == nil { return fmt.Errorf("pool not found") }
+
+		amountIn := payload["amountIn"].(float64)
+		// Swap BOB (A) for sSOL (B)
+		// Constant Product: (x + dx)(y - dy) = xy
+		// dy = y * dx / (x + dx)
+		dx := amountIn
+		dy := (pool.ReserveB * dx) / (pool.ReserveA + dx)
+		
+		fmt.Printf("[AMM] Swap: %f BOB for %f sSOL. New Price: %f\n", dx, dy, (pool.ReserveA+dx)/(pool.ReserveB-dy))
+		
+		pool.ReserveA += dx
+		pool.ReserveB -= dy
 	}
 
 	// 7. Persist to Disk

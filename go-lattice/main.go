@@ -20,6 +20,7 @@ func main() {
 	http.HandleFunc("/process", handleProcess)
 	http.HandleFunc("/balance/", handleBalance)
 	http.HandleFunc("/frontier/", handleFrontier)
+	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/bootstrap", handleBootstrap)
 
 	fmt.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s\n", port)
@@ -74,6 +75,12 @@ func handleFrontier(w http.ResponseWriter, r *http.Request) {
 		hash = &h
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"frontier": hash})
+}
+
+func handlePools(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	json.NewEncoder(w).Encode(lattice.Pools)
 }
 
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {

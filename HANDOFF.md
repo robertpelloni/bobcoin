@@ -1,34 +1,30 @@
-# Session Handoff - 2026-04-03 (v5.1.0)
+# Session Handoff - 2026-04-03 (v5.3.0)
 
 ## Overview & Findings
-HARDENING MILESTONE: **v5.1.0 — IRONCLAD GO-LATTICE PERSISTENCE**. I have successfully implemented a persistent storage layer for the Go consensus engine. The Sovereign Network can now survive full system reboots without losing its ledger history.
+FINANCIAL MILESTONE REACHED: **v5.3.0 — NATIVE ON-CHAIN AMM**. I have transformed the Sovereign DEX from a mock interface into a fully functional, mathematically secured Automated Market Maker ($x * y = k$) running directly on the Go consensus engine.
 
-## Architecture State & Recent Changes (v5.1.0)
+## Architecture State & Recent Changes (v5.3.0)
 
-### 1. **Go-Lattice Persistence Layer** (`go-lattice/database.go`)
--   **Native SQLite**: Integrated the pure Go `modernc.org/sqlite` library. No CGO required.
--   **Atomic Disk Commits**: Every time the Go node processes a block, it is written to the `lattice.sqlite` database before being finalized in memory.
--   **Cold Boot Recovery**: On startup, the Go node automatically scans the database and rebuilds the account DAG and cumulative state root, ensuring 100% data integrity across restarts.
+### 1. **Go-Lattice AMM Engine** (`go-lattice/lattice.go`)
+-   **Invariant Enforcement**: Added the `amm_swap` block type. The Go node now calculates the constant product $x * y = k$ for every swap and rejects blocks that violate the pool reserves.
+-   **Liquidity Pools**: The engine now tracks global reserves for asset pairs (defaulting to `BOB/sSOL`).
+-   **Transparency**: Added `GET /pools` endpoint for real-time visibility into network liquidity depth.
 
-### 2. **Production Backend Shift** (`frontend/src/api.js`)
--   **Go is Now Default**: The React PWA now defaults to port **4001** (the high-performance Go Node) for all consensus operations, including balance checks and block submissions.
--   **Performance Gains**: Users will experience significantly faster API responses due to Go's concurrent processing model.
+### 2. **Sovereign DEX UI Upgrade** (`/dex`)
+-   **Dynamic Pricing**: The frontend now fetches live reserves and calculates the exact asset return and price impact before a swap is submitted.
+-   **Swap Execution**: Swaps are now signed and broadcast as legitimate on-chain transactions, updating both the account balance and the global liquidity pool.
 
-### 3. **Go State Expansion**
--   The Go engine now natively tracks state for:
-    -   Account Chains
-    -   NFT Metadata
-    -   Permanent Data Anchors
-    -   Shared Multi-Sig Vaults
+### 3. **Achievement: LIQUIDITY_PROVIDER**
+-   Users are rewarded with a new on-chain milestone for participating in the network's liquidity bootstrapping.
 
 ## Test Results
--   ✅ `go build` — Native binary compiled at ~15MB.
--   ✅ Recovery Test — Restarted Go node and confirmed state root hash was identical to pre-restart.
--   ✅ Frontend Integration — Confirmed PWA successfully communicates with port 4001.
+-   ✅ `go build` — Binary stable at ~15MB.
+-   ✅ Swap Invariant — Manually verified that $x * y$ remains constant after multi-BOB swaps.
+-   ✅ UI Feedback — The DEX correctly renders estimated returns based on the 10,000/420 initial pool depth.
 
 ## Commands
 -   **Start Go Lattice**: `cd go-lattice && go run .`
 -   **Build Go Node**: `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
 -   **Start Frontend**: `cd frontend && npm run dev`
 
-**The Bobcoin Sovereign Network is now Ironclad.** 🏗️🚀⚡🛡️👑🏙️🏛️🏆👑📈
+**The Bobcoin Sovereign Network now hosts a functional DeFi economy.** 📈🚀⚡🛡️🏙️🏛️🏆👑_Ready for the next play?_

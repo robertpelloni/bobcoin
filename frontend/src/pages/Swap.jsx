@@ -41,15 +41,21 @@ export function Swap() {
     };
 
     const handleLock = async () => {
-        if (!recipient || amount <= 0 || !secretHash) return alert("Missing info");
+        if (!recipient || amount <= 0 || !secretHash) return alert("Missing info: Recipient, Amount, and Secret Hash are required.");
+        if (amount > balance) return alert("Insufficient liquid balance for swap lock.");
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
+            
+            // Hardening: Verify secret hash format
+            if (secretHash.length !== 64) throw new Error("Invalid secret hash (must be SHA-256 hex)");
+
             const block = new Block({
                 type: 'swap_lock',
                 account: keypair.publicKey,
                 previous: frontier.frontier,
                 balance: balance - amount,
+                staked_balance: (await getLatticeFrontier(keypair.publicKey)).staked_balance || 0,
                 link: 'HTLC_LOCK',
                 payload: { secretHash, recipient, amount, expiry: Date.now() + 3600000 },
                 height: (await getLatticeChain(keypair.publicKey)).chain.length

@@ -9,6 +9,7 @@ export const ACHIEVEMENTS = {
     FHE_PHANTOM: { id: 'FHE_PHANTOM', title: 'FHE Phantom', desc: 'Completed a blind-multiplied game round.', icon: '👻', color: '#f0f' },
     LATTICE_SHARK: { id: 'LATTICE_SHARK', title: 'Lattice Shark', desc: 'Won a bet at the Autonomous Casino.', icon: '🎰', color: '#ff0055' },
     P2P_WARRIOR: { id: 'P2P_WARRIOR', title: 'WebRTC Warrior', desc: 'Completed a direct P2P multiplayer match.', icon: '⚔️', color: '#f80' },
+    LATTICE_VALIDATOR: { id: 'LATTICE_VALIDATOR', title: 'Lattice Validator', desc: 'Staked tokens to secure the sovereign network.', icon: '🥩', color: '#0f0' },
 };
 
 export async function checkAndUnlock(achievementId, keypair, existingChain = []) {

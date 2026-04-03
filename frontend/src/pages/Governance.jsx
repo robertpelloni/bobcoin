@@ -7,6 +7,7 @@ import './Governance.css';
 
 export function Governance() {
     const [balance, setBalance] = useState(0);
+    const [stakedBalance, setStakedBalance] = useState(0);
     const [votingPower, setVotingPower] = useState(0);
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -32,10 +33,14 @@ export function Governance() {
                 }
 
                 if (kp) {
-                    const balRes = await fetch(`${LATTICE_URL}/balance/${kp.publicKey}`);
-                    const balData = await balRes.json();
-                    setBalance(balData.balance || 0);
-                    setVotingPower(Math.sqrt(balData.balance || 0));
+                    const frontRes = await getLatticeFrontier(kp.publicKey);
+                    const liquid = frontRes.balance || 0;
+                    const staked = frontRes.staked_balance || 0;
+                    setBalance(liquid);
+                    setStakedBalance(staked);
+                    
+                    // Voting Power: SQRT(Staked * 2 + Liquid)
+                    setVotingPower(Math.sqrt(staked * 2 + liquid));
                 }
             } catch (e) {
                 console.error(e);

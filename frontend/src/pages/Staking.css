@@ -1,0 +1,104 @@
+.staking-container {
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.staking-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.stat-panel {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-panel.staked {
+    border-color: #0f0;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+}
+
+.stat-panel.liquid {
+    border-color: #0ff;
+}
+
+.stat-panel .label {
+    display: block;
+    color: #666;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+}
+
+.stat-panel .value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    font-family: monospace;
+}
+
+.stat-panel .desc {
+    color: #444;
+    font-size: 0.7rem;
+    margin-top: 1rem;
+}
+
+.action-box {
+    margin-top: 3rem;
+    background: #050505;
+    border: 1px solid #222;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.action-box .cyber-input {
+    width: 200px;
+    font-size: 2rem;
+    text-align: center;
+}
+
+.button-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.yield-estimate {
+    margin-top: 4rem;
+    padding: 2rem;
+    border-top: 1px solid #333;
+}
+
+.yield-estimate h3 {
+    color: #888;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+}
+
+.yield-value {
+    font-size: 3rem;
+    color: #0f0;
+    font-weight: bold;
+    text-shadow: 0 0 10px #0f0;
+    margin-bottom: 1rem;
+}
+
+.yield-estimate p {
+    color: #444;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+    .staking-grid {
+        grid-template-columns: 1fr;
+    }
+}

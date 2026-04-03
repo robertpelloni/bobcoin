@@ -63,6 +63,15 @@ export class Lattice {
     }
 
     /**
+     * Get staked balance of an account (not subject to demurrage)
+     */
+    getStakedBalance(account) {
+        const frontier = this.getFrontier(account);
+        if (!frontier) return 0;
+        return frontier.staked_balance || 0;
+    }
+
+    /**
      * Process an incoming block
      */
     processBlock(block) {
@@ -126,6 +135,14 @@ export class Lattice {
         
         // We must allow a tiny floating point epsilon difference in balance calculations due to decay
         const epsilon = 0.001;
+
+        // Invariant Check: Staked balance must be preserved unless explicit stake block
+        if (block.type !== 'stake_lock' && block.type !== 'stake_unlock' && block.type !== 'open') {
+            const currentStaked = frontier ? (frontier.staked_balance || 0) : 0;
+            if (Math.abs(block.staked_balance - currentStaked) > epsilon) {
+                throw new Error(`Staked balance invariant violation. Expected ${currentStaked}, got ${block.staked_balance}`);
+            }
+        }
 
         if (block.type === 'send') {
             if (block.balance > previousBalance + epsilon) throw new Error(`Send block must decrease balance. (Expected <= ${previousBalance}, got ${block.balance})`);
@@ -322,6 +339,26 @@ export class Lattice {
             if (!recipient) throw new Error("Recipient required for NFT transfer");
             
             nft.owner = recipient;
+
+        } else if (block.type === 'stake_lock') {
+            // Locking funds for staking
+            const amount = previousBalance - block.balance;
+            if (amount <= 0) throw new Error("Stake lock must decrease liquid balance");
+            
+            const expectedStaked = (frontier.staked_balance || 0) + amount;
+            if (Math.abs(block.staked_balance - expectedStaked) > epsilon) {
+                throw new Error("Invalid staked balance after lock");
+            }
+        } else if (block.type === 'stake_unlock') {
+            // Unlocking funds from staking
+            const amount = block.balance - previousBalance;
+            if (amount <= 0) throw new Error("Stake unlock must increase liquid balance");
+            
+            const expectedStaked = (frontier.staked_balance || 0) - amount;
+            if (Math.abs(block.staked_balance - expectedStaked) > epsilon) {
+                throw new Error("Invalid staked balance after unlock");
+            }
+            if (expectedStaked < -epsilon) throw new Error("Insufficient staked balance");
 
         } else {
             throw new Error("Invalid block type");

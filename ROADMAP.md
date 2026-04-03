@@ -42,6 +42,5 @@
 - [x] **Multi-Chain Atomic Swaps**: Implemented Hashed Time-Lock Contracts (HTLCs) and a dedicated `/swap` UI for trustless P2P exchange.
 - [x] **Audio Visualizer**: Added a real-time frequency-domain audio visualizer to the rhythm game dashboard, reacting to synthesized sound effects.
 - [x] **Native NFT Minting**: Built a decentralized digital asset protocol (`mint_nft`, `transfer_nft`) and a high-fidelity gallery UI at `/gallery`.
+- [x] **Staking & Delegation**: Implemented Proof-of-Stake logic allowing users to lock tokens for yield and 2x Quadratic Voting power, complete with a `/staking` dashboard.
 - [ ] **DEX / Token Swap UI**: Build a decentralized exchange interface.
-- [ ] **Durable Data UI**: Arweave-style permanent file storage interface.
-- [ ] **Staking / Delegation**: Allow users to stake tokens to secure the network for rewards.

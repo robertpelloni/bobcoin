@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,8 +23,8 @@ app.use(cors());
 app.use(express.json());
 
 const CORE_ARCADE_ANCHORS = [
-    { name: 'bobsgame-arcade-tokyo', magnet: 'magnet:?xt=urn:btih:bobsgamecorefiles1234567890abcdef' },
-    { name: 'fwber-hq-node', magnet: 'magnet:?xt=urn:btih:fwbercorefiles1234567890abcdef' }
+    { name: 'bobsgame-arcade-tokyo', magnet: 'magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678' },
+    { name: 'fwber-hq-node', magnet: 'magnet:?xt=urn:btih:abcdef1234567890abcdef1234567890abcdef12' }
 ];
 
 let savedTorrents = [];
@@ -97,6 +98,32 @@ app.post('/remove-torrent', (req, res) => {
         console.log('[Supernode] Stopped seeding:', infoHash);
         saveTorrents();
         res.json({ success: true });
+    });
+});
+
+app.get('/spora/:challenge', (req, res) => {
+    const { challenge } = req.params;
+    
+    // Check if we are seeding the core anchor
+    const coreAnchor = CORE_ARCADE_ANCHORS[0];
+    const infoHash = coreAnchor.magnet.split('urn:btih:')[1].split('&')[0];
+    
+    const torrent = client.get(coreAnchor.magnet);
+    
+    if (!torrent) {
+        return res.status(400).json({ error: 'Supernode is not tracking the Core Arcade Anchor. SPoRA failed.' });
+    }
+
+    // In a real SPoRA, we read the actual file chunk from disk (requires torrent.progress === 1).
+    // For this prototype, we simulate reading the chunk by hashing the infoHash + challenge
+    const chunkHash = crypto.createHash('sha256').update(infoHash + challenge).digest('hex');
+    res.json({ 
+        success: true, 
+        spora: {
+            infoHash: infoHash,
+            challenge: parseInt(challenge, 10),
+            chunkHash
+        }
     });
 });
 

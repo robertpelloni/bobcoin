@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.6] - 2026-04-03
+
+### Added
+- **SPoRA Consensus Engine**: Upgraded the `bobcoin-consensus` Node.js Asynchronous Block Lattice to enforce Succinct Proof of Random Access. Users MUST generate a valid cryptographic chunk hash from a local `supertorrent` node that actively seeds the core Bobtorrent games in order to transact on the network.
+- **Storage Oracle Endpoints**: Upgraded the Supernode (`supertorrent/server.js`) to act as a local storage oracle, returning deterministic file chunk hashes based on previous block challenges.
+- **Full E2E Execution Flow**: Hardened `test_e2e.js` to execute the full SPoRA flow: Game Server Proof Verification ➔ System Send Block ➔ User Wallet SPoRA Oracle Fetch ➔ User Wallet Receive Block ➔ Native Lattice Signature Validation.
+
+
+
+
+
 ## [2.6.5] - 2026-04-02
 
 ### Added

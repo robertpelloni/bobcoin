@@ -116,12 +116,24 @@ export function Wallet() {
             if (!previousHash) throw new Error("Wallet not initialized on network (no frontier).");
 
             const newBalance = balance - sendAmount;
+
+            const expectedChallenge = parseInt(previousHash.substr(0, 8), 16);
+            let sporaProof = null;
+            try {
+                sporaProof = await getSporaProof(expectedChallenge);
+            } catch (e) {
+                alert("SPoRA Failed: You must be running an active Supernode seeding the Bobtorrent Anchors to send funds.");
+                setIsSending(false);
+                return;
+            }
+
             const sendBlock = new Block({
                 type: 'send',
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
-                link: sendAddress
+                link: sendAddress,
+                spora: sporaProof
             });
 
             await sendBlock.signBlock(keypair.privateKey);

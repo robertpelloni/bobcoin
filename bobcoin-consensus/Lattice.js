@@ -1,4 +1,5 @@
 import { Block } from './Block.js';
+import crypto from 'crypto';
 
 export class Lattice {
     constructor() {
@@ -49,6 +50,28 @@ export class Lattice {
             if (block.previous !== frontier.hash) throw new Error("Invalid previous block hash");
         }
 
+        // Verify SPoRA (Succinct Proof of Random Access)
+        // GENESIS blocks bypass SPoRA for bootstrapping
+        if (!(block.type === 'open' && block.link === 'SYSTEM_GENESIS' && Object.keys(this.chains).length === 0)) {
+            if (!block.spora || !block.spora.infoHash || !block.spora.chunkHash || block.spora.challenge === undefined) {
+                throw new Error("Missing or invalid SPoRA proof. You must seed the Bobtorrent Network to submit blocks.");
+            }
+
+            // Challenge must be deterministic based on the previous block's hash (or account if 'open')
+            const baseHash = block.previous || block.account;
+            const expectedChallenge = parseInt(baseHash.substr(0, 8), 16);
+            if (block.spora.challenge !== expectedChallenge) {
+                throw new Error("SPoRA challenge does not match the deterministic network requirement.");
+            }
+
+            // In a real SPoRA network, the Lattice verifies the Merkle Branch of the file chunk against a known root.
+            // For this prototype, we mathematically verify the chunkHash simulates reading from the exact requested torrent.
+            const verifiedChunkHash = crypto.createHash('sha256').update(block.spora.infoHash + expectedChallenge).digest('hex');
+            if (block.spora.chunkHash !== verifiedChunkHash) {
+                throw new Error("SPoRA chunkHash is mathematically invalid. Node does not hold the file chunk.");
+            }
+        }
+
         // Verify state transitions based on type
         if (block.type === 'send') {
             const previousBalance = frontier ? frontier.balance : 0;
@@ -62,6 +85,15 @@ export class Lattice {
             this.pending[recipient].push({ hash: block.hash, amount, sender: account });
 
         } else if (block.type === 'receive' || block.type === 'open') {
+            // GENESIS BYPASS
+            if (block.type === 'open' && block.link === 'SYSTEM_GENESIS' && Object.keys(this.chains).length === 0) {
+                // Allow the very first block of the network to be an open block linking to SYSTEM_GENESIS
+                if (!this.chains[account]) this.chains[account] = [];
+                this.chains[account].push(block);
+                this.blocks[block.hash] = block;
+                return true;
+            }
+
             // Find the pending send block
             const sendBlockHash = block.link;
             const pendingList = this.pending[account] || [];

@@ -40,7 +40,8 @@ app.post('/process', (req, res) => {
             account: blockData.account,
             previous: blockData.previous,
             balance: blockData.balance,
-            link: blockData.link
+            link: blockData.link,
+            spora: blockData.spora
         });
         block.timestamp = blockData.timestamp;
         block.hash = blockData.hash;

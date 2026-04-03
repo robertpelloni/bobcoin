@@ -66,13 +66,24 @@ async function testFlow() {
     console.log(`✅ Found pending funds: ${pendingTx.amount} BOB from ${pendingTx.sender.substr(0, 8)}...`);
 
     // 4. User Creates and Signs 'Open' Block
-    console.log("4. User signs and broadcasts 'Open' receive block...");
+    console.log("4. User requests SPoRA challenge from local Supernode...");
+    const expectedChallenge = parseInt(userWallet.publicKey.substr(0, 8), 16);
+    const sporaRes = await fetch(`http://localhost:8081/spora/${expectedChallenge}`);
+    const sporaData = await sporaRes.json();
+
+    if (!sporaData.success) {
+        console.error("❌ Failed to generate SPoRA Proof. Ensure supernode is seeding Anchors.");
+        process.exit(1);
+    }
+    
+    console.log("5. User signs and broadcasts 'Open' receive block with SPoRA...");
     const receiveBlock = new Block({
         type: 'open',
         account: userWallet.publicKey,
         previous: null, // First block in user's chain
         balance: pendingTx.amount, // New balance
-        link: pendingTx.hash // Link to system's send block
+        link: pendingTx.hash, // Link to system's send block
+        spora: sporaData.spora
     });
     
     receiveBlock.signBlock(userWallet.privateKey);

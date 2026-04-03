@@ -21,6 +21,14 @@ let systemFrontier = null;
 
 // Helper to interact with the Lattice Network
 const LATTICE_URL = process.env.LATTICE_URL || 'http://localhost:4000';
+const SUPERNODE_URL = process.env.SUPERNODE_URL || 'http://localhost:8081';
+
+async function getSporaProof(challenge) {
+    const res = await fetch(`${SUPERNODE_URL}/spora/${challenge}`);
+    const data = await res.json();
+    if (data.success) return data.spora;
+    throw new Error(data.error);
+}
 
 async function broadcastBlock(block) {
     const res = await fetch(`${LATTICE_URL}/process`, {
@@ -136,22 +144,46 @@ app.post('/submit-proof', async (req, res) => {
         const zkData = { success: true, verified: true };
 
         if (zkData.success && zkData.verified) {
-            // Mint Tokens (Simulated Bridge Call)
+            // Mint Tokens via Lattice
+            const address = proof.publicValues.address || 'unknown';
+            let hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
+            const amount = proof.publicValues.score / 100;
             const tx = 'tx_' + Math.random().toString(36).substr(2, 9);
-            console.log(`[Game Server] Proof Verified. Tokens minted. TX: ${tx}`);
+            console.log(`[Game Server] Proof Verified. Minting ${amount} to ${address}...`);
             
-            // Record Mint Transaction
             try {
+                if (systemFrontier && address !== 'unknown') {
+                    systemBalance -= amount;
+                    const expectedChallenge = parseInt(systemFrontier.substr(0, 8), 16);
+                    let sporaProof = null;
+                    try {
+                        sporaProof = await getSporaProof(expectedChallenge);
+                    } catch(e) {
+                        console.error("[Game Server] SPoRA Failed:", e.message);
+                        throw new Error("System SPoRA failed");
+                    }
+                    const sendBlock = new Block({
+                        type: 'send',
+                        account: SYSTEM_WALLET.publicKey,
+                        previous: systemFrontier,
+                        balance: systemBalance,
+                        link: address,
+                        spora: sporaProof
+                    });
+                    sendBlock.signBlock(SYSTEM_WALLET.privateKey);
+                    const latticeRes = await broadcastBlock(sendBlock);
+                    if (latticeRes.success) {
+                        systemFrontier = sendBlock.hash;
+                        hash = sendBlock.hash;
+                    }
+                }
                 const { recordTransaction } = await import('./database.js');
-                const hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
-                // Calculate mint amount based on score
-                const amount = proof.publicValues.score / 100;
                 await recordTransaction(tx, 'MINT', amount, hash);
             } catch (e) {
                 console.error("DB Error recording proof mint:", e);
             }
 
-            return res.json({ success: true, tx });
+            return res.json({ success: true, tx, hash });
         } else {
             console.log(`[Game Server] Proof Verification Failed.`);
             return res.status(400).json({ success: false, error: 'Cryptographic trace verification failed.' });
@@ -185,8 +217,8 @@ app.post('/burn', async (req, res) => {
 
 // Generic Mint Endpoint (System Sending to User)
 app.post('/mint', async (req, res) => {
-    const { amount, reason } = req.body;
-    console.log(`[Game Server] Minting ${amount} BOB for: ${reason}`);
+    const { amount, reason, address } = req.body;
+    console.log(`[Game Server] Minting ${amount} BOB for: ${reason} to ${address || 'unknown'}`);
     
     if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
 
@@ -194,23 +226,33 @@ app.post('/mint', async (req, res) => {
 
     try {
         // Broadcast send block to Lattice
-        if (systemFrontier) {
+        if (systemFrontier && address) {
             systemBalance -= amount;
+            const expectedChallenge = parseInt(systemFrontier.substr(0, 8), 16);
+            let sporaProof = null;
+            try {
+                sporaProof = await getSporaProof(expectedChallenge);
+            } catch(e) {
+                console.error("[Game Server] SPoRA Failed:", e.message);
+                throw new Error("System SPoRA failed");
+            }
             const sendBlock = new Block({
                 type: 'send',
                 account: SYSTEM_WALLET.publicKey,
                 previous: systemFrontier,
                 balance: systemBalance,
-                link: 'user_wallet_placeholder' // In a real app, this is the user's public key
+                link: address,
+                spora: sporaProof
             });
             sendBlock.signBlock(SYSTEM_WALLET.privateKey);
             const latticeRes = await broadcastBlock(sendBlock);
             if (latticeRes.success) {
                 systemFrontier = sendBlock.hash;
                 hash = sendBlock.hash;
-                console.log(`[Lattice] System sent ${amount} BOB. TX: ${hash}`);
+                console.log(`[Lattice] System sent ${amount} BOB to ${address}. TX: ${hash}`);
             }
         }
+
         
         // Record Mint Transaction locally for UI
         const tx = 'tx_mint_' + Math.random().toString(36).substr(2, 9);

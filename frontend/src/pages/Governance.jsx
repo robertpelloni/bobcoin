@@ -91,8 +91,8 @@ export function Governance() {
                         <div className="prop-actions">
                             {prop.status === 'Active' ? (
                                 <>
-                                    <button className="vote-btn yes" onClick={() => handleVote(prop.id, 'yes')}>VOTE YES</button>
-                                    <button className="vote-btn no" onClick={() => handleVote(prop.id, 'no')}>VOTE NO</button>
+                                    <button className="vote-btn yes" onClick={() => handleVote(prop.id, 'yes')} title="Cast a quadratic vote in favor of this proposal.">VOTE YES</button>
+                                    <button className="vote-btn no" onClick={() => handleVote(prop.id, 'no')} title="Cast a quadratic vote against this proposal.">VOTE NO</button>
                                 </>
                             ) : (
                                 <span className="ended-msg">VOTING ENDED</span>

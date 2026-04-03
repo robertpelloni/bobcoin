@@ -60,6 +60,7 @@ export function Wallet() {
                         <button
                             className={`toggle-btn ${privacyMode ? 'active' : ''}`}
                             onClick={() => setPrivacyMode(!privacyMode)}
+                            title="Toggle privacy mode to obfuscate balances and utilize one-time stealth addresses."
                         >
                             {privacyMode ? 'ON' : 'OFF'}
                         </button>
@@ -77,7 +78,7 @@ export function Wallet() {
                     <label>PUBLIC ADDRESS</label>
                     <div className="address-box">
                         <code>8x7f49c2...3a2b</code>
-                        <button className="copy-btn">COPY</button>
+                        <button className="copy-btn" title="Copy public address to clipboard.">COPY</button>
                     </div>
 
                     {privacyMode && (
@@ -104,6 +105,7 @@ export function Wallet() {
                             max="64"
                             value={ringSize}
                             onChange={(e) => setRingSize(e.target.value)}
+                            title="Adjust the number of decoys in the ring signature. Higher sizes increase privacy."
                         />
                     </div>
                     <p className="description">
@@ -116,7 +118,7 @@ export function Wallet() {
                 <div className="setting-card">
                     <h3>KEY MANAGEMENT</h3>
                     <div className="control">
-                        <button className="cyber-button" onClick={() => setShowKeys(!showKeys)} style={{fontSize: '0.8rem', padding: '0.5rem'}}>
+                        <button className="cyber-button" onClick={() => setShowKeys(!showKeys)} style={{fontSize: '0.8rem', padding: '0.5rem'}} title="Reveal or hide your private cryptographic keys.">
                             {showKeys ? 'HIDE KEYS' : 'REVEAL KEYS'}
                         </button>
                     </div>

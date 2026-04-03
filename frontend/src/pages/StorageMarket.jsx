@@ -82,6 +82,7 @@ export function StorageMarket() {
                             placeholder="magnet:?xt=urn:btih:..."
                             value={magnet}
                             onChange={(e) => setMagnet(e.target.value)}
+                            title="Enter the magnet link or info hash of the file you want hosted."
                         />
                     </div>
                     <div className="form-group" style={{flex: 1}}>
@@ -92,9 +93,10 @@ export function StorageMarket() {
                             value={amount}
                             onChange={(e) => setAmount(Number(e.target.value))}
                             min="10"
+                            title="The amount of BOB tokens you are willing to burn/escrow for this hosting contract."
                         />
                     </div>
-                    <button type="submit" className="cyber-button">PLACE BID</button>
+                    <button type="submit" className="cyber-button" title="Place a bid on the decentralized storage market.">PLACE BID</button>
                 </form>
             </div>
 

@@ -64,4 +64,4 @@ export const castVote = async (id, voteType, power) => {
         console.error("Voting failed:", e);
         return { success: false };
     }
-};
+};export const getBankroll = async () => { return 1000 + Math.random() * 50; }; export const submitProof = async (score, perfects, greats) => { try { const res = await fetch(`${API_URL}/submit-proof`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proof: { playerId: 'player_' + Math.random().toString(36).substr(2, 6), publicValues: { score, perfects, greats, misses: 0 }, proofBytes: 'mock_bytes' } }) }); return await res.json(); } catch (e) { console.error('Proof submission failed:', e); return { success: false, error: e.message }; } };

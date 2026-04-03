@@ -49,6 +49,7 @@ export function Mobile() {
                     <button 
                         className={`cyber-button ${miningActive ? 'stop' : 'start'}`}
                         onClick={() => setMiningActive(!miningActive)}
+                        title="Toggle the mobile background mining process (Proof of Walk & Storage Allocation)."
                     >
                         {miningActive ? 'HALT MINING' : 'START MINING'}
                     </button>

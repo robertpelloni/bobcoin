@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-04-03
+
+### Added
+- **Multi-Chain Atomic Swaps (HTLC)**: Implemented Hashed Time-Lock Contracts (HTLCs) as a core Lattice protocol. Added `swap_lock` and `swap_claim` block types, enabling trustless peer-to-peer token exchanges without intermediary risk.
+- **Atomic Swap UI** (`/swap`): A new page featuring secret generation, fund locking, and secret-reveal claiming. Fully integrated with the Block Lattice and sequential height rules.
+- **Test Suite Stabilization**: Extensively refactored `test_e2e.js` to track and include strictly sequential `height` fields, ensuring all automated tests pass the hardened v3.3.0 consensus rules.
+- **Lattice State Expansion**: The `Lattice.js` class now tracks global `swaps` state for real-time validation of secret hashes and expiry times.
+
 ## [3.3.0] - 2026-04-03
 
 ### Added

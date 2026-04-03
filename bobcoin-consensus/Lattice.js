@@ -19,7 +19,8 @@ export class Lattice {
         
         // Decentralized Storage Market State
         this.marketBids = {}; // Maps bid_hash to { creator, magnet, amount, status: 'OPEN' | 'ACCEPTED' }
-
+        this.swaps = {};      // Maps secretHash to { sender, recipient, amount, expiry }
+        
         // Demurrage Constant (e.g., 1% decay per 365 days = ~3.17e-10 per second)
         // For this prototype, we'll use a visible 0.01% decay per minute for testing
         this.DEMURRAGE_RATE_PER_MS = 0.0001 / 60000;
@@ -246,6 +247,47 @@ export class Lattice {
             // Mark bid as accepted
             bid.status = 'ACCEPTED';
             bid.acceptedBy = account;
+
+        } else if (block.type === 'achievement_unlock') {
+            // Achievement blocks are metadata only, no balance change allowed
+            if (Math.abs(block.balance - previousBalance) > epsilon) {
+                throw new Error("Achievement unlock cannot change balance");
+            }
+        } else if (block.type === 'swap_lock') {
+            // Lock funds for an HTLC
+            const amount = previousBalance - block.balance;
+            if (amount <= 0) throw new Error("Swap lock must decrease balance");
+            
+            if (!block.payload || !block.payload.secretHash || !block.payload.recipient) {
+                throw new Error("Invalid swap_lock payload");
+            }
+            
+            this.swaps[block.payload.secretHash] = {
+                sender: account,
+                recipient: block.payload.recipient,
+                amount: amount,
+                expiry: block.payload.expiry || (Date.now() + 3600000), // Default 1 hour
+                status: 'LOCKED'
+            };
+        } else if (block.type === 'swap_claim') {
+            // Claim funds from an HTLC by revealing secret
+            const { secret, secretHash } = block.payload;
+            const swap = this.swaps[secretHash];
+            
+            if (!swap) throw new Error("Swap not found");
+            if (swap.status !== 'LOCKED') throw new Error("Swap already claimed or expired");
+            if (Date.now() > swap.expiry) throw new Error("Swap expired");
+            
+            const hashed = crypto.createHash('sha256').update(secret).digest('hex');
+            if (hashed !== secretHash) throw new Error("Invalid secret for HTLC claim");
+            
+            const expectedBalance = previousBalance + swap.amount;
+            if (Math.abs(block.balance - expectedBalance) > epsilon) {
+                throw new Error("Swap claim must increment balance by locked amount");
+            }
+            
+            swap.status = 'CLAIMED';
+            swap.claimer = account;
 
         } else {
             throw new Error("Invalid block type");

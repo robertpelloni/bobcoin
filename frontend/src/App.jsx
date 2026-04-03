@@ -10,6 +10,7 @@ import { SystemStatus } from './pages/SystemStatus';
 import { Explorer } from './pages/Explorer';
 import { Trophies } from './pages/Trophies';
 import { Casino } from './pages/Casino';
+import { Swap } from './pages/Swap';
 import { Manual } from './pages/Manual';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="explorer" element={<Explorer />} />
           <Route path="trophies" element={<Trophies />} />
           <Route path="casino" element={<Casino />} />
+          <Route path="swap" element={<Swap />} />
           <Route path="manual" element={<Manual />} />
         </Route>
       </Routes>

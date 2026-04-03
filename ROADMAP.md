@@ -39,8 +39,9 @@
 - [x] **On-Chain Achievements (v2)**: Implemented triggers for `QUADRATIC_CITIZEN`, `LATTICE_SHARK`, `P2P_WARRIOR`, `FHE_PHANTOM`, and `SPORA_LORD`.
 - [x] **Consensus Hardening (v1)**: Implemented **State Hashing** and **Double-Spend Protection** in `Lattice.js` to ensure chain consistency and prevent fund misappropriation.
 - [x] **Consensus Hardening (v2)**: Implemented **Strict Block Height Enforcement** and integrated sequential heights into the cryptographic block hashes.
+- [x] **Multi-Chain Atomic Swaps**: Implemented Hashed Time-Lock Contracts (HTLCs) and a dedicated `/swap` UI for trustless P2P exchange.
 - [x] **Audio Visualizer**: Added a real-time frequency-domain audio visualizer to the rhythm game dashboard, reacting to synthesized sound effects.
-- [ ] **Multi-Chain Atomic Swaps**: Enable users to swap assets between chains.
+- [ ] **DEX / Token Swap UI**: Build a decentralized exchange interface.
 - [ ] **DEX / Token Swap UI**: Build a decentralized exchange interface.
 - [ ] **Durable Data UI**: Arweave-style permanent file storage interface.
 - [ ] **Staking / Delegation**: Allow users to stake tokens to secure the network for rewards.

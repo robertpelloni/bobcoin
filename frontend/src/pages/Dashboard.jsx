@@ -13,6 +13,11 @@ export function Dashboard() {
     const [txSignature, setTxSignature] = useState('');
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
+    const replayLog = useRef([]);
+
+    const handleLogEvent = (evt) => {
+        replayLog.current.push(evt);
+    };
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -47,7 +52,7 @@ export function Dashboard() {
 
         setMintStatus('minting');
         try {
-            const result = await submitProof(score, 50, 10);
+            const result = await submitProof(score, 50, 10, replayLog.current);
             if (result.success) {
                 setMintStatus('success');
                 setTxSignature(result.tx);
@@ -114,7 +119,7 @@ export function Dashboard() {
                 </div>
 
                 <div className="play-area-wrapper" style={{display: 'flex', justifyContent: 'center'}}>
-                    <RhythmGame onScoreUpdate={handleScoreUpdate} />
+                    <RhythmGame onScoreUpdate={handleScoreUpdate} onLogEvent={handleLogEvent} />
                 </div>
 
                 <div className="controls" style={{display: 'flex', gap: '1rem'}}>

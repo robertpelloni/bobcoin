@@ -120,12 +120,15 @@ export function RhythmGame({ onScoreUpdate }) {
                 setFeedback(text);
                 setTimeout(() => setFeedback(null), 300);
                 onScoreUpdate(score);
+                if (onLogEvent) onLogEvent({ time: Date.now(), key, diff, result: text });
 
                 // Remove note
                 const newNotes = [...currentNotes];
                 newNotes.splice(hitIndex, 1);
                 setNotes(newNotes);
                 notesRef.current = newNotes;
+            } else {
+                if (onLogEvent) onLogEvent({ time: Date.now(), key, diff: null, result: 'MISS' });
             }
         };
 

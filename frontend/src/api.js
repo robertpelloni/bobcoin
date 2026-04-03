@@ -113,7 +113,13 @@ export const getProposals = async () => {
 };
 
 export const getBankroll = async () => {
-    return 1000 + Math.random() * 50; 
+    try {
+        const res = await fetch(`${API_URL}/bankroll`);
+        const data = await res.json();
+        return data.balance;
+    } catch(e) {
+        return 1000000;
+    }
 }; 
 
 export const submitFHEOracle = async (cipherText) => {
@@ -130,7 +136,7 @@ export const submitFHEOracle = async (cipherText) => {
     }
 };
 
-export const submitProof = async (score, perfects, greats) => { 
+export const submitProof = async (score, perfects, greats, replayLog = []) => { 
     let address = null;
     try {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -144,7 +150,7 @@ export const submitProof = async (score, perfects, greats) => {
             body: JSON.stringify({ 
                 proof: { 
                     playerId: 'player_' + Math.random().toString(36).substr(2, 6), 
-                    publicValues: { score, perfects, greats, misses: 0, address }, 
+                    publicValues: { score, perfects, greats, misses: 0, address, replayLog }, 
                     proofBytes: 'mock_bytes' 
                 } 
             }) 

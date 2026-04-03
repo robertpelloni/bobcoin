@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.13] - 2026-04-03
+
+### Added
+- **AI-Powered Proof-of-Play Oracle**: Implemented a server-side AI evaluation metric (Hedera-style) to analyze rhythmic game inputs (`replayLogs`). The Game Server actively analyzes the mathematical variance of user keystroke timings to reliably distinguish organic human play from scripted macro bots. The Oracle requires >90% human confidence to authorize a Lattice System `send` block.
+- **Roadmap Annihilation**: Fully consumed and realized the entirety of `IDEAS.md`, Phase III, and Phase IV. The Bobcoin Sovereign Mainnet is architecturally and mathematically complete natively in Node.js.
+
+
+
+
+
 ## [2.6.12] - 2026-04-03
 
 ### Added

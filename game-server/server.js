@@ -109,7 +109,7 @@ app.post('/fhe-oracle', async (req, res) => {
     }
 });
 
-// ZK Proof Submission Endpoint
+// ZK Proof Submission & AI Oracle Endpoint
 app.post('/submit-proof', async (req, res) => {
     const { proof } = req.body;
     if (!proof || !proof.publicValues) {
@@ -117,23 +117,31 @@ app.post('/submit-proof', async (req, res) => {
     }
 
     try {
-        console.log(`[Game Server] Relaying proof for player ${proof.playerId} to ZK Service...`);
-        // We simulate calling the actual Rust ZK Service on port 8080
-        // Currently the ZK service only executes traces (client.execute)
+        console.log(`[Game Server] Analyzing Proof of Play & Replay Log for player ${proof.playerId}...`);
         
-        // Mock ZK Service Verification Response
-        // Replace with actual fetch to ZK_SERVICE_URL when SP1 is robust
-        /*
-        const zkRes = await fetch(`${ZK_SERVICE_URL}/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(proof)
-        });
-        const zkData = await zkRes.json();
-        */
-        
-        // Simulated successful ZK Verification based on previous mock behavior
-        const zkData = { success: true, verified: true };
+        // --- AI ORACLE MOCK ---
+        // Instead of relying on a missing Rust SP1 ZK prover, we simulate an AI Oracle
+        // analyzing the replay logs to detect bots or cheating!
+        const replay = proof.publicValues.replayLog || [];
+        let aiConfidence = 0.95; // Default high confidence
+        let botDetected = false;
+
+        if (replay.length > 5) {
+            // Check for inhuman consistency
+            const diffs = replay.filter(r => r.diff !== null).map(r => r.diff);
+            if (diffs.length > 5) {
+                const avgDiff = diffs.reduce((a,b)=>a+b, 0) / diffs.length;
+                const variance = diffs.reduce((a,b)=>a+Math.pow(b-avgDiff, 2), 0) / diffs.length;
+                if (variance < 1.0) {
+                    botDetected = true;
+                    aiConfidence = 0.10;
+                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Inhuman consistency (Variance: ${variance.toFixed(2)})`);
+                }
+            }
+        }
+
+        const zkData = { success: true, verified: !botDetected };
+        console.log(`[AI Oracle] Analysis Complete. Human Confidence: ${(aiConfidence * 100).toFixed(1)}%`);
 
         if (zkData.success && zkData.verified) {
             // Mint Tokens via Lattice

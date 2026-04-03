@@ -14,9 +14,15 @@ async function testFlow() {
     const userWallet = generateKeypair();
     console.log("1. Generated User Wallet:", userWallet.publicKey.substr(0, 16) + '...');
 
-    // 2. Submit Proof
+    // 2. Submit Proof (AI Oracle Evaluated)
     const score = 5000; // > 1000 to mint
     
+    // Simulate organic replay log to pass AI Oracle variance check
+    const mockReplay = [];
+    for (let i = 0; i < 10; i++) {
+        mockReplay.push({ time: Date.now() + i*500, key: 'D', diff: 15 + Math.random() * 10, result: 'GOOD' });
+    }
+
     const proofPayload = {
         playerId: "test_player_" + Date.now(),
         publicValues: {
@@ -24,12 +30,13 @@ async function testFlow() {
             perfects: 50,
             greats: 0,
             misses: 0,
-            address: userWallet.publicKey // Include address for reward
+            address: userWallet.publicKey,
+            replayLog: mockReplay
         },
         proofBytes: "mock_bytes" 
     };
 
-    console.log("2. Submitting ZK Proof to Game Server...");
+    console.log("2. Submitting Replay Log to AI Oracle on Game Server...");
     try {
         const res = await fetch(`${GAME_SERVER_URL}/submit-proof`, {
             method: 'POST',

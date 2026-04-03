@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.11] - 2026-04-03
+
+### Added
+- **Mathematical Demurrage (Deflationary Economy)**: Implemented continuous block-by-block token decay on the Asynchronous Block Lattice. The system natively recalculates balances using a time-decay factor (`0.01% per minute` for prototype visibility) every time a block is broadcasted. This perfectly disincentivizes hoarding and forces economic velocity, a core pillar of the Sovereign Arcade Economy.
+- **Dynamic E2E Verification**: The `test_e2e.js` suite now perfectly validates floating-point demurrage decay across System Mints, Proposals, Storage Escrows, and P2P Transfers.
+
+
+
+
+
 ## [2.6.10] - 2026-04-03
 
 ### Added

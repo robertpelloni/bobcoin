@@ -67,7 +67,9 @@ async function testFlow() {
 
     // 4. User Creates and Signs 'Open' Block
     console.log("4. User requests SPoRA challenge from local Supernode...");
-    const expectedChallenge = parseInt(userWallet.publicKey.substr(0, 8), 16);
+    const { hash } = await import('./bobcoin-consensus/cryptoUtils.js');
+    const baseHash = hash(userWallet.publicKey);
+    const expectedChallenge = parseInt(baseHash.substr(0, 8), 16);
     const sporaRes = await fetch(`http://localhost:8081/spora/${expectedChallenge}`);
     const sporaData = await sporaRes.json();
 

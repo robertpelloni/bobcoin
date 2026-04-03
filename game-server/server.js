@@ -83,6 +83,11 @@ app.get('/status', (req, res) => {
     res.json({ status: 'online', service: 'Game Server orchestrator', version: '2.4.0' });
 });
 
+// Expose System Bankroll
+app.get('/bankroll', (req, res) => {
+    res.json({ balance: systemBalance });
+});
+
 app.post('/fhe-oracle', async (req, res) => {
     const { cipherText } = req.body;
     if (!cipherText) return res.status(400).json({ error: 'Encrypted payload missing' });
@@ -140,7 +145,10 @@ app.post('/submit-proof', async (req, res) => {
             
             try {
                 if (systemFrontier && address !== 'unknown') {
-                    systemBalance -= amount;
+                    const balRes = await fetch(`${LATTICE_URL}/balance/${SYSTEM_WALLET.publicKey}`);
+                    const balData = await balRes.json();
+                    systemBalance = balData.balance - amount;
+
                     const expectedChallenge = parseInt(systemFrontier.substr(0, 8), 16);
                     let sporaProof = null;
                     try {
@@ -214,7 +222,10 @@ app.post('/mint', async (req, res) => {
     try {
         // Broadcast send block to Lattice
         if (systemFrontier && address) {
-            systemBalance -= amount;
+            const balRes = await fetch(`${LATTICE_URL}/balance/${SYSTEM_WALLET.publicKey}`);
+            const balData = await balRes.json();
+            systemBalance = balData.balance - amount;
+
             const expectedChallenge = parseInt(systemFrontier.substr(0, 8), 16);
             let sporaProof = null;
             try {

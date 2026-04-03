@@ -5,20 +5,37 @@ export class Lattice {
     constructor() {
         // Maps account address to an array of Blocks
         this.chains = {};
-        
+
         // Maps block hash to the actual Block object for O(1) lookup
         this.blocks = {};
         
         // Tracks unreceived 'send' blocks (pending incoming transactions)
         // Maps recipient address to an array of send block hashes
         this.pending = {};
-        
+
         // On-chain Governance State
         this.proposals = {};
         this.votes = {}; // Maps proposal_hash to { account: vote_weight }
         
         // Decentralized Storage Market State
         this.marketBids = {}; // Maps bid_hash to { creator, magnet, amount, status: 'OPEN' | 'ACCEPTED' }
+
+        // Demurrage Constant (e.g., 1% decay per 365 days = ~3.17e-10 per second)
+        // For this prototype, we'll use a visible 0.01% decay per minute for testing
+        this.DEMURRAGE_RATE_PER_MS = 0.0001 / 60000;
+    }
+
+    /**
+     * Calculate balance after demurrage decay based on time elapsed
+     */
+    applyDemurrage(balance, lastTimestamp, currentTimestamp) {
+        if (!lastTimestamp || balance <= 0) return balance;
+        const elapsedMs = currentTimestamp - lastTimestamp;
+        if (elapsedMs <= 0) return balance;
+        
+        // Simple linear decay for prototype (Real world uses compound interest formula)
+        const decay = balance * this.DEMURRAGE_RATE_PER_MS * elapsedMs;
+        return Math.max(0, balance - decay);
     }
 
     /**
@@ -30,11 +47,12 @@ export class Lattice {
     }
 
     /**
-     * Get current balance of an account
+     * Get current balance of an account, adjusted for demurrage decay
      */
-    getBalance(account) {
+    getBalance(account, currentTimestamp = Date.now()) {
         const frontier = this.getFrontier(account);
-        return frontier ? frontier.balance : 0;
+        if (!frontier) return 0;
+        return this.applyDemurrage(frontier.balance, frontier.timestamp, currentTimestamp);
     }
 
     /**
@@ -65,7 +83,7 @@ export class Lattice {
             }
 
             // Challenge must be deterministic based on the previous block's hash (or account if 'open')
-            const baseHash = block.previous || block.account;
+            const baseHash = block.previous || crypto.createHash('sha256').update(block.account).digest('hex');
             const expectedChallenge = parseInt(baseHash.substr(0, 8), 16);
             if (block.spora.challenge !== expectedChallenge) {
                 throw new Error("SPoRA challenge does not match the deterministic network requirement.");
@@ -80,17 +98,24 @@ export class Lattice {
         }
 
         // Verify state transitions based on type
-        const previousBalance = frontier ? frontier.balance : 0;
+        // Apply Demurrage to the previous balance before any new operations
+        let previousBalance = frontier ? frontier.balance : 0;
+        if (frontier && frontier.timestamp) {
+            previousBalance = this.applyDemurrage(previousBalance, frontier.timestamp, block.timestamp);
+        }
+        
+        // We must allow a tiny floating point epsilon difference in balance calculations due to decay
+        const epsilon = 0.001;
 
         if (block.type === 'send') {
-            if (block.balance >= previousBalance) throw new Error("Send block must decrease balance");
+            if (block.balance > previousBalance + epsilon) throw new Error(`Send block must decrease balance. (Expected <= ${previousBalance}, got ${block.balance})`);
             
             const amount = previousBalance - block.balance;
             const recipient = block.link;
 
             // Add to pending for recipient
             if (!this.pending[recipient]) this.pending[recipient] = [];
-            this.pending[recipient].push({ hash: block.hash, amount, sender: account });
+            this.pending[recipient].push({ hash: block.hash, amount, sender: account, payload: block.payload });
 
         } else if (block.type === 'receive' || block.type === 'open') {
             // GENESIS BYPASS
@@ -105,19 +130,23 @@ export class Lattice {
             const sendBlockHash = block.link;
             const pendingList = this.pending[account] || [];
             const pendingTx = pendingList.find(p => p.hash === sendBlockHash);
-            
+
             if (!pendingTx) throw new Error("Pending send block not found or already received");
 
             const expectedBalance = previousBalance + pendingTx.amount;
-            if (block.balance !== expectedBalance) throw new Error("Invalid receive balance");
+            if (Math.abs(block.balance - expectedBalance) > epsilon) {
+                throw new Error(`Invalid receive balance. Expected ~${expectedBalance}, got ${block.balance}`);
+            }
 
             // Remove from pending
             this.pending[account] = pendingList.filter(p => p.hash !== sendBlockHash);
 
         } else if (block.type === 'proposal') {
             // A proposal costs exactly 10 BOB
-            if (block.balance !== previousBalance - 10) throw new Error("Proposal creation costs exactly 10 BOB");
-            
+            if (Math.abs(block.balance - (previousBalance - 10)) > epsilon) {
+                throw new Error(`Proposal creation costs exactly 10 BOB. Expected ~${previousBalance - 10}, got ${block.balance}`);
+            }
+
             if (!block.payload || !block.payload.title || !block.payload.endTime) {
                 throw new Error("Invalid proposal payload");
             }
@@ -135,7 +164,9 @@ export class Lattice {
             this.votes[block.hash] = {}; // Initialize vote tracker
         } else if (block.type === 'vote') {
             // Vote costs 0 BOB
-            if (block.balance !== previousBalance) throw new Error("Vote block must not change balance");
+            if (Math.abs(block.balance - previousBalance) > epsilon) {
+                throw new Error(`Vote block must not change balance. Expected ~${previousBalance}, got ${block.balance}`);
+            }
             
             const proposalHash = block.link;
             const proposal = this.proposals[proposalHash];
@@ -160,9 +191,9 @@ export class Lattice {
 
         } else if (block.type === 'market_bid') {
             // User pays BOB to place a hosting bid
-            if (block.balance >= previousBalance) throw new Error("Market bid must decrease balance");
+            if (block.balance > previousBalance + epsilon) throw new Error("Market bid must decrease balance");
             const amount = previousBalance - block.balance;
-            
+
             if (!block.payload || !block.payload.magnet) {
                 throw new Error("Invalid market bid payload. Magnet link required.");
             }
@@ -180,17 +211,19 @@ export class Lattice {
             // Supernode accepts the bid and gets paid!
             const bidHash = block.link;
             const bid = this.marketBids[bidHash];
-            
+
             if (!bid) throw new Error("Target market bid not found");
             if (bid.status !== 'OPEN') throw new Error("Market bid is already accepted or closed");
-            
+
             // Expected SPoRA proof logic: The Supernode MUST prove they are seeding the requested magnet!
             // However, our current SPoRA mock only checks the core anchors.
             // For this implementation, the Supernode provides standard SPoRA to prove they are an anchor node,
             // plus we mathematically trust the transaction because they spent the compute to accept it.
-            
+
             const expectedBalance = previousBalance + bid.amount;
-            if (block.balance !== expectedBalance) throw new Error("Accept bid block must correctly increment balance by bid amount");
+            if (Math.abs(block.balance - expectedBalance) > epsilon) {
+                throw new Error("Accept bid block must correctly increment balance by bid amount");
+            }
 
             // Mark bid as accepted
             bid.status = 'ACCEPTED';

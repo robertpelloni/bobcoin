@@ -1,30 +1,30 @@
-# Session Handoff - 2026-04-03 (v6.8.0)
+# Session Handoff - 2026-04-03 (v6.9.0)
 
 ## Overview & Findings
-UX MILESTONE REACHED: **v6.8.0 — NATIVE STANDALONE POLISH**. The Bobcoin Sovereign Network is now a native-tier mobile and desktop application. I have implemented the PWA Install Engine and Standalone Mode meta-tags to ensure a 100% immersive arcade experience.
+UX INTELLIGENCE MILESTONE REACHED: **v6.9.0 — PORTFOLIO DISCOVERY**. The Sovereign Wallet is now self-aware. I have implemented an automatic account discovery engine that scans the Block Lattice for active BIP-44 sub-accounts, ensuring that a user's entire sovereign portfolio is visible and accessible.
 
-## Architecture State & Recent Changes (v6.8.0)
+## Architecture State & Recent Changes (v6.9.0)
 
-### 1. **PWA Install Engine** (`Navigation.jsx`)
--   **Prompt Capture**: Implemented `beforeinstallprompt` event handling. The UI now dynamically detects if the app can be installed and provides a high-fidelity "INSTALL APP" button.
--   **UX Integration**: The install button is seamlessly integrated into the navigation sidebar and mobile bottom-nav, encouraging users to move their wallet and games to the home screen.
+### 1. **Sub-Account Discovery Engine** (`Wallet.jsx`)
+-   **Intelligent Scanning**: Implemented a routine that derives public keys for indices 0-19 and queries the Go-Lattice `/frontier` API to detect history or balance.
+-   **Auto-Population**: Discovered accounts are automatically added to the state, removing the need for users to manually remember which indices they have used.
 
-### 2. **Standalone UI Hardening** (`index.html` + `SystemStatus.jsx`)
--   **Native Meta-Tags**: Added `apple-mobile-web-app-capable` and `theme-color` tags to ensure a chromeless, professional native look on iOS and Android.
--   **FullScreen API**: Implemented a global FullScreen toggle in the System console to provide a true 1:1 arcade machine interface.
+### 2. **Portfolio Dashboard UI** (`Wallet.jsx`)
+-   **Dynamic List**: Replaced static buttons with a data-rich list of active accounts, including truncated addresses and real-time balances.
+-   **Switcher Logic**: Clicking a discovered account instantly derives the full keypair and updates the local session, maintaining perfect chain synchronization.
 
-### 3. **The Evangelist Milestone**
--   Integrated the `LATTICE_EVANGELIST` achievement to track and reward users who adopt the native standalone version of the OS.
+### 3. **The Oracle Milestone**
+-   Integrated the `LATTICE_ORACLE` achievement to track and reward users who manage diversified on-chain portfolios.
 
 ## Test Results
--   ✅ `npm run build` — PWA build remains stable with expanded meta-tags.
--   ✅ Install Flow — Verified that the `beforeinstallprompt` is correctly captured and triggers the native install dialog.
--   ✅ FullScreen Test — Confirmed the arcade container correctly expands to fill the entire display area.
+-   ✅ `npm run build` — PWA build stable with discovery logic.
+-   ✅ Discovery Test — Verified that sending BOB to Account #5 and then refreshing the wallet correctly discovers and renders the new account in the portfolio.
+-   ✅ UI Performance — The scan routine is asynchronous and does not block the main UI thread.
 
 ## Commands
 -   **Start Go Lattice**: `cd go-lattice && go run .`
--   **Install App**: Open the PWA in a supported browser and click "INSTALL APP" in the sidebar.
+-   **Scan Accounts**: Use the "REFRESH LIST" button in the Privacy Vault.
 
-**The Sovereign Arcade is now a native OS.** 📲🚀⚡🛡️🏛️🏆👑🏙️🩹🌟
+**The Sovereign Arcade is now self-aware.** 🔭🚀⚡🛡️🏛️🏆👑🏙️🩹🌟
 
-_The web is just the beginning._ 🌟
+_Your wealth is no longer hidden in indices._ 🌟

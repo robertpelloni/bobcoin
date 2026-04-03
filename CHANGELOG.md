@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.9.0] - 2026-04-03
+
+### Added
+- **Automatic Sub-Account Discovery**: Implemented an intelligent scanning engine in `Wallet.jsx`.
+  - The wallet now derives and checks account indices 0-19 for on-chain activity or balances.
+  - Automatically populates the "Portfolio View" with all active sovereign accounts.
+- **Portfolio UI Upgrade**: Overhauled the account-switcher into a unified Portfolio View. Users can now see a real-time balance breakdown across all their derived sub-accounts.
+- **Lattice Oracle Achievement**: A new on-chain milestone unlocked when the discovery engine identifies multiple active sub-accounts.
+- **UX Polish**: Added a "Scanning..." progress indicator and a "Refresh List" capability to the sub-account portfolio.
+
 ## [6.8.0] - 2026-04-03
 
 ### Added

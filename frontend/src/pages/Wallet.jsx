@@ -13,6 +13,8 @@ export function Wallet() {
     const [showKeys, setShowKeys] = useState(false);
     const [keypair, setKeypair] = useState(null);
     const [accountIndex, setAccountIndex] = useState(0);
+    const [activeAccounts, setActiveAccounts] = useState([]); // List of indices with balance/activity
+    const [isScanning, setIsScanning] = useState(false);
     const [pending, setPending] = useState([]);
     
     // Backup Vault State
@@ -68,6 +70,30 @@ export function Wallet() {
         setKeypair(newKp);
         if (newIndex > 0) checkAndUnlock('HD_ARCHITECT', newKp, []);
     };
+
+    const scanForAccounts = async () => {
+        if (!keypair?.mnemonic || isScanning) return;
+        setIsScanning(true);
+        const found = [];
+        
+        for (let i = 0; i < 10; i++) { // Scan first 10 indices
+            const tempKp = await deriveKeypair(keypair.mnemonic, i);
+            const res = await getLatticeFrontier(tempKp.publicKey);
+            if (res.frontier || res.balance > 0) {
+                found.push({ index: i, balance: res.balance || 0, address: tempKp.publicKey });
+            }
+        }
+        
+        setActiveAccounts(found);
+        setIsScanning(false);
+        if (found.length > 1) checkAndUnlock('LATTICE_ORACLE', keypair, []);
+    };
+
+    useEffect(() => {
+        if (keypair?.mnemonic && activeAccounts.length === 0) {
+            scanForAccounts();
+        }
+    }, [keypair?.mnemonic]);
 
     useEffect(() => {
         // Load or generate Lattice wallet
@@ -302,21 +328,52 @@ export function Wallet() {
                 </div>
 
                 <div className="account-switcher" style={{marginTop: '1.5rem', borderTop: '1px solid #222', paddingTop: '1rem', textAlign: 'left'}}>
-                    <label style={{fontSize: '0.7rem', color: '#666', letterSpacing: '1px'}}>SUB-ACCOUNT (BIP-44)</label>
-                    <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap'}}>
-                        {[0, 1, 2, 3, 4].map(idx => (
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <label style={{fontSize: '0.7rem', color: '#666', letterSpacing: '1px'}}>SUB-ACCOUNT PORTFOLIO (BIP-44)</label>
+                        <button className="cyber-button small" onClick={scanForAccounts} disabled={isScanning} style={{fontSize: '0.6rem'}}>
+                            {isScanning ? 'SCANNING...' : 'REFRESH LIST'}
+                        </button>
+                    </div>
+
+                    <div className="account-list" style={{marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem'}}>
+                        {activeAccounts.map(acc => (
+                            <div 
+                                key={acc.index} 
+                                className={`account-row ${accountIndex === acc.index ? 'active' : ''}`}
+                                onClick={() => handleSwitchAccount(acc.index)}
+                                style={{
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    padding: '0.6rem 1rem', 
+                                    background: accountIndex === acc.index ? 'rgba(0, 255, 255, 0.1)' : '#111',
+                                    border: `1px solid ${accountIndex === acc.index ? '#0ff' : '#222'}`,
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem'
+                                }}
+                            >
+                                <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{acc.address.slice(0,8)}...</span></span>
+                                <span className="neon-text">{acc.balance.toFixed(2)} BOB</span>
+                            </div>
+                        ))}
+                        {activeAccounts.length === 0 && !isScanning && <div style={{color: '#444', fontSize: '0.7rem'}}>ONLY MAIN ACCOUNT DISCOVERED</div>}
+                    </div>
+
+                    <div style={{marginTop: '0.8rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                        <span style={{fontSize: '0.6rem', color: '#444'}}>ADD INDEX:</span>
+                        {[0, 1, 2, 3, 4, 5, 6, 7].map(idx => (
                             <button 
                                 key={idx} 
                                 className={`cyber-button small ${accountIndex === idx ? 'active' : 'secondary'}`}
                                 onClick={() => handleSwitchAccount(idx)}
-                                style={{fontSize: '0.7rem', minWidth: '40px'}}
+                                style={{fontSize: '0.6rem', minWidth: '30px', padding: '0.2rem'}}
                             >
                                 #{idx}
                             </button>
                         ))}
                     </div>
-                    <div style={{marginTop: '0.5rem', fontSize: '0.6rem', color: '#444', fontFamily: 'monospace'}}>
-                        PATH: {keypair?.derivationPath || 'm/44\'/1337\'/0\''}
+                    
+                    <div style={{marginTop: '1rem', fontSize: '0.6rem', color: '#444', fontFamily: 'monospace'}}>
+                        DERIVATION: {keypair?.derivationPath || 'm/44\'/1337\'/0\''}
                     </div>
                 </div>
 

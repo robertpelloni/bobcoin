@@ -1,8 +1,9 @@
 # Immediate Action Items & Bug Fixes
 
 ## Critical Backend Infrastructure
-- [ ] **Remove Mock APIs:** Now that backend servers are restored, the highest priority is to remove `frontend/src/api.js` mocks and reconnect UI components (`Governance.jsx`, `Wallet.jsx`, `Mobile.jsx`, `StorageMarket.jsx`) to the actual `localhost:3001` endpoints.
-- [ ] **Update E2E Test:** Refactor `test_e2e.js` to call the real backend endpoints and verify the full, un-mocked application flow.
+- [x] **Remove Mock APIs:** Removed `frontend/src/api.js` mocks and reconnected UI components to the actual `localhost:3001` endpoints (Transactions, Minting, Burning, Market, Governance).
+- [x] **Update E2E Test:** Refactored `test_e2e.js` to call the real backend endpoints and verified the full application flow.
+- [ ] **SP1 ZK Service Robustness:** Current `/submit-proof` endpoint assumes SP1 execution output. Upgrade this to actually call the rust backend verification endpoint when SP1 is running.
 
 ## Enhancements & Refactoring
 - [ ] **Error Handling:** Add robust global error boundaries in the React frontend.

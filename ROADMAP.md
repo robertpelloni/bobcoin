@@ -17,7 +17,7 @@
 - [x] Backend Reconstruction: Restore and harden the missing Node.js Express entry points (`server.js`) for the game-server and supertorrent.
 - [x] **Decentralized Governance (v1)**: Implemented backend logic and frontend UI for DAO proposals and voting.
 - [x] **Privacy Vault (v1)**: Implemented frontend UI for Stealth Address generation and privacy-mode toggles.
-- [ ] **Full Backend Integration:** Remove frontend mock APIs and connect UI components to the live, restored backend services.
+- [x] **Full Backend Integration:** Removed frontend mock APIs and connected UI components (`Wallet`, `Governance`, `Mobile`, `StorageMarket`) to the live backend services (`localhost:3001`). All simulated mint/burn logic now writes to the unified SQLite ledger.
 - [ ] **On-Chain Governance:** Migrate SQLite `proposals` logic to an SPL Governance Program on Solana.
 - [ ] **Full ZK Proving:** Upgrade SP1 ZK Service from `client.execute()` to `client.prove()` to generate actual cryptographic traces.
 - [ ] **Decentralized Storage Market (Bobtorrent):** Connect the Supernode WebTorrent client fully to the new `StorageMarket.jsx` to create a decentralized bid/ask order book for file hosting.

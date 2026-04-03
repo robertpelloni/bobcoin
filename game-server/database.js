@@ -42,6 +42,17 @@ export function initDatabase() {
                     power REAL,
                     PRIMARY KEY (proposal_id, voter_id)
                 )
+            `);
+
+            // Transactions Table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id TEXT PRIMARY KEY,
+                    date TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    type TEXT NOT NULL,
+                    hash TEXT NOT NULL
+                )
             `, async (err) => {
                 if (err) return reject(err);
 
@@ -175,5 +186,29 @@ export function acceptBid(id, nodeId) {
                 else resolve(this.changes); // 1 if successful, 0 if already taken
             }
         );
+    });
+}
+
+// Transactions
+export function recordTransaction(id, type, amount, hash) {
+    return new Promise((resolve, reject) => {
+        const date = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        db.run(
+            "INSERT INTO transactions (id, date, amount, type, hash) VALUES (?, ?, ?, ?, ?)",
+            [id, date, amount, type, hash],
+            function(err) {
+                if (err) reject(err);
+                else resolve();
+            }
+        );
+    });
+}
+
+export function getTransactions() {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM transactions ORDER BY date DESC", (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
     });
 }

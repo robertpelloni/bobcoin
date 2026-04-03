@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getTransactions } from '../api';
 import './Wallet.css';
 
 const MOCK_HISTORY = [
@@ -12,8 +13,31 @@ export function Wallet() {
     const [privacyMode, setPrivacyMode] = useState(true);
     const [ringSize, setRingSize] = useState(16);
     const [balance, setBalance] = useState(1250.50);
-    const [history, setHistory] = useState(MOCK_HISTORY);
+    const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
+
+    useEffect(() => {
+        const fetchTxs = async () => {
+            const txs = await getTransactions();
+            if (txs && txs.length > 0) {
+                setHistory(txs.map(tx => ({ ...tx, decoded: false })));
+                // Calculate balance from txs
+                const newBalance = txs.reduce((acc, tx) => {
+                    if (tx.type === 'MINT' || tx.type === 'RECEIVE') return acc + tx.amount;
+                    if (tx.type === 'SEND' || tx.type === 'TIP') return acc - tx.amount;
+                    return acc;
+                }, 1250.50); // Start with a base balance
+                setBalance(newBalance);
+            } else {
+                setHistory(MOCK_HISTORY); // fallback
+            }
+        };
+        fetchTxs();
+        
+        // Polling for updates
+        const interval = setInterval(fetchTxs, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     const toggleDecode = (id) => {
         setHistory(history.map(tx => {

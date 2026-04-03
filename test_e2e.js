@@ -3,7 +3,7 @@
 
 import fetch from 'node-fetch';
 
-const GAME_SERVER_URL = 'http://localhost:3000'; // Port 3000 mapped to 3001? Docker says 3001:3000. Wait, inside container it's 3000. Outside is 3001.
+const GAME_SERVER_URL = 'http://localhost:3001';
 // If I run this script from host, I should use 3001.
 // If I run inside container, use 3000.
 // I will run this from the HOST (or bash session root), so I should use the mapped port.

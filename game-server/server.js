@@ -5,7 +5,7 @@ import marketRouter from './market.js';
 import { initDatabase } from './database.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const ZK_SERVICE_URL = process.env.ZK_SERVICE_URL || 'http://localhost:8080';
 
 app.use(cors());
@@ -89,6 +89,18 @@ app.post('/submit-proof', async (req, res) => {
             // Mint Tokens (Simulated Bridge Call)
             const tx = 'tx_' + Math.random().toString(36).substr(2, 9);
             console.log(`[Game Server] Proof Verified. Tokens minted. TX: ${tx}`);
+            
+            // Record Mint Transaction
+            try {
+                const { recordTransaction } = await import('./database.js');
+                const hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
+                // Calculate mint amount based on score
+                const amount = proof.publicValues.score / 100;
+                await recordTransaction(tx, 'MINT', amount, hash);
+            } catch (e) {
+                console.error("DB Error recording proof mint:", e);
+            }
+
             return res.json({ success: true, tx });
         } else {
             console.log(`[Game Server] Proof Verification Failed.`);
@@ -101,7 +113,7 @@ app.post('/submit-proof', async (req, res) => {
 });
 
 // Mock Burn Endpoint for the economic loop
-app.post('/burn', (req, res) => {
+app.post('/burn', async (req, res) => {
     const { amount, reason } = req.body;
     console.log(`[Game Server] Burning ${amount} BOB for: ${reason}`);
     
@@ -109,7 +121,48 @@ app.post('/burn', (req, res) => {
 
     // Simulate Solana Devnet Bridge Call
     const tx = 'tx_burn_' + Math.random().toString(36).substr(2, 9);
+    const hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
+    
+    try {
+        const { recordTransaction } = await import('./database.js');
+        await recordTransaction(tx, 'SEND', amount, hash);
+    } catch (e) {
+        console.error("DB Error recording burn:", e);
+    }
+
     res.json({ success: true, tx });
+});
+
+// Generic Mint Endpoint
+app.post('/mint', async (req, res) => {
+    const { amount, reason } = req.body;
+    console.log(`[Game Server] Minting ${amount} BOB for: ${reason}`);
+    
+    if (!amount || amount <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
+
+    // Simulate Solana Devnet Bridge Call
+    const tx = 'tx_mint_' + Math.random().toString(36).substr(2, 9);
+    const hash = Math.random().toString(16).substr(2, 8) + '...' + Math.random().toString(16).substr(2, 4);
+
+    try {
+        const { recordTransaction } = await import('./database.js');
+        await recordTransaction(tx, 'MINT', amount, hash);
+    } catch (e) {
+        console.error("DB Error recording mint:", e);
+    }
+
+    res.json({ success: true, tx });
+});
+
+// Transactions Endpoint
+app.get('/transactions', async (req, res) => {
+    try {
+        const { getTransactions } = await import('./database.js');
+        const txs = await getTransactions();
+        res.json(txs);
+    } catch (e) {
+        res.status(500).json({ error: 'DB Error' });
+    }
 });
 
 app.listen(PORT, () => {

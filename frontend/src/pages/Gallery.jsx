@@ -23,15 +23,26 @@ export function Gallery() {
 
     const fetchData = async (pubkey) => {
         try {
-            // Fetch Balance
-            const resBal = await getLatticeChain(pubkey);
-            if (resBal.chain?.length > 0) {
-                setBalance(resBal.chain[resBal.chain.length - 1].balance);
-            }
+            // Fetch Liquid Balance
+            const resBal = await getLatticeFrontier(pubkey);
+            setBalance(resBal.balance || 0);
 
-            // Fetch NFTs
-            const resNft = await fetch(`${LATTICE_URL}/nfts/${pubkey}`).then(r => r.json());
-            setOwnedNfts(resNft.nfts || []);
+            // Universal Asset Discovery
+            const stored = localStorage.getItem('bobcoin_wallet');
+            if (stored) {
+                const master = JSON.parse(stored);
+                let allNfts = [];
+                // Scan first 5 indices for artifacts
+                for (let i = 0; i < 5; i++) {
+                    const { deriveKeypair } = await import('../cryptoUtils');
+                    const kp = await deriveKeypair(master.mnemonic, i);
+                    const resNft = await fetch(`${LATTICE_URL}/nfts/${kp.publicKey}`).then(r => r.json());
+                    if (resNft.nfts) {
+                        allNfts = [...allNfts, ...resNft.nfts.map(n => ({ ...n, accountIndex: i }))];
+                    }
+                }
+                setOwnedNfts(allNfts);
+            }
         } catch (e) {
             console.error(e);
         }
@@ -146,7 +157,10 @@ export function Gallery() {
                                 </div>
                                 <h3 className="nft-name">{nft.name}</h3>
                                 <p className="nft-desc">{nft.description}</p>
-                                <div className="nft-id">ID: {nft.id.substring(0, 12)}...</div>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <div className="nft-id">ID: {nft.id.substring(0, 8)}...</div>
+                                    <div style={{fontSize: '0.6rem', color: '#0ff', background: 'rgba(0,255,255,0.1)', padding: '2px 6px', border: '1px solid #0ff'}}>ACC #{nft.accountIndex}</div>
+                                </div>
                                 <button className="cyber-button small" onClick={() => handleTransfer(nft.id)}>TRANSFER</button>
                             </div>
                         ))}

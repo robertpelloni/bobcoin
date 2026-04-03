@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.3.0] - 2026-04-03
+
+### Added
+- **Unified Portfolio Intelligence**: Upgraded the account discovery engine to perform a deep-scan of the entire lattice.
+  - Concurrently audits `/frontier`, `/nfts`, and `/staked_balance` across the first 10-20 derived HD account indices.
+  - Implemented a **Sovereign Net Worth** aggregator that sums wealth across the entire HD hierarchy.
+- **Global Asset Discovery UI**: Overhauled the `/gallery` and `/wallet` pages to support cross-account asset visibility.
+  - The Gallery now displays artifacts owned by *any* of the user's discovered sub-accounts.
+  - Added visual asset indicators (🥩, 🖼️) to the portfolio switcher for rapid identification of account types.
+- **Portfolio Master Achievement**: A new on-chain milestone unlocked upon successful aggregation of a diversified, multi-account portfolio.
+
 ## [7.2.0] - 2026-04-03
 
 ### Added

@@ -75,18 +75,32 @@ export function Wallet() {
         if (!keypair?.mnemonic || isScanning) return;
         setIsScanning(true);
         const found = [];
+        let totalBob = 0;
         
         for (let i = 0; i < 10; i++) { // Scan first 10 indices
             const tempKp = await deriveKeypair(keypair.mnemonic, i);
             const res = await getLatticeFrontier(tempKp.publicKey);
-            if (res.frontier || res.balance > 0) {
-                found.push({ index: i, balance: res.balance || 0, address: tempKp.publicKey });
+            
+            // Check for NFTs and Multisigs too
+            const nftRes = await fetch(`${LATTICE_URL}/nfts/${tempKp.publicKey}`).then(r => r.json());
+            const hasActivity = res.frontier || res.balance > 0 || (nftRes.nfts && nftRes.nfts.length > 0);
+            
+            if (hasActivity) {
+                found.push({ 
+                    index: i, 
+                    balance: res.balance || 0, 
+                    staked: res.staked_balance || 0,
+                    nftCount: nftRes.nfts ? nftRes.nfts.length : 0,
+                    address: tempKp.publicKey 
+                });
+                totalBob += (res.balance || 0) + (res.staked_balance || 0);
             }
         }
         
         setActiveAccounts(found);
         setIsScanning(false);
         if (found.length > 1) checkAndUnlock('LATTICE_ORACLE', keypair, []);
+        if (totalBob > 1000) checkAndUnlock('PORTFOLIO_MASTER', keypair, []);
     };
 
     useEffect(() => {
@@ -348,11 +362,19 @@ export function Wallet() {
                                     background: accountIndex === acc.index ? 'rgba(0, 255, 255, 0.1)' : '#111',
                                     border: `1px solid ${accountIndex === acc.index ? '#0ff' : '#222'}`,
                                     cursor: 'pointer',
-                                    fontSize: '0.8rem'
+                                    fontSize: '0.8rem',
+                                    position: 'relative',
+                                    overflow: 'hidden'
                                 }}
                             >
-                                <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{acc.address.slice(0,8)}...</span></span>
-                                <span className="neon-text">{acc.balance.toFixed(2)} BOB</span>
+                                <div style={{display: 'flex', flexDirection: 'column'}}>
+                                    <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{acc.address.slice(0,8)}...</span></span>
+                                    <div style={{display: 'flex', gap: '8px', marginTop: '4px'}}>
+                                        {acc.staked > 0 && <span title="Staking Active" style={{fontSize: '0.6rem', color: '#0f0'}}>🥩 {acc.staked.toFixed(1)}</span>}
+                                        {acc.nftCount > 0 && <span title="Artifacts Collected" style={{fontSize: '0.6rem', color: '#f0f'}}>🖼️ {acc.nftCount}</span>}
+                                    </div>
+                                </div>
+                                <span className="neon-text" style={{fontWeight: 'bold'}}>{(acc.balance + acc.staked).toFixed(2)} BOB</span>
                             </div>
                         ))}
                         {activeAccounts.length === 0 && !isScanning && <div style={{color: '#444', fontSize: '0.7rem'}}>ONLY MAIN ACCOUNT DISCOVERED</div>}

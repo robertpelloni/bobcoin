@@ -24,6 +24,7 @@ export const ACHIEVEMENTS = {
     LATTICE_ZENITH: { id: 'LATTICE_ZENITH', title: 'Lattice Zenith', desc: 'Achieved total Merkle-verified consensus across the sovereign network.', icon: '🏔️', color: '#0f0' },
     LATTICE_UNIFIER: { id: 'LATTICE_UNIFIER', title: 'Lattice Unifier', desc: 'Bridged heterogeneous client runtimes in perfect Merkle consensus.', icon: '🌉', color: '#0ff' },
     LATTICE_VISIONARY: { id: 'LATTICE_VISIONARY', title: 'Lattice Visionary', desc: 'Visualized the global P2P consensus mesh in the Matrix.', icon: '🕸️', color: '#ff0055' },
+    PORTFOLIO_MASTER: { id: 'PORTFOLIO_MASTER', title: 'Portfolio Master', desc: 'Successfully aggregated total wealth across the sovereign HD hierarchy.', icon: '📊', color: '#0f0' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
     CLIENT_DIVERSIFIER: { id: 'CLIENT_DIVERSIFIER', title: 'Client Diversifier', desc: 'Maintained network consensus across multiple client types.', icon: '🌉', color: '#f0f' },
     MOBILE_WARRIOR: { id: 'MOBILE_WARRIOR', title: 'Mobile Warrior', desc: 'Deployed the Sovereign Arcade on a handheld device.', icon: '📱', color: '#0ff' },

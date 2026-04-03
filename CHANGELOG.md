@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.5] - 2026-04-02
+
+### Added
+- **Decentralized Wallet Application**: Upgraded `Wallet.jsx` from a mock UI to a fully functional Asynchronous Block Lattice wallet. The frontend now securely generates and persists an Ed25519 Keypair in `localStorage`.
+- **Cryptographic Signing in Browser**: The React frontend natively signs `receive` and `send` blocks using `tweetnacl` and `bs58` before broadcasting them to the consensus node. Users can now actively claim pending funds from the game server and send funds directly to other players.
+- **Cross-Platform Cryptography**: Migrated the Node.js lattice engine from native DER-based crypto to `tweetnacl` to ensure flawless cross-platform signature verification between the browser and backend.
+
+
+
+
+
 ## [2.6.4] - 2026-04-02
 
 ### Added

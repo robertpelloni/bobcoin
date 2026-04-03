@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 
@@ -15,18 +14,22 @@ export function generateKeypair() {
 }
 
 /**
- * Hash data using SHA-256 (Node Native)
+ * Hash data using SHA-256 (Web Crypto API)
  */
-export function hash(dataString) {
-    return crypto.createHash('sha256').update(dataString).digest('hex');
+export async function hashData(dataString) {
+    const msgBuffer = new TextEncoder().encode(dataString);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
 }
 
 /**
  * Sign data with private key
  */
-export function sign(hashHex, privateKeyBase58) {
+export async function signBlock(hashHex, privateKeyBase58) {
     const secretKey = bs58.decode(privateKeyBase58);
-    const msgBuffer = Buffer.from(hashHex, 'utf8');
+    const msgBuffer = new TextEncoder().encode(hashHex); // We sign the hex string of the hash
     const signature = nacl.sign.detached(msgBuffer, secretKey);
     return bs58.encode(signature);
 }
@@ -34,11 +37,11 @@ export function sign(hashHex, privateKeyBase58) {
 /**
  * Verify signature with public key
  */
-export function verify(hashHex, signatureBase58, publicKeyBase58) {
+export function verifySignature(hashHex, signatureBase58, publicKeyBase58) {
     try {
         const signature = bs58.decode(signatureBase58);
         const publicKey = bs58.decode(publicKeyBase58);
-        const msgBuffer = Buffer.from(hashHex, 'utf8');
+        const msgBuffer = new TextEncoder().encode(hashHex);
         return nacl.sign.detached.verify(msgBuffer, signature, publicKey);
     } catch (e) {
         return false;

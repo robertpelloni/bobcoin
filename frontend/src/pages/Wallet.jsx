@@ -1,43 +1,145 @@
 import { useState, useEffect } from 'react';
-import { getTransactions } from '../api';
+import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, LATTICE_URL } from '../api';
+import { generateKeypair } from '../cryptoUtils';
+import { Block } from '../Block';
 import './Wallet.css';
-
-const MOCK_HISTORY = [
-    { id: 'tx_1', date: '2026-02-07 10:45', amount: 50.00, type: 'MINT', hash: 'e5a1...8f2d', decoded: false },
-    { id: 'tx_2', date: '2026-02-07 09:30', amount: 12.50, type: 'SEND', hash: 'b3c4...9a1b', decoded: false },
-    { id: 'tx_3', date: '2026-02-06 14:20', amount: 100.00, type: 'RECEIVE', hash: 'd7e8...2f5c', decoded: false },
-    { id: 'tx_4', date: '2026-02-06 10:00', amount: 5.00, type: 'TIP', hash: 'f9a0...3b6d', decoded: false },
-];
 
 export function Wallet() {
     const [privacyMode, setPrivacyMode] = useState(true);
     const [ringSize, setRingSize] = useState(16);
-    const [balance, setBalance] = useState(1250.50);
+    const [balance, setBalance] = useState(0.00);
     const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
+    const [keypair, setKeypair] = useState(null);
+    const [pending, setPending] = useState([]);
 
     useEffect(() => {
-        const fetchTxs = async () => {
+        // Load or generate Lattice wallet
+        let kp;
+        let storedKeys = localStorage.getItem('bobcoin_wallet');
+        if (!storedKeys) {
+            kp = generateKeypair();
+            localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+            setKeypair(kp);
+        } else {
+            kp = JSON.parse(storedKeys);
+            setKeypair(kp);
+        }
+
+        const fetchState = async () => {
+            // 1. Fetch system transactions for global history
             const txs = await getTransactions();
             if (txs && txs.length > 0) {
                 setHistory(txs.map(tx => ({ ...tx, decoded: false })));
-                // Calculate balance from txs
-                const newBalance = txs.reduce((acc, tx) => {
-                    if (tx.type === 'MINT' || tx.type === 'RECEIVE') return acc + tx.amount;
-                    if (tx.type === 'SEND' || tx.type === 'TIP') return acc - tx.amount;
-                    return acc;
-                }, 1250.50); // Start with a base balance
-                setBalance(newBalance);
             } else {
-                setHistory(MOCK_HISTORY); // fallback
+                setHistory([]); 
+            }
+
+            // 2. Fetch pending lattice blocks for this wallet
+            if (kp) {
+                const pendRes = await getLatticePending(kp.publicKey);
+                if (pendRes && pendRes.pending) {
+                    setPending(pendRes.pending);
+                }
+                
+                // Fetch our own local balance from our chain, not the global TXs
+                const frontRes = await getLatticeFrontier(kp.publicKey);
+                if (frontRes && frontRes.frontier) {
+                    const balRes = await fetch(`${LATTICE_URL}/balance/${kp.publicKey}`);
+                    const balData = await balRes.json();
+                    setBalance(balData.balance || 0.00);
+                }
             }
         };
-        fetchTxs();
+        fetchState();
         
         // Polling for updates
-        const interval = setInterval(fetchTxs, 5000);
+        const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    const claimPending = async (pend) => {
+        try {
+            // 1. Get our frontier
+            const frontRes = await getLatticeFrontier(keypair.publicKey);
+            let previousHash = frontRes.frontier || null;
+
+            // 2. Determine if this is an OPEN or RECEIVE block
+            const type = previousHash ? 'receive' : 'open';
+
+            // 3. New balance = current balance + pend.amount
+            const newBalance = balance + pend.amount;
+
+            // 4. Create Block
+            const block = new Block({
+                type,
+                account: keypair.publicKey,
+                previous: previousHash,
+                balance: newBalance,
+                link: pend.hash // Link is the send block hash we are claiming
+            });
+
+            // 5. Sign and Submit
+            await block.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(block);
+
+            if (res.success) {
+                alert(`Successfully claimed ${pend.amount} BOB!`);
+                setBalance(newBalance);
+                setPending(p => p.filter(x => x.hash !== pend.hash));
+            } else {
+                alert("Failed to claim: " + res.error);
+            }
+        } catch (e) {
+            alert("Error claiming funds.");
+            console.error(e);
+        }
+    };
+
+    const [sendAddress, setSendAddress] = useState('');
+    const [sendAmount, setSendAmount] = useState(10);
+    const [isSending, setIsSending] = useState(false);
+
+    const handleSend = async (e) => {
+        e.preventDefault();
+        if (!sendAddress || sendAmount <= 0) return;
+        if (sendAmount > balance) {
+            alert("Insufficient funds!");
+            return;
+        }
+        if (!confirm(`Send ${sendAmount} BOB to ${sendAddress.slice(0,10)}...?`)) return;
+
+        setIsSending(true);
+        try {
+            const frontRes = await getLatticeFrontier(keypair.publicKey);
+            const previousHash = frontRes.frontier;
+            if (!previousHash) throw new Error("Wallet not initialized on network (no frontier).");
+
+            const newBalance = balance - sendAmount;
+            const sendBlock = new Block({
+                type: 'send',
+                account: keypair.publicKey,
+                previous: previousHash,
+                balance: newBalance,
+                link: sendAddress
+            });
+
+            await sendBlock.signBlock(keypair.privateKey);
+            const res = await submitLatticeBlock(sendBlock);
+
+            if (res.success) {
+                alert(`Sent ${sendAmount} BOB! TX: ${res.hash}`);
+                setBalance(newBalance);
+                setSendAddress('');
+            } else {
+                alert("Transaction failed: " + res.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error sending funds: " + e.message);
+        }
+        setIsSending(false);
+    };
 
     const toggleDecode = (id) => {
         setHistory(history.map(tx => {
@@ -77,8 +179,8 @@ export function Wallet() {
                 <div className="address-section">
                     <label>PUBLIC ADDRESS</label>
                     <div className="address-box">
-                        <code>8x7f49c2...3a2b</code>
-                        <button className="copy-btn" title="Copy public address to clipboard.">COPY</button>
+                        <code>{keypair ? `${keypair.publicKey.slice(0, 16)}...` : 'GENERATING...'}</code>
+                        <button className="copy-btn" title="Copy public address to clipboard." onClick={() => keypair && navigator.clipboard.writeText(keypair.publicKey)}>COPY</button>
                     </div>
 
                     {privacyMode && (
@@ -94,7 +196,60 @@ export function Wallet() {
                 </div>
             </div>
 
+            {pending.length > 0 && (
+                <div className="pending-funds-section" style={{marginTop: '2rem', padding: '1.5rem', background: 'rgba(255, 0, 85, 0.1)', border: '1px solid var(--secondary-color)'}}>
+                    <h2 style={{color: 'var(--secondary-color)', marginBottom: '1rem'}}>PENDING FUNDS</h2>
+                    <p style={{fontSize: '0.9rem', marginBottom: '1rem'}}>
+                        You have {pending.length} incoming transactions on the Lattice Network. 
+                        You must cryptographically sign a "Receive" block to credit your local balance.
+                    </p>
+                    {pending.map(p => (
+                        <div key={p.hash} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#000', padding: '1rem', border: '1px solid #333', marginBottom: '0.5rem'}}>
+                            <div>
+                                <span style={{color: '#0f0', fontWeight: 'bold'}}>{p.amount.toFixed(2)} BOB</span>
+                                <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {p.sender.slice(0, 8)}...</span>
+                            </div>
+                            <button className="cyber-button small" onClick={() => claimPending(p)}>CLAIM</button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             <div className="settings-grid">
+                <div className="setting-card" style={{border: '1px solid #0f0'}}>
+                    <h3 style={{color: '#0f0'}}>SEND FUNDS</h3>
+                    <form onSubmit={handleSend}>
+                        <div className="control">
+                            <label>RECIPIENT ADDRESS</label>
+                            <input
+                                type="text"
+                                className="cyber-input"
+                                value={sendAddress}
+                                onChange={(e) => setSendAddress(e.target.value)}
+                                placeholder="Public Key (Ed25519 Base58)"
+                                title="The Bobcoin public address of the recipient."
+                                required
+                            />
+                        </div>
+                        <div className="control" style={{marginTop: '1rem'}}>
+                            <label>AMOUNT (BOB)</label>
+                            <input
+                                type="number"
+                                className="cyber-input"
+                                value={sendAmount}
+                                onChange={(e) => setSendAmount(Number(e.target.value))}
+                                min="1"
+                                max={balance}
+                                title="The amount of Bobcoin to send."
+                                required
+                            />
+                        </div>
+                        <button type="submit" className="cyber-button" disabled={isSending} style={{marginTop: '1rem', width: '100%', color: '#0f0', borderColor: '#0f0'}}>
+                            {isSending ? 'PROCESSING...' : 'INITIATE TRANSFER'}
+                        </button>
+                    </form>
+                </div>
+
                 <div className="setting-card">
                     <h3>RING SIGNATURES (CLSAG)</h3>
                     <div className="control">
@@ -125,10 +280,10 @@ export function Wallet() {
                     {showKeys && (
                         <div className="keys-box" style={{marginTop: '1rem', background: '#000', padding: '0.5rem', border: '1px solid #ff0055'}}>
                             <div style={{color: '#ff0055', fontSize: '0.7rem', marginBottom: '0.5rem'}}>DO NOT SHARE THESE KEYS</div>
-                            <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE VIEW KEY:</div>
-                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', marginBottom: '0.5rem'}}>vk_secret_12345...</code>
-                            <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE SPEND KEY:</div>
-                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>sk_secret_67890...</code>
+                            <div style={{fontSize: '0.7rem', color: '#888'}}>PUBLIC ADDRESS (ED25519):</div>
+                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', marginBottom: '0.5rem'}}>{keypair ? keypair.publicKey : '...'}</code>
+                            <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE SIGNING KEY:</div>
+                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>{keypair ? keypair.privateKey : '...'}</code>
                         </div>
                     )}
                     <p className="description">

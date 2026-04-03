@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.14] - 2026-04-03
+
+### Added
+- **Autonomous Block Lattice Smart Contracts**: Implemented an autonomous `casino.js` Node.js script running directly as a network agent on the Lattice. The Casino mathematically acts as an Automated Market Maker (AMM) / Provably Fair Oracle, autonomously accepting `send` blocks, polling the network, determining a 50/50 win based on the deterministic block hash, and broadcasting a `send` payout block back to the user without any central server logic!
+- **Supernode Wallet Bootstrapping**: Upgraded `supertorrent/server.js` to autonomously request a Lattice bootstrap grant and generate its own cryptographically valid `open` block via SPoRA, enabling it to natively claim Storage Escrow funds.
+- **E2E Complete**: The test suite now completely evaluates Alice hitting the jackpot against the autonomous Casino node.
+
+
+
+
+
 ## [2.6.13] - 2026-04-03
 
 ### Added

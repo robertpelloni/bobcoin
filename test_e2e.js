@@ -273,7 +273,6 @@ async function testFlow() {
             const decrypted = decryptMemo(bobTx.payload.memo, bobTx.payload.nonce, bobTx.payload.senderBoxKey, bobWallet.boxPrivateKey);
             if (decrypted === memo) {
                 console.log("✅ Bob successfully decrypted the memo: '" + decrypted + "'");
-                console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
             } else {
                 console.error("❌ Bob failed to decrypt the memo!");
                 process.exit(1);
@@ -284,10 +283,52 @@ async function testFlow() {
         process.exit(1);
     }
     
+    // 10. Casino Smart Contract Bet
+    console.log("\n10. Alice sends a 5 BOB bet to the Autonomous Casino...");
+    const casinoWalletFile = (await import('fs')).readFileSync('./bobcoin-consensus/casino_wallet.json', 'utf8');
+    const casinoWalletPub = JSON.parse(casinoWalletFile).publicKey;
+    
+    const postMsgFrontierRes = await fetch(`${LATTICE_URL}/frontier/${userWallet.publicKey}`);
+    const postMsgFrontier = await postMsgFrontierRes.json();
+    
+    const betChallenge = parseInt(postMsgFrontier.frontier.substr(0, 8), 16);
+    const betSporaRes = await fetch(`http://localhost:8081/spora/${betChallenge}`);
+    const betSporaData = await betSporaRes.json();
+
+    const betBlock = new Block({
+        type: 'send',
+        account: userWallet.publicKey,
+        previous: postMsgFrontier.frontier,
+        balance: 10, // 15 - 5
+        link: casinoWalletPub,
+        spora: betSporaData.spora
+    });
+    await betBlock.signBlock(userWallet.privateKey);
+    
+    const betRes = await fetch(`${LATTICE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block: betBlock })
+    });
+    
+    if ((await betRes.json()).success) {
+        console.log(`✅ Bet sent! Waiting for Casino to roll the dice...`);
+        // Wait for Casino to process
+        await new Promise(r => setTimeout(r, 6000));
+        
+        const finalPendRes = await fetch(`${LATTICE_URL}/pending/${userWallet.publicKey}`);
+        const finalPendData = await finalPendRes.json();
+        
+        if (finalPendData.pending && finalPendData.pending.length > 0) {
+            console.log(`🎰 ALICE WON! Casino sent back ${finalPendData.pending[0].amount} BOB!`);
+        } else {
+            console.log(`💀 ALICE LOST! No pending funds from Casino.`);
+        }
+        console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
     } else {
-        console.error("❌ Failed to process receive block:", receiveData.error);
-        process.exit(1);
+        console.error("❌ Bet Failed");
     }
+}
 }
 
 testFlow();

@@ -16,6 +16,8 @@ export function SystemStatus() {
     });
     const [peers, setPeers] = useState({});
     const [networkRoot, setNetworkRoot] = useState('0x...');
+    const [localBlocks, setLocalBlocks] = useState(0);
+    const [networkHeight, setNetworkHeight] = useState(0);
     const [buildInfo, setBuildInfo] = useState(null);
     const [syncing, setSyncing] = useState(false);
 
@@ -25,8 +27,6 @@ export function SystemStatus() {
             .then(res => res.json())
             .then(data => setBuildInfo(data))
             .catch(e => console.error("Failed to load build info", e));
-        
-        fetchPeers();
     }, []);
 
     const fetchPeers = async () => {
@@ -118,8 +118,22 @@ export function SystemStatus() {
         try {
             const res = await fetch(`${LATTICE_URL}/status`);
             const data = await res.json();
-            setServices(s => ({ ...s, lattice: 'ONLINE (Go v5.6.0)' }));
+            setServices(s => ({ ...s, lattice: 'ONLINE (v6.6.0)' }));
             setNetworkRoot(data.stateHash);
+            
+            const localH = data.accounts || data.blocks || 0;
+            setLocalBlocks(localH);
+
+            const pRes = await fetch(`${LATTICE_URL}/peers`);
+            const pData = await pRes.json();
+            setPeers(pData);
+            
+            let maxH = localH;
+            Object.values(pData).forEach(p => {
+                if (p.blocks > maxH) maxH = p.blocks;
+            });
+            setNetworkHeight(maxH);
+
         } catch {
             setServices(s => ({ ...s, lattice: 'OFFLINE' }));
         }
@@ -133,6 +147,8 @@ export function SystemStatus() {
         const interval = setInterval(checkHealth, 10000);
         return () => clearInterval(interval);
     }, []);
+
+    const syncProgress = networkHeight > 0 ? (localBlocks / networkHeight) * 100 : 100;
 
     return (
         <div className="system-container">
@@ -152,6 +168,16 @@ export function SystemStatus() {
                         <div style={{fontFamily: 'monospace', fontSize: '0.8rem', color: '#ff0055'}}>{networkRoot.substring(0, 32)}...</div>
                     </div>
                 </div>
+
+                <div className="sync-status" style={{marginBottom: '1.5rem'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#888', marginBottom: '0.5rem'}}>
+                        <span>CONSENSUS PROGRESS</span>
+                        <span>{localBlocks} / {networkHeight} BLOCKS</span>
+                    </div>
+                    <div style={{height: '8px', background: '#111', border: '1px solid #333', overflow: 'hidden'}}>
+                        <div style={{height: '100%', background: '#0f0', width: `${syncProgress}%`, transition: 'width 0.5s', boxShadow: '0 0 10px #0f0'}}></div>
+                    </div>
+                </div>
                 
                 <div className="peer-list" style={{marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
                     {Object.values(peers).map(p => (
@@ -164,16 +190,16 @@ export function SystemStatus() {
                     {Object.keys(peers).length === 0 && <span style={{color: '#444', fontSize: '0.7rem'}}>NO PEERS REGISTERED</span>}
                 </div>
 
-                <button className="cyber-button small" style={{marginBottom: '1rem'}} onClick={handleAddPeer}>REGISTER NEW PEER</button>
-
-                <p style={{color: '#888', fontSize: '0.8rem'}}>Export the current network history or bootstrap your local node from a snapshot.</p>
-                <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
+                <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
                     <button className="cyber-button small" onClick={handleExport}>EXPORT STATE (.JSON)</button>
                     <div style={{position: 'relative'}}>
                         <button className="cyber-button small secondary" disabled={syncing}>{syncing ? 'SYNCING...' : 'IMPORT SNAPSHOT'}</button>
                         <input type="file" onChange={handleImport} style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer'}} />
                     </div>
+                    <button className="cyber-button small" onClick={handleAddPeer}>REGISTER NEW PEER</button>
                 </div>
+
+                <p style={{color: '#888', fontSize: '0.8rem', marginTop: '1.5rem'}}>Export the current network history or bootstrap your local node from a snapshot.</p>
             </div>
 
             <div className="status-grid">

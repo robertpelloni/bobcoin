@@ -104,6 +104,12 @@ func handlePeers(w http.ResponseWriter, r *http.Request) {
 
 func handleBlocks(w http.ResponseWriter, r *http.Request) {
 	after := r.URL.Query().Get("after")
+	limitStr := r.URL.Query().Get("limit")
+	limit := 100 // Default batch size
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil { limit = l }
+	}
+
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 
@@ -111,6 +117,11 @@ func handleBlocks(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
+	}
+
+	// Apply limit
+	if len(delta) > limit {
+		delta = delta[:limit]
 	}
 	json.NewEncoder(w).Encode(delta)
 }
@@ -148,19 +159,26 @@ func gossipLoop() {
 			// Detect State Divergence
 			remoteHash := stats["stateHash"].(string)
 			if remoteHash != lattice.StateHash {
-				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Sync...\n", url)
-				syncResp, err := http.Get(url + "/blocks?after=" + lattice.StateHash)
-				if err != nil { continue }
-				var newBlocks []*Block
-				json.NewDecoder(syncResp.Body).Decode(&newBlocks)
+				fmt.Printf("[GOSSIP] State Divergence with %s! Initiating Batch Sync...\n", url)
+				
+				for {
+					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=100", url, lattice.StateHash))
+					if err != nil { break }
+					var newBlocks []*Block
+					json.NewDecoder(syncResp.Body).Decode(&newBlocks)
+					
+					if len(newBlocks) == 0 { break }
 
-				for _, b := range newBlocks {
-					lattice.mu.RLock()
-					_, exists := lattice.Blocks[b.Hash]
-					lattice.mu.RUnlock()
-					if !exists {
-						lattice.ProcessBlock(b, false)
+					for _, b := range newBlocks {
+						lattice.mu.RLock()
+						_, exists := lattice.Blocks[b.Hash]
+						lattice.mu.RUnlock()
+						if !exists {
+							lattice.ProcessBlock(b, false)
+						}
 					}
+					fmt.Printf("[SYNC] Integrated batch of %d blocks from %s\n", len(newBlocks), url)
+					if len(newBlocks) < 100 { break } // Finished syncing
 				}
 			}
 		}

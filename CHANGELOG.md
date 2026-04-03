@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.0] - 2026-04-03
+
+### Added
+- **Consensus Batch Syncing**: Optimized the P2P synchronization protocol for industrial-scale data throughput.
+  - Implemented pagination and `limit` parameters in both **Go** and **Node.js** block APIs.
+  - Upgraded gossip loops to pull history in 100-block cryptographic batches, drastically reducing network round-trips.
+- **Visual Sync Progress Dashboard**: Overhauled the `SystemStatus` page with real-time consensus monitoring.
+  - Added a **Network-Wide Consensus Progress Bar** that calculates local block height vs. maximum peer height.
+  - Added a **Network State Root** display for immediate visual confirmation of global ledger integrity.
+- **Lattice Consolidator Achievement**: A new on-chain milestone unlocked upon synchronizing large batches of network history.
+
 ## [6.5.0] - 2026-04-03
 
 ### Added

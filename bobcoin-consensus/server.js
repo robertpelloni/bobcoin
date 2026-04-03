@@ -34,14 +34,21 @@ async function gossipLoop() {
             peers.set(url, { status: 'online', latency, stateHash: stats.stateHash });
 
             if (stats.stateHash && stats.stateHash !== lattice.stateHash) {
-                const syncRes = await fetch(`${url}/blocks?after=${lattice.stateHash}`);
-                const newBlocks = await syncRes.json();
-                for (const bData of newBlocks) {
-                    const block = new Block(bData);
-                    block.hash = bData.hash;
-                    block.signature = bData.signature;
-                    block.timestamp = bData.timestamp;
-                    lattice.processBlock(block);
+                console.log(`[GOSSIP] Divergence with ${url}. Initiating Batch Sync...`);
+                while (true) {
+                    const syncRes = await fetch(`${url}/blocks?after=${lattice.stateHash}&limit=100`);
+                    const newBlocks = await syncRes.json();
+                    if (!newBlocks || newBlocks.length === 0) break;
+                    
+                    for (const bData of newBlocks) {
+                        const block = new Block(bData);
+                        block.hash = bData.hash;
+                        block.signature = bData.signature;
+                        block.timestamp = bData.timestamp;
+                        lattice.processBlock(block);
+                    }
+                    console.log(`[SYNC] Integrated batch of ${newBlocks.length} blocks`);
+                    if (newBlocks.length < 100) break;
                 }
             }
         } catch (e) {
@@ -75,12 +82,17 @@ app.post('/peers', (req, res) => {
 
 app.get('/blocks', (req, res) => {
     const after = req.query.after;
+    const limit = parseInt(req.query.limit) || 100;
     const allBlocks = Object.values(lattice.blocks).sort((a,b) => a.timestamp - b.timestamp);
     let delta = [];
     let found = !after;
     for (const b of allBlocks) {
-        if (found) delta.push(b);
-        else if (b.hash === after) found = true;
+        if (found) {
+            delta.push(b);
+            if (delta.length >= limit) break;
+        } else if (b.hash === after) {
+            found = true;
+        }
     }
     res.json(delta);
 });

@@ -16,6 +16,7 @@ export const ACHIEVEMENTS = {
     ZK_SAGE: { id: 'ZK_SAGE', title: 'Zero-Knowledge Sage', desc: 'Submitted a mathematically proven game score via SP1.', icon: '🕵️‍♂️', color: '#f0f' },
     LATTICE_SCHOLAR: { id: 'LATTICE_SCHOLAR', title: 'Lattice Scholar', desc: 'Mastered the Sovereign Network protocols.', icon: '📖', color: '#0ff' },
     LATTICE_OPTIMIZER: { id: 'LATTICE_OPTIMIZER', title: 'Lattice Optimizer', desc: 'Achieved high-performance consensus synchronization.', icon: '⚡', color: '#0f0' },
+    LATTICE_CONSOLIDATOR: { id: 'LATTICE_CONSOLIDATOR', title: 'Lattice Consolidator', desc: 'Synchronized a massive cryptographic batch of network history.', icon: '📦', color: '#f80' },
     HD_ARCHITECT: { id: 'HD_ARCHITECT', title: 'HD Architect', desc: 'Implemented BIP-44 Hierarchical Deterministic account derivation.', icon: '🗝️', color: '#f0f' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
     CLIENT_DIVERSIFIER: { id: 'CLIENT_DIVERSIFIER', title: 'Client Diversifier', desc: 'Maintained network consensus across multiple client types.', icon: '🌉', color: '#f0f' },

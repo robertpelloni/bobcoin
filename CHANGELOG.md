@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.4.0] - 2026-04-03
+
+### Added
+- **Multi-Client Consensus Hardening**: Implemented P2P protocol parity between the Go-Lattice and Node.js engines.
+  - Ported `/peers`, `/status`, and `/blocks` APIs to the Node.js implementation.
+  - Built a background gossip loop in JavaScript to enable cross-client state root synchronization and auto-repair.
+- **Client Diversifier Achievement**: A new on-chain milestone unlocked for operators maintaining a multi-client network mesh.
+- **Protocol Consistency pass**: Standardized SHA-256 state root calculations and Ed25519 message buffering across Go and Node.js to ensure bit-perfect consensus across heterogeneous environments.
+
 ## [6.3.0] - 2026-04-03
 
 ### Added

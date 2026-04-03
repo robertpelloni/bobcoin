@@ -17,6 +17,7 @@ export const ACHIEVEMENTS = {
     LATTICE_SCHOLAR: { id: 'LATTICE_SCHOLAR', title: 'Lattice Scholar', desc: 'Mastered the Sovereign Network protocols.', icon: '📖', color: '#0ff' },
     LATTICE_OPTIMIZER: { id: 'LATTICE_OPTIMIZER', title: 'Lattice Optimizer', desc: 'Achieved high-performance consensus synchronization.', icon: '⚡', color: '#0f0' },
     LATTICE_HISTORIAN: { id: 'LATTICE_HISTORIAN', title: 'Lattice Historian', desc: 'Archived the global network state to a portable snapshot.', icon: '🏛️', color: '#ff0' },
+    CLIENT_DIVERSIFIER: { id: 'CLIENT_DIVERSIFIER', title: 'Client Diversifier', desc: 'Maintained network consensus across multiple client types.', icon: '🌉', color: '#f0f' },
     MOBILE_WARRIOR: { id: 'MOBILE_WARRIOR', title: 'Mobile Warrior', desc: 'Deployed the Sovereign Arcade on a handheld device.', icon: '📱', color: '#0ff' },
 };
 

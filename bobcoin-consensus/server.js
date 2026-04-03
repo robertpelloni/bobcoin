@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fetch from 'node-fetch';
 import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -19,14 +20,69 @@ app.use(cors());
 app.use(express.json());
 
 const lattice = new Lattice();
+const peers = new Map();
+
+// Background Gossip Loop
+async function gossipLoop() {
+    for (const [url] of peers.entries()) {
+        try {
+            const start = Date.now();
+            const res = await fetch(`${url}/status`);
+            const latency = Date.now() - start;
+            if (!res.ok) throw new Error("Offline");
+            const stats = await res.json();
+            peers.set(url, { status: 'online', latency, stateHash: stats.stateHash });
+
+            if (stats.stateHash && stats.stateHash !== lattice.stateHash) {
+                const syncRes = await fetch(`${url}/blocks?after=${lattice.stateHash}`);
+                const newBlocks = await syncRes.json();
+                for (const bData of newBlocks) {
+                    const block = new Block(bData);
+                    block.hash = bData.hash;
+                    block.signature = bData.signature;
+                    block.timestamp = bData.timestamp;
+                    lattice.processBlock(block);
+                }
+            }
+        } catch (e) {
+            peers.set(url, { status: 'offline', latency: 0 });
+        }
+    }
+    setTimeout(gossipLoop, 10000);
+}
+gossipLoop();
 
 app.get('/status', (req, res) => {
     res.json({
         status: 'online',
-        service: 'Asynchronous Block Lattice Node',
+        engine: 'Node-Lattice v6.4.0',
+        stateHash: lattice.stateHash,
         chains: Object.keys(lattice.chains).length,
         blocks: Object.keys(lattice.blocks).length
     });
+});
+
+app.get('/peers', (req, res) => {
+    res.json(Object.fromEntries(peers));
+});
+
+app.post('/peers', (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL required' });
+    peers.set(url, { status: 'connecting', latency: 0 });
+    res.json({ success: true });
+});
+
+app.get('/blocks', (req, res) => {
+    const after = req.query.after;
+    const allBlocks = Object.values(lattice.blocks).sort((a,b) => a.timestamp - b.timestamp);
+    let delta = [];
+    let found = !after;
+    for (const b of allBlocks) {
+        if (found) delta.push(b);
+        else if (b.hash === after) found = true;
+    }
+    res.json(delta);
 });
 
 // Submit a signed block to the network

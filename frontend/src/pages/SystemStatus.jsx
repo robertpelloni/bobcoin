@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CyberGrid3D } from '../components/CyberGrid3D';
 import './SystemStatus.css';
 
 // We import version from config (defined in vite.config.js)
@@ -9,7 +10,7 @@ export function SystemStatus() {
         gameServer: 'Checking...',
         zkService: 'Checking...',
         supernode: 'Checking...',
-        bridge: 'Checking...'
+        lattice: 'Checking...'
     });
     const [buildInfo, setBuildInfo] = useState(null);
 
@@ -24,10 +25,10 @@ export function SystemStatus() {
     const checkHealth = async () => {
         // Game Server
         try {
-            await fetch('http://localhost:3001/bankroll');
-            setServices(s => ({ ...s, gameServer: 'ONLINE', bridge: 'CONNECTED' }));
+            await fetch('http://localhost:3001/status');
+            setServices(s => ({ ...s, gameServer: 'ONLINE' }));
         } catch {
-            setServices(s => ({ ...s, gameServer: 'OFFLINE', bridge: 'UNKNOWN' }));
+            setServices(s => ({ ...s, gameServer: 'OFFLINE' }));
         }
 
         // Supernode API
@@ -38,9 +39,14 @@ export function SystemStatus() {
             setServices(s => ({ ...s, supernode: 'OFFLINE' }));
         }
 
-        // ZK Service (proxied via game server usually, but we can try direct if cors allowed,
-        // or infer from game server logs. For now, assume if game server is up, it can talk to ZK)
-        // Ideally we'd hit localhost:8080/health but browser might block mixed content or cors
+        // Lattice API
+        try {
+            await fetch('http://localhost:4000/status');
+            setServices(s => ({ ...s, lattice: 'ONLINE' }));
+        } catch {
+            setServices(s => ({ ...s, lattice: 'OFFLINE' }));
+        }
+
         setServices(s => ({ ...s, zkService: 'ACTIVE (Inferred)' }));
     };
 
@@ -58,6 +64,8 @@ export function SystemStatus() {
                 PROTOCOL VERSION: <span className="neon-text">{VERSION}</span>
             </div>
 
+            <CyberGrid3D />
+
             <div className="status-grid">
                 <div className={`status-card ${services.gameServer === 'ONLINE' ? 'online' : 'offline'}`}>
                     <h3>GAME SERVER (THE MINT)</h3>
@@ -74,10 +82,10 @@ export function SystemStatus() {
                     <p>STATUS: {services.zkService}</p>
                     <p className="detail">Rust/SP1 Circuit Verifier (RISC-V).</p>
                 </div>
-                <div className={`status-card ${services.bridge === 'CONNECTED' ? 'online' : 'offline'}`}>
-                    <h3>SOLANA BRIDGE</h3>
-                    <p>STATUS: {services.bridge}</p>
-                    <p className="detail">Layer 1 Consensus & Settlement.</p>
+                <div className={`status-card ${services.lattice === 'ONLINE' ? 'online' : 'offline'}`}>
+                    <h3>ASYNCHRONOUS BLOCK LATTICE</h3>
+                    <p>STATUS: {services.lattice}</p>
+                    <p className="detail">Native Node.js Sovereign DAG Consensus.</p>
                 </div>
             </div>
 

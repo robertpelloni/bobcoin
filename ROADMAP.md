@@ -43,4 +43,6 @@
 - [x] **Audio Visualizer**: Added a real-time frequency-domain audio visualizer to the rhythm game dashboard, reacting to synthesized sound effects.
 - [x] **Native NFT Minting**: Built a decentralized digital asset protocol (`mint_nft`, `transfer_nft`) and a high-fidelity gallery UI at `/gallery`.
 - [x] **Staking & Delegation**: Implemented Proof-of-Stake logic allowing users to lock tokens for yield and 2x Quadratic Voting power, complete with a `/staking` dashboard.
-- [ ] **DEX / Token Swap UI**: Build a decentralized exchange interface.
+- [x] **DEX / Token Swap UI**: Built a high-fidelity sovereign exchange interface at `/dex` for trustless asset swapping.
+- [x] **Wallet Hardening (Mnemonic Backup)**: Implemented 12-word seed phrases and account restoration to prevent fund loss from cache clearing.
+- [ ] **Durable Data UI**: Arweave-style permanent file storage interface.

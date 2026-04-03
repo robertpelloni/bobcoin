@@ -2,18 +2,42 @@ import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 
 /**
- * Generate a new Ed25519 Keypair (nacl.sign.keyPair)
- * Returns keys in Base58 format to be readable by humans (Solana style)
+ * Generate a pseudo-mnemonic for prototype purposes
  */
-export function generateKeypair() {
-    const signKeyPair = nacl.sign.keyPair();
-    const boxKeyPair = nacl.box.keyPair();
+export function generateMnemonic() {
+    const words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whiskey", "xray", "yankee", "zulu"];
+    let mnemonic = [];
+    for(let i=0; i<12; i++) {
+        mnemonic.push(words[Math.floor(Math.random() * words.length)]);
+    }
+    return mnemonic.join(" ");
+}
+
+/**
+ * Derive deterministic keypair from a seed string (mnemonic)
+ */
+export async function deriveKeypair(mnemonic) {
+    const msgBuffer = new TextEncoder().encode(mnemonic);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const seed = new Uint8Array(hashBuffer);
+    const kp = nacl.sign.keyPair.fromSeed(seed);
+    const boxKp = nacl.box.keyPair.fromSecretKey(seed);
+    
     return {
-        publicKey: bs58.encode(signKeyPair.publicKey),
-        privateKey: bs58.encode(signKeyPair.secretKey),
-        boxPublicKey: bs58.encode(boxKeyPair.publicKey),
-        boxPrivateKey: bs58.encode(boxKeyPair.secretKey)
+        publicKey: bs58.encode(kp.publicKey),
+        privateKey: bs58.encode(kp.secretKey),
+        boxPublicKey: bs58.encode(boxKp.publicKey),
+        boxPrivateKey: bs58.encode(boxKp.secretKey),
+        mnemonic: mnemonic
     };
+}
+
+/**
+ * Generate a new Ed25519 Keypair (nacl.sign.keyPair)
+ */
+export async function generateKeypair() {
+    const mnemonic = generateMnemonic();
+    return await deriveKeypair(mnemonic);
 }
 
 /**

@@ -1,0 +1,75 @@
+.dex-container {
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.dex-card {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #333;
+    padding: 3rem;
+    margin-top: 3rem;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.05);
+}
+
+.swap-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.token-input {
+    text-align: left;
+}
+
+.token-input label {
+    display: block;
+    color: #666;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.input-row .cyber-input {
+    flex: 1;
+    font-size: 1.5rem;
+}
+
+.token-label {
+    color: #0ff;
+    font-weight: bold;
+    font-size: 1.2rem;
+    min-width: 60px;
+}
+
+.swap-icon {
+    font-size: 1.5rem;
+    color: #444;
+}
+
+.price-info {
+    color: #888;
+    font-size: 0.8rem;
+    font-family: monospace;
+    margin: 1rem 0;
+}
+
+.dex-footer {
+    margin-top: 4rem;
+    color: #444;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+}
+
+.cyber-button.large {
+    width: 100%;
+    padding: 1.2rem;
+    font-size: 1.2rem;
+}

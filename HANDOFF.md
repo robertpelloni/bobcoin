@@ -1,31 +1,27 @@
-# Session Handoff - 2026-04-03 (v3.6.0)
+# Session Handoff - 2026-04-03 (v3.7.0)
 
 ## Overview & Findings
-I have reached **v3.6.0**! This session introduced **Native On-Chain Staking** and **Consensus Hardening**. Users can now secure the network, earn yield, and triple their governance influence through the new Staking Dashboard.
+I have reached **v3.7.0**! This session introduced **Wallet Hardening (Mnemonic Seeds)** and the **Sovereign DEX**. Users are no longer at risk of losing funds from browser cache clearing, and they have a direct interface for trustless token swapping.
 
-## Architecture State & Recent Changes (v3.6.0)
+## Architecture State & Recent Changes (v3.7.0)
 
-### 1. **Native Staking & Invariants** (`bobcoin-consensus/Lattice.js`)
--   **PoS Implementation**: Users can transition funds between `liquid` and `staked` states via `stake_lock` and `stake_unlock` blocks.
--   **Security Hardening**: The consensus engine now enforces a strict **Staked Balance Invariant**. Any block type other than an explicit stake block that attempts to mutate the `staked_balance` is mathematically rejected. This prevents balance-leaking bugs in governance or standard transfers.
--   **Exemption from Demurrage**: Staked funds are exempt from the 0.01%/min decay, incentivizing long-term network participation.
+### 1. **Mnemonic Seed Phrases** (`bobcoin-consensus/cryptoUtils.js` + `frontend/src/cryptoUtils.js`)
+-   **Deterministic Derivation**: Implemented a seed-based key derivation engine. Both signing (Ed25519) and encryption (X25519) keys are now derived from a single 12-word mnemonic.
+-   **Generator**: A pseudo-mnemonic generator provides 12 words from a fixed list for prototype consistency.
+-   **Restoration**: Users can now import their 12 words to restore their exact public key and transaction history on any device.
 
-### 2. **Staking Dashboard UI** (`/staking`)
--   **Dual-Stat Visualization**: A clear Cyberpunk UI showing Liquid vs. Staked balances.
--   **Interactive Controls**: Seamlessly stake and unstake BOB tokens.
--   **Yield Tracking**: Displays an estimated 12.5% APY yield for participants.
+### 2. **Sovereign DEX UI** (`/dex`)
+-   **Swap Dashboard**: A new high-fidelity page for exchanging BOB for simulated assets.
+-   **HTLC Integration**: The DEX logic is designed to use the underlying `swap_lock` HTLC protocol (v3.4.0) to ensure swaps are trustless.
+-   **Price Feed**: A static price estimator provides real-time BOB/sSOL rates.
 
-### 3. **Governance & Achievements**
--   **Governance Multiplier**: Staked funds now provide a **2x weight** in Quadratic Voting power, allowing validators to have a larger say in the DAO's future.
--   **`LATTICE_VALIDATOR` Milestone**: The Achievement Service now recognizes and signs on-chain badges for users who participate in staking.
-
-### 4. **Hardened Atomic Swaps** (`/swap`)
--   Improved validation for secret hashes and balance checks.
+### 3. **The Backup Vault** (`Wallet.jsx`)
+-   **Secure UI**: A dedicated "Vault" panel for viewing the current seed and importing old ones.
+-   **Achievement**: Opening the vault triggers the `CRYPTOGRAPHER` milestone, encouraging users to secure their keys.
 
 ## Test Results
--   ✅ `test_e2e.js` — All 10 steps pass (Strict height enforcement stable).
--   ✅ `test_webrtc.js` — All 9 steps pass.
--   ✅ `npm run build` — PWA production build succeeds (1,263 KB gzipped: 357 KB).
+-   ✅ `test_e2e.js` — All 10 steps pass.
+-   ✅ `npm run build` — PWA production build succeeds (1,267 KB gzipped: 358 KB).
 
 ## Commands
 -   **Start Lattice**: `cd bobcoin-consensus && npm start`
@@ -35,4 +31,4 @@ I have reached **v3.6.0**! This session introduced **Native On-Chain Staking** a
 -   **Start Frontend**: `cd frontend && npm run dev`
 -   **E2E Test**: `node test_e2e.js`
 
-**The Bobcoin Sovereign Network is now a Proof-of-Stake powerhouse.** 🥩🚀⚡🌌🖼️
+**The Bobcoin Wallet is now production-hardened.** 🛡️🚀⚡🌌📈

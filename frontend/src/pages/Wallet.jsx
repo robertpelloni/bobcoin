@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL } from '../api';
-import { generateKeypair, encryptMemo, decryptMemo } from '../cryptoUtils';
+import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL, getLatticeChain } from '../api';
+import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
 import './Wallet.css';
@@ -14,6 +14,10 @@ export function Wallet() {
     const [keypair, setKeypair] = useState(null);
     const [pending, setPending] = useState([]);
     
+    // Backup Vault State
+    const [showBackup, setShowBackup] = useState(false);
+    const [importSeed, setImportSeed] = useState('');
+
     // Gamified Onboarding State
     const [isGenerating, setIsGenerating] = useState(false);
     const [typedEntropy, setTypedEntropy] = useState('');
@@ -211,13 +215,16 @@ export function Wallet() {
 
             // Once the user has typed enough characters, finalize generation
             if (entropyRef.current.length >= 64) {
-                const kp = generateKeypair();
-                localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
-                setKeypair(kp);
-                setIsGenerating(false);
-                
-                // Unlock Achievement
-                checkAndUnlock('GIBSON_HACKER', kp, []);
+                const finalize = async () => {
+                    const kp = await generateKeypair();
+                    localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+                    setKeypair(kp);
+                    setIsGenerating(false);
+                    
+                    // Unlock Achievement
+                    checkAndUnlock('GIBSON_HACKER', kp, []);
+                };
+                finalize();
             }
         };
 
@@ -398,11 +405,40 @@ export function Wallet() {
 
                 <div className="setting-card">
                     <h3>KEY MANAGEMENT</h3>
-                    <div className="control">
+                    <div className="control" style={{display: 'flex', gap: '1rem'}}>
                         <button className="cyber-button" onClick={() => setShowKeys(!showKeys)} style={{fontSize: '0.8rem', padding: '0.5rem'}} title="Reveal or hide your private cryptographic keys.">
                             {showKeys ? 'HIDE KEYS' : 'REVEAL KEYS'}
                         </button>
+                        <button className="cyber-button secondary" onClick={() => {
+                            setShowBackup(!showBackup);
+                            if (!showBackup) checkAndUnlock('CRYPTOGRAPHER', keypair, []);
+                        }} style={{fontSize: '0.8rem', padding: '0.5rem'}} title="Open the Secure Backup Vault.">
+                            {showBackup ? 'CLOSE VAULT' : 'BACKUP VAULT'}
+                        </button>
                     </div>
+
+                    {showBackup && (
+                        <div className="backup-vault" style={{background: '#050505', border: '1px solid #ff0055', padding: '1.5rem', marginTop: '1.5rem', textAlign: 'left', width: '100%'}}>
+                            <h3 style={{color: '#ff0055', marginTop: 0}}>BACKUP SEED PHRASE</h3>
+                            <p style={{color: '#888', fontSize: '0.8rem'}}>Write these 12 words down and store them in a physical safe. They can restore your entire account.</p>
+                            <div style={{background: '#111', padding: '1rem', border: '1px solid #333', fontFamily: 'monospace', color: '#fff', letterSpacing: '1px', wordBreak: 'break-all'}}>
+                                {keypair.mnemonic || 'Legacy wallet detected (no seed)'}
+                            </div>
+                            
+                            <div style={{marginTop: '2rem', borderTop: '1px solid #222', paddingTop: '1rem'}}>
+                                <h3 style={{color: '#0ff'}}>RESTORE FROM SEED</h3>
+                                <input 
+                                    className="cyber-input" 
+                                    placeholder="Enter 12-word mnemonic..." 
+                                    value={importSeed}
+                                    onChange={e => setImportSeed(e.target.value)}
+                                    style={{marginBottom: '1rem', width: '100%'}}
+                                />
+                                <button className="cyber-button small" onClick={handleRestore}>RESTORE WALLET</button>
+                            </div>
+                        </div>
+                    )}
+
                     {showKeys && (
                         <div className="keys-box" style={{marginTop: '1rem', background: '#000', padding: '0.5rem', border: '1px solid #ff0055'}}>
                             <div style={{color: '#ff0055', fontSize: '0.7rem', marginBottom: '0.5rem'}}>DO NOT SHARE YOUR PRIVATE KEYS</div>

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-04-03
+
+### Added
+- **Wallet Hardening (Mnemonic Seed Phrases)**: Implemented a 12-word pseudo-mnemonic generator and deterministic key derivation (Ed25519/X25519) from seeds. Users can now backup and restore their entire identity via the "Backup Vault" UI.
+- **Sovereign DEX Interface** (`/dex`): A high-fidelity token swap dashboard for exchanging BOB for simulated assets. Features price estimation and trustless HTLC integration.
+- **Backup Vault UI**: Integrated a secure panel in `Wallet.jsx` for revealing the seed phrase and importing existing accounts.
+- **Master Cryptographer Achievement**: A new on-chain milestone unlocked when a user opens their backup vault to secure their identity.
+- **Async Keypair Generation**: Updated the wallet initialization flow to support asynchronous, seed-based key derivation.
+
 ## [3.6.0] - 2026-04-03
 
 ### Added

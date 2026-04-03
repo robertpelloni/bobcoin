@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.0] - 2026-04-03
+
+### Added
+- **Multi-Signature Shared Vaults**: Implemented institutional-grade multi-sig protocol in `Lattice.js`. Added `multisig_create` block type and deterministic vault address derivation from participant sets.
+- **Shared Vaults UI** (`/multisig`): A new dashboard for initializing and managing collective accounts. Features participant discovery and threshold validation.
+- **Institutional Economics**: Set a 100 BOB fee for shared vault creation to ensure serious network utilization.
+- **Lattice API expansion**: Added `GET /multisigs` and `GET /multisig/:account` to support network-wide vault transparency.
+- **GOVERNANCE_TITAN Achievement**: A final on-chain milestone for users who participate in institutional shared vaults.
+
 ## [3.8.0] - 2026-04-03
 
 ### Added

@@ -22,6 +22,7 @@ export class Lattice {
         this.swaps = {};      // Maps secretHash to { sender, recipient, amount, expiry }
         this.nfts = {};       // Maps nftId to { owner, metadata }
         this.anchors = {};    // Maps anchorId to { owner, magnet, size }
+        this.multisigs = {};  // Maps account -> { participants, threshold, pendingTxs }
         
         // Demurrage Constant (e.g., 1% decay per 365 days = ~3.17e-10 per second)
         // For this prototype, we'll use a visible 0.01% decay per minute for testing
@@ -357,6 +358,23 @@ export class Lattice {
                 magnet: block.payload.magnet,
                 size: block.payload.size || 0,
                 timestamp: block.timestamp
+            };
+
+        } else if (block.type === 'multisig_create') {
+            // Creating a multisig account costs 100 BOB
+            if (Math.abs(block.balance - (previousBalance - 100)) > epsilon) {
+                throw new Error("Multisig creation costs exactly 100 BOB");
+            }
+            if (!block.payload || !block.payload.participants || !block.payload.threshold) {
+                throw new Error("Invalid multisig parameters");
+            }
+            
+            const multisigAccount = crypto.createHash('sha256').update(JSON.stringify(block.payload.participants)).digest('hex').substring(0, 44);
+            this.multisigs[multisigAccount] = {
+                participants: block.payload.participants,
+                threshold: block.payload.threshold,
+                balance: 0,
+                pendingProposals: {}
             };
 
         } else if (block.type === 'stake_lock') {

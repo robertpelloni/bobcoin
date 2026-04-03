@@ -1,0 +1,83 @@
+.multisig-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.multisig-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 3rem;
+    margin-top: 3rem;
+}
+
+.create-panel {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    padding: 2rem;
+    text-align: left;
+    height: fit-content;
+}
+
+.vault-list {
+    text-align: left;
+}
+
+.vault-list h2 {
+    color: #0ff;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 1rem;
+}
+
+.vault-card {
+    background: #050505;
+    border: 1px solid #222;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.vault-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.vault-addr {
+    color: #0ff;
+    font-family: monospace;
+}
+
+.vault-threshold {
+    color: #ff0055;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.vault-participants {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.p-row {
+    color: #444;
+    font-size: 0.7rem;
+    font-family: monospace;
+}
+
+.empty {
+    color: #444;
+    letter-spacing: 2px;
+    padding: 3rem 0;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .multisig-grid {
+        grid-template-columns: 1fr;
+    }
+}

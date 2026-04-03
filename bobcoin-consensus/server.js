@@ -146,6 +146,15 @@ app.get('/anchors', (req, res) => {
     res.json({ anchors: Object.values(lattice.anchors) });
 });
 
+app.get('/multisigs', (req, res) => {
+    res.json({ multisigs: lattice.multisigs });
+});
+
+app.get('/multisig/:account', (req, res) => {
+    const account = req.params.account;
+    res.json(lattice.multisigs[account] || { error: 'Multisig not found' });
+});
+
 const server = app.listen(PORT, () => {
     console.log(`[Lattice Node] Operating asynchronously on port ${PORT}`);
 });

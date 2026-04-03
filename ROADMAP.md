@@ -46,4 +46,5 @@
 - [x] **DEX / Token Swap UI**: Built a high-fidelity sovereign exchange interface at `/dex` for trustless asset swapping.
 - [x] **Wallet Hardening (Mnemonic Backup)**: Implemented 12-word seed phrases and account restoration to prevent fund loss from cache clearing.
 - [x] **Durable Data UI**: Built the **Cyber-Vault** interface for anchoring permanent file storage to the SPoRA-backed network.
-- [ ] **Multi-Sig Wallets**: Allow multiple signatures for transaction authorization.
+- [x] **Multi-Sig Wallets**: Implemented institutional-grade shared vaults (`multisig_create`) with deterministic address derivation and a dedicated UI at `/multisig`.
+- [ ] **Consensus State Sync**: Implement a way for nodes to sync the lattice history from peers.

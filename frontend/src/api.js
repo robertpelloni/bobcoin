@@ -104,6 +104,20 @@ export const getBankroll = async () => {
     return 1000 + Math.random() * 50; 
 }; 
 
+export const submitFHEOracle = async (cipherText) => {
+    try {
+        const res = await fetch(`${API_URL}/fhe-oracle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cipherText })
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("FHE Oracle failed:", e);
+        return { success: false, error: e.message };
+    }
+};
+
 export const submitProof = async (score, perfects, greats) => { 
     let address = null;
     try {

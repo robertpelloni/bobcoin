@@ -83,6 +83,27 @@ app.get('/status', (req, res) => {
     res.json({ status: 'online', service: 'Game Server orchestrator', version: '2.4.0' });
 });
 
+app.post('/fhe-oracle', async (req, res) => {
+    const { cipherText } = req.body;
+    if (!cipherText) return res.status(400).json({ error: 'Encrypted payload missing' });
+
+    try {
+        console.log(`[FHE Oracle] Received Homomorphically Encrypted Score...`);
+        const { homomorphicAddPlain, homomorphicMultiplyPlain } = await import('./fheUtils.js');
+
+        // Homomorphic Game Logic: Server doubles the score (multiplier) and adds a flat 500 point bonus!
+        // All of this computation is done ON ENCRYPTED CIPHERTEXTS. The server DOES NOT KNOW the actual score.
+        const multipliedCipher = await homomorphicMultiplyPlain(cipherText, 2);
+        const finalCipher = await homomorphicAddPlain(multipliedCipher, 500);
+
+        console.log(`[FHE Oracle] Computed encrypted game logic. Returning ciphertext...`);
+        res.json({ success: true, resultCipher: finalCipher });
+    } catch (e) {
+        console.error("FHE Oracle Error:", e);
+        res.status(500).json({ error: "Homomorphic computation failed." });
+    }
+});
+
 // ZK Proof Submission Endpoint
 app.post('/submit-proof', async (req, res) => {
     const { proof } = req.body;

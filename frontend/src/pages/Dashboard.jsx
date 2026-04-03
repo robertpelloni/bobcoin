@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { RhythmGame } from '../components/RhythmGame';
-import { submitProof, getBankroll } from '../api';
+import { submitProof, getBankroll, submitFHEOracle } from '../api';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
+import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 
 export function Dashboard() {
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [mintStatus, setMintStatus] = useState(null);
+    const [fheStatus, setFheStatus] = useState(null);
     const [txSignature, setTxSignature] = useState('');
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
@@ -60,6 +62,41 @@ export function Dashboard() {
         }
     };
 
+    const testFHE = async () => {
+        setFheStatus('encrypting');
+        try {
+            // 1. Setup SEAL and Keys
+            const { secretKey, publicKey, context, seal } = await generateFHEKeys();
+            
+            // 2. Encrypt current score
+            const scoreToEncrypt = score > 0 ? score : 5000;
+            const cipherText = await encryptInt(scoreToEncrypt, publicKey, context, seal);
+            setFheStatus('sending');
+
+            // 3. Send to Game Server Oracle
+            const oracleRes = await submitFHEOracle(cipherText);
+            if (oracleRes.success) {
+                setFheStatus('decrypting');
+                // 4. Decrypt resulting ciphertext
+                const finalResult = await decryptInt(oracleRes.resultCipher, secretKey, context, seal);
+                
+                // The server should have applied: (score * 2) + 500
+                const expected = (scoreToEncrypt * 2) + 500;
+                if (finalResult === expected) {
+                    alert(`FHE Success! Server blindly computed: (${scoreToEncrypt} * 2) + 500 = ${finalResult}`);
+                } else {
+                    alert(`FHE Mismatch: Got ${finalResult} but expected ${expected}`);
+                }
+            } else {
+                alert("Oracle Failed: " + oracleRes.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("FHE Error: " + e.message);
+        }
+        setFheStatus(null);
+    };
+
     return (
         <div className="game-container">
             <div className="ui-layer">
@@ -80,9 +117,12 @@ export function Dashboard() {
                     <RhythmGame onScoreUpdate={handleScoreUpdate} />
                 </div>
 
-                <div className="controls">
+                <div className="controls" style={{display: 'flex', gap: '1rem'}}>
                     <button className="cyber-button" onClick={handleMint} disabled={mintStatus === 'minting'}>
                         {mintStatus === 'minting' ? 'MINTING...' : 'MINT TOKENS'}
+                    </button>
+                    <button className="cyber-button" onClick={testFHE} disabled={fheStatus !== null} style={{borderColor: '#f0f', color: '#f0f'}}>
+                        {fheStatus ? `FHE: ${fheStatus.toUpperCase()}...` : 'TEST FHE COMPUTATION'}
                     </button>
                 </div>
 

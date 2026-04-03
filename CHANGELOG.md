@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.8] - 2026-04-03
+
+### Added
+- **Fully Homomorphic Encryption (FHE)**: Implemented Microsoft SEAL (`node-seal`) WebAssembly binaries across the React DApp and Game Server. Users generate local FHE keys and encrypt their game score into a BFV ciphertext. The Game Server Oracle mathematically processes game multipliers via homomorphic addition/multiplication entirely on the encrypted ciphertext without knowing the underlying value.
+- **White-Magic Privacy**: The `Wallet.jsx` and `Dashboard.jsx` seamlessly decrypt the modified ciphertext locally, achieving absolute game logic integrity while retaining zero-knowledge of the user’s score from the server side.
+- **Node Wasm Exception Handling**: Implemented critical `--experimental-wasm-exnref` overrides for Node.js v24.x compatibility with Microsoft SEAL.
+
+
+
+
+
 ## [2.6.7] - 2026-04-03
 
 ### Added

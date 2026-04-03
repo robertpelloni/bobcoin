@@ -24,6 +24,7 @@ export const ACHIEVEMENTS = {
     LATTICE_EVANGELIST: { id: 'LATTICE_EVANGELIST', title: 'Lattice Evangelist', desc: 'Installed the Sovereign OS to the local home screen.', icon: '📲', color: '#f0f' },
     LATTICE_GUARDIAN: { id: 'LATTICE_GUARDIAN', title: 'Lattice Guardian', desc: 'Verified and authorized a transaction via the pre-sign visualizer.', icon: '🛡️', color: '#ff0055' },
     LATTICE_SENTINEL: { id: 'LATTICE_SENTINEL', title: 'Lattice Sentinel', desc: 'Hardened the network by utilizing the Universal Guardian for all DeFi operations.', icon: '⚔️', color: '#0ff' },
+    VAULT_MASTER: { id: 'VAULT_MASTER', title: 'Vault Master', desc: 'Secured the sovereign identity with AES-256-GCM encryption.', icon: '🔐', color: '#f0f' },
     LATTICE_ZENITH: { id: 'LATTICE_ZENITH', title: 'Lattice Zenith', desc: 'Achieved total Merkle-verified consensus across the sovereign network.', icon: '🏔️', color: '#0f0' },
     LATTICE_UNIFIER: { id: 'LATTICE_UNIFIER', title: 'Lattice Unifier', desc: 'Bridged heterogeneous client runtimes in perfect Merkle consensus.', icon: '🌉', color: '#0ff' },
     LATTICE_VISIONARY: { id: 'LATTICE_VISIONARY', title: 'Lattice Visionary', desc: 'Visualized the global P2P consensus mesh in the Matrix.', icon: '🕸️', color: '#ff0055' },

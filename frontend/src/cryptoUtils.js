@@ -46,6 +46,66 @@ export async function generateKeypair() {
 /**
  * Hash data using SHA-256 (Web Crypto API)
  */
+/**
+ * Encrypt the sovereign vault using a user password (AES-256-GCM)
+ */
+export async function encryptVault(plainData, password) {
+    const encoder = new TextEncoder();
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    
+    // Derive key from password
+    const passwordKey = await window.crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveKey"]);
+    const aesKey = await window.crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+        passwordKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        aesKey,
+        encoder.encode(JSON.stringify(plainData))
+    );
+
+    return {
+        salt: bs58.encode(salt),
+        iv: bs58.encode(iv),
+        ciphertext: bs58.encode(new Uint8Array(encrypted))
+    };
+}
+
+/**
+ * Decrypt the sovereign vault
+ */
+export async function decryptVault(vault, password) {
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    
+    const salt = bs58.decode(vault.salt);
+    const iv = bs58.decode(vault.iv);
+    const ciphertext = bs58.decode(vault.ciphertext);
+
+    const passwordKey = await window.crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveKey"]);
+    const aesKey = await window.crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+        passwordKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+
+    const decrypted = await window.crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        aesKey,
+        ciphertext
+    );
+
+    return JSON.parse(decoder.decode(decrypted));
+}
+
 export async function hashData(dataString) {
     const msgBuffer = new TextEncoder().encode(dataString);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);

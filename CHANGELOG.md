@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.2.0] - 2026-04-03
+
+### Added
+- **AES-256-GCM Vault Encryption**: Implemented maximum-security hardening for the sovereign identity layer.
+  - All private keys and mnemonics are now encrypted using a user-provided Sovereign Password.
+  - Used PBKDF2 with 100,000 iterations for high-entropy key derivation from passwords.
+  - Integrated authenticated encryption (AES-GCM) to ensure vault integrity and confidentiality before writing to localStorage.
+- **Sovereign Unlock UI**: Added a secure "Vault Locked" dashboard that prevents any interaction with the ledger until the identity is decrypted.
+- **Vault Master Achievement**: A new on-chain milestone unlocked when a user successfully hardens their identity with encryption.
+
 ## [8.1.0] - 2026-04-03
 
 ### Added

@@ -324,6 +324,43 @@ export function Wallet() {
                 <div className="progress-bar" style={{width: '100%', maxWidth: '600px', background: '#111', marginTop: '1rem', height: '10px'}}>
                     <div className="fill" style={{background: '#0ff', height: '100%', width: `${(typedEntropy.length / 64) * 100}%`, transition: 'width 0.1s'}}></div>
                 </div>
+
+                {typedEntropy.length >= 64 && (
+                    <div style={{marginTop: '2rem', textAlign: 'center', width: '100%', maxWidth: '400px'}}>
+                        <p style={{color: '#fff', fontSize: '0.8rem', letterSpacing: '1px'}}>SET A PASSWORD TO ENCRYPT YOUR VAULT</p>
+                        <input 
+                            type="password" 
+                            className="cyber-input" 
+                            placeholder="Sovereign Password..." 
+                            style={{width: '100%', marginBottom: '1rem'}}
+                            onChange={e => setPassword(e.target.value)} 
+                        />
+                        <button className="cyber-button" onClick={async () => {
+                            const kp = await generateKeypair();
+                            handleOnboardingComplete(kp, password);
+                        }}>INITIALIZE ENCRYPTED VAULT</button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (isLocked) {
+        return (
+            <div className="wallet-container" style={{display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh'}}>
+                <h1 className="glitch" data-text="VAULT LOCKED">VAULT LOCKED</h1>
+                <p style={{color: '#ff0055', marginBottom: '2rem'}}>ENTER SOVEREIGN PASSWORD TO DECRYPT IDENTITY</p>
+                <input 
+                    type="password" 
+                    className="cyber-input" 
+                    style={{maxWidth: '400px', fontSize: '1.5rem', textAlign: 'center'}}
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && handleUnlock()}
+                    placeholder="Password..."
+                    autoFocus
+                />
+                <button className="cyber-button large" style={{marginTop: '2rem'}} onClick={handleUnlock}>UNLOCK VAULT</button>
             </div>
         );
     }

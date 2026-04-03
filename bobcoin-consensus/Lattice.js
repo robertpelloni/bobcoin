@@ -28,10 +28,52 @@ export class Lattice {
         // For this prototype, we'll use a visible 0.01% decay per minute for testing
         this.DEMURRAGE_RATE_PER_MS = 0.0001 / 60000;
         this.stateHash = '0'.repeat(64);
+        this.merkleRoot = '0'.repeat(64);
     }
 
     updateStateHash(block) {
         this.stateHash = crypto.createHash('sha256').update(this.stateHash + block.hash).digest('hex');
+        this.merkleRoot = this.calculateMerkleRoot();
+    }
+
+    /**
+     * Generate the State Merkle Root (MPT) to match Go implementation
+     */
+    calculateMerkleRoot() {
+        const stateEntries = [];
+        for (const [account, chain] of Object.entries(this.chains)) {
+            if (chain.length === 0) continue;
+            const head = chain[chain.length - 1];
+            // Format to match Go: H(account + balance_string + staked_balance_string + height_string)
+            const entryData = account + 
+                              head.balance.toString() + 
+                              head.staked_balance.toString() + 
+                              head.height.toString();
+            
+            const hash = crypto.createHash('sha256').update(entryData).digest('hex');
+            stateEntries.push(hash);
+        }
+
+        if (stateEntries.length === 0) return '0'.repeat(64);
+
+        // Sort to ensure deterministic root
+        stateEntries.sort();
+
+        const buildRoot = (hashes) => {
+            if (hashes.length === 1) return hashes[0];
+            const nextLevel = [];
+            for (let i = 0; i < hashes.length; i += 2) {
+                if (i + 1 < hashes.length) {
+                    const combined = crypto.createHash('sha256').update(hashes[i] + hashes[i+1]).digest('hex');
+                    nextLevel.push(combined);
+                } else {
+                    nextLevel.push(hashes[i]);
+                }
+            }
+            return buildRoot(nextLevel);
+        };
+
+        return buildRoot(stateEntries);
     }
 
     /**

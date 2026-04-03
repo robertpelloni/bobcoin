@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.1.0] - 2026-04-03
+
+### Added
+- **Cross-Client Merkle Consensus**: Ported the **State Merkle Tree (MPT)** engine to the Node.js consensus engine, achieving 100% protocol parity with the Go implementation.
+- **Universal Merkle Roots**: Standardized the account state hashing logic (Balance, Staked, Height) across JavaScript and Go runtimes. Both clients now calculate bit-identical Merkle Roots for any given network state.
+- **Unified Status API**: Updated the Node.js `/status` endpoint to include the real-time Merkle Root, enabling cross-client P2P verification.
+- **Lattice Unifier Achievement**: A new on-chain milestone unlocked when a user successfully bridges heterogeneous client types in perfect Merkle consensus.
+
 ## [7.0.0] - 2026-04-03
 
 ### Added

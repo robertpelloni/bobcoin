@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, LATTICE_URL } from '../api';
-import { generateKeypair } from '../cryptoUtils';
+import { generateKeypair, encryptMemo, decryptMemo } from '../cryptoUtils';
 import { Block } from '../Block';
 import './Wallet.css';
 
@@ -97,6 +97,8 @@ export function Wallet() {
     };
 
     const [sendAddress, setSendAddress] = useState('');
+    const [sendBoxKey, setSendBoxKey] = useState('');
+    const [sendMemo, setSendMemo] = useState('');
     const [sendAmount, setSendAmount] = useState(10);
     const [isSending, setIsSending] = useState(false);
 
@@ -127,13 +129,24 @@ export function Wallet() {
                 return;
             }
 
+            let payload = null;
+            if (sendMemo && sendBoxKey) {
+                const encrypted = encryptMemo(sendMemo, sendBoxKey, keypair.boxPrivateKey);
+                payload = {
+                    memo: encrypted.box,
+                    nonce: encrypted.nonce,
+                    senderBoxKey: keypair.boxPublicKey
+                };
+            }
+
             const sendBlock = new Block({
                 type: 'send',
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
                 link: sendAddress,
-                spora: sporaProof
+                spora: sporaProof,
+                payload: payload
             });
 
             await sendBlock.signBlock(keypair.privateKey);
@@ -215,15 +228,28 @@ export function Wallet() {
                         You have {pending.length} incoming transactions on the Lattice Network. 
                         You must cryptographically sign a "Receive" block to credit your local balance.
                     </p>
-                    {pending.map(p => (
-                        <div key={p.hash} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#000', padding: '1rem', border: '1px solid #333', marginBottom: '0.5rem'}}>
-                            <div>
-                                <span style={{color: '#0f0', fontWeight: 'bold'}}>{p.amount.toFixed(2)} BOB</span>
-                                <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {p.sender.slice(0, 8)}...</span>
+                    {pending.map(p => {
+                        let decryptedMemo = null;
+                        if (p.payload && p.payload.memo && p.payload.nonce && p.payload.senderBoxKey) {
+                            decryptedMemo = decryptMemo(p.payload.memo, p.payload.nonce, p.payload.senderBoxKey, keypair.boxPrivateKey);
+                        }
+                        return (
+                            <div key={p.hash} style={{background: '#000', padding: '1rem', border: '1px solid #333', marginBottom: '0.5rem'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <div>
+                                        <span style={{color: '#0f0', fontWeight: 'bold'}}>{p.amount.toFixed(2)} BOB</span>
+                                        <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {p.sender.slice(0, 8)}...</span>
+                                    </div>
+                                    <button className="cyber-button small" onClick={() => claimPending(p)}>CLAIM</button>
+                                </div>
+                                {decryptedMemo && (
+                                    <div style={{marginTop: '0.5rem', fontSize: '0.8rem', color: '#ff00ff', borderTop: '1px dashed #333', paddingTop: '0.5rem'}}>
+                                        <span style={{color: '#888'}}>Encrypted Memo:</span> {decryptedMemo}
+                                    </div>
+                                )}
                             </div>
-                            <button className="cyber-button small" onClick={() => claimPending(p)}>CLAIM</button>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -254,6 +280,28 @@ export function Wallet() {
                                 max={balance}
                                 title="The amount of Bobcoin to send."
                                 required
+                            />
+                        </div>
+                        <div className="control" style={{marginTop: '1rem'}}>
+                            <label>RECIPIENT MESSAGING KEY (Optional)</label>
+                            <input
+                                type="text"
+                                className="cyber-input"
+                                value={sendBoxKey}
+                                onChange={(e) => setSendBoxKey(e.target.value)}
+                                placeholder="Public Box Key (X25519 Base58)"
+                                title="The messaging public key of the recipient to encrypt a memo."
+                            />
+                        </div>
+                        <div className="control" style={{marginTop: '1rem'}}>
+                            <label>ENCRYPTED MEMO (Optional)</label>
+                            <input
+                                type="text"
+                                className="cyber-input"
+                                value={sendMemo}
+                                onChange={(e) => setSendMemo(e.target.value)}
+                                placeholder="Secret message..."
+                                title="A private memo that only the recipient can decrypt."
                             />
                         </div>
                         <button type="submit" className="cyber-button" disabled={isSending} style={{marginTop: '1rem', width: '100%', color: '#0f0', borderColor: '#0f0'}}>
@@ -291,11 +339,19 @@ export function Wallet() {
                     </div>
                     {showKeys && (
                         <div className="keys-box" style={{marginTop: '1rem', background: '#000', padding: '0.5rem', border: '1px solid #ff0055'}}>
-                            <div style={{color: '#ff0055', fontSize: '0.7rem', marginBottom: '0.5rem'}}>DO NOT SHARE THESE KEYS</div>
-                            <div style={{fontSize: '0.7rem', color: '#888'}}>PUBLIC ADDRESS (ED25519):</div>
-                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', marginBottom: '0.5rem'}}>{keypair ? keypair.publicKey : '...'}</code>
-                            <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE SIGNING KEY:</div>
+                            <div style={{color: '#ff0055', fontSize: '0.7rem', marginBottom: '0.5rem'}}>DO NOT SHARE YOUR PRIVATE KEYS</div>
+                            
+                            <div style={{fontSize: '0.7rem', color: '#888', marginTop: '0.5rem'}}>PUBLIC ADDRESS (ED25519):</div>
+                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', color: '#0ff'}}>{keypair ? keypair.publicKey : '...'}</code>
+                            
+                            <div style={{fontSize: '0.7rem', color: '#888', marginTop: '0.5rem'}}>PUBLIC MESSAGING KEY (X25519):</div>
+                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', color: '#0ff'}}>{keypair ? keypair.boxPublicKey : '...'}</code>
+                            
+                            <div style={{fontSize: '0.7rem', color: '#888', marginTop: '1rem', borderTop: '1px dashed #333', paddingTop: '0.5rem'}}>PRIVATE SIGNING KEY:</div>
                             <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>{keypair ? keypair.privateKey : '...'}</code>
+                            
+                            <div style={{fontSize: '0.7rem', color: '#888', marginTop: '0.5rem'}}>PRIVATE MESSAGING KEY:</div>
+                            <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>{keypair ? keypair.boxPrivateKey : '...'}</code>
                         </div>
                     )}
                     <p className="description">

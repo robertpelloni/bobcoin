@@ -207,9 +207,71 @@ async function testFlow() {
         const fetchBidsData = await fetchBids.json();
         console.log("Current Market Bids:");
         console.log(fetchBidsData);
-        console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
     } else {
         console.error("❌ Market Bid Failed:", bidData.error);
+        process.exit(1);
+    }
+
+    // 9. Encrypted P2P Messaging via Lattice
+    console.log("\n9. Encrypted P2P Messaging via Lattice...");
+    const bobWallet = generateKeypair();
+    console.log("   Generated Bob's Wallet:", bobWallet.publicKey.substr(0, 8) + '...');
+    
+    const memo = "Top secret Bobsgame strategy.";
+    console.log("   Alice sends 5 BOB to Bob with Encrypted Memo:", memo);
+    
+    const postBidFrontierRes = await fetch(`${LATTICE_URL}/frontier/${userWallet.publicKey}`);
+    const postBidFrontier = await postBidFrontierRes.json();
+    
+    const expectedMsgChallenge = parseInt(postBidFrontier.frontier.substr(0, 8), 16);
+    const msgSporaRes = await fetch(`http://localhost:8081/spora/${expectedMsgChallenge}`);
+    const msgSporaData = await msgSporaRes.json();
+
+    const { encryptMemo, decryptMemo } = await import('./bobcoin-consensus/cryptoUtils.js');
+    const encryptedBox = encryptMemo(memo, bobWallet.boxPublicKey, userWallet.boxPrivateKey);
+
+    const msgBlock = new Block({
+        type: 'send',
+        account: userWallet.publicKey,
+        previous: postBidFrontier.frontier,
+        balance: 15,
+        link: bobWallet.publicKey,
+        spora: msgSporaData.spora,
+        payload: {
+            memo: encryptedBox.box,
+            nonce: encryptedBox.nonce,
+            senderBoxKey: userWallet.boxPublicKey
+        }
+    });
+    await msgBlock.signBlock(userWallet.privateKey);
+    
+    const msgRes = await fetch(`${LATTICE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block: msgBlock })
+    });
+    const msgData = await msgRes.json();
+    
+    if (msgData.success) {
+        console.log(`✅ Encrypted Send Block Created! Hash: ${msgData.hash}`);
+        console.log("   Bob checking pending funds...");
+        const bobPendRes = await fetch(`${LATTICE_URL}/pending/${bobWallet.publicKey}`);
+        const bobPendData = await bobPendRes.json();
+        const bobTx = bobPendData.pending[0];
+        
+        if (bobTx) {
+            console.log(`✅ Bob found ${bobTx.amount} BOB pending from ${bobTx.sender.substr(0, 8)}...`);
+            const decrypted = decryptMemo(bobTx.payload.memo, bobTx.payload.nonce, bobTx.payload.senderBoxKey, bobWallet.boxPrivateKey);
+            if (decrypted === memo) {
+                console.log("✅ Bob successfully decrypted the memo: '" + decrypted + "'");
+                console.log("\n=== FULL LATTICE E2E TEST COMPLETE ===");
+            } else {
+                console.error("❌ Bob failed to decrypt the memo!");
+                process.exit(1);
+            }
+        }
+    } else {
+        console.error("❌ Send Block Failed:", msgData.error);
         process.exit(1);
     }
     

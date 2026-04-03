@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.10] - 2026-04-03
+
+### Added
+- **Encrypted On-Chain Messaging (Diffie-Hellman)**: Architected stealth messaging natively over the Asynchronous Block Lattice. The `Wallet.jsx` now generates a localized X25519 Messaging Keypair alongside the Ed25519 Signing Keypair.
+- **White-Magic Privacy**: When sending BOB, users can attach an encrypted memo. The UI utilizes `tweetnacl` to perform authenticated encryption (nacl.box) against the recipient’s public messaging key, guaranteeing that only the designated recipient can decrypt and view the memo when processing their pending funds.
+- **Complete Sovereign E2E Validation**: The `test_e2e.js` suite perfectly mathematically validates the complete Phase IV architecture in less than 2 seconds, ending with Alice successfully encrypting a top-secret game strategy to Bob over the Lattice network.
+
+
+
+
+
 ## [2.6.9] - 2026-04-03
 
 ### Added

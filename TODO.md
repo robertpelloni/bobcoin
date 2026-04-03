@@ -6,8 +6,8 @@
 - [ ] **SP1 ZK Service Robustness:** Current `/submit-proof` endpoint assumes SP1 execution output. Upgrade this to actually call the rust backend verification endpoint when SP1 is running.
 
 ## System Ready
-- All Phase III and Phase IV core features are completed and natively implemented across the Node.js ecosystem!
-- The remaining tasks (`Fully Homomorphic Encryption` and `Full ZK Proving` from Rust/Cargo toolchains) require an updated environment with the proper `rustc` compiler installed.
+- All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem!
+- The single remaining task (`Full ZK Proving`) requires an updated environment with the proper `rustc`/`cargo` compiler installed.
 
 ## UI/UX Polish
 - [x] **Tooltips:** Ensured every button, input, and stat across major pages has a descriptive tooltip.

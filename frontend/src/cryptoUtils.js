@@ -6,10 +6,13 @@ import bs58 from 'bs58';
  * Returns keys in Base58 format to be readable by humans (Solana style)
  */
 export function generateKeypair() {
-    const keypair = nacl.sign.keyPair();
+    const signKeyPair = nacl.sign.keyPair();
+    const boxKeyPair = nacl.box.keyPair();
     return {
-        publicKey: bs58.encode(keypair.publicKey),
-        privateKey: bs58.encode(keypair.secretKey)
+        publicKey: bs58.encode(signKeyPair.publicKey),
+        privateKey: bs58.encode(signKeyPair.secretKey),
+        boxPublicKey: bs58.encode(boxKeyPair.publicKey),
+        boxPrivateKey: bs58.encode(boxKeyPair.secretKey)
     };
 }
 
@@ -45,5 +48,39 @@ export function verifySignature(hashHex, signatureBase58, publicKeyBase58) {
         return nacl.sign.detached.verify(msgBuffer, signature, publicKey);
     } catch (e) {
         return false;
+    }
+}
+
+export function encryptMemo(memoString, recipientBoxPublicKeyBase58, senderBoxPrivateKeyBase58) {
+    try {
+        const recipientPub = bs58.decode(recipientBoxPublicKeyBase58);
+        const senderPriv = bs58.decode(senderBoxPrivateKeyBase58);
+        const nonce = nacl.randomBytes(nacl.box.nonceLength);
+        const msgBuffer = new TextEncoder().encode(memoString);
+        
+        const encrypted = nacl.box(msgBuffer, nonce, recipientPub, senderPriv);
+        
+        return {
+            nonce: bs58.encode(nonce),
+            box: bs58.encode(encrypted)
+        };
+    } catch (e) {
+        throw new Error("Failed to encrypt memo");
+    }
+}
+
+export function decryptMemo(encryptedBox, nonceBase58, senderBoxPublicKeyBase58, recipientBoxPrivateKeyBase58) {
+    try {
+        const box = bs58.decode(encryptedBox);
+        const nonce = bs58.decode(nonceBase58);
+        const senderPub = bs58.decode(senderBoxPublicKeyBase58);
+        const recipientPriv = bs58.decode(recipientBoxPrivateKeyBase58);
+        
+        const decrypted = nacl.box.open(box, nonce, senderPub, recipientPriv);
+        if (!decrypted) return null;
+        
+        return new TextDecoder().decode(decrypted);
+    } catch (e) {
+        return null;
     }
 }

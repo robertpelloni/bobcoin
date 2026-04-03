@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-04-03
+
+### Added
+- **Lattice Casino Page** (`/casino`): A complete frontend interface for the Autonomous Casino AMM. Users can now place 50/50 bets directly from their browser, view their lattice betting history, and experience real-time win/loss feedback via block inspection.
+- **Achievement v2 Integration**: Wired achievement triggers into all major pages:
+  - `QUADRATIC_CITIZEN`: Triggers in `Governance.jsx` after casting a vote.
+  - `LATTICE_SHARK`: Triggers in `Casino.jsx` after winning a bet.
+  - `P2P_WARRIOR`: Triggers in `RhythmGame.jsx` upon establishing a WebRTC direct connection.
+  - `FHE_PHANTOM`: Triggers in `Dashboard.jsx` after a successful blind computation round.
+- **Trophy Room Completion**: The progress bar and icon grid are now fully functional and fillable as the user interacts with the Sovereign Network.
+
 ## [3.0.0] - 2026-04-03
 
 ### Added

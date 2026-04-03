@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getProposals, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api'; 
 import { generateKeypair } from '../cryptoUtils';
+import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
 import './Governance.css';
 
@@ -80,6 +81,15 @@ export function Governance() {
 
             if (res.success) {
                 alert(`Vote cast successfully! TX: ${res.hash}`);
+                
+                // Unlock Achievement
+                try {
+                    const stored = localStorage.getItem('bobcoin_wallet');
+                    if (stored) {
+                        const kp = JSON.parse(stored);
+                        checkAndUnlock('QUADRATIC_CITIZEN', kp, []);
+                    }
+                } catch(e) {}
             } else {
                 alert("Voting failed: " + res.error);
             }

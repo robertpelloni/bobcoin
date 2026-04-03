@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
 import { submitProof, getBankroll, submitFHEOracle } from '../api';
+import { checkAndUnlock } from '../AchievementService';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
@@ -90,6 +91,15 @@ export function Dashboard() {
                 const expected = (scoreToEncrypt * 2) + 500;
                 if (finalResult === expected) {
                     alert(`FHE Success! Server blindly computed: (${scoreToEncrypt} * 2) + 500 = ${finalResult}`);
+                    
+                    // Unlock Achievement
+                    try {
+                        const stored = localStorage.getItem('bobcoin_wallet');
+                        if (stored) {
+                            const kp = JSON.parse(stored);
+                            checkAndUnlock('FHE_PHANTOM', kp, []);
+                        }
+                    } catch(e) {}
                 } else {
                     alert(`FHE Mismatch: Got ${finalResult} but expected ${expected}`);
                 }

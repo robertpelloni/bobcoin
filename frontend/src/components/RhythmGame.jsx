@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import SimplePeer from 'simple-peer';
 import { API_URL } from '../api';
 import { playHitSound, playMatchSound, startAmbientDrone } from '../audio/AudioEngine';
+import { checkAndUnlock } from '../AchievementService';
 import './RhythmGame.css';
 
 const LANES = ['D', 'F', 'J', 'K'];
@@ -65,6 +66,15 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
                     setMatchStatus('IN_GAME');
                     setIsPlaying(true);
                     playMatchSound();
+                    
+                    // Retrieve keypair from localStorage to unlock achievement
+                    try {
+                        const stored = localStorage.getItem('bobcoin_wallet');
+                        if (stored) {
+                            const kp = JSON.parse(stored);
+                            checkAndUnlock('P2P_WARRIOR', kp, []);
+                        }
+                    } catch(e) {}
                 });
 
                 peer.on('data', (data) => {

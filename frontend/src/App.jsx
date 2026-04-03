@@ -9,6 +9,7 @@ import { Supernode } from './pages/Supernode';
 import { SystemStatus } from './pages/SystemStatus';
 import { Explorer } from './pages/Explorer';
 import { Trophies } from './pages/Trophies';
+import { Casino } from './pages/Casino';
 import { Manual } from './pages/Manual';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
           <Route path="system" element={<SystemStatus />} />
           <Route path="explorer" element={<Explorer />} />
           <Route path="trophies" element={<Trophies />} />
+          <Route path="casino" element={<Casino />} />
           <Route path="manual" element={<Manual />} />
         </Route>
       </Routes>

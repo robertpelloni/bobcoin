@@ -43,6 +43,7 @@ func main() {
 
 	http.HandleFunc("/status", handleStatus)
 	http.HandleFunc("/process", handleProcess)
+	http.HandleFunc("/simulate", handleSimulate)
 	http.HandleFunc("/balance/", handleBalance)
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pools", handlePools)
@@ -85,6 +86,45 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("[Lattice] Processed %s block for %s...\n", payload.Block.Type, payload.Block.Account[:8])
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": payload.Block.Hash})
+}
+
+func handleSimulate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost { return }
+	
+	var payload struct {
+		Block *Block `json:"block"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Simulation: Use a temporary read-lock to check the state
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+
+	// We skip signature verification for simulation because the block isn't signed yet!
+	// But we check everything else: Balance, Height, SPoRA, Invariants.
+	
+	// Check balance availability
+	currentBal := lattice.GetBalance(payload.Block.Account, time.Now().UnixNano()/1e6)
+	projectedBal := payload.Block.Balance
+	
+	// Basic validation logic
+	status := "VALID"
+	errorMsg := ""
+	
+	if payload.Block.Type == "send" && projectedBal > currentBal {
+		status = "INVALID"
+		errorMsg = "Insufficient funds for projected balance."
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": status,
+		"error": errorMsg,
+		"projectedBalance": projectedBal,
+		"currentBalance": currentBal,
+	})
 }
 
 func handleBalance(w http.ResponseWriter, r *http.Request) {

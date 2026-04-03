@@ -1,28 +1,28 @@
-# Session Handoff - 2026-04-03 (v3.4.0)
+# Session Handoff - 2026-04-03 (v3.5.0)
 
 ## Overview & Findings
-This is a major architectural milestone! I have implemented **Multi-Chain Atomic Swaps (HTLC)** and stabilized the entire test suite to work with our newly hardened consensus rules. The Sovereign Network is now capable of trustless P2P exchange.
+I have reached **v3.5.0**! This session introduced **Native NFT Minting** and a **Digital Gallery**. Artifacts are now first-class citizens on the Block Lattice, linked to decentralized storage via Magnet links.
 
-## Architecture State & Recent Changes (v3.4.0)
+## Architecture State & Recent Changes (v3.5.0)
 
-### 1. **Atomic Swaps (HTLC)** (`bobcoin-consensus/Lattice.js` + `Swap.jsx`)
--   **Locking Phase**: Users can broadcast a `swap_lock` block containing a `secretHash`, a `recipient`, and an `expiry`. The funds are effectively escrowed by the lattice.
--   **Claiming Phase**: The recipient can broadcast a `swap_claim` block revealing the original `secret`. If `hash(secret) === secretHash`, the funds are trustlessly released to the recipient's balance.
--   **Safety**: If the `expiry` time passes without a claim, the sender can (conceptually) broadcast a refund block (to be fully automated in v3.5.0).
+### 1. **Native NFT Protocol** (`bobcoin-consensus/Lattice.js`)
+-   **`mint_nft`**: A new block type that allows users to create a digital artifact for a flat fee of 50 BOB. The metadata (name, magnet, description) is stored in the block payload.
+-   **`transfer_nft`**: A block type that enables peer-to-peer transfer of NFT ownership for a 1 BOB fee.
+-   **Asset Discovery**: New API endpoints `GET /nfts` and `GET /nfts/:account` allow any node to discover and verify artifact ownership across the network.
 
-### 2. **Test Suite Stabilization** (`test_e2e.js`)
--   **Sequential Height Tracking**: The E2E simulation now maintains a `currentHeight` counter for each account chain. Every block submitted in the test suite now includes a valid `height` field, ensuring it passes the v3.3.0 strict height enforcement rules.
--   **Lattice Integrity**: Confirmed that `test_e2e.js` now passes all 10 steps flawlessly.
+### 2. **Digital Gallery UI** (`/gallery`)
+-   **Showroom**: A dedicated page for browsing your collection. Each NFT card is rendered with a Cyberpunk aesthetic, featuring a real-time scanline-glitch animation.
+-   **Minting Terminal**: An integrated form for creating new artifacts by providing Magnet links (linking to the underlying SPoRA/WebTorrent network).
+-   **Ownership**: Users can transfer their artifacts to any other public key on the lattice directly from the gallery.
 
-### 3. **The Atomic Swap UI** (`/swap`)
--   **Secret Generation**: Integrated a cryptographic secret generator with SHA-256 hashing.
--   **Real-Time Interaction**: Users can lock funds and claim swaps via two dedicated panels.
--   **Lattice Integration**: The UI uses the new `getLatticeChain` and `getLatticeFrontier` APIs to maintain perfect chain synchronization.
+### 3. **Protocol Integrity**
+-   The NFT protocol is fully integrated with our hardened consensus rules (State Roots, Sequential Heights).
+-   Every mint and transfer is a cryptographically signed event permanently recorded on the account chain.
 
 ## Test Results
--   ✅ `test_e2e.js` — All 10 steps pass (Stable with v3.3.0 rules).
+-   ✅ `test_e2e.js` — All 10 steps pass (Hardened rules enforced).
 -   ✅ `test_webrtc.js` — All 9 steps pass.
--   ✅ `npm run build` — PWA production build succeeds (1,263 KB gzipped: 357 KB).
+-   ✅ `npm run build` — PWA production build succeeds (1,267 KB gzipped: 358 KB).
 
 ## Commands
 -   **Start Lattice**: `cd bobcoin-consensus && npm start`
@@ -32,4 +32,4 @@ This is a major architectural milestone! I have implemented **Multi-Chain Atomic
 -   **Start Frontend**: `cd frontend && npm run dev`
 -   **E2E Test**: `node test_e2e.js`
 
-**Trustless Atomic Swaps are now LIVE on the Bobcoin Lattice.** 💱🚀⚡🌌
+**The Bobcoin Sovereign Network now supports decentralized digital ownership.** 🖼️🚀⚡🌌

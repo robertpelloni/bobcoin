@@ -20,6 +20,7 @@ export class Lattice {
         // Decentralized Storage Market State
         this.marketBids = {}; // Maps bid_hash to { creator, magnet, amount, status: 'OPEN' | 'ACCEPTED' }
         this.swaps = {};      // Maps secretHash to { sender, recipient, amount, expiry }
+        this.nfts = {};       // Maps nftId to { owner, metadata }
         
         // Demurrage Constant (e.g., 1% decay per 365 days = ~3.17e-10 per second)
         // For this prototype, we'll use a visible 0.01% decay per minute for testing
@@ -288,6 +289,39 @@ export class Lattice {
             
             swap.status = 'CLAIMED';
             swap.claimer = account;
+
+        } else if (block.type === 'mint_nft') {
+            // Minting an NFT costs 50 BOB
+            if (Math.abs(block.balance - (previousBalance - 50)) > epsilon) {
+                throw new Error("NFT Minting costs exactly 50 BOB");
+            }
+            if (!block.payload || !block.payload.name || !block.payload.magnet) {
+                throw new Error("Invalid NFT metadata");
+            }
+            // ID is the hash of the mint block
+            this.nfts[block.hash] = {
+                id: block.hash,
+                owner: account,
+                name: block.payload.name,
+                magnet: block.payload.magnet,
+                description: block.payload.description || '',
+                timestamp: block.timestamp
+            };
+        } else if (block.type === 'transfer_nft') {
+            // Transferring an NFT costs 1 BOB
+            if (Math.abs(block.balance - (previousBalance - 1)) > epsilon) {
+                throw new Error("NFT Transfer costs 1 BOB fee");
+            }
+            const nftId = block.link;
+            const nft = this.nfts[nftId];
+            if (!nft) throw new Error("NFT not found");
+            if (nft.owner !== account) throw new Error("You do not own this NFT");
+            
+            // Transfer ownership to recipient in payload
+            const recipient = block.payload.recipient;
+            if (!recipient) throw new Error("Recipient required for NFT transfer");
+            
+            nft.owner = recipient;
 
         } else {
             throw new Error("Invalid block type");

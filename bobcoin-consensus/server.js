@@ -127,6 +127,16 @@ app.get('/market/bids', (req, res) => {
     res.json({ bids: Object.values(lattice.marketBids).filter(b => b.status === 'OPEN') });
 });
 
+app.get('/nfts/:account', (req, res) => {
+    const account = req.params.account;
+    const owned = Object.values(lattice.nfts).filter(n => n.owner === account);
+    res.json({ nfts: owned });
+});
+
+app.get('/nfts', (req, res) => {
+    res.json({ nfts: Object.values(lattice.nfts) });
+});
+
 const server = app.listen(PORT, () => {
     console.log(`[Lattice Node] Operating asynchronously on port ${PORT}`);
 });

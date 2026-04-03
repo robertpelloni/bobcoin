@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-04-03
+
+### Added
+- **Native NFT Protocol**: Implemented `mint_nft` and `transfer_nft` block types in `Lattice.js`. Digital assets are now first-class citizens on the Block Lattice.
+- **Digital Gallery UI** (`/gallery`): A new interactive page for minting and browsing artifacts. Features a Cyberpunk card layout with scanline animations and ownership tracking.
+- **NFT API Endpoints**: Expanded the Lattice server with `GET /nfts` and `GET /nfts/:account` to support cross-network asset discovery.
+- **Asset Decentralization**: Integrated Magnet links into the NFT metadata, linking digital ownership to the underlying SPoRA-backed storage network.
+
 ## [3.4.0] - 2026-04-03
 
 ### Added

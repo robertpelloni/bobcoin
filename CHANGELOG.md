@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.0] - 2026-04-03
+
+### Added
+- **The Sovereign Singularity**: Final production milestone for the Bobcoin Sovereign Network.
+  - Implemented a high-fidelity, glitch-animated `SplashScreen` that simulates the initialization of core cryptographic modules (Lattice, SPoRA, Merkle, Gossip).
+  - Overhauled `main.jsx` with a custom Application Bootstrapper to manage the transition to the live OS.
+- **Lattice Legend Achievement**: A final on-chain milestone unlocked upon witnessing the initialization of the Sovereign OS.
+- **Visual Production Hardening**: Standardized the standalone PWA launch experience for a 1:1 "Arcade Machine" feel.
+
 ## [7.6.0] - 2026-04-03
 
 ### Added

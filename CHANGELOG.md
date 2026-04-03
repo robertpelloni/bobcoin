@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-04-03
+
+### Added
+- **On-Chain Achievement System**: Introduced a decentralized metagame where user milestones are permanently signed and broadcast as `achievement_unlock` blocks to the Lattice.
+- **Trophy Room UI** (`/trophies`): A dedicated high-fidelity page displaying unlocked achievements. Features a "Cryptographic Completion" progress bar and neon-themed achievement cards with unique icons and colors.
+- **Achievement Engine** (`AchievementService.js`): A centralized service to detect and unlock milestones.
+- **Milestone Triggers**:
+  - `GIBSON_HACKER`: Unlocked upon generating a wallet via the physical keyboard entropy terminal.
+  - `FHE_PHANTOM`: Unlocked upon completing an FHE-encrypted blind computation round.
+  - (Planned: `SPORA_LORD`, `QUADRATIC_CITIZEN`, `LATTICE_SHARK`, `P2P_WARRIOR`).
+- **Lattice API**: Exported `getLatticeChain` in the frontend API to support trophy fetching.
+
 ## [2.9.0] - 2026-04-03
 
 ### Added

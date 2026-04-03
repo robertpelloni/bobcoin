@@ -27,6 +27,9 @@ export function Navigation() {
                 <NavLink to="/explorer" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <span className="icon">🔍</span> EXPLORER
                 </NavLink>
+                <NavLink to="/trophies" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                    <span className="icon">🏆</span> TROPHIES
+                </NavLink>
                 <NavLink to="/market" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <span className="icon">📦</span> MARKET
                 </NavLink>

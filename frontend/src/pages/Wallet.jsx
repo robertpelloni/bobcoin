@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL } from '../api';
 import { generateKeypair, encryptMemo, decryptMemo } from '../cryptoUtils';
+import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
 import './Wallet.css';
 
@@ -211,6 +212,9 @@ export function Wallet() {
                 localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
                 setKeypair(kp);
                 setIsGenerating(false);
+                
+                // Unlock Achievement
+                checkAndUnlock('GIBSON_HACKER', kp, []);
             }
         };
 

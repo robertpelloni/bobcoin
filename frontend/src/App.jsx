@@ -8,6 +8,7 @@ import { StorageMarket } from './pages/StorageMarket';
 import { Supernode } from './pages/Supernode';
 import { SystemStatus } from './pages/SystemStatus';
 import { Explorer } from './pages/Explorer';
+import { Trophies } from './pages/Trophies';
 import { Manual } from './pages/Manual';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="supernode" element={<Supernode />} />
           <Route path="system" element={<SystemStatus />} />
           <Route path="explorer" element={<Explorer />} />
+          <Route path="trophies" element={<Trophies />} />
           <Route path="manual" element={<Manual />} />
         </Route>
       </Routes>

@@ -37,6 +37,15 @@ export const getLatticePending = async (publicKey) => {
     }
 };
 
+export const getLatticeChain = async (publicKey) => {
+    try {
+        const res = await fetch(`${LATTICE_URL}/chain/${publicKey}`);
+        return await res.json();
+    } catch (e) {
+        return { chain: [] };
+    }
+};
+
 export const getLatticeFrontier = async (publicKey) => {
     try {
         const res = await fetch(`${LATTICE_URL}/frontier/${publicKey}`);

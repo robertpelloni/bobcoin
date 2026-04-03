@@ -35,3 +35,10 @@
 - [x] **Block Explorer:** Built a comprehensive block explorer UI at `/explorer` with account browsing, chain inspection, color-coded block types, network stats, search filtering, and auto-refresh. Every block's cryptographic details (hash, SPoRA, payload) are fully inspectable!
 - [x] **Web Audio Synthesizer:** Built a pure mathematical waveform synthesizer using the Web Audio API. The rhythm game now has real-time cyberpunk sound effects — pentatonic hit blips, dissonant miss buzzes, match chimes, block confirmation pings, and a sub-bass ambient drone with LFO wobble!
 - [x] **Real-Time Block Feed:** WebSocket server on the Lattice broadcasts `NEW_BLOCK` events. The Dashboard renders a live, color-coded scrolling feed of every block hitting the lattice with connection status and audio notifications!
+- [x] **On-Chain Achievements (v1)**: Built a decentralized metagame where user milestones (first wallet, first FHE round) are signed and broadcast as `achievement_unlock` blocks to the Lattice, viewable in a high-fidelity "Trophy Room" at `/trophies`.
+- [ ] **On-Chain Achievements (v2)**: Implement triggers for `SPORA_LORD`, `QUADRATIC_CITIZEN`, `LATTICE_SHARK`, and `P2P_WARRIOR`.
+- [ ] **Multi-Chain Atomic Swaps**: Enable users to swap assets between chains.
+- [ ] **DEX / Token Swap UI**: Build a decentralized exchange interface.
+- [ ] **Durable Data UI**: Arweave-style permanent file storage interface.
+- [ ] **Staking / Delegation**: Allow users to stake tokens to secure the network for rewards.
+- [ ] **Audio Visualizer**: Add a real-time audio visualizer to the rhythm game dashboard.

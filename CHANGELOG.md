@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-04-03
+
+### Added
+- **Real-Time Audio Visualizer**: Integrated a frequency-domain visualizer into the `RhythmGame.jsx` dashboard. Using the Web Audio API's `AnalyserNode`, the UI now pulses with neon frequency bars that react to every note hit, miss, and background drone.
+- **Strict Block Height Enforcement**: Added a `height` field to the `Block` class and updated `Lattice.js` to strictly enforce `newHeight === prevHeight + 1` for all transactions. This ensures chain continuity and prevents "gapping" attacks.
+- **Enhanced Hash Calculation**: The block height is now included in the SHA-256 hash calculation, further hardening the cryptographic chain integrity.
+- **Audio Engine Upgrade**: The `AudioEngine.js` now exports a global `getAnalyzer()` function, allowing multiple components to sync their visuals with the synthesized audio stream.
+
 ## [3.2.0] - 2026-04-03
 
 ### Added

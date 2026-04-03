@@ -6,16 +6,25 @@
  */
 
 let audioCtx = null;
+let analyzer = null;
 
 function getAudioContext() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyzer = audioCtx.createAnalyser();
+        analyzer.fftSize = 64; // Low FFT size for a "blocky" cyberpunk look
+        analyzer.connect(audioCtx.destination);
     }
     // Resume if suspended (browser autoplay policy)
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
     return audioCtx;
+}
+
+export function getAnalyzer() {
+    getAudioContext();
+    return analyzer;
 }
 
 // Cyberpunk note frequencies (pentatonic scale in A minor)
@@ -65,10 +74,10 @@ export function playHitSound(lane = 0, quality = 'GOOD') {
     gain.gain.linearRampToValueAtTime(quality === 'PERFECT' ? 0.4 : 0.25, now + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
-    // Connect: osc -> filter -> gain -> output
+    // Connect: osc -> filter -> gain -> analyzer -> output
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(analyzer); // Pipe through analyzer!
 
     osc.start(now);
     osc.stop(now + 0.3);
@@ -92,7 +101,7 @@ export function playMissSound() {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(analyzer); // Pipe through analyzer!
 
     osc.start(now);
     osc.stop(now + 0.2);
@@ -118,7 +127,7 @@ export function playMatchSound() {
         gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
         
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(analyzer); // Pipe through analyzer!
         
         osc.start(now + i * 0.1);
         osc.stop(now + i * 0.1 + 0.5);
@@ -142,7 +151,7 @@ export function playCountdownBeep(final = false) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(analyzer); // Pipe through analyzer!
 
     osc.start(now);
     osc.stop(now + 0.15);
@@ -166,7 +175,7 @@ export function playBlockConfirmedSound() {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(analyzer); // Pipe through analyzer!
 
     osc.start(now);
     osc.stop(now + 0.25);
@@ -205,9 +214,9 @@ export function startAmbientDrone() {
     lfoGain.connect(osc2.frequency);
 
     osc1.connect(gain1);
-    gain1.connect(ctx.destination);
+    gain1.connect(analyzer); // Pipe through analyzer!
     osc2.connect(gain2);
-    gain2.connect(ctx.destination);
+    gain2.connect(analyzer); // Pipe through analyzer!
 
     osc1.start(now);
     osc2.start(now);

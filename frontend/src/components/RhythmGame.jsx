@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import SimplePeer from 'simple-peer';
 import { API_URL } from '../api';
-import { playHitSound, playMatchSound, startAmbientDrone, getAudioContext } from '../audio/AudioEngine';
+import { playHitSound, playMatchSound, startAmbientDrone, getAnalyzer } from '../audio/AudioEngine';
 import { checkAndUnlock } from '../AchievementService';
 import './RhythmGame.css';
 
@@ -21,6 +21,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
     const [opponentScore, setOpponentScore] = useState(0);
     const peerRef = useRef(null);
     const wsRef = useRef(null);
+    const canvasRef = useRef(null);
 
     // Use refs for values needed inside the animation loop to avoid stale closures
     const requestRef = useRef();
@@ -32,6 +33,34 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
     useEffect(() => {
         notesRef.current = notes;
     }, [notes]);
+
+    const drawVisualizer = () => {
+        const analyzer = getAnalyzer();
+        if (!analyzer || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const bufferLength = analyzer.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyzer.getByteFrequencyData(dataArray);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const barWidth = (canvas.width / bufferLength) * 2.5;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * canvas.height;
+            const blue = 255;
+            const green = dataArray[i];
+            const red = 255 - dataArray[i];
+
+            ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+            x += barWidth + 1;
+        }
+    };
 
     const initMatchmaking = () => {
         setMatchStatus('SEARCHING');
@@ -139,6 +168,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
         if (!isPlaying) return;
 
         spawnNote(time);
+        drawVisualizer();
 
         // Move notes
         const currentNotes = notesRef.current;
@@ -252,6 +282,12 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
 
     return (
         <div className="rhythm-game-container">
+            <canvas 
+                ref={canvasRef} 
+                width="400" 
+                height="100" 
+                style={{position: 'absolute', top: '10px', left: 0, width: '100%', height: '100px', opacity: 0.5, pointerEvents: 'none'}}
+            />
             <div className="matchmaking-panel" style={{position: 'absolute', top: '-60px', left: 0, width: '100%', display: 'flex', justifyContent: 'space-between', color: '#0ff', fontFamily: 'monospace', zIndex: 10}}>
                 {matchStatus !== 'IN_GAME' ? (
                     <button className="cyber-button small" onClick={initMatchmaking} disabled={matchStatus === 'SEARCHING' || matchStatus === 'CONNECTING'}>

@@ -84,9 +84,13 @@ export class Lattice {
         if (block.type === 'open') {
             if (frontier) throw new Error("Account already open");
             if (block.previous !== null) throw new Error("Open block must have no previous");
+            if (block.height !== 0) throw new Error("Open block must have height 0");
         } else {
             if (!frontier) throw new Error("Account not open");
             if (block.previous !== frontier.hash) throw new Error("Invalid previous block hash");
+            if (block.height !== frontier.height + 1) {
+                throw new Error(`Invalid block height! Expected ${frontier.height + 1}, got ${block.height}`);
+            }
         }
 
         // Verify SPoRA (Succinct Proof of Random Access)

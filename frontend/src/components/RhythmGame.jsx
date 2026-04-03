@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import SimplePeer from 'simple-peer';
 import { API_URL } from '../api';
-import { playHitSound, playMatchSound, startAmbientDrone } from '../audio/AudioEngine';
+import { playHitSound, playMatchSound, startAmbientDrone, getAudioContext } from '../audio/AudioEngine';
 import { checkAndUnlock } from '../AchievementService';
 import './RhythmGame.css';
 

@@ -23,6 +23,11 @@ export class Lattice {
         // Demurrage Constant (e.g., 1% decay per 365 days = ~3.17e-10 per second)
         // For this prototype, we'll use a visible 0.01% decay per minute for testing
         this.DEMURRAGE_RATE_PER_MS = 0.0001 / 60000;
+        this.stateHash = '0'.repeat(64);
+    }
+
+    updateStateHash(block) {
+        this.stateHash = crypto.createHash('sha256').update(this.stateHash + block.hash).digest('hex');
     }
 
     /**
@@ -61,6 +66,15 @@ export class Lattice {
     processBlock(block) {
         if (!block.verifySignature()) {
             throw new Error("Invalid block signature");
+        }
+
+        // 2. Double-Spend Protection
+        if (block.type === 'receive') {
+            const sendHash = block.link;
+            const alreadyReceived = Object.values(this.chains).some(c => 
+                c.some(b => b.type === 'receive' && b.link === sendHash)
+            );
+            if (alreadyReceived) throw new Error("Transaction already received");
         }
 
         const account = block.account;
@@ -237,6 +251,7 @@ export class Lattice {
         if (!this.chains[account]) this.chains[account] = [];
         this.chains[account].push(block);
         this.blocks[block.hash] = block;
+        this.updateStateHash(block);
 
         return true;
     }

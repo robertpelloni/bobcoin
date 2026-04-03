@@ -105,6 +105,9 @@ export function Wallet() {
                 alert(`Successfully claimed ${pend.amount} BOB!`);
                 setBalance(newBalance);
                 setPending(p => p.filter(x => x.hash !== pend.hash));
+                
+                // Unlock Achievement: SPoRA Lord
+                checkAndUnlock('SPORA_LORD', keypair, []);
             } else {
                 alert("Failed to claim: " + res.error);
             }

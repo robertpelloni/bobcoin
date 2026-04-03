@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-04-03
+
+### Added
+- **Consensus Hardening**:
+  - Implemented **State Hashing** (`stateHash`) in `Lattice.js` — a cumulative network state root that updates after every block, ensuring chain consistency and detecting state divergence.
+  - Implemented **Double-Spend Protection** — explicitly checks for duplicate `receive` links during block processing to prevent funds from being claimed multiple times.
+- **Achievements v2 (Triggers Wired)**:
+  - `SPORA_LORD`: Now triggers in `Wallet.jsx` upon successful fund reception via SPoRA proof.
+  - `QUADRATIC_CITIZEN`: Now triggers in `Governance.jsx` after a vote is cast.
+  - `P2P_WARRIOR`: Now triggers in `RhythmGame.jsx` upon successful WebRTC peer connection.
+  - `FHE_PHANTOM`: Now triggers in `Dashboard.jsx` after successful blind computation.
+  - `LATTICE_SHARK`: Now triggers in `Casino.jsx` after a jackpot win.
+- **Trophy Room Completion**: The `Trophy Room` UI is now fully functional, providing real-time cryptographic progress tracking across all network milestones.
+
 ## [3.1.0] - 2026-04-03
 
 ### Added

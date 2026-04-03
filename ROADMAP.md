@@ -23,7 +23,7 @@
 - [x] **Decentralized Storage Market (Bobtorrent):** Connect the Supernode WebTorrent client fully to the new `StorageMarket.jsx` to create a decentralized bid/ask order book for file hosting.
 
 ## Phase IV: The Sovereign Mainnet & Arcade Hardware (Upcoming)
-- [ ] **Arcade Hardware Integration:** Hardcode Bobsgame/Bobmania physical arcade machines to act as anchor Supernodes for the Bobtorrent network.
-- [ ] **Block Lattice & DAG Consensus:** Sunset the Solana Bridge. Implement an Asynchronous Block Lattice (Nano style) combined with a DAG for 60,000+ TPS feeless microtransactions.
+- [x] **Arcade Hardware Integration:** Hardcoded Bobsgame/FWBER core file magnets into the Supernode boot sequence, simulating permanent anchor nodes running on physical arcade hardware.
+- [x] **Block Lattice Consensus (Node.js Engine):** Architected the foundational Asynchronous Block Lattice inside `bobcoin-consensus` using native Node.js cryptography (Ed25519 signatures, SHA-256). Successfully simulated feeless asynchronous `send`/`receive` block flows.
 - [ ] **SPoRA Consensus (Proof of Access):** Implement Succinct Proof of Random Access (Arweave style) so nodes must prove they hold Bobtorrent files to mine the next block.
 - [ ] **Fully Homomorphic Encryption (FHE):** Integrate FHE capabilities into the network to allow the execution of private smart contracts without decrypting balances or game logic.

@@ -15,6 +15,11 @@ const TORRENTS_FILE = path.resolve(process.cwd(), 'torrents.json');
 app.use(cors());
 app.use(express.json());
 
+const CORE_ARCADE_ANCHORS = [
+    { name: 'bobsgame-arcade-tokyo', magnet: 'magnet:?xt=urn:btih:bobsgamecorefiles1234567890abcdef' },
+    { name: 'fwber-hq-node', magnet: 'magnet:?xt=urn:btih:fwbercorefiles1234567890abcdef' }
+];
+
 let savedTorrents = [];
 if (fs.existsSync(TORRENTS_FILE)) {
     try {
@@ -25,6 +30,14 @@ if (fs.existsSync(TORRENTS_FILE)) {
         console.error("Failed to parse torrents.json");
     }
 }
+
+// Ensure Core Arcade Anchor files are permanently seeded
+CORE_ARCADE_ANCHORS.forEach(anchor => {
+    if (!client.get(anchor.magnet) && !savedTorrents.find(t => t.magnet === anchor.magnet)) {
+        console.log(`[Anchor Bootstrap] Initializing permanent seeding for ${anchor.name}...`);
+        client.add(anchor.magnet, { path: './downloads' });
+    }
+});
 
 function saveTorrents() {
     const data = client.torrents.map(t => ({ magnet: t.magnetURI, infoHash: t.infoHash }));

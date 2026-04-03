@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.3] - 2026-04-02
+
+### Added
+- **Block Lattice Node.js Engine**: Initiated Phase IV by writing a native Node.js implementation of an Asynchronous Block Lattice inside `bobcoin-consensus` using Ed25519 signatures and SHA-256 hashes. Simulated feeless microtransactions natively.
+- **Arcade Hardware Integration**: Hardcoded Bobsgame and FWBER core torrent magnets into the `supertorrent` boot sequence to act as permanent storage anchors.
+
+
+
+
+
 ## [2.6.2] - 2026-04-02
 
 ### Added

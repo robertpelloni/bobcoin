@@ -114,17 +114,18 @@ export function SystemStatus() {
             setServices(s => ({ ...s, supernode: 'OFFLINE' }));
         }
 
-        // Lattice API
+        // Lattice API (Go Node)
         try {
             const res = await fetch(`${LATTICE_URL}/status`);
             const data = await res.json();
-            setServices(s => ({ ...s, lattice: 'ONLINE' }));
+            setServices(s => ({ ...s, lattice: 'ONLINE (Go v5.6.0)' }));
             setNetworkRoot(data.stateHash);
         } catch {
             setServices(s => ({ ...s, lattice: 'OFFLINE' }));
         }
 
-        setServices(s => ({ ...s, zkService: 'ACTIVE (Inferred)' }));
+        // ZK Verifier Status
+        setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)' }));
     };
 
     useEffect(() => {

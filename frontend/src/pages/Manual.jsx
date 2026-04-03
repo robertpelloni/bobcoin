@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { checkAndUnlock } from '../AchievementService';
 import './Manual.css';
 
 const SECTIONS = {
@@ -9,111 +9,98 @@ const SECTIONS = {
                 <h2>BOBCOIN: The Protocol of Useful Work</h2>
                 <p className="highlight">"Data is the Currency. Seeding is Mining. Play is Work."</p>
                 <p>
-                    Bobcoin is a next-generation cryptocurrency designed as the default native currency for the entire 
-                    interconnected ecosystem: <strong>Bobtorrent</strong> (P2P sharing), <strong>Bobmania</strong>, 
-                    <strong>Bobsgame</strong> (arcade games), and <strong>FWBER</strong>. 
+                    Bobcoin is a next-generation decentralized ecosystem built on an asynchronous Block Lattice. 
+                    It is the native currency for **Bobtorrent** (P2P sharing), **Bobmania**, 
+                    and **Bobsgame** (arcade hardware). 
                 </p>
                 <p>
-                    Physical arcade machines running Bobsgame across the world will automatically act as stable, 
-                    official "Supernodes" to anchor the network, providing permanent decentralized storage.
+                    The network is designed for **Sovereignty**. Every user owns their own chain, every transaction is feeless, 
+                    and the system is mathematically hardened against centralized capture.
                 </p>
                 <h3>CORE PILLARS</h3>
                 <ul>
-                    <li><strong>Storage = Power (SPoRA):</strong> To mine, nodes must seed useful data via Bobtorrent. We use Succinct Proof of Random Access (SPoRA) to verify physical hardware provisioning.</li>
-                    <li><strong>Play = Work:</strong> Gamers mint tokens by generating ZK-Proofs of their skill ("Proof of Play").</li>
-                    <li><strong>Privacy by Default (FHE & TEEs):</strong> Advanced cryptography protects user data and ensures "White-Magic" resistance against enslavement currency systems.</li>
+                    <li><strong>Block Lattice (Go):</strong> High-performance, multi-threaded consensus engine written in Go.</li>
+                    <li><strong>SPoRA Storage:</strong> Mining is backed by physical storage proofs (Succinct Proof of Random Access).</li>
+                    <li><strong>Proof-of-Play (ZK):</strong> RISC-V Zero-Knowledge proofs (Succinct SP1) verify game integrity.</li>
+                    <li><strong>Privacy by Default (FHE):</strong> Fully Homomorphic Encryption allows blind server computation.</li>
                 </ul>
             </>
         )
     },
-    PRIVACY: {
-        title: "1. PRIVACY & ANONYMITY (WHITE MAGIC)",
+    DEFI: {
+        title: "1. NATIVE DEFI & AMM",
         content: (
             <>
-                <h2>BEYOND MONERO: THE PRIVACY VAULT</h2>
-                <p>Bobcoin implements an advanced privacy stack designed to be fully anonymous yet cryptographically compliant, preventing 51% nation-state attacks.</p>
+                <h2>THE SOVEREIGN EXCHANGE</h2>
+                <p>Bobcoin implements high-velocity financial tools directly in the consensus layer.</p>
                 <div className="tech-stack">
                     <div className="tech-item">
-                        <h4>FULLY HOMOMORPHIC ENCRYPTION (FHE)</h4>
-                        <p>Smart contracts can compute on encrypted balances without ever decrypting the data in memory. Your transactions are mathematically invisible to the node processing them.</p>
+                        <h4>ON-CHAIN AMM (x * y = k)</h4>
+                        <p>A native Constant Product Market Maker is integrated into the Go engine. Swap BOB for simulated assets trustlessly with real-time price impact.</p>
                     </div>
                     <div className="tech-item">
-                        <h4>STEALTH ADDRESSES (ONE-TIME)</h4>
-                        <p>Every transaction uses a unique Diffie-Hellman generated address, decoupling your public identity from your payments.</p>
+                        <h4>ATOMIC SWAPS (HTLC)</h4>
+                        <p>Hashed Time-Lock Contracts allow peer-to-peer asset exchange between separate account chains without intermediaries.</p>
                     </div>
                     <div className="tech-item">
-                        <h4>PRIVACY POOLS (ZK-SNARKS)</h4>
-                        <p>Users can prove via ZK-proofs that their funds did *not* originate from bad actors, allowing compliance without sacrificing anonymity.</p>
+                        <h4>STAKING & YIELD</h4>
+                        <p>Proof-of-Stake logic allows you to lock tokens to secure the lattice, earning 12.5% APY and boosting your Quadratic Voting power.</p>
                     </div>
                 </div>
             </>
         )
     },
-    SPEED: {
-        title: "2. HIGH-SPEED LATTICE DAG",
+    SECURITY: {
+        title: "2. INSTITUTIONAL SECURITY",
         content: (
             <>
-                <h2>BLOCK LATTICE & DAG ARCHITECTURE</h2>
-                <p>
-                    Instead of a single global chain, every account has its own asynchronous blockchain (Block Lattice), 
-                    processed simultaneously via a Directed Acyclic Graph (DAG) for massive parallel throughput.
-                </p>
-                <h3>PERFORMANCE TARGETS</h3>
-                <ul>
-                    <li><strong>Finality:</strong> &lt; 500ms (Asynchronous Updates)</li>
-                    <li><strong>Throughput:</strong> 60,000+ TPS (Hedera/Solana tier)</li>
-                    <li><strong>Fees:</strong> ZERO for arcade tips, minimal for large transfers.</li>
-                </ul>
+                <h2>SHARED SOVEREIGNTY</h2>
+                <p>The Block Lattice is designed for mission-critical asset management.</p>
+                <div className="tech-stack">
+                    <div className="tech-item">
+                        <h4>MULTI-SIG SHARED VAULTS</h4>
+                        <p>Initialize collective accounts that require M-of-N cryptographic signatures to authorize any transaction.</p>
+                    </div>
+                    <div className="tech-item">
+                        <h4>MNEMONIC HARDENING</h4>
+                        <p>Sovereign identities are derived from 12-word seed phrases, allowing for 100% portable and recoverable wealth.</p>
+                    </div>
+                    <div className="tech-item">
+                        <h4>CONSENSUS AUTO-SYNC</h4>
+                        <p>Nodes are self-healing, automatically repairing their own ledger history via P2P gossip and block delta syncing.</p>
+                    </div>
+                </div>
             </>
         )
     },
-    CONTRACTS: {
-        title: "3. SMART CONTRACTS & AI",
+    DAG: {
+        title: "3. ASYNCHRONOUS ARCHITECTURE",
         content: (
             <>
-                <h2>AI-DRIVEN ORACLES</h2>
+                <h2>BEYOND THE BLOCKCHAIN</h2>
                 <p>
-                    Bobcoin utilizes a high-performance VM (inspired by Move and Fuel) designed for parallel execution.
-                    Furthermore, the network embraces AI.
+                    Instead of a single global chain, Bobcoin uses a Directed Acyclic Graph (DAG) of account chains.
                 </p>
-                <h3>FEATURES</h3>
+                <h3>ADVANTAGES</h3>
                 <ul>
-                    <li><strong>AI Factories:</strong> Nodes can host autonomous AI agents that execute complex trading or verification logic with fixed, low fees.</li>
-                    <li><strong>Predicates:</strong> Stateless scripts for gas-efficient conditions.</li>
-                    <li><strong>Cheating Prevention:</strong> Native support for Trusted Execution Environments (TEEs) to isolate game memory.</li>
+                    <li><strong>Infinite Scalability:</strong> Transactions settle asynchronously without global bottlenecks.</li>
+                    <li><strong>State Roots:</strong> Every node maintains a cumulative network state hash for total accountability.</li>
+                    <li><strong>Feeless:</strong> Standard transfers require no gas, only a valid SPoRA storage proof.</li>
                 </ul>
-            </>
-        )
-    },
-    CONSENSUS: {
-        title: "4. HYBRID CONSENSUS",
-        content: (
-            <>
-                <h2>THE "ARCADE" CONSENSUS</h2>
-                <p>A novel combination of three mechanisms designed to prevent "Miner Monopoly" centralization:</p>
-                <ol>
-                    <li><strong>The Spine (BlockDAG):</strong> Provides 60k+ TPS and sub-second finality.</li>
-                    <li><strong>The Filter (SPoRA & PoST):</strong> Proof of Space & Time combined with Proof of Access ensures only useful nodes (Seeding Bobtorrent Data) can vote.</li>
-                    <li><strong>The Mint (Proof-of-Play):</strong> Token distribution is driven by human skill, verified by ZK-Proofs.</li>
-                </ol>
             </>
         )
     },
     TOKENOMICS: {
-        title: "5. TOKENOMICS",
+        title: "4. THE ARCADE ECONOMY",
         content: (
             <>
-                <h2>FAIR DISTRIBUTION</h2>
-                <p>The economy is designed to reward active participants, not passive holders.</p>
+                <h2>WHITE-MAGIC TOKENOMICS</h2>
+                <p>The economy enforces economic velocity through mathematical decay.</p>
                 <ul>
-                    <li><strong>60% - Proof of Play:</strong> Earned by gamers via ZK-verified scores on Bobsgame/Bobmania.</li>
-                    <li><strong>20% - Proof of Useful Work:</strong> Earned by Supernodes for seeding Bobtorrent files (SPoRA).</li>
-                    <li><strong>10% - Staking Rewards:</strong> For securing the consensus layer.</li>
-                    <li><strong>10% - Treasury:</strong> Managed by the DAO for development.</li>
+                    <li><strong>Demurrage:</strong> 0.01%/min balance decay prevents stagnant hoarding and forces circulation.</li>
+                    <li><strong>Quadratic Voting:</strong> DAO power is calculated as SQRT(Balance), preventing whale dominance.</li>
+                    <li><strong>Proof-of-Play:</strong> The only way to mint new supply is through human skill and ZK-proofs.</li>
                 </ul>
-                <p className="highlight">
-                    <strong>Demurrage (Anti-Hoarding):</strong> Large dormant balances slowly decay to encourage circulation and spending in the arcade economy, preventing wealth centralization.
-                </p>
             </>
         )
     }
@@ -122,10 +109,25 @@ const SECTIONS = {
 export function Manual() {
     const [activeSection, setActiveSection] = useState('INTRO');
 
+    const handleNext = () => {
+        const keys = Object.keys(SECTIONS);
+        const idx = keys.indexOf(activeSection);
+        if (idx < keys.length - 1) {
+            setActiveSection(keys[idx + 1]);
+        } else {
+            // Reached the end! Unlock Achievement
+            try {
+                const stored = localStorage.getItem('bobcoin_wallet');
+                if (stored) checkAndUnlock('LATTICE_SCHOLAR', JSON.parse(stored), []);
+                alert("SOVEREIGN EDUCATION COMPLETE. ACHIEVEMENT UNLOCKED.");
+            } catch(e) {}
+        }
+    };
+
     return (
         <div className="manual-container">
             <div className="manual-sidebar">
-                <div className="sidebar-header">DOCS v2.6.0</div>
+                <div className="sidebar-header">DOCS v6.1.0</div>
                 {Object.keys(SECTIONS).map(key => (
                     <button
                         key={key}
@@ -139,6 +141,11 @@ export function Manual() {
             <div className="manual-content">
                 <div className="content-scroll">
                     {SECTIONS[activeSection].content}
+                    <div style={{marginTop: '3rem', borderTop: '1px solid #333', paddingTop: '2rem', textAlign: 'right'}}>
+                        <button className="cyber-button" onClick={handleNext}>
+                            {activeSection === 'TOKENOMICS' ? 'COMPLETE INITIATION' : 'NEXT CHAPTER'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

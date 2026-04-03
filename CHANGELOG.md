@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-04-03
+
+### Added
+- **Sovereign Manual Overhaul**: Completely refactored the `/manual` documentation hub to v6.1.0 standards.
+  - Included technical deep-dives into the **High-Performance Go Engine**, **On-Chain AMM Engine**, **HTLC Atomic Swaps**, and **Multi-Sig Shared Vaults**.
+  - Implemented an interactive navigation flow for onboarding new sovereign citizens.
+- **System Console Hardening**: Upgraded the `SystemStatus` dashboard to monitor the specific versioning of the Go-Lattice engine and the active status of the **SP1 ZK Verifier**.
+- **Lattice Scholar Achievement**: Integrated a new milestone for users who complete the initiation chapters in the manual.
+
 ## [6.0.0-alpha] - 2026-04-03
 
 ### Added

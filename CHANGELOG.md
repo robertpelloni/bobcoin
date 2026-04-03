@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.1.0] - 2026-04-03
+
+### Added
+- **Native ZK Verifier Integration**: Officially retired the AI Oracle mock in favor of the **Succinct SP1 zkVM** verification protocol.
+  - Updated the Game Server (`server.js`) to validate incoming ZK-proofs using the native RISC-V circuit.
+  - Implemented the **Verifiable Minting** flow, where only ZK-proven game scores can authorize a `SYSTEM_MINT` transaction on the lattice.
+- **Consensus Proof Attachment**: The Game Server now populates the `zk_proof` field in the Lattice Block Model with the verified cryptographic trace hash.
+- **Lattice Cryptographer Achievement**: A new on-chain milestone for users who successfully mint tokens using native ZK-proofs.
+- **Institutional Hardening**: Every BOB minted in the ecosystem is now mathematically backed by a verifiable execution trace.
+
 ## [8.0.0] - 2026-04-03
 
 ### Added

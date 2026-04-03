@@ -14,6 +14,7 @@ export const ACHIEVEMENTS = {
     DATA_ARCHITECT: { id: 'DATA_ARCHITECT', title: 'Data Architect', desc: 'Anchored permanent data to the Block Lattice.', icon: '📦', color: '#0ff' },
     LIQUIDITY_PROVIDER: { id: 'LIQUIDITY_PROVIDER', title: 'Liquidity Provider', desc: 'Bootstrapped the on-chain AMM pools.', icon: '🌊', color: '#0f0' },
     ZK_SAGE: { id: 'ZK_SAGE', title: 'Zero-Knowledge Sage', desc: 'Submitted a mathematically proven game score via SP1.', icon: '🕵️‍♂️', color: '#f0f' },
+    LATTICE_CRYPTOGRAPHER: { id: 'LATTICE_CRYPTOGRAPHER', title: 'Lattice Cryptographer', desc: 'Minted supply using a native RISC-V zero-knowledge proof.', icon: '🔐', color: '#0ff' },
     LATTICE_SCHOLAR: { id: 'LATTICE_SCHOLAR', title: 'Lattice Scholar', desc: 'Mastered the Sovereign Network protocols.', icon: '📖', color: '#0ff' },
     LATTICE_OPTIMIZER: { id: 'LATTICE_OPTIMIZER', title: 'Lattice Optimizer', desc: 'Achieved high-performance consensus synchronization.', icon: '⚡', color: '#0f0' },
     LATTICE_CONSOLIDATOR: { id: 'LATTICE_CONSOLIDATOR', title: 'Lattice Consolidator', desc: 'Synchronized a massive cryptographic batch of network history.', icon: '📦', color: '#f80' },

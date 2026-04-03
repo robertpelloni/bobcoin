@@ -3,9 +3,12 @@ import cors from 'cors';
 import WebTorrent from 'webtorrent';
 import fs from 'fs';
 import path from 'path';
+import fetch from 'node-fetch';
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8081; // Using 8081 directly to match standard docker mapping
+const GAME_SERVER_URL = process.env.GAME_SERVER_URL || 'http://localhost:3001';
+const NODE_ID = "sn_" + Math.random().toString(36).substr(2, 9);
 const client = new WebTorrent();
 const TORRENTS_FILE = path.resolve(process.cwd(), 'torrents.json');
 
@@ -79,5 +82,40 @@ app.post('/remove-torrent', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[Supernode] Listening on port ${PORT}`);
+    console.log(`[Supernode ${NODE_ID}] Listening on port ${PORT}`);
+    
+    // Background Market Polling Loop
+    setInterval(async () => {
+        try {
+            const res = await fetch(`${GAME_SERVER_URL}/market/bids`);
+            const data = await res.json();
+            
+            if (data.bids && data.bids.length > 0) {
+                // Find an open bid we aren't already seeding
+                for (const bid of data.bids) {
+                    if (bid.status === 'OPEN' && !client.get(bid.magnet)) {
+                        console.log(`[Supernode] Found open bid #${bid.id} for ${bid.amount} BOB. Accepting...`);
+                        
+                        // Accept Bid
+                        const acceptRes = await fetch(`${GAME_SERVER_URL}/market/accept`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ bidId: bid.id, nodeId: NODE_ID })
+                        });
+                        
+                        const acceptData = await acceptRes.json();
+                        if (acceptData.success) {
+                            console.log(`[Supernode] Bid #${bid.id} accepted! Starting WebTorrent download...`);
+                            client.add(bid.magnet, { path: './downloads' }, (torrent) => {
+                                console.log('[Supernode] Market Torrent seeding:', torrent.infoHash);
+                                saveTorrents();
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignore fetch errors if game-server is down
+        }
+    }, 10000); // Check every 10 seconds
 });

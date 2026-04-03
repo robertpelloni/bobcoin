@@ -20,7 +20,7 @@
 - [x] **Full Backend Integration:** Removed frontend mock APIs and connected UI components (`Wallet`, `Governance`, `Mobile`, `StorageMarket`) to the live backend services (`localhost:3001`). All simulated mint/burn logic now writes to the unified SQLite ledger.
 - [ ] **On-Chain Governance:** Migrate SQLite `proposals` logic to an SPL Governance Program on Solana.
 - [ ] **Full ZK Proving:** Upgrade SP1 ZK Service from `client.execute()` to `client.prove()` to generate actual cryptographic traces.
-- [ ] **Decentralized Storage Market (Bobtorrent):** Connect the Supernode WebTorrent client fully to the new `StorageMarket.jsx` to create a decentralized bid/ask order book for file hosting.
+- [x] **Decentralized Storage Market (Bobtorrent):** Connect the Supernode WebTorrent client fully to the new `StorageMarket.jsx` to create a decentralized bid/ask order book for file hosting.
 
 ## Phase IV: The Sovereign Mainnet & Arcade Hardware (Upcoming)
 - [ ] **Arcade Hardware Integration:** Hardcode Bobsgame/Bobmania physical arcade machines to act as anchor Supernodes for the Bobtorrent network.

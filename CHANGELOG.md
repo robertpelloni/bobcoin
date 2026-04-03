@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0-alpha] - 2026-04-03
+
+### Ported
+- **Go-Lattice Consensus Engine**: Ported the entire core Block Lattice state machine to Go for high-performance, multi-threaded consensus.
+  - Implemented thread-safe `Lattice` struct with `sync.RWMutex`.
+  - Ported strict sequence validation, height enforcement, and state root hashing.
+  - Built high-concurrency API using Go's `net/http` standard library.
+- **Go Cryptography Layer**: Implemented Ed25519 signature verification and SHA-256 hashing using Go's standard library.
+- **Go Block Model**: Implemented the hardened Bobcoin block structure in Go with full JSON compatibility for the React/PWA frontend.
+
 ## [4.0.0] - 2026-04-03
 
 ### Added

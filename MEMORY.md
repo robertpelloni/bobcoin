@@ -1,8 +1,8 @@
 # AI Memory & Architectural Observations
 
 ## Codebase Anomalies & Quirks
-- **Missing Entry Points:** In v2.3.0, it was discovered that the root entry scripts for the Express backend (`game-server/server.js`) are absent, likely due to a previous AI execution error, failed git merge, or local desync. The frontend currently relies on a mocked `api.js` to simulate interactions.
-- **Port Mapping Confusion:** There is historical confusion in the codebase regarding port 3000 vs 3001 and 8080 vs 8081. The Docker containers run on 3000/8080 internally but are mapped to 3001/8081 on the host to avoid local conflicts. All external fetch calls from the UI must target the `3001`/`8081` host ports.
+- **Restored Entry Points:** In v2.6.1, `game-server/server.js` and `database.js` have been fully restored and hardened to handle live frontend UI interactions, replacing the mock JSON/frontend API.
+- **Port Mapping Clarification:** `game-server` now defaults to `3001` out-of-the-box in `server.js` (`process.env.PORT || 3001`) to match the Docker host mapping and simplify local development. `frontend` directly targets `http://localhost:3001`.
 
 ## Design Preferences & Conventions
 - **Strict Completeness:** A feature is not considered "done" unless it is fully represented in the UI, has error handling, and is documented in the Manual. No hidden backend-only features.

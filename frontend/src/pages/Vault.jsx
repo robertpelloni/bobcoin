@@ -122,6 +122,7 @@ function buildOwnerProfiles(manifestAnchors, legacyAnchors) {
 }
 
 const VAULT_PRESETS_KEY = 'bobcoin_vault_filter_presets';
+const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
 
 function sortAnchors(anchors, sortMode, ownerProfiles) {
     const copy = [...anchors];
@@ -165,6 +166,40 @@ function groupAnchors(anchors, groupMode) {
     }));
 }
 
+function buildSourceProfiles(reports) {
+    const profiles = new Map();
+    const touch = (host) => {
+        const key = host || 'unknown-source';
+        if (!profiles.has(key)) {
+            profiles.set(key, {
+                host: key,
+                failures: 0,
+                successfulReports: 0,
+                categories: {},
+                latestSeen: null,
+            });
+        }
+        return profiles.get(key);
+    };
+
+    for (const report of reports) {
+        const generatedAt = report.generatedAt || null;
+        if (report.recovery?.restoredFile) {
+            const successProfile = touch('successful-recovery');
+            successProfile.successfulReports += 1;
+            successProfile.latestSeen = generatedAt || successProfile.latestSeen;
+        }
+        for (const failure of report.recovery?.failedShards || []) {
+            const profile = touch(failure.sourceHost || failure.source || 'unknown-source');
+            profile.failures += 1;
+            profile.latestSeen = generatedAt || profile.latestSeen;
+            profile.categories[failure.category] = (profile.categories[failure.category] || 0) + 1;
+        }
+    }
+
+    return Array.from(profiles.values()).sort((a, b) => b.failures - a.failures || b.successfulReports - a.successfulReports);
+}
+
 export function Vault() {
     const [balance, setBalance] = useState(0);
     const [myAnchors, setMyAnchors] = useState([]);
@@ -184,6 +219,7 @@ export function Vault() {
     const [groupMode, setGroupMode] = useState('none');
     const [presetName, setPresetName] = useState('');
     const [savedPresets, setSavedPresets] = useState([]);
+    const [recoveryReports, setRecoveryReports] = useState([]);
 
     useEffect(() => {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -203,6 +239,15 @@ export function Vault() {
             }
         } catch (error) {
             console.error('Failed to load vault presets:', error);
+        }
+
+        try {
+            const rawReports = localStorage.getItem(RECOVERY_REPORTS_KEY);
+            if (rawReports) {
+                setRecoveryReports(JSON.parse(rawReports));
+            }
+        } catch (error) {
+            console.error('Failed to load recovery reports:', error);
         }
     }, []);
 
@@ -243,6 +288,8 @@ export function Vault() {
 
     const groupedOwnedEntries = useMemo(() => groupAnchors(filteredOwnedEntries, groupMode), [filteredOwnedEntries, groupMode]);
     const groupedNetworkEntries = useMemo(() => groupAnchors(filteredNetworkAnchors.slice(0, 12), groupMode), [filteredNetworkAnchors, groupMode]);
+
+    const sourceProfiles = useMemo(() => buildSourceProfiles(recoveryReports), [recoveryReports]);
 
     const stats = useMemo(() => {
         const totalSize = ownedLegacyAnchors.reduce((sum, anchor) => sum + (anchor.size || anchor.originalSize || 0), 0);
@@ -549,6 +596,32 @@ export function Vault() {
                         </div>
                     ))}
                     {ownerProfiles.length === 0 && <p className="empty">NO OWNER REPUTATION PROFILES HAVE BEEN DERIVED YET.</p>}
+                </div>
+            </div>
+
+            <div className="vault-section leaderboard-section">
+                <div className="section-header-row">
+                    <div>
+                        <h2>SOURCE RELIABILITY SNAPSHOT</h2>
+                        <p className="section-copy">
+                            Recovery reports are now persisted locally, allowing the archive workspace to summarize which shard sources fail most often,
+                            which hosts appear healthiest, and where operators should focus future diagnostics.
+                        </p>
+                    </div>
+                </div>
+                <div className="leaderboard-grid">
+                    {sourceProfiles.slice(0, 8).map((profile) => (
+                        <div key={profile.host} className="leaderboard-card">
+                            <div className="leaderboard-owner">{profile.host}</div>
+                            <div className="leaderboard-score">FAILURES {profile.failures}</div>
+                            <div className="leaderboard-meta">SUCCESSFUL REPORTS: {profile.successfulReports}</div>
+                            <div className="leaderboard-meta">LATEST SEEN: {profile.latestSeen || 'UNKNOWN'}</div>
+                            <div className="leaderboard-meta">
+                                {Object.entries(profile.categories).map(([category, count]) => `${category}:${count}`).join(' • ') || 'NO FAILURE CATEGORIES'}
+                            </div>
+                        </div>
+                    ))}
+                    {sourceProfiles.length === 0 && <p className="empty">NO RECOVERY REPORTS HAVE BEEN CAPTURED YET.</p>}
                 </div>
             </div>
 

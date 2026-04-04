@@ -136,6 +136,43 @@ func TestProcessBlockNormalModeDoesNotDeadlockOnMerkleUpdate(t *testing.T) {
 	}
 }
 
+func TestProcessBlockRollsBackStateWhenPersistenceFails(t *testing.T) {
+	keys := DeriveKeypair("semantic parity rollback", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+	if err := l.db.db.Close(); err != nil {
+		t.Fatalf("failed to close test db: %v", err)
+	}
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     1,
+	}
+	signTestBlock(t, genesis, keys["privateKey"])
+
+	err := l.ProcessBlock(genesis, false)
+	if err == nil || !strings.Contains(err.Error(), "failed to persist block") {
+		t.Fatalf("expected persistence failure, got %v", err)
+	}
+	if len(l.Chains) != 0 {
+		t.Fatalf("expected chains to roll back after persistence failure, got %d", len(l.Chains))
+	}
+	if len(l.Blocks) != 0 {
+		t.Fatalf("expected blocks to roll back after persistence failure, got %d", len(l.Blocks))
+	}
+	if l.StateHash != strings.Repeat("0", 64) {
+		t.Fatalf("expected zeroed state hash after rollback, got %s", l.StateHash)
+	}
+	if l.MerkleRoot != strings.Repeat("0", 64) {
+		t.Fatalf("expected zeroed merkle root after rollback, got %s", l.MerkleRoot)
+	}
+}
+
 func TestAuditStateRebuildsDerivedAnchorState(t *testing.T) {
 	keys := DeriveKeypair("semantic parity audit", 0)
 	l := NewLattice(NewDBManager(":memory:"))

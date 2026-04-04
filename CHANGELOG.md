@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.21.0] - 2026-04-04
+
+### Added
+- Go regression coverage for persistence rollback behavior, ensuring failed disk writes do not leave partially-applied in-memory consensus state behind.
+
+### Changed
+- Hardened `ProcessBlock()` so a failed `SaveBlock()` now triggers in-memory rollback followed by state reconstruction via audit.
+- Strengthened semantic parity protection by asserting that failed persistence cannot leave residual chains, blocks, state hashes, or merkle roots behind.
+
+### Validation
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.20.0] - 2026-04-04
 
 ### Added

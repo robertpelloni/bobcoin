@@ -28,6 +28,7 @@
   - As of v8.19.0, the Go `AuditState()` routine no longer only loops over existing maps; it replays ordered blocks onto a shadow lattice and re-derives runtime state from history.
   - Legacy anchor/manifest blocks may contain payloads that were historically mutated with derived fields (`id`, `owner`, `timestamp`, `type`) after signing, so audit hash checks must tolerate and normalize that legacy condition.
   - A latent merkle deadlock was identified in normal-mode block processing when a locked write path attempted to call a merkle helper that re-acquired a read lock. Internal lock-free merkle derivation should be used from locked callers.
+  - As of v8.21.0, failed Go persistence writes are expected to roll back in-memory state and trigger audit-based reconstruction rather than leaving partially-applied consensus mutations resident in memory.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

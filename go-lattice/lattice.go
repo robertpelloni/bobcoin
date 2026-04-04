@@ -657,6 +657,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	// 8. Persist to Disk
 	if !isRecovery {
 		if err := l.db.SaveBlock(block); err != nil {
+			if rollbackErr := l.rollbackUnpersistedBlock(block); rollbackErr != nil {
+				return fmt.Errorf("failed to persist block: %v (rollback failed: %v)", err, rollbackErr)
+			}
 			return fmt.Errorf("failed to persist block: %v", err)
 		}
 	}
@@ -696,6 +699,20 @@ func deterministicMultisigAddress(participants []string) string {
 		return address[:44]
 	}
 	return address
+}
+
+func (l *Lattice) rollbackUnpersistedBlock(block *Block) error {
+	chain := l.Chains[block.Account]
+	if len(chain) > 0 && chain[len(chain)-1].Hash == block.Hash {
+		chain = chain[:len(chain)-1]
+		if len(chain) == 0 {
+			delete(l.Chains, block.Account)
+		} else {
+			l.Chains[block.Account] = chain
+		}
+	}
+	delete(l.Blocks, block.Hash)
+	return l.AuditState()
 }
 
 func (l *Lattice) GetStateSnapshot() map[string]interface{} {

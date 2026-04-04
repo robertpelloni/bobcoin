@@ -1,143 +1,57 @@
-# Session Handoff - 2026-04-04 (v8.20.0)
+# Session Handoff - 2026-04-04 (v8.21.0)
 
 ## Executive Summary
-This session continued the Go-port campaign while preserving newer upstream archive work that landed concurrently on `origin/main`. The result is a merged branch where:
-- the newer degraded recovery diagnostics work remains intact,
-- the signed publisher metadata work remains intact,
-- the Vault trust/reputation overlay work remains intact,
-- the archive discovery and provenance work remains intact,
-- the archive reuse work across Storage Market and Gallery remains intact,
-- and the Go lattice gains a more trustworthy semantic audit engine rather than only accumulating more routes and block types.
+This session continued the Go-port hardening effort with a narrower but important target: consistency under failure.
 
-This was the recommended next move after the last parity pass: shift from feature-count parity toward confidence in reconstructed state semantics, and while doing so preserve the newer upstream archive UX work instead of regressing it.
+The previous passes improved route parity, block-type parity, audit replay, and derived-state reconstruction. This pass addressed a remaining semantic integrity issue in the Go lattice: what happens if persistence fails after in-memory state has already been mutated.
 
-## Remote/Rebase Context
-A direct push was rejected because `origin/main` advanced with upstream archive improvements that added degraded restore diagnostics and parity-testing controls in the browser restore flow.
+That is now materially stronger.
 
-That upstream work was preserved. This pass was rebased on top of it and promoted to `v8.20.0` so the branch now contains both:
-- richer restore diagnostics and archive UX upstream work, and
-- deeper Go semantic audit hardening.
+## What Changed
 
-## What This Pass Added
-
-### 1. Audit engine rewritten around deterministic shadow replay
+### 1. Persistence failure rollback hardening
 **Files:**
 - `go-lattice/lattice.go`
 
-The most important change in this session is the rewrite of `AuditState()`.
+Previously, the Go lattice could reach a dangerous state transition sequence:
+- mutate in-memory runtime state
+- append the block to chains/maps
+- attempt persistence
+- if persistence failed, return an error
 
-### Previous behavior
-The older audit path primarily:
-- iterated existing account chains
-- checked signature validity
-- checked per-chain height continuity
-- recomputed a cumulative state hash while trusting already-materialized runtime maps
+That pattern risked leaving partially-applied state in memory even though the block never reached durable storage.
 
-That was not strong enough for semantic parity confidence because it did not prove that pending state, anchor indexes, vote maps, market state, and other derived structures could actually be reconstructed from history.
+This session hardened that path so that if `SaveBlock()` fails:
+- the just-applied block is removed from chain/block indexes
+- rollback is followed by `AuditState()` reconstruction
+- derived state is rebuilt from surviving history
+- the failed block no longer pollutes live in-memory consensus state
 
-### New behavior
-The new audit path now:
-- gathers all blocks from all chains
-- verifies signature validity and height continuity before replay
-- verifies block hash validity with compatibility support for older mutated anchor payloads
-- sorts blocks deterministically by timestamp, height, account, and hash
-- replays them on a fresh shadow Go lattice
-- rebuilds derived runtime state from historical chain data
-- replaces live derived maps with the shadow-derived results once replay succeeds
+This is a strong correctness improvement for crash/failure semantics.
 
-This is a material architectural strengthening. The Go lattice now verifies not just that chains exist, but that operational state implied by those chains is reproducible from history.
-
-### 2. Derived-state reconstruction now covers the important runtime maps
-**Files:**
-- `go-lattice/lattice.go`
-
-The audit replay now re-derives:
-- pending transactions
-- proposals
-- votes
-- market bids
-- swaps
-- NFTs
-- anchors
-- multisigs
-- AMM pool state
-- state hash
-- merkle root
-
-This matters because many Node-vs-Go parity failures show up in derived maps and indexes rather than in the first validation branch of a block processor.
-
-### 3. Recovery now reports invalid persisted blocks honestly
-**Files:**
-- `go-lattice/lattice.go`
-
-Cold-boot recovery was improved so it now:
-- logs replay failures per block
-- skips invalid recovered blocks explicitly
-- reports the actual number of successfully restored blocks
-
-That makes recovery behavior more diagnosable and less misleading.
-
-### 4. Legacy anchor/manifest hash compatibility hardening
-**Files:**
-- `go-lattice/lattice.go`
-
-A subtle historical issue surfaced during the audit rewrite.
-
-Problem:
-- earlier Go handling of `data_anchor` / `publish_manifest` could mutate payload maps by injecting derived fields such as:
-  - `id`
-  - `owner`
-  - `timestamp`
-  - `type`
-- those fields were not part of the original signed payload
-- later hash verification during audit could therefore fail even when the block had originally been valid
-
-Fixes:
-- new processing no longer mutates the original block payload when indexing anchors
-- audit hash verification now includes a legacy-compatibility path that strips those derived fields for older anchor/manifest records before comparing hashes
-
-This preserves old data while fixing forward behavior.
-
-### 5. Merkle deadlock hardening
-**Files:**
-- `go-lattice/merkle.go`
-- `go-lattice/lattice.go`
-
-A latent runtime issue was identified and corrected:
-- normal-mode block processing could deadlock when the code attempted to derive a merkle root through a helper that re-acquired a read lock while the writer lock was already held
-- the merkle code is now split so locked callers can use a lock-free internal derivation path safely
-
-This was important because it was a real runtime correctness issue, not just a theoretical style concern.
-
-### 6. Additional Go parity tests
+### 2. New regression test for rollback correctness
 **Files:**
 - `go-lattice/lattice_parity_test.go`
 
-Added or expanded tests for:
-- deterministic multisig address stability
-- snapshot parity map inclusion
-- invalid block-type rejection after a valid genesis open block
-- audit-time reconstruction of anchor state from chain history
-- normal-mode block processing reaching merkle derivation without deadlock
+Added a Go test that intentionally closes the underlying SQLite handle and then submits a block in normal mode.
 
-These tests are still not full protocol-coverage tests, but they are more aligned with the real parity risks than earlier minimal helper checks.
+The test verifies:
+- persistence fails as expected
+- chains are rolled back
+- blocks are rolled back
+- state hash returns to the zero state
+- merkle root returns to the zero state
 
-### 7. Internal ephemeral lattice constructor
-**Files:**
-- `go-lattice/lattice.go`
+That gives us explicit regression coverage for a real failure mode instead of assuming the rollback path works.
 
-Added an internal ephemeral/shadow lattice constructor to support:
-- deterministic audit replay
-- isolated state reconstruction
-- cleaner parity-oriented tests without persistence side effects
+### 3. Previous audit hardening retained
+This pass builds on the prior semantic audit improvements already in place:
+- shadow-lattice replay during `AuditState()`
+- deterministic ordered replay
+- legacy anchor/manifest hash compatibility
+- lock-safe merkle derivation
 
-### 8. Version/status updates
-**Files:**
-- `go-lattice/main.go`
-- `VERSION.md`
-- `CHANGELOG.md`
-
-The repo version and Go node status string were advanced to `v8.20.0`.
+The new rollback behavior benefits directly from that stronger audit path, because rollback repair now depends on the audit engine being able to reconstruct correct derived state from surviving history.
 
 ## Validation Performed
 
@@ -159,22 +73,23 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- large bundle warnings remain non-fatal
+- bundle-size warnings remain non-fatal
 
-## What This Means Architecturally
-This session still does not justify claiming Bobcoin is now a complete all-Go platform.
+## Architectural Meaning
+This is another step away from superficial parity and toward operational trustworthiness.
 
-However, it does materially improve one of the most important foundations of that transition:
-- Go is no longer only collecting route/block parity
-- Go is becoming more trustworthy at reconstructing and auditing its own semantic state from history
-- a real merkle deadlock hazard in the Go execution path has been removed
+The Go lattice now has stronger answers for all of the following classes of questions:
+- can it reconstruct runtime state from history?
+- can it survive legacy historical quirks?
+- can it avoid deadlocking during merkle updates?
+- can it avoid leaving poisoned in-memory state after failed persistence?
 
-That is a more meaningful step than simply adding more endpoints.
+That is exactly the kind of hardening required before claiming the Go core is a serious replacement candidate.
 
 ## Remaining Gaps
 The largest remaining honest gaps are still:
 1. **Governance finalization semantics**
-   - proposal closure/finalization still needs a true 1:1 treatment
+   - proposal closure/finalization still needs a real 1:1 treatment
 2. **Economic semantic reconciliation**
    - `accept_bid`
    - `data_anchor` economics
@@ -185,14 +100,15 @@ The largest remaining honest gaps are still:
 4. **Deeper Go regression coverage**
    - swaps
    - NFT transfer
-   - publish-manifest history replay
+   - publish-manifest replay
    - mixed historical ledgers
+   - economic edge cases
 
 ## Recommended Next Move
 The next best move remains:
-1. deep semantic Node-vs-Go comparison of remaining economic and edge-case behavior
-2. broader parity-focused Go regression tests for the newly ported flows
-3. an explicit architectural decision about whether `game-server` and `supertorrent` remain intentionally Node-native or are to be ported into Go
+1. deeper Node-vs-Go economic/edge-case reconciliation, especially `accept_bid` and `data_anchor`
+2. broader parity-focused Go tests for replay and mixed-history behavior
+3. an explicit architectural decision on whether `game-server` and `supertorrent` remain intentionally Node-native or should be ported into Go
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -201,8 +117,6 @@ The next best move remains:
 - `MEMORY.md`
 - `HANDOFF.md`
 - `go-lattice/lattice.go`
-- `go-lattice/main.go`
-- `go-lattice/merkle.go`
 - `go-lattice/lattice_parity_test.go`
 
 ## Operational Note

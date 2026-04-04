@@ -66,6 +66,42 @@ func TestGetStateSnapshotIncludesParityMaps(t *testing.T) {
 	}
 }
 
+func TestSecondSystemGenesisBootstrapIsRejected(t *testing.T) {
+	keysA := DeriveKeypair("semantic parity genesis a", 0)
+	keysB := DeriveKeypair("semantic parity genesis b", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesisA := &Block{
+		Type:          "open",
+		Account:       keysA["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     1,
+	}
+	signTestBlock(t, genesisA, keysA["privateKey"])
+	if err := l.ProcessBlock(genesisA, true); err != nil {
+		t.Fatalf("expected first genesis block to succeed, got %v", err)
+	}
+
+	genesisB := &Block{
+		Type:          "open",
+		Account:       keysB["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     2,
+	}
+	signTestBlock(t, genesisB, keysB["privateKey"])
+	if err := l.ProcessBlock(genesisB, true); err == nil {
+		t.Fatalf("expected second system genesis bootstrap to be rejected")
+	}
+}
+
 func TestProcessBlockRejectsInvalidTypeAfterGenesis(t *testing.T) {
 	keys := DeriveKeypair("semantic parity invalid type", 0)
 	l := NewLattice(NewDBManager(":memory:"))
@@ -170,6 +206,22 @@ func TestProcessBlockRollsBackStateWhenPersistenceFails(t *testing.T) {
 	}
 	if l.MerkleRoot != strings.Repeat("0", 64) {
 		t.Fatalf("expected zeroed merkle root after rollback, got %s", l.MerkleRoot)
+	}
+}
+
+func TestRefreshProposalStatusesFinalizesExpiredProposal(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	l.Proposals["proposal-1"] = map[string]interface{}{
+		"id":           "proposal-1",
+		"status":       "Active",
+		"votesFor":     4.0,
+		"votesAgainst": 1.0,
+		"endTime":      time.Now().Add(-time.Hour).Format(time.RFC3339),
+	}
+	l.refreshProposalStatusesAt(time.Now())
+	proposal := l.Proposals["proposal-1"].(map[string]interface{})
+	if proposal["status"] != "Passed" {
+		t.Fatalf("expected expired proposal to finalize as Passed, got %v", proposal["status"])
 	}
 }
 

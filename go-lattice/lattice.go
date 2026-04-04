@@ -151,6 +151,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		return errors.New("invalid block signature")
 	}
 
+	isGenesisBootstrap := block.Type == "open" && block.Link == "SYSTEM_GENESIS" && len(l.Chains) == 0
+
 	// 1.5 ZK-Proof Verification (for Minting blocks)
 	if block.Type == "receive" && block.Link == "SYSTEM_MINT" {
 		if block.ZKProof == "" {
@@ -160,8 +162,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	}
 
 	// 1.6 SPoRA Verification (Succinct Proof of Random Access)
-	// Bypassed for SYSTEM_GENESIS bootstrapping
-	if !(block.Type == "open" && block.Link == "SYSTEM_GENESIS") {
+	// Bypassed only for the single system genesis bootstrapping block.
+	if !isGenesisBootstrap {
 		if block.Spora == nil || block.Spora.InfoHash == "" || block.Spora.ChunkHash == "" {
 			return errors.New("missing or invalid SPoRA proof. Must seed Bobtorrent to mine")
 		}
@@ -231,6 +233,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	}
 
 	// 4. Consensus Rules (Balance, etc)
+	l.refreshProposalStatusesAt(time.UnixMilli(block.Timestamp))
 	epsilon := 0.001
 	prevBalance := 0.0
 	if head != nil {
@@ -261,7 +264,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			})
 		}
 	} else if block.Type == "receive" || block.Type == "open" {
-		if block.Type == "open" && block.Link == "SYSTEM_GENESIS" {
+		if isGenesisBootstrap {
 			// Genesis bootstrap open block bypasses pending-receive requirements.
 		} else {
 			list := l.Pending[block.Account]
@@ -699,6 +702,34 @@ func deterministicMultisigAddress(participants []string) string {
 		return address[:44]
 	}
 	return address
+}
+
+func (l *Lattice) refreshProposalStatusesAt(at time.Time) {
+	for _, proposalRaw := range l.Proposals {
+		proposal, ok := proposalRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		status, _ := proposal["status"].(string)
+		if status != "Active" {
+			continue
+		}
+		endTime, _ := proposal["endTime"].(string)
+		if endTime == "" {
+			continue
+		}
+		parsed, err := time.Parse(time.RFC3339, endTime)
+		if err != nil || at.Before(parsed) {
+			continue
+		}
+		votesFor, _ := proposal["votesFor"].(float64)
+		votesAgainst, _ := proposal["votesAgainst"].(float64)
+		if votesFor > votesAgainst {
+			proposal["status"] = "Passed"
+		} else {
+			proposal["status"] = "Rejected"
+		}
+	}
 }
 
 func (l *Lattice) rollbackUnpersistedBlock(block *Block) error {

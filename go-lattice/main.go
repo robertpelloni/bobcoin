@@ -134,7 +134,7 @@ func main() {
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":     "online",
-		"engine":     "Go-Lattice v8.20.0",
+		"engine":     "Go-Lattice v8.23.0",
 		"stateHash":  lattice.StateHash,
 		"merkleRoot": lattice.MerkleRoot,
 		"accounts":   len(lattice.Chains),
@@ -325,23 +325,25 @@ func handleAccountAnchors(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleProposals(w http.ResponseWriter, r *http.Request) {
-	lattice.mu.RLock()
-	defer lattice.mu.RUnlock()
+	lattice.mu.Lock()
+	lattice.refreshProposalStatusesAt(time.Now())
 	proposals := make([]interface{}, 0, len(lattice.Proposals))
 	for _, proposal := range lattice.Proposals {
 		proposals = append(proposals, proposal)
 	}
+	lattice.mu.Unlock()
 	json.NewEncoder(w).Encode(proposals)
 }
 
 func handleVotes(w http.ResponseWriter, r *http.Request) {
 	proposalHash := r.URL.Path[len("/votes/"):]
-	lattice.mu.RLock()
-	defer lattice.mu.RUnlock()
+	lattice.mu.Lock()
+	lattice.refreshProposalStatusesAt(time.Now())
 	votes := lattice.Votes[proposalHash]
 	if votes == nil {
 		votes = map[string]map[string]interface{}{}
 	}
+	lattice.mu.Unlock()
 	json.NewEncoder(w).Encode(votes)
 }
 

@@ -33,6 +33,25 @@ function uint8ArrayToBase64(bytes) {
     return btoa(binary);
 }
 
+function classifyFailureReason(reason) {
+    const lower = String(reason || '').toLowerCase();
+    if (lower.includes('manually omitted')) return 'operator_omission';
+    if (lower.includes('hash mismatch')) return 'integrity_mismatch';
+    if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('fetch')) return 'network_fetch_failure';
+    if (lower.includes('404') || lower.includes('not found')) return 'missing_shard';
+    return 'unknown_failure';
+}
+
+function sourceHostFromReference(ref) {
+    try {
+        if (!ref) return null;
+        const url = new URL(ref);
+        return url.host;
+    } catch {
+        return null;
+    }
+}
+
 function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes }) {
     return {
         generatedAt: new Date().toISOString(),
@@ -56,6 +75,7 @@ function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo,
             availableCount: restoreDiagnostics?.availableCount ?? null,
             missingCount: restoreDiagnostics?.missingCount ?? null,
             recoverable: restoreDiagnostics?.recoverable ?? false,
+            failureSummary: restoreDiagnostics?.failureSummary || {},
             failedShards: restoreDiagnostics?.failedShards || [],
             restoredFile: restoredInfo || null,
         },
@@ -268,24 +288,46 @@ export function StorageWasmWorkbench() {
 
             for (let i = 0; i < shardEntries.length; i++) {
                 const shard = shardEntries[i];
+                const sourceReference = shard.url || shard.hash;
+                const sourceHost = sourceHostFromReference(sourceReference);
                 if (omittedSet.has(shard.index)) {
-                    failedShards.push({ index: shard.index, reason: 'manually omitted for recovery test' });
+                    failedShards.push({
+                        index: shard.index,
+                        source: sourceReference,
+                        sourceHost,
+                        category: 'operator_omission',
+                        reason: 'manually omitted for recovery test',
+                    });
                     shards[shard.index] = null;
                     continue;
                 }
 
                 setRestoreState(`Downloading shard ${i + 1} / ${shardEntries.length}...`);
                 try {
-                    const bytes = await getPublishedShard(shard.url || shard.hash);
+                    const bytes = await getPublishedShard(sourceReference);
                     const computedHash = await sha256Hex(bytes);
                     if (computedHash !== shard.hash) {
-                        failedShards.push({ index: shard.index, reason: `hash mismatch (${computedHash.slice(0, 12)}...)` });
+                        failedShards.push({
+                            index: shard.index,
+                            source: sourceReference,
+                            sourceHost,
+                            category: 'integrity_mismatch',
+                            expectedHash: shard.hash,
+                            actualHash: computedHash,
+                            reason: `hash mismatch (${computedHash.slice(0, 12)}...)`,
+                        });
                         shards[shard.index] = null;
                         continue;
                     }
                     shards[shard.index] = bytes;
                 } catch (error) {
-                    failedShards.push({ index: shard.index, reason: error.message });
+                    failedShards.push({
+                        index: shard.index,
+                        source: sourceReference,
+                        sourceHost,
+                        category: classifyFailureReason(error.message),
+                        reason: error.message,
+                    });
                     shards[shard.index] = null;
                 }
             }
@@ -294,6 +336,10 @@ export function StorageWasmWorkbench() {
             const dataShards = loadedManifest.erasure?.dataShards || 4;
             const parityShards = loadedManifest.erasure?.parityShards || 2;
             const recoverable = availableCount >= dataShards;
+            const failureSummary = failedShards.reduce((acc, failure) => {
+                acc[failure.category] = (acc[failure.category] || 0) + 1;
+                return acc;
+            }, {});
 
             setRestoreDiagnostics({
                 totalShards: shardEntries.length,
@@ -302,6 +348,7 @@ export function StorageWasmWorkbench() {
                 availableCount,
                 missingCount: shardEntries.length - availableCount,
                 recoverable,
+                failureSummary,
                 failedShards,
             });
 
@@ -671,11 +718,20 @@ export function StorageWasmWorkbench() {
                         <div style={{ color: '#bbb', fontSize: '0.9rem' }}>
                             MISSING OR INVALID SHARDS: <span style={{ color: '#fff' }}>{restoreDiagnostics.missingCount}</span>
                         </div>
+                        {restoreDiagnostics.failureSummary && Object.keys(restoreDiagnostics.failureSummary).length > 0 && (
+                            <div style={{ marginTop: '0.85rem', color: '#bbb', fontSize: '0.85rem' }}>
+                                {Object.entries(restoreDiagnostics.failureSummary).map(([category, count]) => (
+                                    <div key={category} style={{ marginBottom: '0.25rem' }}>
+                                        {category.toUpperCase()}: <span style={{ color: '#fff' }}>{count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {restoreDiagnostics.failedShards?.length > 0 && (
                             <div style={{ marginTop: '0.85rem' }}>
                                 {restoreDiagnostics.failedShards.map((failure) => (
                                     <div key={`${failure.index}-${failure.reason}`} style={{ color: '#888', fontSize: '0.82rem', fontFamily: 'monospace', marginBottom: '0.3rem' }}>
-                                        SHARD #{failure.index}: {failure.reason}
+                                        SHARD #{failure.index} [{failure.category}] via {failure.sourceHost || 'unknown-source'}: {failure.reason}
                                     </div>
                                 ))}
                             </div>

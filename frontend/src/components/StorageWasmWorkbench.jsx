@@ -49,6 +49,8 @@ export function StorageWasmWorkbench() {
     const [loadedManifest, setLoadedManifest] = useState(null);
     const [restoreState, setRestoreState] = useState('');
     const [restoredInfo, setRestoredInfo] = useState(null);
+    const [restoreDiagnostics, setRestoreDiagnostics] = useState(null);
+    const [omittedShardIndexes, setOmittedShardIndexes] = useState('');
     const [anchoring, setAnchoring] = useState(false);
     const [anchorState, setAnchorState] = useState('');
     const [anchoredResult, setAnchoredResult] = useState(null);
@@ -196,6 +198,7 @@ export function StorageWasmWorkbench() {
 
         setRestoreState('Loading manifest...');
         setRestoredInfo(null);
+        setRestoreDiagnostics(null);
         try {
             const fetched = await getPublishedManifest(manifestRef.trim());
             setLoadedManifest(fetched);
@@ -216,21 +219,63 @@ export function StorageWasmWorkbench() {
         setRestoring(true);
         setRestoreState('Fetching shards...');
         setRestoredInfo(null);
+        setRestoreDiagnostics(null);
 
         try {
             const client = await createStorageWasmClient();
             const shardEntries = [...(loadedManifest.erasure?.shards || [])].sort((a, b) => a.index - b.index);
             const shards = [];
+            const failedShards = [];
+            const omittedSet = new Set(
+                omittedShardIndexes
+                    .split(',')
+                    .map(v => v.trim())
+                    .filter(Boolean)
+                    .map(v => Number(v))
+                    .filter(v => Number.isInteger(v) && v >= 0)
+            );
 
             for (let i = 0; i < shardEntries.length; i++) {
                 const shard = shardEntries[i];
-                setRestoreState(`Downloading shard ${i + 1} / ${shardEntries.length}...`);
-                const bytes = await getPublishedShard(shard.url || shard.hash);
-                const computedHash = await sha256Hex(bytes);
-                if (computedHash !== shard.hash) {
-                    throw new Error(`Shard hash mismatch at index ${shard.index}: expected ${shard.hash}, got ${computedHash}`);
+                if (omittedSet.has(shard.index)) {
+                    failedShards.push({ index: shard.index, reason: 'manually omitted for recovery test' });
+                    shards[shard.index] = null;
+                    continue;
                 }
-                shards[shard.index] = bytes;
+
+                setRestoreState(`Downloading shard ${i + 1} / ${shardEntries.length}...`);
+                try {
+                    const bytes = await getPublishedShard(shard.url || shard.hash);
+                    const computedHash = await sha256Hex(bytes);
+                    if (computedHash !== shard.hash) {
+                        failedShards.push({ index: shard.index, reason: `hash mismatch (${computedHash.slice(0, 12)}...)` });
+                        shards[shard.index] = null;
+                        continue;
+                    }
+                    shards[shard.index] = bytes;
+                } catch (error) {
+                    failedShards.push({ index: shard.index, reason: error.message });
+                    shards[shard.index] = null;
+                }
+            }
+
+            const availableCount = shards.filter(Boolean).length;
+            const dataShards = loadedManifest.erasure?.dataShards || 4;
+            const parityShards = loadedManifest.erasure?.parityShards || 2;
+            const recoverable = availableCount >= dataShards;
+
+            setRestoreDiagnostics({
+                totalShards: shardEntries.length,
+                dataShards,
+                parityShards,
+                availableCount,
+                missingCount: shardEntries.length - availableCount,
+                recoverable,
+                failedShards,
+            });
+
+            if (!recoverable) {
+                throw new Error(`Insufficient shards for recovery: have ${availableCount}, need at least ${dataShards}.`);
             }
 
             setRestoreState('Reconstructing ciphertext via Reed-Solomon...');
@@ -254,8 +299,9 @@ export function StorageWasmWorkbench() {
                 filename,
                 size: restoredBytes.length,
                 hash: restoredHash,
+                recoveredWithParity: failedShards.length > 0,
             });
-            setRestoreState('Restore complete. File downloaded locally.');
+            setRestoreState(failedShards.length > 0 ? 'Restore complete via parity reconstruction. File downloaded locally.' : 'Restore complete. File downloaded locally.');
         } catch (error) {
             console.error(error);
             setRestoreState('');
@@ -522,6 +568,21 @@ export function StorageWasmWorkbench() {
                     </button>
                 </div>
 
+                <div style={{ marginBottom: '1rem', padding: '0.9rem', background: '#0b0b0b', border: '1px solid #1e1e1e' }}>
+                    <div style={{ color: '#888', marginBottom: '0.5rem' }}>DEGRADED RECOVERY TEST (OPTIONAL)</div>
+                    <input
+                        type="text"
+                        value={omittedShardIndexes}
+                        onChange={(e) => setOmittedShardIndexes(e.target.value)}
+                        placeholder="Comma-separated shard indexes to omit during restore, e.g. 1,4"
+                        className="cyber-input"
+                        style={{ width: '100%' }}
+                    />
+                    <div style={{ color: '#666', fontSize: '0.8rem', marginTop: '0.45rem' }}>
+                        Use this to simulate missing shards and verify that parity reconstruction still succeeds when enough shards remain.
+                    </div>
+                </div>
+
                 {restoreState && <div style={{ marginBottom: '1rem', color: '#0ff', fontSize: '0.9rem' }}>{restoreState}</div>}
 
                 {loadedManifest && (
@@ -543,9 +604,37 @@ export function StorageWasmWorkbench() {
                     </div>
                 )}
 
+                {restoreDiagnostics && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#101010', border: `1px solid ${restoreDiagnostics.recoverable ? '#0f0' : '#ff0055'}` }}>
+                        <div style={{ color: restoreDiagnostics.recoverable ? '#0f0' : '#ff0055', fontWeight: 700, marginBottom: '0.5rem' }}>
+                            RECOVERY DIAGNOSTICS: {restoreDiagnostics.recoverable ? 'PARITY SUFFICIENT' : 'PARITY INSUFFICIENT'}
+                        </div>
+                        <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                            AVAILABLE SHARDS: <span style={{ color: '#fff' }}>{restoreDiagnostics.availableCount}</span> / {restoreDiagnostics.totalShards}
+                        </div>
+                        <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                            REQUIRED DATA SHARDS: <span style={{ color: '#fff' }}>{restoreDiagnostics.dataShards}</span> | PARITY SHARDS: {restoreDiagnostics.parityShards}
+                        </div>
+                        <div style={{ color: '#bbb', fontSize: '0.9rem' }}>
+                            MISSING OR INVALID SHARDS: <span style={{ color: '#fff' }}>{restoreDiagnostics.missingCount}</span>
+                        </div>
+                        {restoreDiagnostics.failedShards?.length > 0 && (
+                            <div style={{ marginTop: '0.85rem' }}>
+                                {restoreDiagnostics.failedShards.map((failure) => (
+                                    <div key={`${failure.index}-${failure.reason}`} style={{ color: '#888', fontSize: '0.82rem', fontFamily: 'monospace', marginBottom: '0.3rem' }}>
+                                        SHARD #{failure.index}: {failure.reason}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {restoredInfo && (
                     <div style={{ marginTop: '1rem', padding: '1rem', background: '#091109', border: '1px solid #0f0' }}>
-                        <div style={{ color: '#0f0', fontWeight: 700, marginBottom: '0.5rem' }}>RESTORE COMPLETE</div>
+                        <div style={{ color: '#0f0', fontWeight: 700, marginBottom: '0.5rem' }}>
+                            RESTORE COMPLETE {restoredInfo.recoveredWithParity ? '(PARITY RECOVERY)' : ''}
+                        </div>
                         <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>FILENAME: <span style={{ color: '#fff' }}>{restoredInfo.filename}</span></div>
                         <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>SIZE: <span style={{ color: '#fff' }}>{restoredInfo.size} bytes</span></div>
                         <div style={{ color: '#bbb', fontSize: '0.9rem' }}>RESTORED SHA-256: <code style={{ color: '#0ff' }}>{restoredInfo.hash}</code></div>

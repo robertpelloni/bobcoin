@@ -23,6 +23,16 @@ function short(value, length = 14) {
     return value.length > length ? `${value.slice(0, length)}...` : value;
 }
 
+function downloadJson(filename, value) {
+    const blob = new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 function matchesSearch(anchor, query) {
     if (!query) return true;
     const haystack = [
@@ -277,6 +287,59 @@ export function Vault() {
         persistPresets(savedPresets.filter(p => p.name !== name));
     };
 
+    const exportPresets = () => {
+        downloadJson('vault-filter-presets.json', {
+            exportedAt: new Date().toISOString(),
+            presets: savedPresets,
+        });
+    };
+
+    const importPresets = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            const parsed = JSON.parse(await file.text());
+            const imported = Array.isArray(parsed) ? parsed : (parsed.presets || []);
+            const sanitized = imported
+                .filter(p => p && typeof p.name === 'string')
+                .map(p => ({
+                    name: p.name,
+                    search: p.search || '',
+                    typeFilter: p.typeFilter || 'all',
+                    networkSearch: p.networkSearch || '',
+                    showOnlySigned: !!p.showOnlySigned,
+                    sortMode: p.sortMode || 'recent',
+                    groupMode: p.groupMode || 'none',
+                }));
+            persistPresets(sanitized);
+        } catch (error) {
+            alert(`Failed to import presets: ${error.message}`);
+        } finally {
+            event.target.value = '';
+        }
+    };
+
+    const exportVisibleArchive = () => {
+        downloadJson('vault-visible-archive.json', {
+            exportedAt: new Date().toISOString(),
+            filters: { search, typeFilter, networkSearch, showOnlySigned, sortMode, groupMode },
+            owned: filteredOwnedEntries,
+            network: filteredNetworkAnchors.slice(0, 12),
+        });
+    };
+
+    const copyVisibleLocators = async () => {
+        const locators = [...filteredOwnedEntries, ...filteredNetworkAnchors.slice(0, 12)]
+            .map(anchor => anchor.locator || anchor.magnet)
+            .filter(Boolean);
+        if (locators.length === 0) {
+            alert('No visible locators to copy.');
+            return;
+        }
+        await navigator.clipboard.writeText(locators.join('\n'));
+        alert(`Copied ${locators.length} locator(s) to clipboard.`);
+    };
+
     const refresh = async (pubkey) => {
         setLoading(true);
         setError('');
@@ -447,12 +510,21 @@ export function Vault() {
                         onChange={(e) => setPresetName(e.target.value)}
                     />
                     <button className="cyber-button small" onClick={savePreset}>SAVE PRESET</button>
+                    <button className="cyber-button small secondary" onClick={exportPresets}>EXPORT PRESETS</button>
+                    <label className="vault-import-label">
+                        <span className="cyber-button small secondary">IMPORT PRESETS</span>
+                        <input type="file" accept="application/json" onChange={importPresets} />
+                    </label>
                     {savedPresets.map((preset) => (
                         <div key={preset.name} className="vault-preset-chip">
                             <button className="cyber-button small secondary" onClick={() => applyPreset(preset)}>{preset.name}</button>
                             <button className="chip-delete" onClick={() => deletePreset(preset.name)} title="Delete preset">×</button>
                         </div>
                     ))}
+                </div>
+                <div className="vault-batch-row">
+                    <button className="cyber-button small secondary" onClick={exportVisibleArchive}>EXPORT VISIBLE ARCHIVE</button>
+                    <button className="cyber-button small secondary" onClick={copyVisibleLocators}>COPY VISIBLE LOCATORS</button>
                 </div>
             </div>
 

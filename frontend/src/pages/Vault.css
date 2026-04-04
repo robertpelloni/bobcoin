@@ -119,6 +119,25 @@
     padding: 0.2rem;
 }
 
+.vault-import-label {
+    position: relative;
+    display: inline-flex;
+}
+
+.vault-import-label input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.vault-batch-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
 .chip-delete {
     border: none;
     background: transparent;

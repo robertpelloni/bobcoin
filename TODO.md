@@ -36,6 +36,7 @@
 - [x] **Publisher Profile Overlay (Frontend v12):** Added avatar/profile/proof-link metadata to manifest anchors and surfaced those linked identity cues inside Vault archive cards.
 - [x] **Exportable Recovery Reports (Frontend v13):** Added downloadable JSON recovery reports capturing shard failures, parity sufficiency, omitted-shard tests, and restored-file metadata.
 - [x] **Corruption/Source Attribution (Frontend v14):** Added shard failure categorization, source host attribution, and summarized failure counts inside restore diagnostics.
+- [x] **Batch Archive Actions (Frontend v15):** Added preset import/export plus batch export/copy actions for the currently visible archive result set.
 - [x] **Tooltips:** Ensured every button, input, and stat across major pages has a descriptive tooltip.
 - [x] **Mobile Responsiveness:** Audited the CSS and injected global media queries to ensure desktop dashboard views collapse gracefully on mobile screens.
 - [x] **Version Display:** Injected the global version string dynamically into the footer using Vite defines.

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.10.0] - 2026-04-03
+
+### Added
+- **Go Lattice Manifest Anchoring**: The `StorageWasmWorkbench` can now submit a signed `publish_manifest` block to the Go lattice after supernode publication, creating an attributable on-chain anchor for the manifest ID, locator, and manifest URL.
+- **Manifest Anchor Queries**: Added frontend support for fetching wallet-specific manifest anchors from the Go lattice.
+- **Anchor Activity UI**: The workbench now displays successful lattice anchor results and recent wallet-owned manifest anchors.
+
+### Changed
+- **Identity Binding**: Publication metadata is now tied to wallet identity through both the signed lattice block and an explicit `publicationProof` payload signature.
+
 ## [8.9.0] - 2026-04-03
 
 ### Added

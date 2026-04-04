@@ -1,4 +1,4 @@
-# Session Handoff - 2026-04-03 (v8.9.0)
+# Session Handoff - 2026-04-03 (v8.10.0)
 
 ## Overview
 This session extended the already-advanced Bobcoin production branch by adding a **browser-side Go storage WASM integration layer** to the frontend. The goal was to begin connecting the Bobcoin UI to the newer Bobtorrent Go storage stack without regressing the existing high-end Go-lattice / snapshot / wallet hardening work already present on `origin/main`.
@@ -101,18 +101,31 @@ Additional validation:
 - `cd frontend && npm run build`
 - result: ✅ build succeeds after retrieval-flow wiring
 
+## Follow-Up Progress (v8.10.0)
+The workbench now anchors published manifests on the Go lattice:
+- creates a signed `publish_manifest` block
+- ties the publication to wallet identity
+- stores the manifest ID / locator / manifest URL on-chain
+- exposes recent wallet-owned anchors back into the UI
+
+Additional validation:
+- `cd frontend && npm run build`
+- result: ✅ build still succeeds after manifest anchoring integration
+
 ## Recommended Next Step
-1. **Anchor manifest metadata on the lattice**
-   - publish manifest IDs into storage-market / NFT / dedicated manifest blocks
-   - preserve publication provenance on-chain
-2. **Add uploader authentication / signing**
-   - bind publications to Bobcoin wallet identity
-3. **Add richer retrieval options**
-   - partial/missing shard recovery UX
-   - optional integrity comparison against user-provided original hash
+1. **Anchor manifest IDs into broader app surfaces**
+   - storage-market payloads
+   - NFT metadata
+   - vault/archive views
+2. **Add degraded recovery UX**
+   - partial shard availability handling
+   - clearer recovery diagnostics
+3. **Expand provenance**
+   - richer signed metadata
+   - optional uploader profile / reputation overlays
 
 ## Summary
 - Upstream Bobcoin production features were preserved.
 - The Go storage WASM UI is now layered on top of them.
-- The workbench now supports both publication and restoration round-trips.
-- The next major integration point is **lattice anchoring + identity binding**.
+- The workbench now supports publication, restoration, and attributable lattice anchoring.
+- The next major integration point is **broader lattice-surface integration + richer provenance**.

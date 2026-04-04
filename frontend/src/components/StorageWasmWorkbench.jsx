@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getPublishedManifest, getPublishedShard, publishStorageManifest, uploadStorageShard } from '../api';
+import { getGoLatticeChain, getGoLatticeFrontier, getManifestAnchors, getPublishedManifest, getPublishedShard, publishStorageManifest, submitGoLatticeBlock, uploadStorageShard } from '../api';
+import { Block } from '../Block';
+import { hashData, signBlock } from '../cryptoUtils';
 import { createStorageWasmClient, probeStorageWasmAvailability, sha256Hex } from '../lib/storageWasm';
 
 function downloadJson(filename, value) {
@@ -47,6 +49,10 @@ export function StorageWasmWorkbench() {
     const [loadedManifest, setLoadedManifest] = useState(null);
     const [restoreState, setRestoreState] = useState('');
     const [restoredInfo, setRestoredInfo] = useState(null);
+    const [anchoring, setAnchoring] = useState(false);
+    const [anchorState, setAnchorState] = useState('');
+    const [anchoredResult, setAnchoredResult] = useState(null);
+    const [myAnchors, setMyAnchors] = useState([]);
 
     useEffect(() => {
         let active = true;
@@ -55,6 +61,7 @@ export function StorageWasmWorkbench() {
             setRuntimeStatus(result.available ? 'ready' : 'offline');
             setRuntimeError(result.error || '');
         });
+        refreshAnchors();
         return () => {
             active = false;
         };
@@ -62,6 +69,21 @@ export function StorageWasmWorkbench() {
 
     const shardPreview = useMemo(() => manifest?.erasure?.shards?.slice(0, 3) || [], [manifest]);
     const loadedShardPreview = useMemo(() => loadedManifest?.erasure?.shards?.slice(0, 3) || [], [loadedManifest]);
+
+    const refreshAnchors = async () => {
+        try {
+            const stored = localStorage.getItem('bobcoin_wallet');
+            if (!stored) {
+                setMyAnchors([]);
+                return;
+            }
+            const kp = JSON.parse(stored);
+            const result = await getManifestAnchors(kp.publicKey);
+            setMyAnchors(result.anchors || []);
+        } catch (error) {
+            console.error('Failed to refresh manifest anchors:', error);
+        }
+    };
 
     const handlePrepare = async () => {
         if (!file) {
@@ -240,6 +262,84 @@ export function StorageWasmWorkbench() {
         }
     };
 
+    const handleAnchorManifest = async () => {
+        const activeManifest = publishedResult?.manifest || manifest;
+        const manifestId = publishedResult?.id || activeManifest?.manifestId || activeManifest?.encryption?.ciphertextHash;
+        const locator = publishedResult?.locator || activeManifest?.locator || activeManifest?.experimentalLocator;
+        const manifestUrl = publishedResult?.manifestUrl || activeManifest?.manifestUrl;
+
+        if (!activeManifest || !manifestId || !locator || !manifestUrl) {
+            alert('Publish the manifest to the supernode before anchoring it on the lattice.');
+            return;
+        }
+
+        const stored = localStorage.getItem('bobcoin_wallet');
+        if (!stored) {
+            alert('Create or unlock a Bobcoin wallet before anchoring manifests.');
+            return;
+        }
+
+        setAnchoring(true);
+        setAnchorState('Preparing wallet-signed manifest anchor...');
+        try {
+            const keypair = JSON.parse(stored);
+            const frontier = await getGoLatticeFrontier(keypair.publicKey);
+            const chain = await getGoLatticeChain(keypair.publicKey);
+            if (!frontier?.frontier) {
+                throw new Error('The Go lattice does not yet know this wallet. Open or sync the account first.');
+            }
+
+            const proofMessage = [manifestId, locator, manifestUrl, activeManifest.publishedAt || Date.now()].join('|');
+            const proofHash = await hashData(proofMessage);
+            const proofSignature = await signBlock(proofHash, keypair.privateKey);
+
+            const block = new Block({
+                type: 'publish_manifest',
+                account: keypair.publicKey,
+                previous: frontier.frontier,
+                balance: frontier.balance || 0,
+                link: manifestId,
+                payload: {
+                    manifestId,
+                    locator,
+                    manifestUrl,
+                    name: activeManifest.source?.name || 'unnamed.bin',
+                    size: activeManifest.source?.size || 0,
+                    ciphertextHash: activeManifest.encryption?.ciphertextHash || '',
+                    publicationProof: {
+                        messageHash: proofHash,
+                        signature: proofSignature,
+                        publicKey: keypair.publicKey,
+                    },
+                },
+                height: chain.chain?.length || 0,
+                staked_balance: frontier.staked_balance || 0,
+            });
+
+            setAnchorState('Signing lattice block...');
+            await block.signBlock(keypair.privateKey);
+            setAnchorState('Submitting manifest anchor to Go lattice...');
+            const result = await submitGoLatticeBlock(block);
+            if (!result.success) {
+                throw new Error(result.error || 'Go lattice rejected the anchor block.');
+            }
+
+            setAnchoredResult({
+                hash: result.hash,
+                manifestId,
+                locator,
+            });
+            setAnchorState('Manifest anchored on the Go lattice.');
+            refreshAnchors();
+        } catch (error) {
+            console.error(error);
+            setAnchorState('');
+            alert(`Manifest anchoring failed: ${error.message}`);
+        } finally {
+            setAnchoring(false);
+        }
+    };
+
     const handleCopy = async () => {
         if (!manifest) return;
         try {
@@ -317,8 +417,24 @@ export function StorageWasmWorkbench() {
                             <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                                 LOCATOR: <code style={{ color: '#fff' }}>{publishedResult.locator}</code>
                             </div>
-                            <div style={{ color: '#bbb', fontSize: '0.9rem' }}>
+                            <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
                                 MANIFEST URL: <a href={publishedResult.manifestUrl} target="_blank" rel="noreferrer" style={{ color: '#0ff' }}>{publishedResult.manifestUrl}</a>
+                            </div>
+                            <button className="cyber-button small" onClick={handleAnchorManifest} disabled={anchoring}>
+                                {anchoring ? 'ANCHORING...' : 'ANCHOR ON GO LATTICE'}
+                            </button>
+                            {anchorState && <div style={{ color: '#0ff', marginTop: '0.75rem', fontSize: '0.9rem' }}>{anchorState}</div>}
+                        </div>
+                    )}
+
+                    {anchoredResult && (
+                        <div style={{ marginTop: '1rem', padding: '1rem', background: '#100810', border: '1px solid #f0f' }}>
+                            <div style={{ color: '#f0f', fontWeight: 700, marginBottom: '0.5rem' }}>LATTICE ANCHOR COMPLETE</div>
+                            <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                                ANCHOR BLOCK: <code style={{ color: '#fff' }}>{anchoredResult.hash}</code>
+                            </div>
+                            <div style={{ color: '#bbb', fontSize: '0.9rem' }}>
+                                MANIFEST ID: <code style={{ color: '#0ff' }}>{anchoredResult.manifestId}</code>
                             </div>
                         </div>
                     )}
@@ -392,6 +508,19 @@ export function StorageWasmWorkbench() {
                         <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>FILENAME: <span style={{ color: '#fff' }}>{restoredInfo.filename}</span></div>
                         <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>SIZE: <span style={{ color: '#fff' }}>{restoredInfo.size} bytes</span></div>
                         <div style={{ color: '#bbb', fontSize: '0.9rem' }}>RESTORED SHA-256: <code style={{ color: '#0ff' }}>{restoredInfo.hash}</code></div>
+                    </div>
+                )}
+
+                {myAnchors.length > 0 && (
+                    <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #1e1e1e' }}>
+                        <div style={{ color: '#888', marginBottom: '0.5rem' }}>MY GO LATTICE MANIFEST ANCHORS</div>
+                        {myAnchors.slice(0, 5).map(anchor => (
+                            <div key={anchor.blockHash} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.45rem 0', borderBottom: '1px solid #151515', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                                <span style={{ color: '#fff' }}>{anchor.name || anchor.manifestId || anchor.id}</span>
+                                <span style={{ color: '#888', flex: 1 }}>{(anchor.locator || anchor.magnet || '').slice(0, 40)}...</span>
+                                <span style={{ color: '#f0f' }}>{anchor.type}</span>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

@@ -1,5 +1,6 @@
 export const API_URL = import.meta.env.VITE_GAME_SERVER_URL || 'http://localhost:3001';
 export const LATTICE_URL = import.meta.env.VITE_LATTICE_URL || 'http://localhost:4001';
+export const GO_LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4000';
 export const SUPERNODE_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8000';
 
 export const getSporaProof = async (challenge) => {
@@ -52,6 +53,49 @@ export const getLatticeFrontier = async (publicKey) => {
         return await res.json();
     } catch (e) {
         return { frontier: null };
+    }
+};
+
+export const getGoLatticeFrontier = async (publicKey) => {
+    try {
+        const res = await fetch(`${GO_LATTICE_URL}/frontier/${publicKey}`);
+        return await res.json();
+    } catch (e) {
+        return { frontier: null };
+    }
+};
+
+export const getGoLatticeChain = async (publicKey) => {
+    try {
+        const res = await fetch(`${GO_LATTICE_URL}/chain/${publicKey}`);
+        return await res.json();
+    } catch (e) {
+        return { chain: [] };
+    }
+};
+
+export const submitGoLatticeBlock = async (block) => {
+    try {
+        const res = await fetch(`${GO_LATTICE_URL}/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ block })
+        });
+        return await res.json();
+    } catch (e) {
+        console.error('Go lattice block submission failed:', e);
+        return { success: false, error: e.message };
+    }
+};
+
+export const getManifestAnchors = async (account = null) => {
+    try {
+        const url = account ? `${GO_LATTICE_URL}/anchors/${account}` : `${GO_LATTICE_URL}/anchors`;
+        const res = await fetch(url);
+        return await res.json();
+    } catch (e) {
+        console.error('Failed to fetch manifest anchors:', e);
+        return { anchors: [] };
     }
 };
 

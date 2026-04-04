@@ -665,7 +665,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	h := sha256.New()
 	h.Write([]byte(l.StateHash + block.Hash))
 	l.StateHash = hex.EncodeToString(h.Sum(nil))
-	l.MerkleRoot = l.CalculateMerkleRoot()
+	l.MerkleRoot = calculateMerkleRootFromChains(l.Chains)
 
 	return nil
 }

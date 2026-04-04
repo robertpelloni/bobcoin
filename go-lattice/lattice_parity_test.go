@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mr-tron/base58"
 )
@@ -101,6 +102,37 @@ func TestProcessBlockRejectsInvalidTypeAfterGenesis(t *testing.T) {
 	err := l.ProcessBlock(invalid, true)
 	if err == nil || !strings.Contains(err.Error(), "invalid block type") {
 		t.Fatalf("expected invalid block type error, got %v", err)
+	}
+}
+
+func TestProcessBlockNormalModeDoesNotDeadlockOnMerkleUpdate(t *testing.T) {
+	keys := DeriveKeypair("semantic parity normal mode", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     1,
+	}
+	signTestBlock(t, genesis, keys["privateKey"])
+
+	done := make(chan error, 1)
+	go func() {
+		done <- l.ProcessBlock(genesis, false)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("expected normal-mode genesis processing to succeed, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("ProcessBlock appears to have deadlocked during merkle update")
 	}
 }
 

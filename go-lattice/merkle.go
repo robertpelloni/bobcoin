@@ -7,20 +7,13 @@ import (
 	"sort"
 )
 
-/**
- * Calculate the State Merkle Root of the entire Lattice
- */
-func (l *Lattice) CalculateMerkleRoot() string {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
+func calculateMerkleRootFromChains(chains map[string][]*Block) string {
 	var stateEntries []string
-	for account, chain := range l.Chains {
+	for account, chain := range chains {
 		if len(chain) == 0 {
 			continue
 		}
 		head := chain[len(chain)-1]
-		// Each entry is H(account + balance + staked_balance + height)
 		entry := Hash(account +
 			fmt.Sprintf("%f", head.Balance) +
 			fmt.Sprintf("%f", head.StakedBalance) +
@@ -32,11 +25,17 @@ func (l *Lattice) CalculateMerkleRoot() string {
 		return "0000000000000000000000000000000000000000000000000000000000000000"
 	}
 
-	// Sort to ensure deterministic root across all nodes
 	sort.Strings(stateEntries)
-
-	// Build the tree (Simple Merkle approach)
 	return buildRoot(stateEntries)
+}
+
+/**
+ * Calculate the State Merkle Root of the entire Lattice
+ */
+func (l *Lattice) CalculateMerkleRoot() string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return calculateMerkleRootFromChains(l.Chains)
 }
 
 func buildRoot(hashes []string) string {

@@ -25,8 +25,9 @@
   - Rust/SP1 remains the correct place for proof generation/verification.
   - Some semantics still need final reconciliation between Node and Go, especially around economic edge cases and non-lattice service behavior.
 - Audit architecture note:
-  - As of v8.16.0, the Go `AuditState()` routine no longer only loops over existing maps; it replays ordered blocks onto a shadow lattice and re-derives runtime state from history.
+  - As of v8.19.0, the Go `AuditState()` routine no longer only loops over existing maps; it replays ordered blocks onto a shadow lattice and re-derives runtime state from history.
   - Legacy anchor/manifest blocks may contain payloads that were historically mutated with derived fields (`id`, `owner`, `timestamp`, `type`) after signing, so audit hash checks must tolerate and normalize that legacy condition.
+  - A latent merkle deadlock was identified in normal-mode block processing when a locked write path attempted to call a merkle helper that re-acquired a read lock. Internal lock-free merkle derivation should be used from locked callers.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

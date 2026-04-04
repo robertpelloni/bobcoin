@@ -5,19 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.19.0] - 2026-04-04
-
-### Added
-- **Degraded Recovery Diagnostics**: The storage workbench now records shard fetch failures, missing shard counts, parity sufficiency, and per-shard failure reasons during restore attempts.
-- **Parity Recovery Testing Controls**: Added an optional shard-omission input so operators can simulate missing shards and validate parity reconstruction behavior without needing a real storage outage.
-- **Recovery Outcome Surfacing**: Restore results now explicitly indicate when parity reconstruction was used to recover the file.
-
-## [8.18.0] - 2026-04-04
+## [8.20.0] - 2026-04-04
 
 ### Added
 - Go parity audit regression tests for:
   - invalid block-type rejection after valid genesis initialization
   - deterministic audit-time reconstruction of derived anchor state from chain history
+  - normal-mode block processing reaching merkle updates without deadlock
 - Legacy-hash tolerance during audit for older anchor/manifest blocks whose payloads had previously been mutated with derived fields after signing.
 
 ### Changed
@@ -33,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - multisigs
   - AMM pool state
 - Recovery now logs and skips invalid persisted blocks instead of silently pretending all recovered blocks succeeded.
-- The Go status endpoint now reports `Go-Lattice v8.17.0`.
+- The Go status endpoint now reports `Go-Lattice v8.20.0`.
+- Fixed a latent normal-mode merkle-update deadlock by separating lock-free merkle derivation from the public locked helper.
 
 ### Fixed
 - Fixed a subtle but important correctness issue where audit iteration over account maps was not a true deterministic state verification strategy.
@@ -46,14 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cd go-lattice && go test ./...`
 - `cd frontend && npm run build`
 
-## [8.17.0] - 2026-04-04
+## [8.19.0] - 2026-04-04
+
+### Added
+- **Degraded Recovery Diagnostics**: The storage workbench now records shard fetch failures, missing shard counts, parity sufficiency, and per-shard failure reasons during restore attempts.
+- **Parity Recovery Testing Controls**: Added an optional shard-omission input so operators can simulate missing shards and validate parity reconstruction behavior without needing a real storage outage.
+- **Recovery Outcome Surfacing**: Restore results now explicitly indicate when parity reconstruction was used to recover the file.
+
+## [8.18.0] - 2026-04-04
 
 ### Added
 - **Signed Publisher Metadata**: The storage workbench can now attach publisher alias, website, and statement metadata to a `publish_manifest` anchor block, with the metadata covered by the same signed publication proof.
 - **Vault Publisher Identity Surfacing**: Vault archive records now display publisher alias, profile URL, and publisher statement when present.
 - **Publisher Searchability**: Vault search now includes publisher identity metadata so users can discover content by publisher context rather than only hashes and locators.
 
-## [8.16.0] - 2026-04-04
+## [8.17.0] - 2026-04-04
 
 ### Added
 - **Owner Reputation Overlay**: Vault now derives lightweight trust scores and tier labels from anchored content activity, signed anchor counts, and archived data volume.
@@ -64,4 +66,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vault Discovery Surface**: Expanded Vault from search/filter discovery into a trust-aware archive intelligence surface with owner-level provenance context.
 
 ## [8.15.0] - 2026-04-04
+
+### Added
+- Additional Go-Lattice API parity routes to close more of the Node-to-Go gap:
+  - `GET /frontier`
+  - `GET /anchors/:account`
+  - `GET /votes/:proposalHash`
+  - `GET /nfts`
+  - `GET /nfts/:account`
+  - `GET /multisig/:account`
+- First-pass Go support for additional block types and state models:
+  - `achievement_unlock`
+  - `swap_lock`
+  - `swap_claim`
+  - `transfer_nft`
+  - `publish_manifest`
+- `HTLCSwap` state tracking and Go snapshot coverage for swaps.
+- Go unit tests covering deterministic multisig address derivation and snapshot parity maps.
+
+### Changed
+- Improved Go bootstrap exports so `/bootstrap` now returns a cleaner explicit state snapshot rather than dumping the entire lattice struct.
+- Improved Go bootstrap imports so proposal, vote, market, swap, NFT, anchor, and multisig maps can be restored alongside chains and blocks.
+- Updated the frontend Go archive target default from `http://localhost:4000` to `http://localhost:4001` to match the in-repo Go lattice service.
+- Aligned Go vote-power math with the current Node implementation (`sqrt(balance)`) for closer governance parity.
+- Hardened Go consensus so unknown block types are now rejected explicitly.
+- Delayed Go state-root mutation until after block validation/state application succeeds, preventing false state-hash drift on rejected blocks.
+
+### Fixed
+- Fixed a major parity hole where `open` blocks would become invalid after strict invalid-type rejection was introduced; Go now handles `open` as the receive-style path with a genesis bypass.
+- Fixed missing per-account archive and NFT query routes required by the newer Go-manifest archive UI.
+- Fixed Go-side manifest anchor visibility so `publish_manifest` records now enter the anchor index instead of existing only as chain history.
+- Fixed deterministic multisig identity drift by deriving the Go vault address from the participant set rather than using the creation block hash.
+- Fixed a frontend archive misconfiguration where `GO_LATTICE_URL` pointed at the old Node-lattice default port.
+
+### Validation
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
+## [8.14.0] - 2026-04-04
 ...

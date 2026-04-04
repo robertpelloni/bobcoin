@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.35.0] - 2026-04-04
+
+### Added
+- **Typed Proof Entries**: The storage workbench now supports proof entries in `kind|url` form, allowing publisher attestations to carry explicit semantic hints instead of only raw URLs.
+- **Typed Proof Badges**: Vault now renders publisher proofs with their proof kind labels, improving provenance legibility for linked attestations.
+- **Proof-Kind Persistence**: Manifest anchors now store proof-kind metadata alongside proof URLs in the Go lattice.
+
 ## [8.34.0] - 2026-04-04
 
 ### Added

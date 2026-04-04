@@ -50,6 +50,7 @@ function matchesSearch(anchor, query) {
         anchor.publisherStatement,
         anchor.publisherAvatar,
         ...(anchor.publisherProofs || []),
+        ...(anchor.publisherProofKinds || []),
         anchor.type,
     ]
         .map(normalizeString)
@@ -74,6 +75,15 @@ function tierForScore(score) {
     if (score >= 60) return { label: 'TRUSTED', className: 'tier-trusted' };
     if (score >= 35) return { label: 'EMERGING', className: 'tier-emerging' };
     return { label: 'UNVERIFIED', className: 'tier-unverified' };
+}
+
+function normalizePublisherProofs(anchor) {
+    const proofs = Array.isArray(anchor.publisherProofs) ? anchor.publisherProofs : [];
+    const kinds = Array.isArray(anchor.publisherProofKinds) ? anchor.publisherProofKinds : [];
+    return proofs.map((url, index) => ({
+        url,
+        kind: kinds[index] || 'link',
+    }));
 }
 
 function buildOwnerProfiles(manifestAnchors, legacyAnchors) {
@@ -780,10 +790,10 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                         </div>
                     </div>
                 )}
-                {Array.isArray(anchor.publisherProofs) && anchor.publisherProofs.length > 0 && (
+                {normalizePublisherProofs(anchor).length > 0 && (
                     <div className="publisher-proofs">
-                        {anchor.publisherProofs.map((proof) => (
-                            <a key={proof} href={proof} target="_blank" rel="noreferrer" className="vault-badge neutral publisher-proof-link">PROOF</a>
+                        {normalizePublisherProofs(anchor).map((proof) => (
+                            <a key={`${proof.kind}-${proof.url}`} href={proof.url} target="_blank" rel="noreferrer" className="vault-badge neutral publisher-proof-link">{proof.kind.toUpperCase()}</a>
                         ))}
                     </div>
                 )}

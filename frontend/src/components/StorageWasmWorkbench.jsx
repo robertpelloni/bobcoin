@@ -52,6 +52,21 @@ function sourceHostFromReference(ref) {
     }
 }
 
+function parsePublisherProofInputs(value) {
+    return value
+        .split(/\r?\n|,/) 
+        .map(v => v.trim())
+        .filter(Boolean)
+        .map((entry) => {
+            const [maybeKind, ...rest] = entry.split('|');
+            if (rest.length === 0) {
+                return { kind: 'link', url: maybeKind.trim() };
+            }
+            return { kind: maybeKind.trim() || 'link', url: rest.join('|').trim() };
+        })
+        .filter(proof => proof.url);
+}
+
 const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
 
 function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes }) {
@@ -442,10 +457,7 @@ export function StorageWasmWorkbench() {
                 throw new Error('The Go lattice does not yet know this wallet. Open or sync the account first.');
             }
 
-            const normalizedProofs = publisherProofs
-                .split(/\r?\n|,/) 
-                .map(v => v.trim())
-                .filter(Boolean);
+            const normalizedProofs = parsePublisherProofInputs(publisherProofs);
 
             const proofMessage = [
                 manifestId,
@@ -456,7 +468,7 @@ export function StorageWasmWorkbench() {
                 publisherWebsite.trim(),
                 publisherStatement.trim(),
                 publisherAvatar.trim(),
-                normalizedProofs.join('|'),
+                normalizedProofs.map(proof => `${proof.kind}:${proof.url}`).join('|'),
             ].join('|');
             const proofHash = await hashData(proofMessage);
             const proofSignature = await signBlock(proofHash, keypair.privateKey);
@@ -616,7 +628,7 @@ export function StorageWasmWorkbench() {
                             />
                             <textarea
                                 className="cyber-input"
-                                placeholder="Proof / Attestation URLs (comma or newline separated)"
+                                placeholder="Proof entries (kind|url), comma or newline separated"
                                 value={publisherProofs}
                                 onChange={(e) => setPublisherProofs(e.target.value)}
                                 style={{ minHeight: '72px', gridColumn: '1 / -1' }}

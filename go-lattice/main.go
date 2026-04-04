@@ -134,7 +134,7 @@ func main() {
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":     "online",
-		"engine":     "Go-Lattice v8.23.0",
+		"engine":     "Go-Lattice v8.25.0",
 		"stateHash":  lattice.StateHash,
 		"merkleRoot": lattice.MerkleRoot,
 		"accounts":   len(lattice.Chains),

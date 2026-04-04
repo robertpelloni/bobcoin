@@ -20,6 +20,19 @@ func signTestBlock(t *testing.T, block *Block, privateKeyBase58 string) {
 	block.Signature = base58.Encode(ed25519.Sign(ed25519.PrivateKey(priv), []byte(block.Hash)))
 }
 
+func makeGenesisBlock(keys map[string]string, balance float64) *Block {
+	return &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       balance,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     1,
+	}
+}
+
 func validSpora(previousHash string) *SporaProof {
 	challenge64, _ := strconv.ParseInt(previousHash[:8], 16, 64)
 	challenge := int(challenge64)
@@ -99,6 +112,181 @@ func TestSecondSystemGenesisBootstrapIsRejected(t *testing.T) {
 	signTestBlock(t, genesisB, keysB["privateKey"])
 	if err := l.ProcessBlock(genesisB, true); err == nil {
 		t.Fatalf("expected second system genesis bootstrap to be rejected")
+	}
+}
+
+func TestAcceptBidRequiresExactBalanceIncrementAndClosesBid(t *testing.T) {
+	keys := DeriveKeypair("semantic parity accept bid", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	previousBid := genesis.Hash
+	bidBlock := &Block{
+		Type:          "market_bid",
+		Account:       keys["publicKey"],
+		Previous:      &previousBid,
+		Balance:       900,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "STORAGE_MARKET",
+		Spora:         validSpora(genesis.Hash),
+		Payload:       map[string]interface{}{"magnet": "magnet:?xt=urn:btih:test"},
+		Timestamp:     2,
+	}
+	signTestBlock(t, bidBlock, keys["privateKey"])
+	if err := l.ProcessBlock(bidBlock, true); err != nil {
+		t.Fatalf("expected market bid to succeed, got %v", err)
+	}
+
+	previousAccept := bidBlock.Hash
+	acceptBlock := &Block{
+		Type:          "accept_bid",
+		Account:       keys["publicKey"],
+		Previous:      &previousAccept,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          bidBlock.Hash,
+		Spora:         validSpora(bidBlock.Hash),
+		Timestamp:     3,
+	}
+	signTestBlock(t, acceptBlock, keys["privateKey"])
+	if err := l.ProcessBlock(acceptBlock, true); err != nil {
+		t.Fatalf("expected accept_bid to succeed, got %v", err)
+	}
+
+	bid := l.MarketBids[bidBlock.Hash].(map[string]interface{})
+	if bid["status"] != "ACCEPTED" {
+		t.Fatalf("expected bid status ACCEPTED, got %v", bid["status"])
+	}
+	if bid["acceptedBy"] != keys["publicKey"] {
+		t.Fatalf("expected acceptedBy %q, got %v", keys["publicKey"], bid["acceptedBy"])
+	}
+}
+
+func TestAcceptBidCannotBeClaimedTwice(t *testing.T) {
+	keys := DeriveKeypair("semantic parity accept twice", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	prev := genesis.Hash
+	bidBlock := &Block{
+		Type:          "market_bid",
+		Account:       keys["publicKey"],
+		Previous:      &prev,
+		Balance:       950,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "STORAGE_MARKET",
+		Spora:         validSpora(genesis.Hash),
+		Payload:       map[string]interface{}{"magnet": "magnet:?xt=urn:btih:double"},
+		Timestamp:     2,
+	}
+	signTestBlock(t, bidBlock, keys["privateKey"])
+	if err := l.ProcessBlock(bidBlock, true); err != nil {
+		t.Fatalf("expected market bid to succeed, got %v", err)
+	}
+
+	acceptOnePrev := bidBlock.Hash
+	acceptOne := &Block{
+		Type:          "accept_bid",
+		Account:       keys["publicKey"],
+		Previous:      &acceptOnePrev,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          bidBlock.Hash,
+		Spora:         validSpora(bidBlock.Hash),
+		Timestamp:     3,
+	}
+	signTestBlock(t, acceptOne, keys["privateKey"])
+	if err := l.ProcessBlock(acceptOne, true); err != nil {
+		t.Fatalf("expected first accept_bid to succeed, got %v", err)
+	}
+
+	acceptTwoPrev := acceptOne.Hash
+	acceptTwo := &Block{
+		Type:          "accept_bid",
+		Account:       keys["publicKey"],
+		Previous:      &acceptTwoPrev,
+		Balance:       1050,
+		StakedBalance: 0,
+		Height:        3,
+		Link:          bidBlock.Hash,
+		Spora:         validSpora(acceptOne.Hash),
+		Timestamp:     4,
+	}
+	signTestBlock(t, acceptTwo, keys["privateKey"])
+	if err := l.ProcessBlock(acceptTwo, true); err == nil || !strings.Contains(err.Error(), "already accepted or closed") {
+		t.Fatalf("expected second accept_bid to fail as already accepted, got %v", err)
+	}
+}
+
+func TestDataAnchorRequiresPositiveFeeAndIndexesAnchor(t *testing.T) {
+	keys := DeriveKeypair("semantic parity data anchor", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	prev := genesis.Hash
+	invalidAnchor := &Block{
+		Type:          "data_anchor",
+		Account:       keys["publicKey"],
+		Previous:      &prev,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "DATA_ANCHOR",
+		Spora:         validSpora(genesis.Hash),
+		Payload:       map[string]interface{}{"name": "zero-fee.bin", "magnet": "magnet:?xt=urn:btih:anchor0", "size": 42},
+		Timestamp:     2,
+	}
+	signTestBlock(t, invalidAnchor, keys["privateKey"])
+	if err := l.ProcessBlock(invalidAnchor, true); err == nil || !strings.Contains(err.Error(), "data anchor must pay storage fee") {
+		t.Fatalf("expected zero-fee data anchor to fail, got %v", err)
+	}
+
+	validAnchor := &Block{
+		Type:          "data_anchor",
+		Account:       keys["publicKey"],
+		Previous:      &prev,
+		Balance:       990,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "DATA_ANCHOR",
+		Spora:         validSpora(genesis.Hash),
+		Payload:       map[string]interface{}{"name": "paid-anchor.bin", "magnet": "magnet:?xt=urn:btih:anchor1", "size": 42},
+		Timestamp:     3,
+	}
+	signTestBlock(t, validAnchor, keys["privateKey"])
+	if err := l.ProcessBlock(validAnchor, true); err != nil {
+		t.Fatalf("expected paid data anchor to succeed, got %v", err)
+	}
+
+	anchor, ok := l.Anchors[validAnchor.Hash]
+	if !ok {
+		t.Fatalf("expected anchor to be indexed")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["owner"] != keys["publicKey"] {
+		t.Fatalf("expected anchor owner %q, got %v", keys["publicKey"], anchorMap["owner"])
+	}
+	if anchorMap["name"] != "paid-anchor.bin" {
+		t.Fatalf("expected anchor name to be preserved, got %v", anchorMap["name"])
 	}
 }
 

@@ -31,6 +31,7 @@
   - As of v8.21.0, failed Go persistence writes are expected to roll back in-memory state and trigger audit-based reconstruction rather than leaving partially-applied consensus mutations resident in memory.
   - As of v8.22.0, `SYSTEM_GENESIS` bypass semantics are intentionally single-use only; once any chain exists, later `SYSTEM_GENESIS` opens should be rejected rather than treated as valid bootstrap events.
   - As of v8.22.0, proposal status is refreshed in Go both during block processing and proposal/vote reads so expired governance records do not remain indefinitely `Active`.
+  - As of v8.24.0, the Go test suite explicitly covers the economic parity path for `accept_bid` and `data_anchor`, so these behaviors are now guarded by regression tests rather than only manual reasoning.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

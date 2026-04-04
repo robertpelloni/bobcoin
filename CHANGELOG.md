@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.12.0] - 2026-04-04
+
+### Added
+- Go-Lattice compatibility endpoints needed by the existing Bobcoin frontend and service ecosystem:
+  - `GET /pending/:account`
+  - `GET /chain/:account`
+  - `GET /anchors`
+  - `GET /proposals`
+  - `GET /market/bids`
+  - `GET /multisigs`
+- Binary-safe client-side vault file encryption helpers for cloaked legacy data-anchor uploads.
+- On-chain cloaked anchor metadata enrichment including `owner`, `algorithm`, `salt`, `iv`, `originalType`, and `originalSize`.
+- A merged Vault surface that preserves the Go manifest archive browser and storage workbench while also restoring direct legacy data-anchor publishing with optional cloak mode.
+
+### Changed
+- Hardened `GET /frontier/:account` so the Go node now returns `frontier`, `balance`, `staked_balance`, and `height`, matching long-standing frontend expectations.
+- Added block normalization at the Go ingress layer so older clients missing `height`, `staked_balance`, or `timestamp` remain compatible with strict consensus validation.
+- Upgraded the frontend `Block` model to preserve `height`, `staked_balance`, `zk_proof`, and `timestamp`, aligning React-side block serialization with Go and Node expectations.
+- Updated the achievement unlock flow to sign asynchronously and include frontier-derived balance and staking metadata.
+- Reworked the Vault page to combine the new Go manifest archive UX with the legacy encrypted data-anchor path instead of losing either feature set.
+
+### Fixed
+- Fixed a latent integration bug where several frontend pages passed `height` and `staked_balance`, but the frontend `Block` class discarded them before serialization.
+- Fixed the achievement engine calling `block.sign(...)` against a model that only exposed `signBlock(...)`.
+- Fixed the earlier cloaked upload path, which reused JSON vault encryption logic for binary file payloads.
+- Restored governance proposal visibility, vote accounting, storage-market bid visibility, and anchor identity metadata in the Go client state maps.
+- Restored missing Go routes required by Explorer, Governance, Wallet, Storage Market, MultiSig, and Vault flows.
+
+### Validation
+- `cd go-lattice && gofmt -w lattice.go main.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.11.0] - 2026-04-03
 
 ### Added
@@ -77,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Sovereign Heartbeat**: Implemented a real-time network monitoring protocol via WebSockets.
   - The Go-Lattice node now calculates and broadcasts live **TPS (Transactions Per Second)** and **Merkle Root** updates to all connected clients.
   - Integrated `gorilla/websocket` into the Go consensus engine for high-performance streaming.
-- **Real-Time Network Widget**: Added a persistent heartbeat widget to the PWA header. 
+- **Real-Time Network Widget**: Added a persistent heartbeat widget to the PWA header.
   - Displays live throughput and the current cryptographic state of the network mesh.
   - Includes a "Pulse" animation synced with the network's processing interval.
 - **Lattice Operator Achievement**: A new on-chain milestone for users who monitor and maintain the health of the sovereign network.

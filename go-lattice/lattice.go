@@ -17,9 +17,9 @@ type PendingTx struct {
 }
 
 type MultisigVault struct {
-	Participants     []string            `json:"participants"`
-	Threshold        int                 `json:"threshold"`
-	Balance          float64             `json:"balance"`
+	Participants     []string             `json:"participants"`
+	Threshold        int                  `json:"threshold"`
+	Balance          float64              `json:"balance"`
 	PendingProposals map[string]*Proposal `json:"pendingProposals"`
 }
 
@@ -32,11 +32,11 @@ type Proposal struct {
 }
 
 type LiquidityPool struct {
-	AssetA       string  `json:"assetA"` // Always BOB
-	AssetB       string  `json:"assetB"` // e.g., sSOL
-	ReserveA     float64 `json:"reserveA"`
-	ReserveB     float64 `json:"reserveB"`
-	TotalShares  float64 `json:"totalShares"`
+	AssetA      string  `json:"assetA"` // Always BOB
+	AssetB      string  `json:"assetB"` // e.g., sSOL
+	ReserveA    float64 `json:"reserveA"`
+	ReserveB    float64 `json:"reserveB"`
+	TotalShares float64 `json:"totalShares"`
 }
 
 type PeerInfo struct {
@@ -49,40 +49,42 @@ type PeerInfo struct {
 }
 
 type Lattice struct {
-	mu         sync.RWMutex
-	db         *DBManager
-	Chains     map[string][]*Block
-	Blocks     map[string]*Block
-	Pending    map[string][]*PendingTx
-	Proposals  map[string]interface{}
-	MarketBids map[string]interface{}
-	Nfts       map[string]interface{}
-	Anchors    map[string]interface{}
-	Multisigs  map[string]*MultisigVault
-	Pools      map[string]*LiquidityPool // PairName -> Pool
-	Peers      map[string]*PeerInfo      // URL -> Stats
-	StateHash  string
-	MerkleRoot string                   // God-Hash of all account states
-	QuorumScore float64                 // % of network in agreement
+	mu            sync.RWMutex
+	db            *DBManager
+	Chains        map[string][]*Block
+	Blocks        map[string]*Block
+	Pending       map[string][]*PendingTx
+	Proposals     map[string]interface{}
+	Votes         map[string]map[string]map[string]interface{}
+	MarketBids    map[string]interface{}
+	Nfts          map[string]interface{}
+	Anchors       map[string]interface{}
+	Multisigs     map[string]*MultisigVault
+	Pools         map[string]*LiquidityPool // PairName -> Pool
+	Peers         map[string]*PeerInfo      // URL -> Stats
+	StateHash     string
+	MerkleRoot    string  // God-Hash of all account states
+	QuorumScore   float64 // % of network in agreement
 	DemurrageRate float64
 }
 
 func NewLattice(db *DBManager) *Lattice {
 	l := &Lattice{
-		db:         db,
-		Chains:     make(map[string][]*Block),
-		Blocks:     make(map[string]*Block),
-		Pending:    make(map[string][]*PendingTx),
-		Proposals:  make(map[string]interface{}),
-		MarketBids: make(map[string]interface{}),
-		Nfts:       make(map[string]interface{}),
-		Anchors:    make(map[string]interface{}),
-		Multisigs:  make(map[string]*MultisigVault),
-		Pools:      make(map[string]*LiquidityPool),
-		Peers:      make(map[string]*PeerInfo),
-		StateHash:  "0000000000000000000000000000000000000000000000000000000000000000",
-		MerkleRoot: "0000000000000000000000000000000000000000000000000000000000000000",
-		QuorumScore: 100.0,
+		db:            db,
+		Chains:        make(map[string][]*Block),
+		Blocks:        make(map[string]*Block),
+		Pending:       make(map[string][]*PendingTx),
+		Proposals:     make(map[string]interface{}),
+		Votes:         make(map[string]map[string]map[string]interface{}),
+		MarketBids:    make(map[string]interface{}),
+		Nfts:          make(map[string]interface{}),
+		Anchors:       make(map[string]interface{}),
+		Multisigs:     make(map[string]*MultisigVault),
+		Pools:         make(map[string]*LiquidityPool),
+		Peers:         make(map[string]*PeerInfo),
+		StateHash:     "0000000000000000000000000000000000000000000000000000000000000000",
+		MerkleRoot:    "0000000000000000000000000000000000000000000000000000000000000000",
+		QuorumScore:   100.0,
 		DemurrageRate: 0.0001 / 60000,
 	}
 
@@ -173,10 +175,16 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 
 	// 2. Continuity & Height Checks
 	if block.Type == "open" {
-		if head != nil { return errors.New("account already open") }
-		if block.Height != 0 { return errors.New("open block height must be 0") }
+		if head != nil {
+			return errors.New("account already open")
+		}
+		if block.Height != 0 {
+			return errors.New("open block height must be 0")
+		}
 	} else {
-		if head == nil { return errors.New("account not open") }
+		if head == nil {
+			return errors.New("account not open")
+		}
 		if block.Previous == nil || *block.Previous != head.Hash {
 			return errors.New("invalid previous hash link")
 		}
@@ -187,9 +195,11 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 
 	// 3. Staked Invariant
 	prevStaked := 0.0
-	if head != nil { prevStaked = head.StakedBalance }
+	if head != nil {
+		prevStaked = head.StakedBalance
+	}
 	if block.Type != "stake_lock" && block.Type != "stake_unlock" && block.Type != "open" {
-		if math.Abs(block.StakedBalance - prevStaked) > 0.001 {
+		if math.Abs(block.StakedBalance-prevStaked) > 0.001 {
 			return errors.New("staked balance invariant violation")
 		}
 	}
@@ -217,7 +227,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return fmt.Errorf("insufficient balance for send")
 		}
 		amount := prevBalance - block.Balance
-		
+
 		// If recipient is a multisig, update its balance
 		if vault, ok := l.Multisigs[block.Link]; ok {
 			vault.Balance += amount
@@ -241,35 +251,123 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 				break
 			}
 		}
-		if !found { return fmt.Errorf("pending send block not found") }
-		if math.Abs(block.Balance - (prevBalance + amount)) > epsilon {
+		if !found {
+			return fmt.Errorf("pending send block not found")
+		}
+		if math.Abs(block.Balance-(prevBalance+amount)) > epsilon {
 			return fmt.Errorf("invalid receive balance")
 		}
 	} else if block.Type == "proposal" {
-		if math.Abs(block.Balance - (prevBalance - 10)) > epsilon {
+		if math.Abs(block.Balance-(prevBalance-10)) > epsilon {
 			return fmt.Errorf("proposal costs 10 BOB")
 		}
 	} else if block.Type == "market_bid" {
-		if block.Balance > prevBalance+epsilon { return fmt.Errorf("market bid must decrease balance") }
+		if block.Balance > prevBalance+epsilon {
+			return fmt.Errorf("market bid must decrease balance")
+		}
 	} else if block.Type == "stake_lock" {
 		amount := prevBalance - block.Balance
-		if amount <= 0 { return errors.New("stake lock must decrease liquid balance") }
-		if math.Abs(block.StakedBalance - (prevStaked + amount)) > epsilon { return errors.New("invalid staked balance") }
+		if amount <= 0 {
+			return errors.New("stake lock must decrease liquid balance")
+		}
+		if math.Abs(block.StakedBalance-(prevStaked+amount)) > epsilon {
+			return errors.New("invalid staked balance")
+		}
 	} else if block.Type == "stake_unlock" {
 		amount := block.Balance - prevBalance
-		if amount <= 0 { return errors.New("stake unlock must increase liquid balance") }
-		if math.Abs(block.StakedBalance - (prevStaked - amount)) > epsilon { return errors.New("invalid staked balance") }
+		if amount <= 0 {
+			return errors.New("stake unlock must increase liquid balance")
+		}
+		if math.Abs(block.StakedBalance-(prevStaked-amount)) > epsilon {
+			return errors.New("invalid staked balance")
+		}
 	}
 
 	// 6. Commit In-Memory
 	l.Chains[block.Account] = append(l.Chains[block.Account], block)
 	l.Blocks[block.Hash] = block
 
-	// 7. Type-Specific State Updates (NFTs, Multisig, etc)
-	if block.Type == "mint_nft" {
+	// 7. Type-Specific State Updates (Governance, Storage, NFTs, Multisig, DeFi)
+	if block.Type == "proposal" {
+		payload := block.Payload.(map[string]interface{})
+		endTime, _ := payload["endTime"].(string)
+		l.Proposals[block.Hash] = map[string]interface{}{
+			"id":           block.Hash,
+			"proposer":     block.Account,
+			"title":        payload["title"],
+			"status":       "Active",
+			"votesFor":     0.0,
+			"votesAgainst": 0.0,
+			"endTime":      endTime,
+			"timestamp":    block.Timestamp,
+		}
+		l.Votes[block.Hash] = make(map[string]map[string]interface{})
+	} else if block.Type == "vote" {
+		payload := block.Payload.(map[string]interface{})
+		proposalRaw, ok := l.Proposals[block.Link]
+		if !ok {
+			return fmt.Errorf("target proposal not found")
+		}
+		proposal := proposalRaw.(map[string]interface{})
+		if proposal["status"] != "Active" {
+			return fmt.Errorf("proposal is closed")
+		}
+		if _, ok := l.Votes[block.Link]; !ok {
+			l.Votes[block.Link] = make(map[string]map[string]interface{})
+		}
+		if _, exists := l.Votes[block.Link][block.Account]; exists {
+			return fmt.Errorf("account has already voted on this proposal")
+		}
+
+		voteType, _ := payload["vote"].(string)
+		if voteType != "FOR" && voteType != "AGAINST" {
+			return fmt.Errorf("invalid vote type")
+		}
+
+		power := math.Sqrt(math.Max(block.Balance+(block.StakedBalance*2), 0))
+		l.Votes[block.Link][block.Account] = map[string]interface{}{
+			"type":  voteType,
+			"power": power,
+		}
+
+		if voteType == "FOR" {
+			proposal["votesFor"] = proposal["votesFor"].(float64) + power
+		} else {
+			proposal["votesAgainst"] = proposal["votesAgainst"].(float64) + power
+		}
+	} else if block.Type == "market_bid" {
+		payload := block.Payload.(map[string]interface{})
+		amount := math.Max(prevBalance-block.Balance, 0)
+		l.MarketBids[block.Hash] = map[string]interface{}{
+			"id":        block.Hash,
+			"creator":   block.Account,
+			"magnet":    payload["magnet"],
+			"amount":    amount,
+			"status":    "OPEN",
+			"timestamp": block.Timestamp,
+		}
+	} else if block.Type == "accept_bid" {
+		bidRaw, ok := l.MarketBids[block.Link]
+		if !ok {
+			return fmt.Errorf("target market bid not found")
+		}
+		bid := bidRaw.(map[string]interface{})
+		if bid["status"] != "OPEN" {
+			return fmt.Errorf("market bid is already accepted or closed")
+		}
+		bid["status"] = "ACCEPTED"
+		bid["acceptedBy"] = block.Account
+	} else if block.Type == "mint_nft" {
 		l.Nfts[block.Hash] = block.Payload
 	} else if block.Type == "data_anchor" {
-		l.Anchors[block.Hash] = block.Payload
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok {
+			payload = map[string]interface{}{}
+		}
+		payload["id"] = block.Hash
+		payload["owner"] = block.Account
+		payload["timestamp"] = block.Timestamp
+		l.Anchors[block.Hash] = payload
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
 		partsRaw := payload["participants"].([]interface{})
@@ -288,7 +386,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload := block.Payload.(map[string]interface{})
 		vaultAddr := payload["vault"].(string)
 		vault := l.Multisigs[vaultAddr]
-		if vault == nil { return fmt.Errorf("vault not found") }
+		if vault == nil {
+			return fmt.Errorf("vault not found")
+		}
 
 		vault.PendingProposals[block.Hash] = &Proposal{
 			ID:         block.Hash,
@@ -302,17 +402,25 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		vaultAddr := payload["vault"].(string)
 		proposalID := payload["proposalID"].(string)
 		vault := l.Multisigs[vaultAddr]
-		if vault == nil { return fmt.Errorf("vault not found") }
+		if vault == nil {
+			return fmt.Errorf("vault not found")
+		}
 		prop := vault.PendingProposals[proposalID]
-		if prop == nil { return fmt.Errorf("proposal not found") }
+		if prop == nil {
+			return fmt.Errorf("proposal not found")
+		}
 
 		for _, s := range prop.Signatures {
-			if s == block.Account { return fmt.Errorf("already signed") }
+			if s == block.Account {
+				return fmt.Errorf("already signed")
+			}
 		}
 		prop.Signatures = append(prop.Signatures, block.Account)
-		
+
 		if len(prop.Signatures) >= vault.Threshold {
-			if vault.Balance < prop.Amount { return fmt.Errorf("insufficient vault balance") }
+			if vault.Balance < prop.Amount {
+				return fmt.Errorf("insufficient vault balance")
+			}
 			prop.Executed = true
 			vault.Balance -= prop.Amount
 			l.Pending[prop.Recipient] = append(l.Pending[prop.Recipient], &PendingTx{
@@ -324,7 +432,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload := block.Payload.(map[string]interface{})
 		pair := payload["pair"].(string)
 		pool := l.Pools[pair]
-		if pool == nil { return fmt.Errorf("pool not found") }
+		if pool == nil {
+			return fmt.Errorf("pool not found")
+		}
 
 		amountIn := payload["amountIn"].(float64)
 		// Swap BOB (A) for sSOL (B)
@@ -332,9 +442,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		// dy = y * dx / (x + dx)
 		dx := amountIn
 		dy := (pool.ReserveB * dx) / (pool.ReserveA + dx)
-		
+
 		fmt.Printf("[AMM] Swap: %f BOB for %f sSOL. New Price: %f\n", dx, dy, (pool.ReserveA+dx)/(pool.ReserveB-dy))
-		
+
 		pool.ReserveA += dx
 		pool.ReserveB -= dy
 	}
@@ -355,13 +465,13 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 func (l *Lattice) GetBalance(account string, ts int64) float64 {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	
+
 	chain, ok := l.Chains[account]
 	if !ok || len(chain) == 0 {
 		return 0
 	}
 	head := chain[len(chain)-1]
-	
+
 	// Apply Demurrage
 	elapsed := ts - head.Timestamp
 	if elapsed <= 0 {
@@ -376,11 +486,11 @@ func (l *Lattice) GetBalance(account string, ts int64) float64 {
  */
 func (l *Lattice) AuditState() error {
 	fmt.Println("[Lattice] Initiating Global Consensus Audit...")
-	
+
 	// Temporarily clear in-memory state and rebuild from blocks
 	// (In production, this would be done on a shadow-lattice first)
 	l.StateHash = "0000000000000000000000000000000000000000000000000000000000000000"
-	
+
 	for account, chain := range l.Chains {
 		for i, block := range chain {
 			// 1. Signature Verification
@@ -391,14 +501,14 @@ func (l *Lattice) AuditState() error {
 			if block.Height != i {
 				return fmt.Errorf("audit failed: height gap detected in account %s", account[:8])
 			}
-			
+
 			// Update cumulative state hash
 			h := sha256.New()
 			h.Write([]byte(l.StateHash + block.Hash))
 			l.StateHash = hex.EncodeToString(h.Sum(nil))
 		}
 	}
-	
+
 	l.MerkleRoot = l.CalculateMerkleRoot()
 	fmt.Printf("[Lattice] Audit Complete. Verified Integrity of %d chains. New Root: %s\n", len(l.Chains), l.MerkleRoot[:16])
 	return nil

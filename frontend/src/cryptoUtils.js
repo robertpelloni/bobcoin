@@ -106,6 +106,57 @@ export async function decryptVault(vault, password) {
     return JSON.parse(decoder.decode(decrypted));
 }
 
+async function deriveAesKey(secret, salt) {
+    const encoder = new TextEncoder();
+    const baseKey = await window.crypto.subtle.importKey(
+        'raw',
+        encoder.encode(secret),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    return window.crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+export async function encryptFileForVault(fileBytes, secret) {
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const aesKey = await deriveAesKey(secret, salt);
+    const encrypted = await window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        aesKey,
+        fileBytes
+    );
+
+    return {
+        ciphertext: new Uint8Array(encrypted),
+        salt: bs58.encode(salt),
+        iv: bs58.encode(iv),
+        algorithm: 'AES-256-GCM'
+    };
+}
+
+export async function decryptFileFromVault(ciphertextBytes, secret, metadata) {
+    const salt = bs58.decode(metadata.salt);
+    const iv = bs58.decode(metadata.iv);
+    const aesKey = await deriveAesKey(secret, salt);
+
+    const decrypted = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        aesKey,
+        ciphertextBytes
+    );
+
+    return new Uint8Array(decrypted);
+}
+
 export async function hashData(dataString) {
     const msgBuffer = new TextEncoder().encode(dataString);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);

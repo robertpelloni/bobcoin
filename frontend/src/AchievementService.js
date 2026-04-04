@@ -12,6 +12,7 @@ export const ACHIEVEMENTS = {
     LATTICE_VALIDATOR: { id: 'LATTICE_VALIDATOR', title: 'Lattice Validator', desc: 'Staked tokens to secure the sovereign network.', icon: '🥩', color: '#0f0' },
     CRYPTOGRAPHER: { id: 'CRYPTOGRAPHER', title: 'Master Cryptographer', desc: 'Secured the sovereign identity via mnemonic backup.', icon: '🔐', color: '#ff0055' },
     DATA_ARCHITECT: { id: 'DATA_ARCHITECT', title: 'Data Architect', desc: 'Anchored permanent data to the Block Lattice.', icon: '📦', color: '#0ff' },
+    VAULT_ENCRYPTOR: { id: 'VAULT_ENCRYPTOR', title: 'Vault Encryptor', desc: 'Secured decentralized file storage via client-side encryption.', icon: '🔐', color: '#ff0055' },
     LIQUIDITY_PROVIDER: { id: 'LIQUIDITY_PROVIDER', title: 'Liquidity Provider', desc: 'Bootstrapped the on-chain AMM pools.', icon: '🌊', color: '#0f0' },
     ZK_SAGE: { id: 'ZK_SAGE', title: 'Zero-Knowledge Sage', desc: 'Submitted a mathematically proven game score via SP1.', icon: '🕵️‍♂️', color: '#f0f' },
     LATTICE_CRYPTOGRAPHER: { id: 'LATTICE_CRYPTOGRAPHER', title: 'Lattice Cryptographer', desc: 'Minted supply using a native RISC-V zero-knowledge proof.', icon: '🔐', color: '#0ff' },
@@ -52,23 +53,27 @@ export async function checkAndUnlock(achievementId, keypair, existingChain = [])
         // 2. Fetch current chain state
         const frontierData = await getLatticeFrontier(keypair.publicKey);
         const previous = frontierData.frontier || null;
-        const balance = 0; // Achievement blocks are metadata-only (0 balance change)
-        
-        // Use current balance if available
-        const currentBalance = existingChain.length > 0 ? existingChain[existingChain.length-1].balance : 0;
+        const currentBalance = existingChain.length > 0
+            ? existingChain[existingChain.length - 1].balance
+            : (frontierData.balance || 0);
+        const currentStakedBalance = existingChain.length > 0
+            ? (existingChain[existingChain.length - 1].staked_balance || 0)
+            : (frontierData.staked_balance || 0);
 
         // 3. Create achievement_unlock block
         const block = new Block({
             type: 'achievement_unlock',
             account: keypair.publicKey,
-            previous: previous,
+            previous,
             balance: currentBalance,
+            staked_balance: currentStakedBalance,
+            height: existingChain.length,
             link: 'SYSTEM_ACHIEVEMENT',
             payload: ACHIEVEMENTS[achievementId]
         });
 
         // 4. Sign and broadcast
-        block.sign(keypair.privateKey);
+        await block.signBlock(keypair.privateKey);
         const result = await submitLatticeBlock(block);
         
         if (result.success) {

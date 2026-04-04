@@ -5,15 +5,15 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 	"sync"
-	"github.com/gorilla/websocket"
+	"time"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	}
 	clients   = make(map[*websocket.Conn]bool)
 	clientsMu sync.Mutex
-	
+
 	blocksInInterval int
 	lastTps          float64
 )
@@ -33,7 +33,7 @@ func broadcastHeartbeat() {
 		lattice.mu.RLock()
 		lastTps = float64(blocksInInterval) / 2.0
 		blocksInInterval = 0
-		
+
 		heartbeat := map[string]interface{}{
 			"tps":        lastTps,
 			"merkleRoot": lattice.MerkleRoot,
@@ -45,7 +45,7 @@ func broadcastHeartbeat() {
 		lattice.mu.RUnlock()
 
 		msg, _ := json.Marshal(heartbeat)
-		
+
 		clientsMu.Lock()
 		for client := range clients {
 			err := client.WriteMessage(websocket.TextMessage, msg)
@@ -67,7 +67,6 @@ func handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	clients[conn] = true
 	clientsMu.Unlock()
 }
-
 
 type gzipResponseWriter struct {
 	io.Writer
@@ -96,13 +95,21 @@ var lattice = NewLattice(db)
 
 func main() {
 	port := os.Getenv("LATTICE_PORT")
-	if port == "" { port = "4001" } // Use 4001 to not conflict with Node node
+	if port == "" {
+		port = "4001"
+	} // Use 4001 to not conflict with Node node
 
 	http.HandleFunc("/status", handleStatus)
 	http.HandleFunc("/process", handleProcess)
 	// http.HandleFunc("/simulate", handleSimulate) // Not implemented in this version
 	http.HandleFunc("/balance/", handleBalance)
 	http.HandleFunc("/frontier/", handleFrontier)
+	http.HandleFunc("/pending/", handlePending)
+	http.HandleFunc("/chain/", handleChain)
+	http.HandleFunc("/anchors", handleAnchors)
+	http.HandleFunc("/proposals", handleProposals)
+	http.HandleFunc("/market/bids", handleMarketBids)
+	http.HandleFunc("/multisigs", handleMultisigs)
 	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/peers", handlePeers)
 	http.HandleFunc("/health", handleHealth)
@@ -120,18 +127,20 @@ func main() {
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "online",
-		"engine": "Go-Lattice v7.0.0",
-		"stateHash": lattice.StateHash,
+		"status":     "online",
+		"engine":     "Go-Lattice v7.0.0",
+		"stateHash":  lattice.StateHash,
 		"merkleRoot": lattice.MerkleRoot,
-		"accounts": len(lattice.Chains),
-		"blocks": len(lattice.Blocks),
+		"accounts":   len(lattice.Chains),
+		"blocks":     len(lattice.Blocks),
 	})
 }
 
 func handleProcess(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost { return }
-	
+	if r.Method != http.MethodPost {
+		return
+	}
+
 	var payload struct {
 		Block *Block `json:"block"`
 	}
@@ -139,6 +148,12 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+	if payload.Block == nil {
+		http.Error(w, "missing block payload", 400)
+		return
+	}
+
+	normalizeLegacyBlock(payload.Block)
 
 	if err := lattice.ProcessBlock(payload.Block, false); err != nil {
 		fmt.Printf("[Lattice Error] %v\n", err)
@@ -151,6 +166,36 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": payload.Block.Hash})
 }
 
+func normalizeLegacyBlock(block *Block) {
+	if block == nil {
+		return
+	}
+
+	if block.Timestamp == 0 {
+		block.Timestamp = time.Now().UnixNano() / 1e6
+	}
+
+	lattice.mu.RLock()
+	chain := lattice.Chains[block.Account]
+	var head *Block
+	if len(chain) > 0 {
+		head = chain[len(chain)-1]
+	}
+	lattice.mu.RUnlock()
+
+	if head == nil {
+		return
+	}
+
+	if block.Height == 0 && block.Type != "open" {
+		block.Height = head.Height + 1
+	}
+
+	if block.StakedBalance == 0 && block.Type != "stake_lock" && block.Type != "stake_unlock" {
+		block.StakedBalance = head.StakedBalance
+	}
+}
+
 func handleBalance(w http.ResponseWriter, r *http.Request) {
 	account := r.URL.Path[len("/balance/"):]
 	balance := lattice.GetBalance(account, time.Now().UnixNano()/1e6)
@@ -161,14 +206,85 @@ func handleFrontier(w http.ResponseWriter, r *http.Request) {
 	account := r.URL.Path[len("/frontier/"):]
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
-	
+
 	chain := lattice.Chains[account]
 	var hash *string
+	balance := 0.0
+	stakedBalance := 0.0
 	if len(chain) > 0 {
-		h := chain[len(chain)-1].Hash
+		head := chain[len(chain)-1]
+		h := head.Hash
 		hash = &h
+		balance = lattice.GetBalance(account, time.Now().UnixNano()/1e6)
+		stakedBalance = head.StakedBalance
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"frontier": hash})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"frontier":       hash,
+		"balance":        balance,
+		"staked_balance": stakedBalance,
+		"height":         len(chain),
+	})
+}
+
+func handlePending(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Path[len("/pending/"):]
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	pending := lattice.Pending[account]
+	if pending == nil {
+		pending = []*PendingTx{}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"pending": pending})
+}
+
+func handleChain(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Path[len("/chain/"):]
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	chain := lattice.Chains[account]
+	if chain == nil {
+		chain = []*Block{}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"chain": chain})
+}
+
+func handleAnchors(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	anchors := make([]interface{}, 0, len(lattice.Anchors))
+	for _, anchor := range lattice.Anchors {
+		anchors = append(anchors, anchor)
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"anchors": anchors})
+}
+
+func handleProposals(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	proposals := make([]interface{}, 0, len(lattice.Proposals))
+	for _, proposal := range lattice.Proposals {
+		proposals = append(proposals, proposal)
+	}
+	json.NewEncoder(w).Encode(proposals)
+}
+
+func handleMarketBids(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	bids := make([]interface{}, 0, len(lattice.MarketBids))
+	for _, bidRaw := range lattice.MarketBids {
+		bid, ok := bidRaw.(map[string]interface{})
+		if ok && bid["status"] == "OPEN" {
+			bids = append(bids, bid)
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"bids": bids})
+}
+
+func handleMultisigs(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	json.NewEncoder(w).Encode(map[string]interface{}{"multisigs": lattice.Multisigs})
 }
 
 func handlePools(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +295,9 @@ func handlePools(w http.ResponseWriter, r *http.Request) {
 
 func handlePeers(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		var payload struct { URL string `json:"url"` }
+		var payload struct {
+			URL string `json:"url"`
+		}
 		json.NewDecoder(r.Body).Decode(&payload)
 		lattice.mu.Lock()
 		lattice.Peers[payload.URL] = &PeerInfo{URL: payload.URL, Status: "connected"}
@@ -197,7 +315,9 @@ func handleBlocks(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	limit := 100 // Default batch size
 	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil { limit = l }
+		if l, err := strconv.Atoi(limitStr); err == nil {
+			limit = l
+		}
 	}
 
 	lattice.mu.RLock()
@@ -219,14 +339,14 @@ func handleBlocks(w http.ResponseWriter, r *http.Request) {
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
-	
+
 	agreeCount := 0
 	for _, p := range lattice.Peers {
 		if p.Status == "online" && p.MerkleRoot == lattice.MerkleRoot {
 			agreeCount++
 		}
 	}
-	
+
 	quorum := 100.0
 	if len(lattice.Peers) > 0 {
 		quorum = (float64(agreeCount) / float64(len(lattice.Peers))) * 100.0
@@ -248,25 +368,29 @@ func gossipLoop() {
 	for range ticker.C {
 		lattice.mu.RLock()
 		peerURLs := make([]string, 0, len(lattice.Peers))
-		for url := range lattice.Peers { peerURLs = append(peerURLs, url) }
+		for url := range lattice.Peers {
+			peerURLs = append(peerURLs, url)
+		}
 		lattice.mu.RUnlock()
 
 		for _, url := range peerURLs {
 			start := time.Now()
 			resp, err := http.Get(url + "/status")
 			latency := time.Since(start).Milliseconds()
-			
+
 			lattice.mu.Lock()
 			peer := lattice.Peers[url]
 			if err != nil {
-				if peer != nil { peer.Status = "offline" }
+				if peer != nil {
+					peer.Status = "offline"
+				}
 				lattice.mu.Unlock()
 				continue
 			}
-			
+
 			var stats map[string]interface{}
 			json.NewDecoder(resp.Body).Decode(&stats)
-			
+
 			remoteMerkle := stats["merkleRoot"].(string)
 			remoteBlocks := int(stats["blocks"].(float64))
 			if peer != nil {
@@ -279,15 +403,19 @@ func gossipLoop() {
 
 			if remoteMerkle != lattice.MerkleRoot {
 				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Batch Sync...\n", url)
-				
+
 				for {
 					// Use 100 block batches for better throughput
 					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=100", url, lattice.StateHash))
-					if err != nil { break }
+					if err != nil {
+						break
+					}
 					var newBlocks []*Block
 					json.NewDecoder(syncResp.Body).Decode(&newBlocks)
-					
-					if len(newBlocks) == 0 { break }
+
+					if len(newBlocks) == 0 {
+						break
+					}
 
 					for _, b := range newBlocks {
 						lattice.mu.RLock()
@@ -298,7 +426,9 @@ func gossipLoop() {
 						}
 					}
 					fmt.Printf("[SYNC] Integrated compressed batch of %d blocks from %s\n", len(newBlocks), url)
-					if len(newBlocks) < 100 { break } 
+					if len(newBlocks) < 100 {
+						break
+					}
 				}
 			}
 			lattice.mu.Unlock()
@@ -310,29 +440,29 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		lattice.mu.Lock()
 		defer lattice.mu.Unlock()
-		
+
 		fmt.Println("[Snapshot] Received binary state. Commencing binary import...")
-		
+
 		// Use GOB decoder to restore state
 		err := gob.NewDecoder(r.Body).Decode(lattice)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
-		
+
 		// Perform Deep Audit to verify the binary state
 		if err := lattice.AuditState(); err != nil {
 			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "stateHash": lattice.StateHash})
 		return
 	}
 
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
-	
+
 	// Export state in binary GOB format
 	w.Header().Set("Content-Type", "application/octet-stream")
 	err := gob.NewEncoder(w).Encode(lattice)
@@ -357,11 +487,11 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		defer lattice.mu.Unlock()
 
 		fmt.Println("[Bootstrap] Received network snapshot. Commencing security audit...")
-		
+
 		// Load into memory
 		lattice.Chains = snapshot.Chains
 		lattice.Blocks = snapshot.Blocks
-		
+
 		// Perform Deep Audit
 		if err := lattice.AuditState(); err != nil {
 			fmt.Printf("[Bootstrap Error] Snapshot Rejected: %v\n", err)
@@ -379,7 +509,7 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "stateHash": lattice.StateHash, "merkleRoot": lattice.MerkleRoot})
 		return
 	}
-	
+
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(lattice)

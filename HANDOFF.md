@@ -1,123 +1,81 @@
-# Session Handoff - 2026-04-04 (v8.21.0)
+# Session Handoff - 2026-04-04 (v8.22.0)
 
 ## Executive Summary
-This session continued the Go-port hardening effort with a narrower but important target: consistency under failure.
+This pass preserves the newer upstream `v8.21.0` Go rollback/audit hardening while layering an additional operator-workflow improvement on top: Vault now supports saved presets and grouping modes for repeatable archive investigations.
 
-The previous passes improved route parity, block-type parity, audit replay, and derived-state reconstruction. This pass addressed a remaining semantic integrity issue in the Go lattice: what happens if persistence fails after in-memory state has already been mutated.
+## What This Pass Added
 
-That is now materially stronger.
+### 1. Saved archive presets
+**File:** `frontend/src/pages/Vault.jsx`
 
-## What Changed
+Added:
+- save current archive discovery filters under a custom name
+- reapply saved presets later
+- delete stale presets
 
-### 1. Persistence failure rollback hardening
+Persisted state includes:
+- search query
+- type filter
+- network search query
+- signed-only toggle
+- sort mode
+- group mode
+
+### 2. Archive grouping modes
+Added grouping by:
+- owner
+- type
+- or no grouping
+
+This lets operators inspect archive records in structured batches rather than only as a flat stream.
+
+### 3. Supporting UI polish
 **Files:**
-- `go-lattice/lattice.go`
+- `frontend/src/pages/Vault.jsx`
+- `frontend/src/pages/Vault.css`
 
-Previously, the Go lattice could reach a dangerous state transition sequence:
-- mutate in-memory runtime state
-- append the block to chains/maps
-- attempt persistence
-- if persistence failed, return an error
+Added:
+- preset chip row
+- group headings
+- grouped archive sections
 
-That pattern risked leaving partially-applied state in memory even though the block never reached durable storage.
+## Validation
+Executed successfully:
+- `cd frontend && npm run build`
+- result: ✅ production build succeeds after preset/grouping integration
 
-This session hardened that path so that if `SaveBlock()` fails:
-- the just-applied block is removed from chain/block indexes
-- rollback is followed by `AuditState()` reconstruction
-- derived state is rebuilt from surviving history
-- the failed block no longer pollutes live in-memory consensus state
+## Merge / Rebase Context
+A direct push was rejected because `origin/main` had advanced with upstream `v8.20.0` and `v8.21.0` Go hardening passes.
 
-This is a strong correctness improvement for crash/failure semantics.
+Resolution strategy:
+- preserve upstream semantic-audit and rollback hardening
+- promote this archive preset/grouping UX to `v8.22.0`
+- keep both the deeper Go trustworthiness work and the richer operator workflow ergonomics together
 
-### 2. New regression test for rollback correctness
-**Files:**
-- `go-lattice/lattice_parity_test.go`
+## Strategic State After This Session
+The Bobcoin archive stack now supports:
+- publication
+- restoration
+- lattice anchoring
+- cross-surface reuse
+- archive discovery
+- trust/reputation overlays
+- signed publisher metadata
+- degraded recovery diagnostics
+- saved presets and grouping workflows
 
-Added a Go test that intentionally closes the underlying SQLite handle and then submits a block in normal mode.
+## Recommended Next Step
+1. Deepen publisher identity semantics
+   - profile cards / avatars / linked proofs
+2. Export richer recovery diagnostics
+   - exportable reports
+   - stronger corruption/source attribution
+3. Add more archive workspace ergonomics
+   - batch actions
+   - preset sharing/export
 
-The test verifies:
-- persistence fails as expected
-- chains are rolled back
-- blocks are rolled back
-- state hash returns to the zero state
-- merkle root returns to the zero state
-
-That gives us explicit regression coverage for a real failure mode instead of assuming the rollback path works.
-
-### 3. Previous audit hardening retained
-This pass builds on the prior semantic audit improvements already in place:
-- shadow-lattice replay during `AuditState()`
-- deterministic ordered replay
-- legacy anchor/manifest hash compatibility
-- lock-safe merkle derivation
-
-The new rollback behavior benefits directly from that stronger audit path, because rollback repair now depends on the audit engine being able to reconstruct correct derived state from surviving history.
-
-## Validation Performed
-
-### Go lattice
-Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
-- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go test ./...`
-
-Result:
-- formatting succeeded
-- build succeeded
-- tests passed
-
-### Frontend
-Command run:
-- `cd C:/Users/hyper/workspace/bobcoin/frontend && npm run build`
-
-Result:
-- production build succeeded
-- PWA artifacts generated successfully
-- bundle-size warnings remain non-fatal
-
-## Architectural Meaning
-This is another step away from superficial parity and toward operational trustworthiness.
-
-The Go lattice now has stronger answers for all of the following classes of questions:
-- can it reconstruct runtime state from history?
-- can it survive legacy historical quirks?
-- can it avoid deadlocking during merkle updates?
-- can it avoid leaving poisoned in-memory state after failed persistence?
-
-That is exactly the kind of hardening required before claiming the Go core is a serious replacement candidate.
-
-## Remaining Gaps
-The largest remaining honest gaps are still:
-1. **Governance finalization semantics**
-   - proposal closure/finalization still needs a real 1:1 treatment
-2. **Economic semantic reconciliation**
-   - `accept_bid`
-   - `data_anchor` economics
-   - mixed historical bootstrap/recovery edge cases
-3. **Service ownership beyond the lattice core**
-   - `game-server` remains Node
-   - `supertorrent` remains Node
-4. **Deeper Go regression coverage**
-   - swaps
-   - NFT transfer
-   - publish-manifest replay
-   - mixed historical ledgers
-   - economic edge cases
-
-## Recommended Next Move
-The next best move remains:
-1. deeper Node-vs-Go economic/edge-case reconciliation, especially `accept_bid` and `data_anchor`
-2. broader parity-focused Go tests for replay and mixed-history behavior
-3. an explicit architectural decision on whether `game-server` and `supertorrent` remain intentionally Node-native or should be ported into Go
-
-## Files Changed In This Session
-- `VERSION.md`
-- `CHANGELOG.md`
-- `TODO.md`
-- `MEMORY.md`
-- `HANDOFF.md`
-- `go-lattice/lattice.go`
-- `go-lattice/lattice_parity_test.go`
-
-## Operational Note
-No running processes were terminated in this session.
+## Summary
+- Upstream Bobcoin production features were preserved.
+- The Go storage/archive stack is now reused across Vault, Market, and Gallery.
+- Vault now supports persistent operator workflows rather than only transient filtering.
+- The next major integration point is **publisher identity depth + exportable diagnostics**.

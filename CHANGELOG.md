@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.22.0] - 2026-04-04
+
+### Added
+- **Saved Archive Presets**: Vault now lets operators save, reapply, and delete named filter presets for recurring archive investigations.
+- **Archive Grouping Modes**: Added grouping by owner and by type so anchored content can be reviewed in structured batches rather than only as a flat list.
+- **Preset-Driven Archive Workflow**: Saved presets now persist key discovery controls including search, signed-only mode, sorting, grouping, and network query terms.
+
 ## [8.21.0] - 2026-04-04
 
 ### Added
@@ -64,61 +71,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Recovery Outcome Surfacing**: Restore results now explicitly indicate when parity reconstruction was used to recover the file.
 
 ## [8.18.0] - 2026-04-04
-
-### Added
-- **Signed Publisher Metadata**: The storage workbench can now attach publisher alias, website, and statement metadata to a `publish_manifest` anchor block, with the metadata covered by the same signed publication proof.
-- **Vault Publisher Identity Surfacing**: Vault archive records now display publisher alias, profile URL, and publisher statement when present.
-- **Publisher Searchability**: Vault search now includes publisher identity metadata so users can discover content by publisher context rather than only hashes and locators.
-
-## [8.17.0] - 2026-04-04
-
-### Added
-- **Owner Reputation Overlay**: Vault now derives lightweight trust scores and tier labels from anchored content activity, signed anchor counts, and archived data volume.
-- **Sovereign Publisher Leaderboard**: Added a ranked archive leaderboard highlighting the most active and attributable archive owners in the current data set.
-- **Archive Sorting Controls**: Added sorting modes for recent activity, trust score, size, owner, and name.
-
-### Changed
-- **Vault Discovery Surface**: Expanded Vault from search/filter discovery into a trust-aware archive intelligence surface with owner-level provenance context.
-
-## [8.15.0] - 2026-04-04
-
-### Added
-- Additional Go-Lattice API parity routes to close more of the Node-to-Go gap:
-  - `GET /frontier`
-  - `GET /anchors/:account`
-  - `GET /votes/:proposalHash`
-  - `GET /nfts`
-  - `GET /nfts/:account`
-  - `GET /multisig/:account`
-- First-pass Go support for additional block types and state models:
-  - `achievement_unlock`
-  - `swap_lock`
-  - `swap_claim`
-  - `transfer_nft`
-  - `publish_manifest`
-- `HTLCSwap` state tracking and Go snapshot coverage for swaps.
-- Go unit tests covering deterministic multisig address derivation and snapshot parity maps.
-
-### Changed
-- Improved Go bootstrap exports so `/bootstrap` now returns a cleaner explicit state snapshot rather than dumping the entire lattice struct.
-- Improved Go bootstrap imports so proposal, vote, market, swap, NFT, anchor, and multisig maps can be restored alongside chains and blocks.
-- Updated the frontend Go archive target default from `http://localhost:4000` to `http://localhost:4001` to match the in-repo Go lattice service.
-- Aligned Go vote-power math with the current Node implementation (`sqrt(balance)`) for closer governance parity.
-- Hardened Go consensus so unknown block types are now rejected explicitly.
-- Delayed Go state-root mutation until after block validation/state application succeeds, preventing false state-hash drift on rejected blocks.
-
-### Fixed
-- Fixed a major parity hole where `open` blocks would become invalid after strict invalid-type rejection was introduced; Go now handles `open` as the receive-style path with a genesis bypass.
-- Fixed missing per-account archive and NFT query routes required by the newer Go-manifest archive UI.
-- Fixed Go-side manifest anchor visibility so `publish_manifest` records now enter the anchor index instead of existing only as chain history.
-- Fixed deterministic multisig identity drift by deriving the Go vault address from the participant set rather than using the creation block hash.
-- Fixed a frontend archive misconfiguration where `GO_LATTICE_URL` pointed at the old Node-lattice default port.
-
-### Validation
-- `cd go-lattice && gofmt -w *.go`
-- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
-- `cd go-lattice && go test ./...`
-- `cd frontend && npm run build`
-
-## [8.14.0] - 2026-04-04
 ...

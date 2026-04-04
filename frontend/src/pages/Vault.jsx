@@ -109,6 +109,8 @@ function buildOwnerProfiles(manifestAnchors, legacyAnchors) {
         .sort((a, b) => b.trustScore - a.trustScore || b.totalAnchors - a.totalAnchors || b.latestTimestamp - a.latestTimestamp);
 }
 
+const VAULT_PRESETS_KEY = 'bobcoin_vault_filter_presets';
+
 function sortAnchors(anchors, sortMode, ownerProfiles) {
     const copy = [...anchors];
     const trustFor = (anchor) => ownerProfiles.get(anchor.owner)?.trustScore || 0;
@@ -128,6 +130,29 @@ function sortAnchors(anchors, sortMode, ownerProfiles) {
     }
 }
 
+function groupAnchors(anchors, groupMode) {
+    if (groupMode === 'none') {
+        return [{ key: 'all', label: 'ALL RESULTS', anchors }];
+    }
+
+    const groups = new Map();
+    for (const anchor of anchors) {
+        const key = groupMode === 'owner'
+            ? (anchor.owner || 'UNKNOWN')
+            : (anchor.type || anchor.sourceKind || 'unknown');
+        if (!groups.has(key)) {
+            groups.set(key, []);
+        }
+        groups.get(key).push(anchor);
+    }
+
+    return Array.from(groups.entries()).map(([key, groupedAnchors]) => ({
+        key,
+        label: groupMode === 'owner' ? `OWNER ${short(key, 20)}` : `TYPE ${(key || 'unknown').toUpperCase()}`,
+        anchors: groupedAnchors,
+    }));
+}
+
 export function Vault() {
     const [balance, setBalance] = useState(0);
     const [myAnchors, setMyAnchors] = useState([]);
@@ -144,6 +169,9 @@ export function Vault() {
     const [networkSearch, setNetworkSearch] = useState('');
     const [showOnlySigned, setShowOnlySigned] = useState(false);
     const [sortMode, setSortMode] = useState('recent');
+    const [groupMode, setGroupMode] = useState('none');
+    const [presetName, setPresetName] = useState('');
+    const [savedPresets, setSavedPresets] = useState([]);
 
     useEffect(() => {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -155,6 +183,15 @@ export function Vault() {
         const kp = JSON.parse(storedKeys);
         setKeypair(kp);
         refresh(kp.publicKey);
+
+        try {
+            const raw = localStorage.getItem(VAULT_PRESETS_KEY);
+            if (raw) {
+                setSavedPresets(JSON.parse(raw));
+            }
+        } catch (error) {
+            console.error('Failed to load vault presets:', error);
+        }
     }, []);
 
     const ownedLegacyAnchors = useMemo(
@@ -192,6 +229,9 @@ export function Vault() {
         return sortAnchors(filtered, sortMode, ownerProfilesMap);
     }, [networkAnchors, networkSearch, showOnlySigned, sortMode, ownerProfilesMap]);
 
+    const groupedOwnedEntries = useMemo(() => groupAnchors(filteredOwnedEntries, groupMode), [filteredOwnedEntries, groupMode]);
+    const groupedNetworkEntries = useMemo(() => groupAnchors(filteredNetworkAnchors.slice(0, 12), groupMode), [filteredNetworkAnchors, groupMode]);
+
     const stats = useMemo(() => {
         const totalSize = ownedLegacyAnchors.reduce((sum, anchor) => sum + (anchor.size || anchor.originalSize || 0), 0);
         const published = myAnchors.filter(anchor => anchor.type === 'publish_manifest').length;
@@ -202,6 +242,38 @@ export function Vault() {
             : 0;
         return { totalSize, published, legacy, signed, avgTrust };
     }, [myAnchors, ownedLegacyAnchors, ownerProfiles]);
+
+    const persistPresets = (nextPresets) => {
+        setSavedPresets(nextPresets);
+        localStorage.setItem(VAULT_PRESETS_KEY, JSON.stringify(nextPresets));
+    };
+
+    const savePreset = () => {
+        const name = presetName.trim();
+        if (!name) {
+            alert('Enter a preset name first.');
+            return;
+        }
+        const next = [
+            ...savedPresets.filter(p => p.name !== name),
+            { name, search, typeFilter, networkSearch, showOnlySigned, sortMode, groupMode },
+        ];
+        persistPresets(next);
+        setPresetName('');
+    };
+
+    const applyPreset = (preset) => {
+        setSearch(preset.search || '');
+        setTypeFilter(preset.typeFilter || 'all');
+        setNetworkSearch(preset.networkSearch || '');
+        setShowOnlySigned(!!preset.showOnlySigned);
+        setSortMode(preset.sortMode || 'recent');
+        setGroupMode(preset.groupMode || 'none');
+    };
+
+    const deletePreset = (name) => {
+        persistPresets(savedPresets.filter(p => p.name !== name));
+    };
 
     const refresh = async (pubkey) => {
         setLoading(true);
@@ -349,6 +421,11 @@ export function Vault() {
                         <option value="name">SORT: NAME</option>
                         <option value="owner">SORT: OWNER</option>
                     </select>
+                    <select className="cyber-input" value={groupMode} onChange={(e) => setGroupMode(e.target.value)}>
+                        <option value="none">GROUP: NONE</option>
+                        <option value="owner">GROUP: OWNER</option>
+                        <option value="type">GROUP: TYPE</option>
+                    </select>
                     <label className="vault-checkbox-row">
                         <input type="checkbox" checked={showOnlySigned} onChange={() => setShowOnlySigned(!showOnlySigned)} />
                         <span>SIGNED / PROVENANCE-RICH ONLY</span>
@@ -359,6 +436,21 @@ export function Vault() {
                         value={networkSearch}
                         onChange={(e) => setNetworkSearch(e.target.value)}
                     />
+                </div>
+                <div className="vault-presets-row">
+                    <input
+                        className="cyber-input"
+                        placeholder="SAVE CURRENT FILTERS AS..."
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                    />
+                    <button className="cyber-button small" onClick={savePreset}>SAVE PRESET</button>
+                    {savedPresets.map((preset) => (
+                        <div key={preset.name} className="vault-preset-chip">
+                            <button className="cyber-button small secondary" onClick={() => applyPreset(preset)}>{preset.name}</button>
+                            <button className="chip-delete" onClick={() => deletePreset(preset.name)} title="Delete preset">×</button>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -442,10 +534,15 @@ export function Vault() {
                 </div>
 
                 <div className="anchor-grid">
-                    {filteredOwnedEntries.map(anchor => (
-                        anchor.sourceKind === 'legacy'
-                            ? <LegacyAnchorCard key={anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} />
-                            : <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} owned />
+                    {groupedOwnedEntries.map(group => (
+                        <div key={group.key} className="vault-group-block">
+                            {groupMode !== 'none' && <div className="vault-group-label">{group.label} ({group.anchors.length})</div>}
+                            {group.anchors.map(anchor => (
+                                anchor.sourceKind === 'legacy'
+                                    ? <LegacyAnchorCard key={anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} />
+                                    : <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} owned />
+                            ))}
+                        </div>
                     ))}
                     {!loading && filteredOwnedEntries.length === 0 && (
                         <p className="empty">NO PERSONAL ARCHIVE ENTRIES MATCH THE CURRENT FILTERS.</p>
@@ -462,8 +559,13 @@ export function Vault() {
                     published manifests and data anchors, giving operators a provenance-aware view of the storage network.
                 </p>
                 <div className="anchor-grid">
-                    {filteredNetworkAnchors.slice(0, 12).map(anchor => (
-                        <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} />
+                    {groupedNetworkEntries.map(group => (
+                        <div key={group.key} className="vault-group-block">
+                            {groupMode !== 'none' && <div className="vault-group-label">{group.label} ({group.anchors.length})</div>}
+                            {group.anchors.map(anchor => (
+                                <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} />
+                            ))}
+                        </div>
                     ))}
                     {!loading && filteredNetworkAnchors.length === 0 && <p className="empty">NO NETWORK ANCHORS MATCH THE CURRENT FILTERS.</p>}
                 </div>

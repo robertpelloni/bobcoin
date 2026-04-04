@@ -38,6 +38,8 @@ function matchesSearch(anchor, query) {
         anchor.publisherAlias,
         anchor.publisherWebsite,
         anchor.publisherStatement,
+        anchor.publisherAvatar,
+        ...(anchor.publisherProofs || []),
         anchor.type,
     ]
         .map(normalizeString)
@@ -624,6 +626,22 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                 {anchor.publisherWebsite && <span className="file-meta dim">PROFILE: {anchor.publisherWebsite}</span>}
                 {anchor.publisherStatement && <span className="file-meta dim">STATEMENT: {anchor.publisherStatement}</span>}
                 <ProvenanceBadge anchor={anchor} ownerProfile={ownerProfile} />
+                {anchor.publisherAvatar && (
+                    <div className="publisher-card">
+                        <img src={anchor.publisherAvatar} alt={anchor.publisherAlias || 'publisher avatar'} className="publisher-avatar" />
+                        <div className="publisher-card-meta">
+                            <div className="publisher-card-title">{anchor.publisherAlias || 'Unnamed Publisher'}</div>
+                            {anchor.publisherWebsite && <a href={anchor.publisherWebsite} target="_blank" rel="noreferrer" className="publisher-link">{anchor.publisherWebsite}</a>}
+                        </div>
+                    </div>
+                )}
+                {Array.isArray(anchor.publisherProofs) && anchor.publisherProofs.length > 0 && (
+                    <div className="publisher-proofs">
+                        {anchor.publisherProofs.map((proof) => (
+                            <a key={proof} href={proof} target="_blank" rel="noreferrer" className="vault-badge neutral publisher-proof-link">PROOF</a>
+                        ))}
+                    </div>
+                )}
             </div>
             <div className="anchor-actions">
                 {manifestUrl && (

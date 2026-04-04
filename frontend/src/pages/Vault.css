@@ -338,6 +338,56 @@
     margin-top: 0.55rem;
 }
 
+.publisher-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.6rem;
+    border: 1px solid #222;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.publisher-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #333;
+    background: #111;
+}
+
+.publisher-card-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.publisher-card-title {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+}
+
+.publisher-link {
+    color: #0ff;
+    font-size: 0.72rem;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.publisher-proofs {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+}
+
+.publisher-proof-link {
+    text-decoration: none;
+}
+
 .vault-badge {
     display: inline-flex;
     align-items: center;

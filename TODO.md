@@ -33,6 +33,7 @@
 - [x] **Signed Publisher Metadata (Frontend v9):** Added publisher alias/website/statement metadata to manifest anchors and surfaced it in Vault discovery results.
 - [x] **Degraded Recovery Diagnostics (Frontend v10):** Added missing-shard diagnostics, parity sufficiency reporting, and manual shard-omission testing controls to the restore flow.
 - [x] **Saved Archive Presets & Grouping (Frontend v11):** Added reusable filter presets plus owner/type grouping modes to the Vault archive intelligence surface.
+- [x] **Publisher Profile Overlay (Frontend v12):** Added avatar/profile/proof-link metadata to manifest anchors and surfaced those linked identity cues inside Vault archive cards.
 - [x] **Tooltips:** Ensured every button, input, and stat across major pages has a descriptive tooltip.
 - [x] **Mobile Responsiveness:** Audited the CSS and injected global media queries to ensure desktop dashboard views collapse gracefully on mobile screens.
 - [x] **Version Display:** Injected the global version string dynamically into the footer using Vite defines.

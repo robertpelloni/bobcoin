@@ -58,6 +58,8 @@ export function StorageWasmWorkbench() {
     const [publisherAlias, setPublisherAlias] = useState('');
     const [publisherWebsite, setPublisherWebsite] = useState('');
     const [publisherStatement, setPublisherStatement] = useState('');
+    const [publisherAvatar, setPublisherAvatar] = useState('');
+    const [publisherProofs, setPublisherProofs] = useState('');
 
     useEffect(() => {
         let active = true;
@@ -338,6 +340,11 @@ export function StorageWasmWorkbench() {
                 throw new Error('The Go lattice does not yet know this wallet. Open or sync the account first.');
             }
 
+            const normalizedProofs = publisherProofs
+                .split(/\r?\n|,/) 
+                .map(v => v.trim())
+                .filter(Boolean);
+
             const proofMessage = [
                 manifestId,
                 locator,
@@ -346,6 +353,8 @@ export function StorageWasmWorkbench() {
                 publisherAlias.trim(),
                 publisherWebsite.trim(),
                 publisherStatement.trim(),
+                publisherAvatar.trim(),
+                normalizedProofs.join('|'),
             ].join('|');
             const proofHash = await hashData(proofMessage);
             const proofSignature = await signBlock(proofHash, keypair.privateKey);
@@ -367,6 +376,8 @@ export function StorageWasmWorkbench() {
                         alias: publisherAlias.trim(),
                         website: publisherWebsite.trim(),
                         statement: publisherStatement.trim(),
+                        avatar: publisherAvatar.trim(),
+                        proofs: normalizedProofs,
                     },
                     publicationProof: {
                         messageHash: proofHash,
@@ -488,11 +499,24 @@ export function StorageWasmWorkbench() {
                                 value={publisherWebsite}
                                 onChange={(e) => setPublisherWebsite(e.target.value)}
                             />
+                            <input
+                                className="cyber-input"
+                                placeholder="Avatar / Profile Image URL"
+                                value={publisherAvatar}
+                                onChange={(e) => setPublisherAvatar(e.target.value)}
+                            />
                             <textarea
                                 className="cyber-input"
                                 placeholder="Publisher Statement / Intent"
                                 value={publisherStatement}
                                 onChange={(e) => setPublisherStatement(e.target.value)}
+                                style={{ minHeight: '72px', gridColumn: '1 / -1' }}
+                            />
+                            <textarea
+                                className="cyber-input"
+                                placeholder="Proof / Attestation URLs (comma or newline separated)"
+                                value={publisherProofs}
+                                onChange={(e) => setPublisherProofs(e.target.value)}
                                 style={{ minHeight: '72px', gridColumn: '1 / -1' }}
                             />
                         </div>

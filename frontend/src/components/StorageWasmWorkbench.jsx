@@ -33,6 +33,35 @@ function uint8ArrayToBase64(bytes) {
     return btoa(binary);
 }
 
+function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes }) {
+    return {
+        generatedAt: new Date().toISOString(),
+        manifest: {
+            id: loadedManifest?.manifestId || loadedManifest?.encryption?.ciphertextHash || null,
+            locator: loadedManifest?.locator || null,
+            manifestUrl: loadedManifest?.manifestUrl || null,
+            name: loadedManifest?.source?.name || null,
+            size: loadedManifest?.source?.size || null,
+            mime: loadedManifest?.source?.mime || null,
+            ciphertextHash: loadedManifest?.encryption?.ciphertextHash || null,
+        },
+        recovery: {
+            omittedShardIndexes: omittedShardIndexes
+                .split(',')
+                .map(v => v.trim())
+                .filter(Boolean),
+            totalShards: restoreDiagnostics?.totalShards ?? null,
+            dataShards: restoreDiagnostics?.dataShards ?? null,
+            parityShards: restoreDiagnostics?.parityShards ?? null,
+            availableCount: restoreDiagnostics?.availableCount ?? null,
+            missingCount: restoreDiagnostics?.missingCount ?? null,
+            recoverable: restoreDiagnostics?.recoverable ?? false,
+            failedShards: restoreDiagnostics?.failedShards || [],
+            restoredFile: restoredInfo || null,
+        },
+    };
+}
+
 export function StorageWasmWorkbench() {
     const [runtimeStatus, setRuntimeStatus] = useState('checking');
     const [runtimeError, setRuntimeError] = useState('');
@@ -651,6 +680,17 @@ export function StorageWasmWorkbench() {
                                 ))}
                             </div>
                         )}
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+                            <button
+                                className="cyber-button small"
+                                onClick={() => downloadJson(
+                                    `${loadedManifest?.source?.name || loadedManifest?.manifestId || 'restore'}-recovery-report.json`,
+                                    buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes })
+                                )}
+                            >
+                                DOWNLOAD RECOVERY REPORT
+                            </button>
+                        </div>
                     </div>
                 )}
 

@@ -12,3 +12,19 @@
 
 ## Git Submodule Structure
 - The `research/forest` and `research/solana` directories exist but are throwing `.gitmodules` mapping errors, indicating they were cloned or moved without proper submodule initialization. They are treated as untracked/modified content by the root git instance.
+
+## Go Port Reality Check (v8.13.0)
+- The Go lattice is now much closer to Node parity, but the repository is still a hybrid system rather than a pure-Go platform.
+- Newly closed parity gaps:
+  - Go now exposes additional compatibility routes: `/frontier`, `/anchors/:account`, `/votes/:proposalHash`, `/nfts`, `/nfts/:account`, `/multisig/:account`.
+  - Go now supports more block/state types: `achievement_unlock`, `swap_lock`, `swap_claim`, `transfer_nft`, `publish_manifest`.
+  - Go bootstrap snapshots now include proposals, votes, market bids, swaps, NFTs, anchors, and multisigs.
+  - Go now rejects unknown block types explicitly and delays state-hash mutation until successful block application.
+- Remaining architectural truth:
+  - `game-server` and `supertorrent` are still Node services.
+  - Rust/SP1 remains the correct place for proof generation/verification.
+  - Some semantics still need final reconciliation between Node and Go, especially around economic edge cases and non-lattice service behavior.
+- Operational convention:
+  - In this repo, the in-repo Go lattice defaults to port `4001`.
+  - The older Node lattice defaults to port `4000`.
+  - Any new Go-facing frontend/archive integration should target `4001` unless explicitly overridden.

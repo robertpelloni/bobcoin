@@ -3,11 +3,13 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type PendingTx struct {
@@ -39,6 +41,15 @@ type LiquidityPool struct {
 	TotalShares float64 `json:"totalShares"`
 }
 
+type HTLCSwap struct {
+	Sender    string  `json:"sender"`
+	Recipient string  `json:"recipient"`
+	Amount    float64 `json:"amount"`
+	Expiry    int64   `json:"expiry"`
+	Status    string  `json:"status"`
+	Claimer   string  `json:"claimer,omitempty"`
+}
+
 type PeerInfo struct {
 	URL        string `json:"url"`
 	Latency    int64  `json:"latency"` // in milliseconds
@@ -57,6 +68,7 @@ type Lattice struct {
 	Proposals     map[string]interface{}
 	Votes         map[string]map[string]map[string]interface{}
 	MarketBids    map[string]interface{}
+	Swaps         map[string]*HTLCSwap
 	Nfts          map[string]interface{}
 	Anchors       map[string]interface{}
 	Multisigs     map[string]*MultisigVault
@@ -77,6 +89,7 @@ func NewLattice(db *DBManager) *Lattice {
 		Proposals:     make(map[string]interface{}),
 		Votes:         make(map[string]map[string]map[string]interface{}),
 		MarketBids:    make(map[string]interface{}),
+		Swaps:         make(map[string]*HTLCSwap),
 		Nfts:          make(map[string]interface{}),
 		Anchors:       make(map[string]interface{}),
 		Multisigs:     make(map[string]*MultisigVault),
@@ -204,12 +217,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		}
 	}
 
-	// 4. Update State Root
-	h := sha256.New()
-	h.Write([]byte(l.StateHash + block.Hash))
-	l.StateHash = hex.EncodeToString(h.Sum(nil))
-
-	// 5. Consensus Rules (Balance, etc)
+	// 4. Consensus Rules (Balance, etc)
 	epsilon := 0.001
 	prevBalance := 0.0
 	if head != nil {
@@ -239,31 +247,164 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 				Sender: block.Account,
 			})
 		}
-	} else if block.Type == "receive" {
-		list := l.Pending[block.Account]
-		found := false
-		var amount float64
-		for i, p := range list {
-			if p.Hash == block.Link {
-				amount = p.Amount
-				l.Pending[block.Account] = append(list[:i], list[i+1:]...)
-				found = true
-				break
+	} else if block.Type == "receive" || block.Type == "open" {
+		if block.Type == "open" && block.Link == "SYSTEM_GENESIS" {
+			// Genesis bootstrap open block bypasses pending-receive requirements.
+		} else {
+			list := l.Pending[block.Account]
+			found := false
+			var amount float64
+			for i, p := range list {
+				if p.Hash == block.Link {
+					amount = p.Amount
+					l.Pending[block.Account] = append(list[:i], list[i+1:]...)
+					found = true
+					break
+				}
 			}
-		}
-		if !found {
-			return fmt.Errorf("pending send block not found")
-		}
-		if math.Abs(block.Balance-(prevBalance+amount)) > epsilon {
-			return fmt.Errorf("invalid receive balance")
+			if !found {
+				return fmt.Errorf("pending send block not found")
+			}
+			if math.Abs(block.Balance-(prevBalance+amount)) > epsilon {
+				return fmt.Errorf("invalid receive balance")
+			}
 		}
 	} else if block.Type == "proposal" {
 		if math.Abs(block.Balance-(prevBalance-10)) > epsilon {
 			return fmt.Errorf("proposal costs 10 BOB")
 		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["title"] == nil || payload["endTime"] == nil {
+			return fmt.Errorf("invalid proposal payload")
+		}
+	} else if block.Type == "vote" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("vote block must not change balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["vote"] == nil {
+			return fmt.Errorf("invalid vote payload")
+		}
 	} else if block.Type == "market_bid" {
 		if block.Balance > prevBalance+epsilon {
 			return fmt.Errorf("market bid must decrease balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["magnet"] == nil {
+			return fmt.Errorf("invalid market bid payload")
+		}
+	} else if block.Type == "accept_bid" {
+		bidRaw, ok := l.MarketBids[block.Link]
+		if !ok {
+			return fmt.Errorf("target market bid not found")
+		}
+		bid := bidRaw.(map[string]interface{})
+		if bid["status"] != "OPEN" {
+			return fmt.Errorf("market bid is already accepted or closed")
+		}
+		amount, ok := bid["amount"].(float64)
+		if !ok {
+			return fmt.Errorf("market bid amount malformed")
+		}
+		if math.Abs(block.Balance-(prevBalance+amount)) > epsilon {
+			return fmt.Errorf("accept bid block must correctly increment balance by bid amount")
+		}
+	} else if block.Type == "achievement_unlock" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("achievement unlock cannot change balance")
+		}
+	} else if block.Type == "swap_lock" {
+		amount := prevBalance - block.Balance
+		if amount <= 0 {
+			return fmt.Errorf("swap lock must decrease balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["secretHash"] == nil || payload["recipient"] == nil {
+			return fmt.Errorf("invalid swap_lock payload")
+		}
+	} else if block.Type == "swap_claim" {
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["secret"] == nil || payload["secretHash"] == nil {
+			return fmt.Errorf("invalid swap_claim payload")
+		}
+		secretHash, _ := payload["secretHash"].(string)
+		swap := l.Swaps[secretHash]
+		if swap == nil {
+			return fmt.Errorf("swap not found")
+		}
+		if swap.Status != "LOCKED" {
+			return fmt.Errorf("swap already claimed or expired")
+		}
+		if time.Now().UnixMilli() > swap.Expiry {
+			return fmt.Errorf("swap expired")
+		}
+		secret, _ := payload["secret"].(string)
+		if Hash(secret) != secretHash {
+			return fmt.Errorf("invalid secret for HTLC claim")
+		}
+		if math.Abs(block.Balance-(prevBalance+swap.Amount)) > epsilon {
+			return fmt.Errorf("swap claim must increment balance by locked amount")
+		}
+	} else if block.Type == "mint_nft" {
+		if math.Abs(block.Balance-(prevBalance-50)) > epsilon {
+			return fmt.Errorf("NFT minting costs exactly 50 BOB")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["name"] == nil || payload["magnet"] == nil {
+			return fmt.Errorf("invalid NFT metadata")
+		}
+	} else if block.Type == "transfer_nft" {
+		if math.Abs(block.Balance-(prevBalance-1)) > epsilon {
+			return fmt.Errorf("NFT transfer costs 1 BOB fee")
+		}
+		nftRaw, ok := l.Nfts[block.Link]
+		if !ok {
+			return fmt.Errorf("NFT not found")
+		}
+		nft, ok := nftRaw.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("NFT state malformed")
+		}
+		owner, _ := nft["owner"].(string)
+		if owner != block.Account {
+			return fmt.Errorf("you do not own this NFT")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["recipient"] == nil {
+			return fmt.Errorf("recipient required for NFT transfer")
+		}
+	} else if block.Type == "data_anchor" {
+		amount := prevBalance - block.Balance
+		if amount <= 0 {
+			return fmt.Errorf("data anchor must pay storage fee")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["magnet"] == nil || payload["name"] == nil {
+			return fmt.Errorf("invalid data anchor metadata")
+		}
+	} else if block.Type == "publish_manifest" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("publish_manifest cannot change balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["manifestId"] == nil || payload["locator"] == nil || payload["manifestUrl"] == nil {
+			return fmt.Errorf("invalid publish_manifest payload")
+		}
+	} else if block.Type == "multisig_create" {
+		if math.Abs(block.Balance-(prevBalance-100)) > epsilon {
+			return fmt.Errorf("multisig creation costs exactly 100 BOB")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["participants"] == nil || payload["threshold"] == nil {
+			return fmt.Errorf("invalid multisig parameters")
+		}
+	} else if block.Type == "multisig_propose" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("multisig propose cannot change balance")
+		}
+	} else if block.Type == "multisig_approve" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("multisig approve cannot change balance")
 		}
 	} else if block.Type == "stake_lock" {
 		amount := prevBalance - block.Balance
@@ -281,13 +422,19 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if math.Abs(block.StakedBalance-(prevStaked-amount)) > epsilon {
 			return errors.New("invalid staked balance")
 		}
+		if block.StakedBalance < -epsilon {
+			return errors.New("insufficient staked balance")
+		}
+	} else if block.Type == "amm_swap" {
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["pair"] == nil || payload["amountIn"] == nil {
+			return fmt.Errorf("invalid amm swap payload")
+		}
+	} else {
+		return fmt.Errorf("invalid block type")
 	}
 
-	// 6. Commit In-Memory
-	l.Chains[block.Account] = append(l.Chains[block.Account], block)
-	l.Blocks[block.Hash] = block
-
-	// 7. Type-Specific State Updates (Governance, Storage, NFTs, Multisig, DeFi)
+	// 6. Type-Specific State Updates (Governance, Storage, NFTs, Multisig, DeFi)
 	if block.Type == "proposal" {
 		payload := block.Payload.(map[string]interface{})
 		endTime, _ := payload["endTime"].(string)
@@ -312,6 +459,12 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if proposal["status"] != "Active" {
 			return fmt.Errorf("proposal is closed")
 		}
+		endTime, _ := proposal["endTime"].(string)
+		if endTime != "" {
+			if parsed, err := time.Parse(time.RFC3339, endTime); err == nil && time.Now().After(parsed) {
+				return fmt.Errorf("proposal is closed")
+			}
+		}
 		if _, ok := l.Votes[block.Link]; !ok {
 			l.Votes[block.Link] = make(map[string]map[string]interface{})
 		}
@@ -320,11 +473,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		}
 
 		voteType, _ := payload["vote"].(string)
-		if voteType != "FOR" && voteType != "AGAINST" {
-			return fmt.Errorf("invalid vote type")
-		}
-
-		power := math.Sqrt(math.Max(block.Balance+(block.StakedBalance*2), 0))
+		power := math.Sqrt(math.Max(block.Balance, 0))
 		l.Votes[block.Link][block.Account] = map[string]interface{}{
 			"type":  voteType,
 			"power": power,
@@ -347,19 +496,51 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			"timestamp": block.Timestamp,
 		}
 	} else if block.Type == "accept_bid" {
-		bidRaw, ok := l.MarketBids[block.Link]
-		if !ok {
-			return fmt.Errorf("target market bid not found")
-		}
-		bid := bidRaw.(map[string]interface{})
-		if bid["status"] != "OPEN" {
-			return fmt.Errorf("market bid is already accepted or closed")
-		}
+		bid := l.MarketBids[block.Link].(map[string]interface{})
 		bid["status"] = "ACCEPTED"
 		bid["acceptedBy"] = block.Account
+	} else if block.Type == "swap_lock" {
+		payload := block.Payload.(map[string]interface{})
+		expiry := int64(time.Now().UnixMilli() + 3600000)
+		switch v := payload["expiry"].(type) {
+		case float64:
+			expiry = int64(v)
+		case int64:
+			expiry = v
+		case int:
+			expiry = int64(v)
+		}
+		amount := prevBalance - block.Balance
+		secretHash, _ := payload["secretHash"].(string)
+		recipient, _ := payload["recipient"].(string)
+		l.Swaps[secretHash] = &HTLCSwap{
+			Sender:    block.Account,
+			Recipient: recipient,
+			Amount:    amount,
+			Expiry:    expiry,
+			Status:    "LOCKED",
+		}
+	} else if block.Type == "swap_claim" {
+		payload := block.Payload.(map[string]interface{})
+		secretHash, _ := payload["secretHash"].(string)
+		swap := l.Swaps[secretHash]
+		swap.Status = "CLAIMED"
+		swap.Claimer = block.Account
 	} else if block.Type == "mint_nft" {
-		l.Nfts[block.Hash] = block.Payload
-	} else if block.Type == "data_anchor" {
+		payload := block.Payload.(map[string]interface{})
+		l.Nfts[block.Hash] = map[string]interface{}{
+			"id":          block.Hash,
+			"owner":       block.Account,
+			"name":        payload["name"],
+			"magnet":      payload["magnet"],
+			"description": payload["description"],
+			"timestamp":   block.Timestamp,
+		}
+	} else if block.Type == "transfer_nft" {
+		payload := block.Payload.(map[string]interface{})
+		nft := l.Nfts[block.Link].(map[string]interface{})
+		nft["owner"] = payload["recipient"]
+	} else if block.Type == "data_anchor" || block.Type == "publish_manifest" {
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok {
 			payload = map[string]interface{}{}
@@ -367,6 +548,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload["id"] = block.Hash
 		payload["owner"] = block.Account
 		payload["timestamp"] = block.Timestamp
+		if payload["type"] == nil {
+			payload["type"] = block.Type
+		}
 		l.Anchors[block.Hash] = payload
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
@@ -375,8 +559,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		for _, p := range partsRaw {
 			participants = append(participants, p.(string))
 		}
+		vaultAddr := deterministicMultisigAddress(participants)
 
-		l.Multisigs[block.Hash] = &MultisigVault{
+		l.Multisigs[vaultAddr] = &MultisigVault{
 			Participants:     participants,
 			Threshold:        int(payload["threshold"].(float64)),
 			Balance:          0,
@@ -449,6 +634,10 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		pool.ReserveB -= dy
 	}
 
+	// 7. Commit In-Memory
+	l.Chains[block.Account] = append(l.Chains[block.Account], block)
+	l.Blocks[block.Hash] = block
+
 	// 8. Persist to Disk
 	if !isRecovery {
 		if err := l.db.SaveBlock(block); err != nil {
@@ -456,7 +645,10 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		}
 	}
 
-	// 9. Update State Merkle Tree
+	// 9. Update State Root + State Merkle Tree only after all validation and persistence succeeds
+	h := sha256.New()
+	h.Write([]byte(l.StateHash + block.Hash))
+	l.StateHash = hex.EncodeToString(h.Sum(nil))
 	l.MerkleRoot = l.CalculateMerkleRoot()
 
 	return nil
@@ -479,6 +671,36 @@ func (l *Lattice) GetBalance(account string, ts int64) float64 {
 	}
 	decay := head.Balance * l.DemurrageRate * float64(elapsed)
 	return math.Max(0, head.Balance-decay)
+}
+
+func deterministicMultisigAddress(participants []string) string {
+	participantsJSON, _ := json.Marshal(participants)
+	address := Hash(string(participantsJSON))
+	if len(address) > 44 {
+		return address[:44]
+	}
+	return address
+}
+
+func (l *Lattice) GetStateSnapshot() map[string]interface{} {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return map[string]interface{}{
+		"chains":     l.Chains,
+		"blocks":     l.Blocks,
+		"pending":    l.Pending,
+		"proposals":  l.Proposals,
+		"votes":      l.Votes,
+		"marketBids": l.MarketBids,
+		"swaps":      l.Swaps,
+		"nfts":       l.Nfts,
+		"anchors":    l.Anchors,
+		"multisigs":  l.Multisigs,
+		"stateHash":  l.StateHash,
+		"merkleRoot": l.MerkleRoot,
+		"timestamp":  time.Now().UnixMilli(),
+	}
 }
 
 /**

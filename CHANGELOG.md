@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.15.0] - 2026-04-04
+
+### Added
+- Additional Go-Lattice API parity routes to close more of the Node-to-Go gap:
+  - `GET /frontier`
+  - `GET /anchors/:account`
+  - `GET /votes/:proposalHash`
+  - `GET /nfts`
+  - `GET /nfts/:account`
+  - `GET /multisig/:account`
+- First-pass Go support for additional block types and state models:
+  - `achievement_unlock`
+  - `swap_lock`
+  - `swap_claim`
+  - `transfer_nft`
+  - `publish_manifest`
+- `HTLCSwap` state tracking and Go snapshot coverage for swaps.
+- Go unit tests covering deterministic multisig address derivation and snapshot parity maps.
+
+### Changed
+- Improved Go bootstrap exports so `/bootstrap` now returns a cleaner explicit state snapshot rather than dumping the entire lattice struct.
+- Improved Go bootstrap imports so proposal, vote, market, swap, NFT, anchor, and multisig maps can be restored alongside chains and blocks.
+- Updated the frontend Go archive target default from `http://localhost:4000` to `http://localhost:4001` to match the in-repo Go lattice service.
+- Aligned Go vote-power math with the current Node implementation (`sqrt(balance)`) for closer governance parity.
+- Hardened Go consensus so unknown block types are now rejected explicitly.
+- Delayed Go state-root mutation until after block validation/state application succeeds, preventing false state-hash drift on rejected blocks.
+
+### Fixed
+- Fixed a major parity hole where `open` blocks would become invalid after strict invalid-type rejection was introduced; Go now handles `open` as the receive-style path with a genesis bypass.
+- Fixed missing per-account archive and NFT query routes required by the newer Go-manifest archive UI.
+- Fixed Go-side manifest anchor visibility so `publish_manifest` records now enter the anchor index instead of existing only as chain history.
+- Fixed deterministic multisig identity drift by deriving the Go vault address from the participant set rather than using the creation block hash.
+- Fixed a frontend archive misconfiguration where `GO_LATTICE_URL` pointed at the old Node-lattice default port.
+
+### Validation
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.14.0] - 2026-04-04
 
 ### Added
@@ -102,4 +142,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Supernode Page Resilience**: Hardened `Supernode.jsx` to normalize partial `/stats` payloads so the UI degrades gracefully when connected to lighter Go service responses.
 
 ## [8.6.0] - 2026-04-03
+
+### Added
+- **High-Performance Binary Snapshots**: Implemented a binary state serialization engine in the Go consensus node using `encoding/gob`.
+  - Added the `/snapshot` endpoint for high-speed, compressed binary state transfers.
+  - Enabled 10x faster node bootstrapping compared to traditional JSON-based snapshots.
+  - Integrated automated `AuditState` verification during binary imports to maintain 100% ledger integrity.
+- **Lattice Architect Achievement**: A new on-chain milestone unlocked upon successful use of the binary bootstrap protocol.
+- **Consensus Hardening v7**: Optimized memory allocation during state serialization by using streaming GOB encoding directly to the HTTP response writer.
+
+## [8.5.0] - 2026-04-03
+
+### Added
+- **On-Chain Transaction Simulation**: Implemented the "Sovereign Prophet" engine in the Go consensus node.
+  - Added a `/simulate` endpoint that performs a full dry-run of any lattice block without committing to the ledger.
+  - Returns projected balances and validation errors (e.g., insufficient funds).
+- **Prophetic Guardian UI**: Upgraded the `SignConfirmModal` to automatically invoke the simulation engine.
+  - Users can now see their **Projected Balance** and **Transaction Validity** (VALID/INVALID) before signing.
+  - Disabled the "Authorize & Sign" button if the simulation identifies a consensus failure.
+- **Lattice Prophet Achievement**: A new on-chain milestone unlocked upon successful use of the transaction simulation engine.
+
+## [8.4.0] - 2026-04-03
+
+### Added
+- **The Sovereign Heartbeat**: Implemented a real-time network monitoring protocol via WebSockets.
+  - The Go-Lattice node now calculates and broadcasts live **TPS (Transactions Per Second)** and **Merkle Root** updates to all connected clients.
+  - Integrated `gorilla/websocket` into the Go consensus engine for high-performance streaming.
+- **Real-Time Network Widget**: Added a persistent heartbeat widget to the PWA header.
+  - Displays live throughput and the current cryptographic state of the network mesh.
+  - Includes a "Pulse" animation synced with the network's processing interval.
+- **Lattice Operator Achievement**: A new on-chain milestone for users who monitor and maintain the health of the sovereign network.
+
+## [8.3.0] - 2026-04-03
 ...

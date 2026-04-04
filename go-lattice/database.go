@@ -48,7 +48,7 @@ func (mgr *DBManager) SaveBlock(b *Block) error {
 func (mgr *DBManager) LoadBlocksAfter(hash string) ([]*Block, error) {
 	var rows *sql.Rows
 	var err error
-	
+
 	if hash == "" {
 		rows, err = mgr.db.Query("SELECT data FROM blocks ORDER BY timestamp ASC")
 	} else {
@@ -58,7 +58,7 @@ func (mgr *DBManager) LoadBlocksAfter(hash string) ([]*Block, error) {
 			WHERE timestamp > (SELECT timestamp FROM blocks WHERE hash = ?)
 			ORDER BY timestamp ASC`, hash)
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}

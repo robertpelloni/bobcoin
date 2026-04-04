@@ -3,8 +3,8 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"sort"
 	"fmt"
+	"sort"
 )
 
 /**
@@ -16,12 +16,14 @@ func (l *Lattice) CalculateMerkleRoot() string {
 
 	var stateEntries []string
 	for account, chain := range l.Chains {
-		if len(chain) == 0 { continue }
+		if len(chain) == 0 {
+			continue
+		}
 		head := chain[len(chain)-1]
 		// Each entry is H(account + balance + staked_balance + height)
-		entry := Hash(account + 
-			fmt.Sprintf("%f", head.Balance) + 
-			fmt.Sprintf("%f", head.StakedBalance) + 
+		entry := Hash(account +
+			fmt.Sprintf("%f", head.Balance) +
+			fmt.Sprintf("%f", head.StakedBalance) +
 			fmt.Sprintf("%d", head.Height))
 		stateEntries = append(stateEntries, entry)
 	}

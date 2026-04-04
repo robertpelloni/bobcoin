@@ -14,15 +14,15 @@ import (
 func DeriveKeypair(mnemonic string, index int) map[string]string {
 	derivationPath := fmt.Sprintf("m/44'/1337'/%d'", index)
 	seed := sha256.Sum256([]byte(mnemonic + derivationPath))
-	
+
 	kp := ed25519.NewKeyFromSeed(seed[:32])
 	pub := base58.Encode(kp.Public().(ed25519.PublicKey))
 	priv := base58.Encode(kp)
-	
+
 	return map[string]string{
-		"publicKey": pub,
-		"privateKey": priv,
-		"mnemonic": mnemonic,
+		"publicKey":      pub,
+		"privateKey":     priv,
+		"mnemonic":       mnemonic,
 		"derivationPath": derivationPath,
 	}
 }

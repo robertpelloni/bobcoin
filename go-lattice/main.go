@@ -103,13 +103,19 @@ func main() {
 	http.HandleFunc("/process", handleProcess)
 	// http.HandleFunc("/simulate", handleSimulate) // Not implemented in this version
 	http.HandleFunc("/balance/", handleBalance)
+	http.HandleFunc("/frontier", handleFrontiers)
 	http.HandleFunc("/frontier/", handleFrontier)
 	http.HandleFunc("/pending/", handlePending)
 	http.HandleFunc("/chain/", handleChain)
 	http.HandleFunc("/anchors", handleAnchors)
+	http.HandleFunc("/anchors/", handleAccountAnchors)
 	http.HandleFunc("/proposals", handleProposals)
+	http.HandleFunc("/votes/", handleVotes)
 	http.HandleFunc("/market/bids", handleMarketBids)
+	http.HandleFunc("/nfts", handleNFTs)
+	http.HandleFunc("/nfts/", handleAccountNFTs)
 	http.HandleFunc("/multisigs", handleMultisigs)
+	http.HandleFunc("/multisig/", handleMultisigAccount)
 	http.HandleFunc("/pools", handlePools)
 	http.HandleFunc("/peers", handlePeers)
 	http.HandleFunc("/health", handleHealth)
@@ -128,7 +134,7 @@ func main() {
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":     "online",
-		"engine":     "Go-Lattice v7.0.0",
+		"engine":     "Go-Lattice v8.13.0",
 		"stateHash":  lattice.StateHash,
 		"merkleRoot": lattice.MerkleRoot,
 		"accounts":   len(lattice.Chains),
@@ -202,11 +208,44 @@ func handleBalance(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"balance": balance})
 }
 
+func handleFrontiers(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UnixNano() / 1e6
+	lattice.mu.RLock()
+	accounts := make(map[string]interface{}, len(lattice.Chains))
+	for account, chain := range lattice.Chains {
+		var hash *string
+		stakedBalance := 0.0
+		balance := 0.0
+		if len(chain) > 0 {
+			head := chain[len(chain)-1]
+			h := head.Hash
+			hash = &h
+			stakedBalance = head.StakedBalance
+			elapsed := now - head.Timestamp
+			if elapsed <= 0 {
+				balance = head.Balance
+			} else {
+				decay := head.Balance * lattice.DemurrageRate * float64(elapsed)
+				if head.Balance > decay {
+					balance = head.Balance - decay
+				}
+			}
+		}
+		accounts[account] = map[string]interface{}{
+			"balance":        balance,
+			"staked_balance": stakedBalance,
+			"height":         len(chain),
+			"headHash":       hash,
+		}
+	}
+	lattice.mu.RUnlock()
+	json.NewEncoder(w).Encode(accounts)
+}
+
 func handleFrontier(w http.ResponseWriter, r *http.Request) {
 	account := r.URL.Path[len("/frontier/"):]
+	now := time.Now().UnixNano() / 1e6
 	lattice.mu.RLock()
-	defer lattice.mu.RUnlock()
-
 	chain := lattice.Chains[account]
 	var hash *string
 	balance := 0.0
@@ -215,14 +254,24 @@ func handleFrontier(w http.ResponseWriter, r *http.Request) {
 		head := chain[len(chain)-1]
 		h := head.Hash
 		hash = &h
-		balance = lattice.GetBalance(account, time.Now().UnixNano()/1e6)
+		elapsed := now - head.Timestamp
+		if elapsed <= 0 {
+			balance = head.Balance
+		} else {
+			decay := head.Balance * lattice.DemurrageRate * float64(elapsed)
+			if head.Balance > decay {
+				balance = head.Balance - decay
+			}
+		}
 		stakedBalance = head.StakedBalance
 	}
+	height := len(chain)
+	lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"frontier":       hash,
 		"balance":        balance,
 		"staked_balance": stakedBalance,
-		"height":         len(chain),
+		"height":         height,
 	})
 }
 
@@ -258,6 +307,23 @@ func handleAnchors(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"anchors": anchors})
 }
 
+func handleAccountAnchors(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Path[len("/anchors/"):]
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	anchors := make([]interface{}, 0)
+	for _, anchorRaw := range lattice.Anchors {
+		anchor, ok := anchorRaw.(map[string]interface{})
+		if ok {
+			owner, _ := anchor["owner"].(string)
+			if owner == account {
+				anchors = append(anchors, anchor)
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"anchors": anchors})
+}
+
 func handleProposals(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
@@ -266,6 +332,17 @@ func handleProposals(w http.ResponseWriter, r *http.Request) {
 		proposals = append(proposals, proposal)
 	}
 	json.NewEncoder(w).Encode(proposals)
+}
+
+func handleVotes(w http.ResponseWriter, r *http.Request) {
+	proposalHash := r.URL.Path[len("/votes/"):]
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	votes := lattice.Votes[proposalHash]
+	if votes == nil {
+		votes = map[string]map[string]interface{}{}
+	}
+	json.NewEncoder(w).Encode(votes)
 }
 
 func handleMarketBids(w http.ResponseWriter, r *http.Request) {
@@ -281,10 +358,49 @@ func handleMarketBids(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"bids": bids})
 }
 
+func handleNFTs(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	nfts := make([]interface{}, 0, len(lattice.Nfts))
+	for _, nft := range lattice.Nfts {
+		nfts = append(nfts, nft)
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"nfts": nfts})
+}
+
+func handleAccountNFTs(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Path[len("/nfts/"):]
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	nfts := make([]interface{}, 0)
+	for _, nftRaw := range lattice.Nfts {
+		nft, ok := nftRaw.(map[string]interface{})
+		if ok {
+			owner, _ := nft["owner"].(string)
+			if owner == account {
+				nfts = append(nfts, nft)
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"nfts": nfts})
+}
+
 func handleMultisigs(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(map[string]interface{}{"multisigs": lattice.Multisigs})
+}
+
+func handleMultisigAccount(w http.ResponseWriter, r *http.Request) {
+	account := r.URL.Path[len("/multisig/"):]
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+	vault, ok := lattice.Multisigs[account]
+	if !ok {
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "Multisig not found"})
+		return
+	}
+	json.NewEncoder(w).Encode(vault)
 }
 
 func handlePools(w http.ResponseWriter, r *http.Request) {
@@ -474,12 +590,25 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var snapshot struct {
-			Chains    map[string][]*Block `json:"chains"`
-			Blocks    map[string]*Block   `json:"blocks"`
-			StateHash string              `json:"stateHash"`
+			Chains     map[string][]*Block                          `json:"chains"`
+			Blocks     map[string]*Block                            `json:"blocks"`
+			Pending    map[string][]*PendingTx                      `json:"pending"`
+			Proposals  map[string]interface{}                       `json:"proposals"`
+			Votes      map[string]map[string]map[string]interface{} `json:"votes"`
+			MarketBids map[string]interface{}                       `json:"marketBids"`
+			Swaps      map[string]*HTLCSwap                         `json:"swaps"`
+			Nfts       map[string]interface{}                       `json:"nfts"`
+			Anchors    map[string]interface{}                       `json:"anchors"`
+			Multisigs  map[string]*MultisigVault                    `json:"multisigs"`
+			StateHash  string                                       `json:"stateHash"`
+			MerkleRoot string                                       `json:"merkleRoot"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&snapshot); err != nil {
 			http.Error(w, err.Error(), 400)
+			return
+		}
+		if snapshot.StateHash == "" {
+			http.Error(w, "invalid snapshot", 400)
 			return
 		}
 
@@ -488,18 +617,39 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("[Bootstrap] Received network snapshot. Commencing security audit...")
 
-		// Load into memory
 		lattice.Chains = snapshot.Chains
 		lattice.Blocks = snapshot.Blocks
+		if snapshot.Pending != nil {
+			lattice.Pending = snapshot.Pending
+		}
+		if snapshot.Proposals != nil {
+			lattice.Proposals = snapshot.Proposals
+		}
+		if snapshot.Votes != nil {
+			lattice.Votes = snapshot.Votes
+		}
+		if snapshot.MarketBids != nil {
+			lattice.MarketBids = snapshot.MarketBids
+		}
+		if snapshot.Swaps != nil {
+			lattice.Swaps = snapshot.Swaps
+		}
+		if snapshot.Nfts != nil {
+			lattice.Nfts = snapshot.Nfts
+		}
+		if snapshot.Anchors != nil {
+			lattice.Anchors = snapshot.Anchors
+		}
+		if snapshot.Multisigs != nil {
+			lattice.Multisigs = snapshot.Multisigs
+		}
 
-		// Perform Deep Audit
 		if err := lattice.AuditState(); err != nil {
 			fmt.Printf("[Bootstrap Error] Snapshot Rejected: %v\n", err)
 			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Cryptographic audit failed: Malicious or corrupted snapshot."})
 			return
 		}
 
-		// Re-persist audited blocks to disk
 		for _, chain := range lattice.Chains {
 			for _, b := range chain {
 				db.SaveBlock(b)
@@ -510,7 +660,5 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lattice.mu.RLock()
-	defer lattice.mu.RUnlock()
-	json.NewEncoder(w).Encode(lattice)
+	json.NewEncoder(w).Encode(lattice.GetStateSnapshot())
 }

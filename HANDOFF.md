@@ -1,88 +1,185 @@
-# Session Handoff - 2026-04-04 (v8.14.0)
+# Session Handoff - 2026-04-04 (v8.15.0)
 
 ## Executive Summary
-This pass preserved the newer Bobcoin `v8.12.0` Go-API parity hardening while layering an additional product-level integration on top: **manifest anchors are now reusable across Vault, Storage Market, and Gallery** instead of being confined to the archive/workbench flow.
+This session continued the Go-port campaign while preserving newer upstream archive work that landed concurrently on `origin/main`. The result is a merged branch where:
+- the newer Vault archive discovery/provenance work remains intact,
+- the archive reuse work across Storage Market and Gallery remains intact,
+- the Go lattice closes additional Node-parity gaps rather than pretending the port is already complete.
 
-## What Was Added In This Pass
+This was not a cosmetic pass. It was a structural parity pass focused on narrowing the gap between the older Node lattice implementation and the in-repo Go lattice.
 
-### 1. Storage Market Archive Reuse
-**File:** `frontend/src/pages/StorageMarket.jsx`
+## Remote/Rebase Context
+A direct push was rejected because `origin/main` had advanced with additional archive-focused work:
+- `v8.13.0`: archive reuse across market and gallery
+- `v8.14.0`: archive discovery and provenance surfacing in Vault
 
-Added Go-lattice archive integration so operators can now select one of their previously anchored manifests directly when creating a hosting bid.
+I rebased the new Go parity work on top of that newer branch and resolved documentation/version conflicts by preserving both sets of work and promoting this combined pass to `v8.15.0`.
 
-What changed:
-- loads wallet-owned manifest anchors via `getManifestAnchors(pubkey)`
-- displays a selector above the manual magnet field
-- selecting an anchor autofills the bid target with the anchor locator/magnet
-- includes a refresh action for the archive list
+## What This Pass Added
 
-Impact:
-- archived content can now flow directly into decentralized storage bidding
-- removes the need to manually paste locators/magnets for already-anchored content
+### 1. Additional Go-Lattice route parity
+**Files:**
+- `go-lattice/main.go`
 
-### 2. Gallery Archive Reuse
-**File:** `frontend/src/pages/Gallery.jsx`
+New/restored Go routes:
+- `GET /frontier`
+- `GET /anchors/:account`
+- `GET /votes/:proposalHash`
+- `GET /nfts`
+- `GET /nfts/:account`
+- `GET /multisig/:account`
 
-Added archive reuse to NFT minting.
+These were added on top of the earlier parity routes already restored in prior sessions.
 
-What changed:
-- loads wallet-owned manifest anchors via `getManifestAnchors(pubkey)`
-- exposes a selector for choosing an anchored manifest as the NFT asset source
-- selecting an anchor autofills the NFT magnet/locator target
+### 2. Additional block-type parity in Go
+**Files:**
+- `go-lattice/lattice.go`
 
-Impact:
-- archived content can now become NFT-backed media without copy/pasting locator data
-- turns the Go-lattice archive into a reusable content substrate for collectibles
+New Go-side support added for:
+- `achievement_unlock`
+- `swap_lock`
+- `swap_claim`
+- `transfer_nft`
+- `publish_manifest`
 
-## Validation
-Executed successfully:
-- `cd frontend && npm run build`
-- result: ✅ production build succeeds after Storage Market and Gallery archive reuse integration
+This materially reduces the number of Node-era block types that existed only in JavaScript.
 
-Warnings remain non-fatal:
-- large bundle chunk warnings
-- browser-externalized dependency warnings from upstream dependency graph
+### 3. HTLC state tracking in Go
+**Files:**
+- `go-lattice/lattice.go`
 
-## Merge / Rebase Context
-A direct Bobcoin push was rejected because `origin/main` had advanced again with a separate `v8.12.0` hardening pass focused on Go API parity and Vault compatibility restoration.
+Added an explicit `HTLCSwap` model and swap-state map so the Go lattice now tracks swap lock/claim state rather than only approximating the concept at the transaction level.
 
-Conflict resolution strategy used:
-- preserve upstream `v8.12.0` compatibility work
-- promote this archive-reuse pass to `v8.13.0`
-- keep both the newer Vault/archive model and the broader cross-surface reuse additions
+### 4. Deterministic multisig address derivation
+**Files:**
+- `go-lattice/lattice.go`
+- `go-lattice/lattice_parity_test.go`
 
-## Strategic State After This Session
-Manifest anchors are now visible and reusable across:
-- Vault
-- Storage Market
-- Gallery
+The previous Go implementation keyed multisig vaults by creation block hash. That diverged from the deterministic-address behavior of the Node implementation. This pass introduced a deterministic multisig-address helper derived from the participant set.
 
-This means the archive is no longer just a record of publication history.
-It is now an active content source inside multiple product surfaces.
+### 5. Bootstrap/snapshot parity improvements
+**Files:**
+- `go-lattice/lattice.go`
+- `go-lattice/main.go`
 
-## Follow-Up Progress (v8.14.0)
-The Vault archive has now been upgraded from a passive browser into a searchable discovery surface:
-- search by name, owner, locator, manifest ID, ciphertext hash, proof hash, and type
-- signed/unsigned provenance badging
-- locator/ciphertext/cloaked visual metadata cues
-- searchable network stream alongside owned archive content
+The bootstrap contract is now significantly closer to Node parity.
 
-Additional validation:
-- `cd frontend && npm run build`
-- result: ✅ production build succeeds after archive discovery/provenance integration
+GET `/bootstrap` now returns an explicit snapshot payload rather than the whole lattice struct.
+
+POST `/bootstrap` can now restore:
+- chains
+- blocks
+- pending
+- proposals
+- votes
+- market bids
+- swaps
+- nfts
+- anchors
+- multisigs
+- state-hash metadata
+
+### 6. Safer Go state-root mutation
+**Files:**
+- `go-lattice/lattice.go`
+
+A significant correctness fix was made:
+- the Go state hash is now updated only after validation/state application/persistence succeed,
+- instead of mutating early and risking false state-root drift on rejected blocks.
+
+### 7. Explicit invalid-block rejection
+**Files:**
+- `go-lattice/lattice.go`
+
+Unknown block types are now rejected explicitly in Go.
+
+### 8. Open-block handling preserved under stricter validation
+**Files:**
+- `go-lattice/lattice.go`
+
+After introducing explicit invalid-type rejection, `open` blocks would have broken unless they were handled deliberately. This session restored the intended receive-style open behavior with a genesis bypass.
+
+### 9. Frontend Go target correction
+**Files:**
+- `frontend/src/api.js`
+
+Updated the default `GO_LATTICE_URL` from `http://localhost:4000` to `http://localhost:4001`.
+
+This matters because:
+- Node lattice defaults to `4000`
+- Go lattice defaults to `4001`
+- the newer archive/manifests work should be talking to the Go lattice by default, not the older Node default
+
+### 10. Tests added
+**Files:**
+- `go-lattice/lattice_parity_test.go`
+
+Added Go tests covering:
+- deterministic multisig address stability
+- snapshot inclusion of the new parity maps
+
+## Validation Performed
+
+### Go lattice
+Commands run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go test ./...`
+
+Result:
+- formatting succeeded
+- build succeeded
+- tests passed
+
+### Frontend
+Command run:
+- `cd C:/Users/hyper/workspace/bobcoin/frontend && npm run build`
+
+Result:
+- production build succeeded
+- PWA artifacts generated successfully
+- large bundle warnings remain non-fatal
+
+## Current Reality Check
+This repo is now more Go-native than before, but it is still not honestly certifiable as a complete all-Go rewrite.
+
+### What is now materially stronger
+- more consensus/block semantics live in Go
+- more lattice API surface lives in Go
+- Go archive/manifests integration is better aligned with the in-repo service defaults
+- snapshot/state restoration is more complete than before
+
+### What is still not fully ported
+1. `game-server` is still Node.
+2. `supertorrent` is still Node.
+3. Rust/SP1 remains outside Go, which is reasonable and likely should remain so.
+4. Final semantic parity still needs a careful audit for:
+   - `accept_bid`
+   - `data_anchor` economics
+   - proposal finalization/closure logic
+   - snapshot/recovery fidelity across mixed historical states
+   - remaining non-lattice service behavior
 
 ## Recommended Next Step
-1. **Expand provenance further**
-   - richer signed metadata
-   - optional uploader profile / reputation overlays
-2. **Improve degraded recovery UX**
-   - partial shard availability handling
-   - clearer recovery diagnostics
-3. **Add stronger cross-view discovery**
-   - saved filters, grouping, and broader archive search ergonomics
+If the mandate stays “port everything reasonable to Go,” the next best move is:
+1. final semantic parity audit between Node and Go lattice behavior
+2. explicit ownership decision for `game-server` and `supertorrent`
+3. deeper Go regression tests for swaps, NFT transfer, manifest anchors, and genesis/open behavior
 
-## Summary
-- Upstream Bobcoin production features were preserved.
-- The Go storage/archive stack is now reused across Vault, Market, and Gallery.
-- Vault now acts as a provenance-aware archive intelligence surface rather than a static list.
-- The next major integration point is **richer provenance semantics + stronger discovery ergonomics**.
+## Files Changed In This Session
+- `VERSION.md`
+- `CHANGELOG.md`
+- `TODO.md`
+- `MEMORY.md`
+- `HANDOFF.md`
+- `frontend/src/api.js`
+- `go-lattice/block.go`
+- `go-lattice/crypto.go`
+- `go-lattice/database.go`
+- `go-lattice/lattice.go`
+- `go-lattice/main.go`
+- `go-lattice/merkle.go`
+- `go-lattice/lattice_parity_test.go`
+
+## Operational Note
+No running processes were terminated in this session.

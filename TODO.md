@@ -3,10 +3,20 @@
 ## Critical Backend Infrastructure
 - [x] **Remove Mock APIs:** Removed `frontend/src/api.js` mocks and reconnected UI components to the actual `localhost:3001` endpoints (Transactions, Minting, Burning, Market, Governance).
 - [x] **Update E2E Test:** Refactored `test_e2e.js` to call the real backend endpoints and verified the full application flow.
+- [x] **Go API Parity Hardening:** Restored missing Go-Lattice compatibility endpoints (`/pending`, `/chain`, `/anchors`, `/proposals`, `/market/bids`, `/multisigs`) and normalized legacy client blocks at ingress.
+- [x] **Go API Parity Hardening (Phase 2):** Added `/frontier`, `/anchors/:account`, `/votes/:proposalHash`, `/nfts`, `/nfts/:account`, and `/multisig/:account`, plus broader bootstrap snapshot parity.
+- [x] **Vault Encryption Hardening:** Replaced the incorrect JSON-style file cloaking flow with binary-safe AES-256-GCM encryption metadata for uploaded artifacts.
 - [ ] **SP1 ZK Service Robustness:** Current `/submit-proof` endpoint assumes SP1 execution output. Upgrade this to actually call the rust backend verification endpoint when SP1 is running.
 
+## Recommended Next Pass
+- [ ] **Cloaked Retrieval Flow:** Add first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI.
+- [ ] **Chunk Splitting Audit:** The frontend still emits a >500 kB main chunk. Introduce manual chunking for `node-seal`, `three.js`, and heavy dashboard routes.
+- [ ] **Governance Finalization:** Proposal vote export is now present in Go, but proposal closure/finalization logic still needs to be ported 1:1.
+- [ ] **Consensus Parity Audit (Final):** Reconcile the remaining semantic differences between Node and Go for `accept_bid`, `data_anchor` economics, snapshot recovery semantics, and any remaining service-side behaviors outside the lattice core.
+- [ ] **Service Porting Plan:** Decide explicitly which Node services remain canonical (`game-server`, `supertorrent`) and which will be fully moved into Go.
+
 ## System Ready
-- All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem!
+- All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem.
 - The single remaining task (`Full ZK Proving`) requires an updated environment with the proper `rustc`/`cargo` compiler installed.
 
 ## UI/UX Polish

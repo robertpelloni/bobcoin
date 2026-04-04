@@ -1,5 +1,6 @@
-const WASM_EXEC_URL = import.meta.env.VITE_WASM_EXEC_URL || '/wasm_exec.js';
-const STORAGE_WASM_URL = import.meta.env.VITE_STORAGE_WASM_URL || '/storage.wasm';
+const DEFAULT_SUPERNODE_ORIGIN = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8000';
+const WASM_EXEC_URL = import.meta.env.VITE_WASM_EXEC_URL || `${DEFAULT_SUPERNODE_ORIGIN}/wasm_exec.js`;
+const STORAGE_WASM_URL = import.meta.env.VITE_STORAGE_WASM_URL || `${DEFAULT_SUPERNODE_ORIGIN}/storage.wasm`;
 
 let clientPromise = null;
 

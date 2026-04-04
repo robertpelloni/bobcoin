@@ -1,6 +1,34 @@
 package main
 
-import "testing"
+import (
+	"crypto/ed25519"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/mr-tron/base58"
+)
+
+func signTestBlock(t *testing.T, block *Block, privateKeyBase58 string) {
+	t.Helper()
+	block.Hash = block.CalculateHash()
+	priv, err := base58.Decode(privateKeyBase58)
+	if err != nil {
+		t.Fatalf("failed to decode private key: %v", err)
+	}
+	block.Signature = base58.Encode(ed25519.Sign(ed25519.PrivateKey(priv), []byte(block.Hash)))
+}
+
+func validSpora(previousHash string) *SporaProof {
+	challenge64, _ := strconv.ParseInt(previousHash[:8], 16, 64)
+	challenge := int(challenge64)
+	infoHash := "anchor-seed"
+	return &SporaProof{
+		InfoHash:  infoHash,
+		Challenge: challenge,
+		ChunkHash: Hash(infoHash + strconv.Itoa(challenge)),
+	}
+}
 
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
 	participants := []string{"alice", "bob", "carol"}
@@ -34,5 +62,108 @@ func TestGetStateSnapshotIncludesParityMaps(t *testing.T) {
 	}
 	if snapshot["merkleRoot"] == nil {
 		t.Fatalf("expected merkleRoot in snapshot")
+	}
+}
+
+func TestProcessBlockRejectsInvalidTypeAfterGenesis(t *testing.T) {
+	keys := DeriveKeypair("semantic parity invalid type", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     1,
+	}
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	previous := genesis.Hash
+	invalid := &Block{
+		Type:          "totally_invalid",
+		Account:       keys["publicKey"],
+		Previous:      &previous,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "X",
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     2,
+	}
+	signTestBlock(t, invalid, keys["privateKey"])
+
+	err := l.ProcessBlock(invalid, true)
+	if err == nil || !strings.Contains(err.Error(), "invalid block type") {
+		t.Fatalf("expected invalid block type error, got %v", err)
+	}
+}
+
+func TestAuditStateRebuildsDerivedAnchorState(t *testing.T) {
+	keys := DeriveKeypair("semantic parity audit", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     1,
+	}
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	previous := genesis.Hash
+	manifest := &Block{
+		Type:          "publish_manifest",
+		Account:       keys["publicKey"],
+		Previous:      &previous,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "manifest-1",
+		Spora:         validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "manifest-1",
+			"locator":     "bobtorrent://manifest/manifest-1",
+			"manifestUrl": "http://localhost:8000/manifests/manifest-1",
+			"name":        "artifact.bin",
+			"size":        64,
+		},
+		Timestamp: 2,
+	}
+	signTestBlock(t, manifest, keys["privateKey"])
+	if err := l.ProcessBlock(manifest, true); err != nil {
+		t.Fatalf("expected publish_manifest to succeed, got %v", err)
+	}
+
+	l.Anchors = map[string]interface{}{}
+	l.StateHash = "corrupted"
+	l.MerkleRoot = "corrupted"
+
+	if err := l.AuditState(); err != nil {
+		t.Fatalf("expected audit to succeed, got %v", err)
+	}
+
+	anchor, ok := l.Anchors[manifest.Hash]
+	if !ok {
+		t.Fatalf("expected audit to rebuild anchor state")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["owner"] != keys["publicKey"] {
+		t.Fatalf("expected rebuilt anchor owner %q, got %v", keys["publicKey"], anchorMap["owner"])
+	}
+	if l.StateHash == "corrupted" || l.MerkleRoot == "corrupted" {
+		t.Fatalf("expected audit to restore state hashes")
 	}
 }

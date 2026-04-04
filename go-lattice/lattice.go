@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -80,9 +81,8 @@ type Lattice struct {
 	DemurrageRate float64
 }
 
-func NewLattice(db *DBManager) *Lattice {
+func newEphemeralLattice() *Lattice {
 	l := &Lattice{
-		db:            db,
 		Chains:        make(map[string][]*Block),
 		Blocks:        make(map[string]*Block),
 		Pending:       make(map[string][]*PendingTx),
@@ -101,12 +101,20 @@ func NewLattice(db *DBManager) *Lattice {
 		DemurrageRate: 0.0001 / 60000,
 	}
 
-	// Initialize Default BOB/sSOL Pool
 	l.Pools["BOB/sSOL"] = &LiquidityPool{
-		AssetA: "BOB", AssetB: "sSOL",
-		ReserveA: 10000, ReserveB: 420, // Initial Bootstrapped Liquidity
+		AssetA:      "BOB",
+		AssetB:      "sSOL",
+		ReserveA:    10000,
+		ReserveB:    420,
 		TotalShares: 1000,
 	}
+
+	return l
+}
+
+func NewLattice(db *DBManager) *Lattice {
+	l := newEphemeralLattice()
+	l.db = db
 
 	// Cold Boot Recovery
 	l.Recovery()
@@ -121,10 +129,15 @@ func (l *Lattice) Recovery() {
 		return
 	}
 
+	recovered := 0
 	for _, b := range blocks {
-		l.ProcessBlock(b, true) // Pass true to skip re-persistence during recovery
+		if err := l.ProcessBlock(b, true); err != nil {
+			fmt.Printf("[Recovery Error] Block %s rejected during replay: %v\n", b.Hash[:8], err)
+			continue
+		}
+		recovered++
 	}
-	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", len(blocks), l.StateHash[:16])
+	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", recovered, l.StateHash[:16])
 }
 
 func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
@@ -542,16 +555,19 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		nft["owner"] = payload["recipient"]
 	} else if block.Type == "data_anchor" || block.Type == "publish_manifest" {
 		payload, ok := block.Payload.(map[string]interface{})
-		if !ok {
-			payload = map[string]interface{}{}
+		payloadCopy := map[string]interface{}{}
+		if ok {
+			for key, value := range payload {
+				payloadCopy[key] = value
+			}
 		}
-		payload["id"] = block.Hash
-		payload["owner"] = block.Account
-		payload["timestamp"] = block.Timestamp
-		if payload["type"] == nil {
-			payload["type"] = block.Type
+		payloadCopy["id"] = block.Hash
+		payloadCopy["owner"] = block.Account
+		payloadCopy["timestamp"] = block.Timestamp
+		if payloadCopy["type"] == nil {
+			payloadCopy["type"] = block.Type
 		}
-		l.Anchors[block.Hash] = payload
+		l.Anchors[block.Hash] = payloadCopy
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
 		partsRaw := payload["participants"].([]interface{})
@@ -703,35 +719,116 @@ func (l *Lattice) GetStateSnapshot() map[string]interface{} {
 	}
 }
 
+func cloneBlock(block *Block) (*Block, error) {
+	encoded, err := json.Marshal(block)
+	if err != nil {
+		return nil, err
+	}
+	var clone Block
+	if err := json.Unmarshal(encoded, &clone); err != nil {
+		return nil, err
+	}
+	return &clone, nil
+}
+
+func hashMatchesWithLegacyDerivedFields(block *Block) bool {
+	if expected := block.CalculateHash(); expected == block.Hash {
+		return true
+	}
+
+	if _, ok := block.Payload.(map[string]interface{}); !ok {
+		return false
+	}
+	if block.Type != "data_anchor" && block.Type != "publish_manifest" {
+		return false
+	}
+
+	clone, err := cloneBlock(block)
+	if err != nil {
+		return false
+	}
+	payloadClone, ok := clone.Payload.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	delete(payloadClone, "id")
+	delete(payloadClone, "owner")
+	delete(payloadClone, "timestamp")
+	if derivedType, ok := payloadClone["type"].(string); ok && derivedType == block.Type {
+		delete(payloadClone, "type")
+	}
+	clone.Payload = payloadClone
+	return clone.CalculateHash() == block.Hash
+}
+
 /**
- * Perform a full cryptographic audit of the entire ledger
+ * Perform a full cryptographic audit of the entire ledger.
+ * Replays all blocks onto a shadow lattice so derived state maps are rebuilt
+ * from chain history rather than trusted blindly.
  */
 func (l *Lattice) AuditState() error {
 	fmt.Println("[Lattice] Initiating Global Consensus Audit...")
 
-	// Temporarily clear in-memory state and rebuild from blocks
-	// (In production, this would be done on a shadow-lattice first)
-	l.StateHash = "0000000000000000000000000000000000000000000000000000000000000000"
+	type orderedBlock struct {
+		account string
+		index   int
+		block   *Block
+	}
 
+	var ordered []orderedBlock
 	for account, chain := range l.Chains {
 		for i, block := range chain {
-			// 1. Signature Verification
 			if !block.Verify() {
 				return fmt.Errorf("audit failed: invalid signature on block %s", block.Hash[:8])
 			}
-			// 2. Height Verification
 			if block.Height != i {
 				return fmt.Errorf("audit failed: height gap detected in account %s", account[:8])
 			}
-
-			// Update cumulative state hash
-			h := sha256.New()
-			h.Write([]byte(l.StateHash + block.Hash))
-			l.StateHash = hex.EncodeToString(h.Sum(nil))
+			if !hashMatchesWithLegacyDerivedFields(block) {
+				return fmt.Errorf("audit failed: hash mismatch on block %s", block.Hash[:8])
+			}
+			ordered = append(ordered, orderedBlock{account: account, index: i, block: block})
 		}
 	}
 
-	l.MerkleRoot = l.CalculateMerkleRoot()
+	sort.Slice(ordered, func(i, j int) bool {
+		bi := ordered[i].block
+		bj := ordered[j].block
+		if bi.Timestamp != bj.Timestamp {
+			return bi.Timestamp < bj.Timestamp
+		}
+		if bi.Height != bj.Height {
+			return bi.Height < bj.Height
+		}
+		if bi.Account != bj.Account {
+			return bi.Account < bj.Account
+		}
+		return bi.Hash < bj.Hash
+	})
+
+	shadow := newEphemeralLattice()
+	for _, entry := range ordered {
+		cloned, err := cloneBlock(entry.block)
+		if err != nil {
+			return fmt.Errorf("audit failed: could not clone block %s: %v", entry.block.Hash[:8], err)
+		}
+		if err := shadow.ProcessBlock(cloned, true); err != nil {
+			return fmt.Errorf("audit failed during deterministic replay of block %s: %v", entry.block.Hash[:8], err)
+		}
+	}
+
+	l.Pending = shadow.Pending
+	l.Proposals = shadow.Proposals
+	l.Votes = shadow.Votes
+	l.MarketBids = shadow.MarketBids
+	l.Swaps = shadow.Swaps
+	l.Nfts = shadow.Nfts
+	l.Anchors = shadow.Anchors
+	l.Multisigs = shadow.Multisigs
+	l.Pools = shadow.Pools
+	l.StateHash = shadow.StateHash
+	l.MerkleRoot = shadow.MerkleRoot
+
 	fmt.Printf("[Lattice] Audit Complete. Verified Integrity of %d chains. New Root: %s\n", len(l.Chains), l.MerkleRoot[:16])
 	return nil
 }

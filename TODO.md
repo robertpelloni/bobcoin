@@ -12,8 +12,9 @@
 - [ ] **Cloaked Retrieval Flow:** Add first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI.
 - [ ] **Chunk Splitting Audit:** The frontend still emits a >500 kB main chunk. Introduce manual chunking for `node-seal`, `three.js`, and heavy dashboard routes.
 - [ ] **Governance Finalization:** Proposal vote export is now present in Go, but proposal closure/finalization logic still needs to be ported 1:1.
-- [ ] **Consensus Parity Audit (Final):** Reconcile the remaining semantic differences between Node and Go for `accept_bid`, `data_anchor` economics, snapshot recovery semantics, and any remaining service-side behaviors outside the lattice core.
+- [ ] **Consensus Parity Audit (Final):** The Go audit engine now replays chain history on a shadow lattice, but the remaining semantic differences still need explicit reconciliation for `accept_bid`, `data_anchor` economics, bootstrap edge cases, and any service-side behavior outside the lattice core.
 - [ ] **Service Porting Plan:** Decide explicitly which Node services remain canonical (`game-server`, `supertorrent`) and which will be fully moved into Go.
+- [ ] **Deep Parity Tests:** Add more end-to-end Go tests for `swap_lock`, `swap_claim`, `transfer_nft`, `publish_manifest`, and recovery of mixed historical ledgers.
 
 ## System Ready
 - All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem.

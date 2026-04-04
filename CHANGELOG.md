@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.18.0] - 2026-04-04
+
+### Added
+- Go parity audit regression tests for:
+  - invalid block-type rejection after valid genesis initialization
+  - deterministic audit-time reconstruction of derived anchor state from chain history
+- Legacy-hash tolerance during audit for older anchor/manifest blocks whose payloads had previously been mutated with derived fields after signing.
+
+### Changed
+- Reworked `AuditState()` to replay the ledger onto a shadow Go lattice instead of only checking signature/height loops.
+- `AuditState()` now rebuilds and re-derives runtime state maps from block history, including:
+  - pending transactions
+  - proposals
+  - votes
+  - market bids
+  - swaps
+  - NFTs
+  - anchors
+  - multisigs
+  - AMM pool state
+- Recovery now logs and skips invalid persisted blocks instead of silently pretending all recovered blocks succeeded.
+- The Go status endpoint now reports `Go-Lattice v8.17.0`.
+
+### Fixed
+- Fixed a subtle but important correctness issue where audit iteration over account maps was not a true deterministic state verification strategy.
+- Fixed a historical integrity bug where anchor/manifest payload metadata could be mutated after block processing, making later hash verification fail.
+- Fixed audit/state verification so derived state is reconstituted from chain history rather than trusting already-materialized in-memory maps.
+
+### Validation
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.17.0] - 2026-04-04
 
 ### Added
@@ -73,11 +107,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vault Archive UX**: Reworked the archive view to behave like a searchable intelligence surface rather than a static list, while preserving both Go-manifest anchors and legacy data-anchor compatibility.
 
 ## [8.13.0] - 2026-04-04
-
-### Added
-- **Storage Market Archive Reuse**: `StorageMarket.jsx` now lets operators select previously anchored manifests directly from their Go-lattice archive when creating hosting bids.
-- **Gallery Archive Reuse**: `Gallery.jsx` now lets users mint NFTs directly from previously anchored manifests, making the archive a reusable asset source rather than a dead-end log.
-- **Cross-Surface Anchor Reuse**: Manifest anchors now flow through Vault, Market, and Gallery, establishing a broader archive-backed content lifecycle across the Bobcoin app.
-
-## [8.12.0] - 2026-04-04
 ...

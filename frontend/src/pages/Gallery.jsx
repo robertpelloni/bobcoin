@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { submitLatticeBlock, getLatticeFrontier, getLatticeChain, LATTICE_URL } from '../api';
+import { getManifestAnchors, submitLatticeBlock, getLatticeFrontier, getLatticeChain, LATTICE_URL } from '../api';
 import { Block } from '../Block';
 import './Gallery.css';
 
@@ -11,6 +11,7 @@ export function Gallery() {
     const [nftDesc, setNftDesc] = useState('');
     const [keypair, setKeypair] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [myAnchors, setMyAnchors] = useState([]);
 
     useEffect(() => {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -26,6 +27,9 @@ export function Gallery() {
             // Fetch Liquid Balance
             const resBal = await getLatticeFrontier(pubkey);
             setBalance(resBal.balance || 0);
+
+            const resAnchors = await getManifestAnchors(pubkey);
+            setMyAnchors(resAnchors.anchors || []);
 
             // Universal Asset Discovery
             const stored = localStorage.getItem('bobcoin_wallet');
@@ -128,6 +132,31 @@ export function Gallery() {
                 <div className="mint-panel">
                     <h2>MINT NEW ARTIFACT</h2>
                     <p className="fee-notice">COST: 50 BOB</p>
+                    {myAnchors.length > 0 && (
+                        <div className="field">
+                            <label>MINT FROM ANCHORED MANIFEST</label>
+                            <div style={{display: 'flex', gap: '0.5rem'}}>
+                                <select
+                                    className="cyber-input"
+                                    style={{flex: 1}}
+                                    value={myAnchors.some(a => (a.locator || a.magnet) === nftMagnet) ? nftMagnet : ''}
+                                    onChange={e => {
+                                        if (e.target.value) setNftMagnet(e.target.value);
+                                    }}
+                                >
+                                    <option value="">-- Select from your Archive --</option>
+                                    {myAnchors.map(anchor => (
+                                        <option key={anchor.blockHash} value={anchor.locator || anchor.magnet}>
+                                            {anchor.name || (anchor.locator || anchor.magnet).slice(0, 32) + '...'}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button type="button" className="cyber-button small" onClick={() => keypair && fetchData(keypair.publicKey)}>
+                                    REFRESH
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <form onSubmit={handleMint}>
                         <div className="field">
                             <label>ARTIFACT NAME</label>

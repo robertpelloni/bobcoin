@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMarketBids, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api';
+import { getManifestAnchors, getMarketBids, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api';
 import { generateKeypair } from '../cryptoUtils';
 import { Block } from '../Block';
 import './StorageMarket.css';
@@ -11,6 +11,16 @@ export function StorageMarket() {
     const [loading, setLoading] = useState(true);
     const [keypair, setKeypair] = useState(null);
     const [balance, setBalance] = useState(0);
+    const [myAnchors, setMyAnchors] = useState([]);
+
+    const fetchAnchors = async (pubkey) => {
+        try {
+            const res = await getManifestAnchors(pubkey);
+            setMyAnchors(res.anchors || []);
+        } catch (e) {
+            console.error("Failed to fetch anchors", e);
+        }
+    };
 
     const fetchBids = async () => {
         try {
@@ -46,8 +56,17 @@ export function StorageMarket() {
         };
 
         fetchBids();
-        fetchBal();
-        const interval = setInterval(() => { fetchBids(); fetchBal(); }, 5000);
+        if (kp) {
+            fetchBal();
+            fetchAnchors(kp.publicKey);
+        }
+        const interval = setInterval(() => { 
+            fetchBids(); 
+            if (kp) {
+                fetchBal();
+                fetchAnchors(kp.publicKey);
+            }
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -111,6 +130,38 @@ export function StorageMarket() {
 
             <div className="create-bid-section">
                 <h2>REQUEST HOSTING</h2>
+                
+                {myAnchors.length > 0 && (
+                    <div className="archive-selector" style={{ marginBottom: '1.5rem', textAlign: 'left', background: 'rgba(0,255,255,0.05)', padding: '1rem', border: '1px solid #111' }}>
+                        <label style={{ display: 'block', color: '#0ff', fontSize: '0.7rem', marginBottom: '0.5rem', letterSpacing: '1px' }}>USE ANCHORED MANIFEST</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <select 
+                                className="cyber-input" 
+                                style={{ flex: 1, padding: '0.4rem' }}
+                                onChange={(e) => {
+                                    if (e.target.value) setMagnet(e.target.value);
+                                }}
+                                value={myAnchors.some(a => (a.locator || a.magnet) === magnet) ? magnet : ""}
+                            >
+                                <option value="">-- Select from your Archive --</option>
+                                {myAnchors.map(a => (
+                                    <option key={a.blockHash} value={a.locator || a.magnet}>
+                                        {a.name || (a.locator || a.magnet).slice(0, 32) + '...'}
+                                    </option>
+                                ))}
+                            </select>
+                            <button 
+                                type="button" 
+                                className="cyber-button small" 
+                                onClick={() => keypair && fetchAnchors(keypair.publicKey)}
+                                style={{ padding: '0 1rem' }}
+                            >
+                                REFRESH
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleCreateBid} className="bid-form">
                     <div className="form-group" style={{flex: 3}}>
                         <label>MAGNET LINK / INFO HASH</label>

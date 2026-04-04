@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { publishStorageManifest, uploadStorageShard } from '../api';
 import { createStorageWasmClient, probeStorageWasmAvailability, sha256Hex } from '../lib/storageWasm';
 
 function downloadJson(filename, value) {
@@ -11,13 +12,26 @@ function downloadJson(filename, value) {
     URL.revokeObjectURL(url);
 }
 
+function uint8ArrayToBase64(bytes) {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+}
+
 export function StorageWasmWorkbench() {
     const [runtimeStatus, setRuntimeStatus] = useState('checking');
     const [runtimeError, setRuntimeError] = useState('');
     const [file, setFile] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [publishing, setPublishing] = useState(false);
     const [manifest, setManifest] = useState(null);
+    const [preparedShards, setPreparedShards] = useState([]);
     const [copyState, setCopyState] = useState('idle');
+    const [publishState, setPublishState] = useState('');
+    const [publishedResult, setPublishedResult] = useState(null);
 
     useEffect(() => {
         let active = true;
@@ -41,6 +55,8 @@ export function StorageWasmWorkbench() {
 
         setProcessing(true);
         setCopyState('idle');
+        setPublishState('');
+        setPublishedResult(null);
 
         try {
             const client = await createStorageWasmClient();
@@ -79,16 +95,51 @@ export function StorageWasmWorkbench() {
                 notes: [
                     'This manifest was generated entirely in the browser via the Go storage WASM kernel.',
                     'Encryption and erasure coding completed client-side before any network upload.',
-                    'This is a preprocessing artifact and not yet a BitTorrent magnet URI.',
+                    'The next step is to push the prepared shards and manifest into the Go supernode publication registry.',
                 ],
             };
 
+            setPreparedShards(shards);
             setManifest(preparedManifest);
         } catch (error) {
             console.error(error);
             alert(`Storage WASM preprocessing failed: ${error.message}`);
         } finally {
             setProcessing(false);
+        }
+    };
+
+    const handlePublish = async () => {
+        if (!manifest || preparedShards.length === 0) {
+            alert('Prepare a file before publishing.');
+            return;
+        }
+
+        setPublishing(true);
+        setPublishState('Uploading shards to the Go supernode...');
+
+        try {
+            for (let i = 0; i < preparedShards.length; i++) {
+                const shard = preparedShards[i];
+                const shardMeta = manifest.erasure.shards[i];
+                setPublishState(`Uploading shard ${i + 1} / ${preparedShards.length}...`);
+                await uploadStorageShard({
+                    hash: shardMeta.hash,
+                    data: uint8ArrayToBase64(shard),
+                });
+            }
+
+            setPublishState('Publishing manifest registry entry...');
+            const published = await publishStorageManifest(manifest);
+            setManifest(published.manifest || manifest);
+            setPublishedResult(published);
+            setPublishState('Manifest published to Go supernode registry.');
+        } catch (error) {
+            console.error(error);
+            setPublishState('');
+            alert(`Publishing failed: ${error.message}`);
+        } finally {
+            setPublishing(false);
         }
     };
 
@@ -109,7 +160,8 @@ export function StorageWasmWorkbench() {
             <h2 style={{ color: '#0ff', marginTop: 0 }}>BROWSER STORAGE KERNEL (GO WASM)</h2>
             <p style={{ color: '#888', lineHeight: 1.6 }}>
                 This workbench runs the Go Bobtorrent storage kernel directly in the browser. It encrypts the selected file with
-                ChaCha20-Poly1305, shards it with Reed-Solomon (4+2), and produces a portable manifest preview before any upload occurs.
+                ChaCha20-Poly1305, shards it with Reed-Solomon (4+2), and can now publish the prepared shards and manifest into the
+                Go supernode registry.
             </p>
 
             <div style={{ marginBottom: '1rem', color: runtimeStatus === 'ready' ? '#0f0' : runtimeStatus === 'checking' ? '#ff0' : '#ff0055' }}>
@@ -127,7 +179,14 @@ export function StorageWasmWorkbench() {
                 <button className="cyber-button" onClick={handlePrepare} disabled={processing || runtimeStatus !== 'ready'}>
                     {processing ? 'PROCESSING...' : 'PREPARE FILE'}
                 </button>
+                <button className="cyber-button" onClick={handlePublish} disabled={publishing || processing || !manifest || preparedShards.length === 0}>
+                    {publishing ? 'PUBLISHING...' : 'PUBLISH TO SUPERNODE'}
+                </button>
             </div>
+
+            {publishState && (
+                <div style={{ marginBottom: '1rem', color: '#0ff', fontSize: '0.9rem' }}>{publishState}</div>
+            )}
 
             {file && (
                 <div style={{ marginBottom: '1rem', color: '#aaa', fontSize: '0.9rem' }}>
@@ -153,8 +212,20 @@ export function StorageWasmWorkbench() {
                         <Metric label="Ciphertext Size" value={`${(manifest.encryption.ciphertextSize / 1024).toFixed(2)} KB`} />
                         <Metric label="Shard Layout" value={`${manifest.erasure.dataShards}+${manifest.erasure.parityShards}`} />
                         <Metric label="Total Shards" value={`${manifest.erasure.totalShards}`} />
-                        <Metric label="Locator" value={manifest.experimentalLocator.slice(0, 32) + '...'} />
+                        <Metric label="Locator" value={(manifest.locator || manifest.experimentalLocator).slice(0, 32) + '...'} />
                     </div>
+
+                    {publishedResult && (
+                        <div style={{ marginTop: '1rem', padding: '1rem', background: '#091109', border: '1px solid #0f0' }}>
+                            <div style={{ color: '#0f0', fontWeight: 700, marginBottom: '0.5rem' }}>SUPERNODE PUBLICATION COMPLETE</div>
+                            <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                                LOCATOR: <code style={{ color: '#fff' }}>{publishedResult.locator}</code>
+                            </div>
+                            <div style={{ color: '#bbb', fontSize: '0.9rem' }}>
+                                MANIFEST URL: <a href={publishedResult.manifestUrl} target="_blank" rel="noreferrer" style={{ color: '#0ff' }}>{publishedResult.manifestUrl}</a>
+                            </div>
+                        </div>
+                    )}
 
                     <div style={{ marginTop: '1rem', padding: '1rem', background: '#0b0b0b', border: '1px solid #1e1e1e' }}>
                         <div style={{ color: '#888', marginBottom: '0.5rem' }}>ENCRYPTED BLOB HASH</div>

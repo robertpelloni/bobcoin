@@ -1,4 +1,4 @@
-# Session Handoff - 2026-04-03 (v8.7.0)
+# Session Handoff - 2026-04-03 (v8.8.0)
 
 ## Overview
 This session extended the already-advanced Bobcoin production branch by adding a **browser-side Go storage WASM integration layer** to the frontend. The goal was to begin connecting the Bobcoin UI to the newer Bobtorrent Go storage stack without regressing the existing high-end Go-lattice / snapshot / wallet hardening work already present on `origin/main`.
@@ -72,21 +72,34 @@ Build result:
 - ⚠ chunk-size warnings remain, but build passes
 - ⚠ existing browser-externalized module warnings from dependency graph remain, but build passes
 
-## Important Remaining Gap
-The frontend code is now ready to consume:
-- `/wasm_exec.js`
-- `/storage.wasm`
+## Follow-Up Progress (v8.8.0)
+The earlier artifact-serving gap has now been closed from the root Bobtorrent repo side:
+- the Go supernode now serves `/wasm_exec.js`
+- the Go supernode now serves `/storage.wasm`
+- the Go supernode now exposes publication endpoints for shard + manifest upload
 
-However, these artifacts still need to be served into the Bobcoin frontend runtime environment. The top-level Bobtorrent repo should now copy or expose them automatically so this UI becomes operational without manual steps.
+The frontend has been updated accordingly:
+- the WASM runtime defaults to the Go supernode origin
+- the workbench can upload shards and publish manifests
+- the UI now displays the resulting locator and manifest URL after publication
+
+## Validation
+Additional validation after the publish-flow upgrade:
+- `cd frontend && npm run build`
+- result: ✅ build still succeeds after the upload/publish integration
 
 ## Recommended Next Step
-From the root repo:
-1. copy `build/storage.wasm` into `bobcoin/frontend/public/storage.wasm`
-2. copy `build/wasm_exec.js` into `bobcoin/frontend/public/wasm_exec.js`
-3. optionally extend `supernode-go` to match the richer `/stats`, `/add-torrent`, and `/remove-torrent` contract expected by the frontend
+1. **Anchor manifest metadata on the lattice**
+   - publish manifest IDs into storage-market / NFT / dedicated manifest blocks
+2. **Add retrieval UX**
+   - fetch published manifest JSON
+   - reconstruct missing shards
+   - decrypt back into the original file
+3. **Add uploader authentication / signing**
+   - bind publications to Bobcoin wallet identity
 
 ## Summary
 - Upstream Bobcoin production features were preserved.
-- The new Go storage WASM UI is now layered on top of them.
-- The frontend build is passing.
-- The next major integration point is **artifact serving + supernode API parity**.
+- The Go storage WASM UI is now layered on top of them.
+- The workbench has moved from preprocessing-only to a real supernode publication flow.
+- The next major integration point is **lattice anchoring + retrieval UX**.

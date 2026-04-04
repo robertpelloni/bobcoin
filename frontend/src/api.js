@@ -67,6 +67,40 @@ export const getMarketBids = async () => {
     }
 };
 
+export const uploadStorageShard = async ({ hash, data }) => {
+    try {
+        const res = await fetch(`${SUPERNODE_URL}/upload-shard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hash, data })
+        });
+        if (!res.ok) {
+            throw new Error(await res.text());
+        }
+        return await res.json();
+    } catch (e) {
+        console.error('Failed to upload shard:', e);
+        throw e;
+    }
+};
+
+export const publishStorageManifest = async (manifest) => {
+    try {
+        const res = await fetch(`${SUPERNODE_URL}/publish-manifest`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manifest })
+        });
+        if (!res.ok) {
+            throw new Error(await res.text());
+        }
+        return await res.json();
+    } catch (e) {
+        console.error('Failed to publish manifest:', e);
+        throw e;
+    }
+};
+
 export const burnTokens = async (amount, reason) => {
     try {
         const res = await fetch(`${API_URL}/burn`, {

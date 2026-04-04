@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.8.0] - 2026-04-03
+
+### Added
+- **End-to-End Supernode Publication Flow**: The `StorageWasmWorkbench` now uploads prepared Reed-Solomon shards directly to the Go supernode and publishes a persisted manifest registry entry.
+- **Manifest Registry Integration**: The frontend now uses `uploadStorageShard()` and `publishStorageManifest()` to turn local preprocessing into a real supernode publication pipeline.
+- **Publication Feedback UI**: Added live publish-state messaging plus returned locator / manifest URL display once publication succeeds.
+
+### Changed
+- **Storage WASM Runtime Targeting**: The browser-side Go storage client now defaults `wasm_exec.js` and `storage.wasm` to the Go supernode origin, eliminating the earlier same-origin artifact mismatch.
+
 ## [8.7.0] - 2026-04-03
 
 ### Added

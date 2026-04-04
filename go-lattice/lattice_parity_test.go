@@ -778,6 +778,201 @@ func TestAuditStateRebuildsMixedHistoricalLedgerState(t *testing.T) {
 	}
 }
 
+func TestRecoveryRebuildsComplexHistoricalStateFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "complex-recovery.sqlite")
+	keysA := DeriveKeypair("semantic parity complex recovery A", 0)
+	keysB := DeriveKeypair("semantic parity complex recovery B", 0)
+	keysC := DeriveKeypair("semantic parity complex recovery C", 0)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	genesisA := makeGenesisBlock(keysA, 1000)
+	signTestBlock(t, genesisA, keysA["privateKey"])
+	if err := l.ProcessBlock(genesisA, false); err != nil {
+		t.Fatalf("expected complex genesisA persistence to succeed, got %v", err)
+	}
+
+	prevSend := genesisA.Hash
+	sendAB := &Block{
+		Type:          "send",
+		Account:       keysA["publicKey"],
+		Previous:      &prevSend,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          keysB["publicKey"],
+		Spora:         validSpora(genesisA.Hash),
+		Timestamp:     2,
+	}
+	signTestBlock(t, sendAB, keysA["privateKey"])
+	if err := l.ProcessBlock(sendAB, false); err != nil {
+		t.Fatalf("expected complex sendAB to succeed, got %v", err)
+	}
+
+	openB := &Block{
+		Type:          "open",
+		Account:       keysB["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendAB.Hash,
+		Spora:         validSporaForOpenAccount(keysB["publicKey"]),
+		Timestamp:     3,
+	}
+	signTestBlock(t, openB, keysB["privateKey"])
+	if err := l.ProcessBlock(openB, false); err != nil {
+		t.Fatalf("expected complex openB to succeed, got %v", err)
+	}
+
+	prevMint := sendAB.Hash
+	mintNFT := &Block{
+		Type:          "mint_nft",
+		Account:       keysA["publicKey"],
+		Previous:      &prevMint,
+		Balance:       750,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "NFT_MINT",
+		Spora:         validSpora(sendAB.Hash),
+		Payload: map[string]interface{}{
+			"name":        "Complex Artifact",
+			"magnet":      "magnet:?xt=urn:btih:complex-nft",
+			"description": "Recovered across restart",
+		},
+		Timestamp: 4,
+	}
+	signTestBlock(t, mintNFT, keysA["privateKey"])
+	if err := l.ProcessBlock(mintNFT, false); err != nil {
+		t.Fatalf("expected complex mint_nft to succeed, got %v", err)
+	}
+
+	proposalEnd := time.UnixMilli(5).Format(time.RFC3339)
+	prevProposal := openB.Hash
+	proposalB := &Block{
+		Type:          "proposal",
+		Account:       keysB["publicKey"],
+		Previous:      &prevProposal,
+		Balance:       190,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "DAO_PROPOSAL",
+		Spora:         validSpora(openB.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Complex Recovery Proposal",
+			"endTime": proposalEnd,
+		},
+		Timestamp: 5,
+	}
+	signTestBlock(t, proposalB, keysB["privateKey"])
+	if err := l.ProcessBlock(proposalB, false); err != nil {
+		t.Fatalf("expected complex proposal to succeed, got %v", err)
+	}
+
+	prevTransfer := mintNFT.Hash
+	transferNFT := &Block{
+		Type:          "transfer_nft",
+		Account:       keysA["publicKey"],
+		Previous:      &prevTransfer,
+		Balance:       749,
+		StakedBalance: 0,
+		Height:        3,
+		Link:          mintNFT.Hash,
+		Spora:         validSpora(mintNFT.Hash),
+		Payload: map[string]interface{}{
+			"recipient": keysC["publicKey"],
+		},
+		Timestamp: 6,
+	}
+	signTestBlock(t, transferNFT, keysA["privateKey"])
+	if err := l.ProcessBlock(transferNFT, false); err != nil {
+		t.Fatalf("expected complex transfer_nft to succeed, got %v", err)
+	}
+
+	secret := "complex-recovery-secret"
+	secretHash := Hash(secret)
+	prevSwapLock := transferNFT.Hash
+	swapLock := &Block{
+		Type:          "swap_lock",
+		Account:       keysA["publicKey"],
+		Previous:      &prevSwapLock,
+		Balance:       649,
+		StakedBalance: 0,
+		Height:        4,
+		Link:          "HTLC_LOCK",
+		Spora:         validSpora(transferNFT.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  keysB["publicKey"],
+			"expiry":     float64(time.Now().Add(time.Hour).UnixMilli()),
+		},
+		Timestamp: 7,
+	}
+	signTestBlock(t, swapLock, keysA["privateKey"])
+	if err := l.ProcessBlock(swapLock, false); err != nil {
+		t.Fatalf("expected complex swap_lock to succeed, got %v", err)
+	}
+
+	prevClaim := proposalB.Hash
+	swapClaim := &Block{
+		Type:          "swap_claim",
+		Account:       keysB["publicKey"],
+		Previous:      &prevClaim,
+		Balance:       290,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "HTLC_CLAIM",
+		Spora:         validSpora(proposalB.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: 8,
+	}
+	signTestBlock(t, swapClaim, keysB["privateKey"])
+	if err := l.ProcessBlock(swapClaim, false); err != nil {
+		t.Fatalf("expected complex swap_claim to succeed, got %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before complex recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if len(recovered.Chains[keysA["publicKey"]]) != 5 {
+		t.Fatalf("expected recovered account A chain length 5, got %d", len(recovered.Chains[keysA["publicKey"]]))
+	}
+	if len(recovered.Chains[keysB["publicKey"]]) != 3 {
+		t.Fatalf("expected recovered account B chain length 3, got %d", len(recovered.Chains[keysB["publicKey"]]))
+	}
+	nft, ok := recovered.Nfts[mintNFT.Hash]
+	if !ok {
+		t.Fatalf("expected recovered NFT to exist")
+	}
+	nftMap := nft.(map[string]interface{})
+	if nftMap["owner"] != keysC["publicKey"] {
+		t.Fatalf("expected recovered NFT owner %q, got %v", keysC["publicKey"], nftMap["owner"])
+	}
+	swap := recovered.Swaps[secretHash]
+	if swap == nil || swap.Status != "CLAIMED" {
+		t.Fatalf("expected recovered swap to be CLAIMED, got %+v", swap)
+	}
+	if swap.Claimer != keysB["publicKey"] {
+		t.Fatalf("expected recovered swap claimer %q, got %v", keysB["publicKey"], swap.Claimer)
+	}
+	proposal, ok := recovered.Proposals[proposalB.Hash]
+	if !ok {
+		t.Fatalf("expected recovered proposal to exist")
+	}
+	proposalMap := proposal.(map[string]interface{})
+	if proposalMap["status"] != "Rejected" {
+		t.Fatalf("expected recovered proposal status Rejected, got %v", proposalMap["status"])
+	}
+}
+
 func TestRecoveryRebuildsMixedHistoricalStateFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "recovery.sqlite")
 	keysA := DeriveKeypair("semantic parity recovery A", 0)

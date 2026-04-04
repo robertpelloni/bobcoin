@@ -44,6 +44,7 @@
 - [x] **Native NFT Minting**: Built a decentralized digital asset protocol (`mint_nft`, `transfer_nft`) and a high-fidelity gallery UI at `/gallery`.
 - [x] **Staking & Delegation**: Implemented Proof-of-Stake logic allowing users to lock tokens for yield and 2x Quadratic Voting power, complete with a `/staking` dashboard.
 - [x] **Go Storage WASM Workbench**: Integrated a browser-side Go storage kernel into the frontend Supernode page for encrypted preprocessing, shard generation, and manifest export.
+- [x] **Vault Archive Browser**: Integrated Go-lattice manifest anchors into the dedicated `/vault` archive view so archived publications are visible as a first-class product surface.
 - [x] **DEX / Token Swap UI**: Built a high-fidelity sovereign exchange interface at `/dex` and implemented a native on-chain AMM engine ($x * y = k$) in Go.
 - [x] **Wallet Hardening (Mnemonic Backup)**: Implemented 12-word seed phrases and account restoration to prevent fund loss from cache clearing.
 - [x] **Durable Data UI**: Built the **Cyber-Vault** interface for anchoring permanent file storage to the SPoRA-backed network.

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.11.0] - 2026-04-03
+
+### Added
+- **Vault Archive Surface Integration**: Rebuilt `Vault.jsx` into a real Go-lattice archive browser, showing personal and network manifest anchors, archive statistics, and direct manifest/locator actions.
+- **Embedded Storage Workbench**: The Go storage WASM workbench now lives inside the Vault flow as a first-class archive tool rather than an isolated hidden utility.
+- **Anchor-Aware Archive UX**: Users can now browse their recent wallet-owned manifest anchors and the wider network anchor stream from the dedicated archive page.
+
 ## [8.10.0] - 2026-04-03
 
 ### Added

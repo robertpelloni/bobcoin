@@ -32,6 +32,7 @@
   - As of v8.22.0, `SYSTEM_GENESIS` bypass semantics are intentionally single-use only; once any chain exists, later `SYSTEM_GENESIS` opens should be rejected rather than treated as valid bootstrap events.
   - As of v8.22.0, proposal status is refreshed in Go both during block processing and proposal/vote reads so expired governance records do not remain indefinitely `Active`.
   - As of v8.24.0, the Go test suite explicitly covers the economic parity path for `accept_bid` and `data_anchor`, so these behaviors are now guarded by regression tests rather than only manual reasoning.
+  - As of v8.26.0, the Go regression suite also covers swap lifecycle behavior, NFT transfer ownership semantics, and publish-manifest anchor replay through audit reconstruction.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

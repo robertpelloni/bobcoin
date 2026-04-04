@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -410,6 +411,221 @@ func TestRefreshProposalStatusesFinalizesExpiredProposal(t *testing.T) {
 	proposal := l.Proposals["proposal-1"].(map[string]interface{})
 	if proposal["status"] != "Passed" {
 		t.Fatalf("expected expired proposal to finalize as Passed, got %v", proposal["status"])
+	}
+}
+
+func TestSwapLockAndClaimLifecycle(t *testing.T) {
+	keys := DeriveKeypair("semantic parity swap lifecycle", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	secret := "ultra-secret"
+	secretHash := Hash(secret)
+	prev := genesis.Hash
+	lockBlock := &Block{
+		Type:          "swap_lock",
+		Account:       keys["publicKey"],
+		Previous:      &prev,
+		Balance:       925,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "HTLC_LOCK",
+		Spora:         validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  "recipient-pubkey",
+			"expiry":     float64(time.Now().Add(time.Hour).UnixMilli()),
+		},
+		Timestamp: 2,
+	}
+	signTestBlock(t, lockBlock, keys["privateKey"])
+	if err := l.ProcessBlock(lockBlock, true); err != nil {
+		t.Fatalf("expected swap_lock to succeed, got %v", err)
+	}
+
+	swap := l.Swaps[secretHash]
+	if swap == nil || swap.Status != "LOCKED" {
+		t.Fatalf("expected locked swap state, got %+v", swap)
+	}
+	if diff := math.Abs(swap.Amount - 75); diff > 0.001 {
+		t.Fatalf("expected locked amount near 75, got %v", swap.Amount)
+	}
+
+	prevClaim := lockBlock.Hash
+	claimBlock := &Block{
+		Type:          "swap_claim",
+		Account:       keys["publicKey"],
+		Previous:      &prevClaim,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "HTLC_CLAIM",
+		Spora:         validSpora(lockBlock.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: 3,
+	}
+	signTestBlock(t, claimBlock, keys["privateKey"])
+	if err := l.ProcessBlock(claimBlock, true); err != nil {
+		t.Fatalf("expected swap_claim to succeed, got %v", err)
+	}
+
+	if swap.Status != "CLAIMED" {
+		t.Fatalf("expected claimed swap state, got %v", swap.Status)
+	}
+	if swap.Claimer != keys["publicKey"] {
+		t.Fatalf("expected claimer %q, got %v", keys["publicKey"], swap.Claimer)
+	}
+}
+
+func TestTransferNFTEnforcesOwnershipAndUpdatesOwner(t *testing.T) {
+	ownerKeys := DeriveKeypair("semantic parity nft owner", 0)
+	otherKeys := DeriveKeypair("semantic parity nft other", 0)
+	recipientKeys := DeriveKeypair("semantic parity nft recipient", 0)
+
+	ownerLattice := NewLattice(NewDBManager(":memory:"))
+	ownerGenesis := makeGenesisBlock(ownerKeys, 1000)
+	signTestBlock(t, ownerGenesis, ownerKeys["privateKey"])
+	if err := ownerLattice.ProcessBlock(ownerGenesis, true); err != nil {
+		t.Fatalf("expected owner genesis to succeed, got %v", err)
+	}
+
+	prevMint := ownerGenesis.Hash
+	mintBlock := &Block{
+		Type:          "mint_nft",
+		Account:       ownerKeys["publicKey"],
+		Previous:      &prevMint,
+		Balance:       950,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "NFT_MINT",
+		Spora:         validSpora(ownerGenesis.Hash),
+		Payload: map[string]interface{}{
+			"name":        "Artifact",
+			"magnet":      "magnet:?xt=urn:btih:nft1",
+			"description": "Rare",
+		},
+		Timestamp: 2,
+	}
+	signTestBlock(t, mintBlock, ownerKeys["privateKey"])
+	if err := ownerLattice.ProcessBlock(mintBlock, true); err != nil {
+		t.Fatalf("expected mint_nft to succeed, got %v", err)
+	}
+
+	otherLattice := NewLattice(NewDBManager(":memory:"))
+	otherGenesis := makeGenesisBlock(otherKeys, 1000)
+	signTestBlock(t, otherGenesis, otherKeys["privateKey"])
+	if err := otherLattice.ProcessBlock(otherGenesis, true); err != nil {
+		t.Fatalf("expected other genesis to succeed, got %v", err)
+	}
+	otherLattice.Nfts[mintBlock.Hash] = map[string]interface{}{
+		"id":    mintBlock.Hash,
+		"owner": ownerKeys["publicKey"],
+		"name":  "Artifact",
+	}
+
+	otherPrev := otherGenesis.Hash
+	invalidTransfer := &Block{
+		Type:          "transfer_nft",
+		Account:       otherKeys["publicKey"],
+		Previous:      &otherPrev,
+		Balance:       999,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          mintBlock.Hash,
+		Spora:         validSpora(otherGenesis.Hash),
+		Payload: map[string]interface{}{
+			"recipient": recipientKeys["publicKey"],
+		},
+		Timestamp: 2,
+	}
+	signTestBlock(t, invalidTransfer, otherKeys["privateKey"])
+	if err := otherLattice.ProcessBlock(invalidTransfer, true); err == nil || !strings.Contains(err.Error(), "do not own this NFT") {
+		t.Fatalf("expected non-owner transfer to fail, got %v", err)
+	}
+
+	ownerPrev := mintBlock.Hash
+	validTransfer := &Block{
+		Type:          "transfer_nft",
+		Account:       ownerKeys["publicKey"],
+		Previous:      &ownerPrev,
+		Balance:       949,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          mintBlock.Hash,
+		Spora:         validSpora(mintBlock.Hash),
+		Payload: map[string]interface{}{
+			"recipient": recipientKeys["publicKey"],
+		},
+		Timestamp: 3,
+	}
+	signTestBlock(t, validTransfer, ownerKeys["privateKey"])
+	if err := ownerLattice.ProcessBlock(validTransfer, true); err != nil {
+		t.Fatalf("expected owner transfer_nft to succeed, got %v", err)
+	}
+
+	nft := ownerLattice.Nfts[mintBlock.Hash].(map[string]interface{})
+	if nft["owner"] != recipientKeys["publicKey"] {
+		t.Fatalf("expected NFT owner %q, got %v", recipientKeys["publicKey"], nft["owner"])
+	}
+}
+
+func TestAuditStateRebuildsPublishedManifestAnchorState(t *testing.T) {
+	keys := DeriveKeypair("semantic parity manifest replay", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	prev := genesis.Hash
+	manifest := &Block{
+		Type:          "publish_manifest",
+		Account:       keys["publicKey"],
+		Previous:      &prev,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "manifest-2",
+		Spora:         validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "manifest-2",
+			"locator":     "bobtorrent://manifest/manifest-2",
+			"manifestUrl": "http://localhost:8000/manifests/manifest-2",
+			"name":        "manifested.bin",
+			"size":        128,
+		},
+		Timestamp: 2,
+	}
+	signTestBlock(t, manifest, keys["privateKey"])
+	if err := l.ProcessBlock(manifest, true); err != nil {
+		t.Fatalf("expected publish_manifest to succeed, got %v", err)
+	}
+
+	l.Anchors = map[string]interface{}{}
+	if err := l.AuditState(); err != nil {
+		t.Fatalf("expected audit to succeed, got %v", err)
+	}
+
+	anchor, ok := l.Anchors[manifest.Hash]
+	if !ok {
+		t.Fatalf("expected publish_manifest anchor to be rebuilt")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["type"] != "publish_manifest" {
+		t.Fatalf("expected rebuilt anchor type publish_manifest, got %v", anchorMap["type"])
+	}
+	if anchorMap["locator"] != "bobtorrent://manifest/manifest-2" {
+		t.Fatalf("expected rebuilt locator to survive replay, got %v", anchorMap["locator"])
 	}
 }
 

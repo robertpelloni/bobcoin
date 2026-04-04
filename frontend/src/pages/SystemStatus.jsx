@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CyberGrid3D } from '../components/CyberGrid3D';
-import { LATTICE_URL } from '../api';
+import { LATTICE_URL, SUPERNODE_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
+import { probeStorageWasmAvailability } from '../lib/storageWasm';
 import './SystemStatus.css';
 
 // We import version from config (defined in vite.config.js)
@@ -12,7 +13,8 @@ export function SystemStatus() {
         gameServer: 'Checking...',
         zkService: 'Checking...',
         supernode: 'Checking...',
-        lattice: 'Checking...'
+        lattice: 'Checking...',
+        storageWasm: 'Checking...'
     });
     const [peers, setPeers] = useState({});
     const [networkRoot, setNetworkRoot] = useState('0x...');
@@ -23,11 +25,10 @@ export function SystemStatus() {
     const [syncing, setSyncing] = useState(false);
 
     useEffect(() => {
-        // Fetch Build Info
         fetch('/build-info.json')
             .then(res => res.json())
             .then(data => setBuildInfo(data))
-            .catch(e => console.error("Failed to load build info", e));
+            .catch(e => console.error('Failed to load build info', e));
     }, []);
 
     const fetchPeers = async () => {
@@ -41,7 +42,7 @@ export function SystemStatus() {
     };
 
     const handleAddPeer = async () => {
-        const url = prompt("Enter Peer Node URL (e.g. http://localhost:4001):");
+        const url = prompt('Enter Peer Node URL (e.g. http://localhost:4001):');
         if (!url) return;
         try {
             await fetch(`${LATTICE_URL}/peers`, {
@@ -50,7 +51,9 @@ export function SystemStatus() {
                 body: JSON.stringify({ url })
             });
             fetchPeers();
-        } catch(e) { alert(e.message); }
+        } catch (e) {
+            alert(e.message);
+        }
     };
 
     const handleExport = async () => {
@@ -63,12 +66,11 @@ export function SystemStatus() {
             a.href = url;
             a.download = `bobcoin_state_${Date.now()}.json`;
             a.click();
-            
-            // Achievement
+
             const stored = localStorage.getItem('bobcoin_wallet');
             if (stored) checkAndUnlock('LATTICE_HISTORIAN', JSON.parse(stored), []);
         } catch (e) {
-            alert("Export failed: " + e.message);
+            alert('Export failed: ' + e.message);
         }
     };
 
@@ -79,7 +81,7 @@ export function SystemStatus() {
         try {
             const text = await file.text();
             const snapshot = JSON.parse(text);
-            
+
             const res = await fetch(`${LATTICE_URL}/bootstrap`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -87,19 +89,18 @@ export function SystemStatus() {
             }).then(r => r.json());
 
             if (res.success) {
-                alert("State Synchronized! Network Root: " + res.stateHash.substring(0, 16));
+                alert('State Synchronized! Network Root: ' + res.stateHash.substring(0, 16));
                 checkHealth();
             } else {
-                alert("Sync failed: " + res.error);
+                alert('Sync failed: ' + res.error);
             }
         } catch (e) {
-            alert("Sync Error: " + e.message);
+            alert('Sync Error: ' + e.message);
         }
         setSyncing(false);
     };
 
     const checkHealth = async () => {
-        // Game Server
         try {
             await fetch('http://localhost:3001/status');
             setServices(s => ({ ...s, gameServer: 'ONLINE' }));
@@ -107,40 +108,43 @@ export function SystemStatus() {
             setServices(s => ({ ...s, gameServer: 'OFFLINE' }));
         }
 
-        // Supernode API
         try {
-            await fetch('http://localhost:8081/stats');
+            await fetch(`${SUPERNODE_URL}/stats`);
             setServices(s => ({ ...s, supernode: 'ONLINE' }));
         } catch {
             setServices(s => ({ ...s, supernode: 'OFFLINE' }));
         }
 
-        // Lattice API (Go Node)
+        try {
+            const wasm = await probeStorageWasmAvailability();
+            setServices(s => ({ ...s, storageWasm: wasm.available ? 'READY' : 'MISSING ARTIFACTS' }));
+        } catch {
+            setServices(s => ({ ...s, storageWasm: 'OFFLINE' }));
+        }
+
         try {
             const res = await fetch(`${LATTICE_URL}/status`);
             const data = await res.json();
             setServices(s => ({ ...s, lattice: 'ONLINE (Zenith v7.0.0)' }));
             setNetworkRoot(data.stateHash);
-            setMerkleRoot(data.merkleRoot);
-            
+            setMerkleRoot(data.merkleRoot || data.stateHash || '0x...');
+
             const localH = data.accounts || data.blocks || 0;
             setLocalBlocks(localH);
 
             const pRes = await fetch(`${LATTICE_URL}/peers`);
             const pData = await pRes.json();
             setPeers(pData);
-            
+
             let maxH = localH;
             Object.values(pData).forEach(p => {
                 if (p.blocks > maxH) maxH = p.blocks;
             });
             setNetworkHeight(maxH);
-
         } catch {
             setServices(s => ({ ...s, lattice: 'OFFLINE' }));
         }
 
-        // ZK Verifier Status
         setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)' }));
     };
 
@@ -155,8 +159,8 @@ export function SystemStatus() {
     const toggleFullScreen = () => {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
+        } else if (document.exitFullscreen) {
+            document.exitFullscreen();
         }
     };
 
@@ -199,7 +203,7 @@ export function SystemStatus() {
                         <div style={{height: '100%', background: '#0f0', width: `${syncProgress}%`, transition: 'width 0.5s', boxShadow: '0 0 10px #0f0'}}></div>
                     </div>
                 </div>
-                
+
                 <div className="peer-list" style={{marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
                     {Object.values(peers).map(p => (
                         <div key={p.url} style={{background: '#111', border: `1px solid ${p.status === 'online' ? '#0f0' : '#f00'}`, padding: '0.4rem 0.8rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '8px'}}>
@@ -239,10 +243,15 @@ export function SystemStatus() {
                     <p>STATUS: {services.zkService}</p>
                     <p className="detail">Rust/SP1 Circuit Verifier (RISC-V).</p>
                 </div>
-                <div className={`status-card ${services.lattice === 'ONLINE' ? 'online' : 'offline'}`}>
+                <div className={`status-card ${services.lattice.startsWith('ONLINE') ? 'online' : 'offline'}`}>
                     <h3>ASYNCHRONOUS BLOCK LATTICE</h3>
                     <p>STATUS: {services.lattice}</p>
-                    <p className="detail">Native Node.js Sovereign DAG Consensus.</p>
+                    <p className="detail">Go-compatible sovereign DAG consensus service.</p>
+                </div>
+                <div className={`status-card ${services.storageWasm === 'READY' ? 'online' : 'offline'}`}>
+                    <h3>GO STORAGE WASM KERNEL</h3>
+                    <p>STATUS: {services.storageWasm}</p>
+                    <p className="detail">Browser-side encryption and erasure coding runtime for zero-trust upload preprocessing.</p>
                 </div>
             </div>
 

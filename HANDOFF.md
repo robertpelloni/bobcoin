@@ -1,39 +1,92 @@
-# Session Handoff - 2026-04-03 (v8.4.0)
+# Session Handoff - 2026-04-03 (v8.7.0)
 
-## Overview & Findings
-In this session, we've successfully brought the Bobcoin Sovereign Network to a production-ready state, culminating in version 8.4.0. The migration from Node.js to a high-performance Go-based consensus engine is complete, achieving full feature parity while introducing significant architectural enhancements.
+## Overview
+This session extended the already-advanced Bobcoin production branch by adding a **browser-side Go storage WASM integration layer** to the frontend. The goal was to begin connecting the Bobcoin UI to the newer Bobtorrent Go storage stack without regressing the existing high-end Go-lattice / snapshot / wallet hardening work already present on `origin/main`.
 
-## Key Accomplishments (v5.0.0 - v8.4.0)
+## What Was Added
 
-### 1. **Go-Lattice Engine (Core Consensus)**
--   **Ported from Node.js**: The entire consensus state machine was rewritten in Go, providing superior performance and multi-threading capabilities.
--   **Persistence**: Integrated SQLite (`modernc.org/sqlite`) for atomic disk commits and reliable cold-boot recovery.
--   **Security**: Implemented strict sequential height enforcement, state root hashing, and SPoRA (Succinct Proof of Random Access) verification.
--   **DeFi & Governance**: Fully functional on-chain AMM ($x*y=k$), HTLC swaps, and multi-sig execution with on-chain proposals.
--   **Networking**: Added P2P gossip, node discovery, and Gzip-compressed 500-block batch syncing for massive scalability.
+### 1. Go Storage WASM Client
+**File:** `frontend/src/lib/storageWasm.js`
 
-### 2. **Security & Cryptography**
--   **Lattice Guardian**: A pre-sign visualizer that intercepts all balance-mutating actions (Send, Swap, Stake) to prevent "blind-signing."
--   **Sovereign Prophet**: Integrated on-chain transaction simulation to project future balances and validate blocks before signing.
--   **Encrypted Vault**: Implemented AES-256-GCM encryption for local wallet storage, protected by a user-defined password and derived via PBKDF2.
--   **Native ZK**: Integrated Succinct SP1 zkVM for "Proof of Play" verification in the minting cycle.
--   **HD Wallets**: Implemented BIP-44 hierarchical deterministic derivation for infinite sub-accounts from a single seed.
+Added a browser utility that:
+- loads `wasm_exec.js`
+- fetches `storage.wasm`
+- boots the Go runtime in-browser
+- exposes `encrypt`, `decrypt`, `encodeErasure`, `decodeErasure`
+- provides `probeStorageWasmAvailability()` for diagnostics
+- provides `sha256Hex()` for manifest hashing
 
-### 3. **UI/UX & PWA**
--   **Sovereign Singularity**: Immersive, glitch-animated boot sequence (SplashScreen) providing a "Native OS" feel.
--   **Unified Portfolio**: Automatic sub-account discovery and a global net-worth display in the header.
--   **Network Heartbeat**: Real-time WebSocket monitoring for live TPS, peer health, and Merkle root integrity.
--   **Mobile Hardening**: Full responsive audit with a dedicated mobile bottom-navigation bar.
+This isolates the Go runtime bootstrapping details from the React page layer.
 
-## Status of TODO & ROADMAP
--   ✅ All core roadmap items are 100% complete.
--   ✅ Full feature parity between Go and Node.js clients.
--   ✅ ZK-proving unblocked and integrated into the minting loop.
--   ✅ PWA is production-ready with offline support and native-install capabilities.
+### 2. Storage WASM Workbench
+**File:** `frontend/src/components/StorageWasmWorkbench.jsx`
 
-## Commands
--   **Go Node**: `cd go-lattice && go run .`
--   **Frontend**: `cd frontend && npm run dev`
--   **Tests**: `node test_e2e.js` (updated for v8.4.0 compliance)
+Added a new operator workbench that:
+- accepts a local file
+- preprocesses it in-browser through the Go storage kernel
+- encrypts the file with ChaCha20-Poly1305
+- shards it with Reed-Solomon (4+2)
+- hashes ciphertext and shard outputs
+- exports a JSON manifest
+- displays an experimental `bobtorrent://manifest/<hash>` locator
 
-**The Bobcoin Sovereign Network is now a fully realized, production-ready decentralized ecosystem.** 🚀🛡️🏛️💎
+This is intentionally a **preprocessing** step, not yet the full publish-to-network pipeline.
+
+### 3. Supernode UI Integration
+**File:** `frontend/src/pages/Supernode.jsx`
+
+Integrated the storage workbench into the Supernode page and hardened the page so it can tolerate partial or lighter `/stats` responses from Go services.
+
+### 4. Diagnostics Integration
+**File:** `frontend/src/pages/SystemStatus.jsx`
+
+Added a runtime health indicator for the Go storage WASM kernel while preserving the newer upstream production features already present in the diagnostics dashboard:
+- state export/import
+- peer discovery view
+- network root / merkle root display
+- sync progress
+
+### 5. Service Targeting
+**File:** `frontend/src/api.js`
+
+Resolved the rebase by keeping the upstream lattice port default and switching the supernode default toward the Go supernode target:
+- `LATTICE_URL` default: `http://localhost:4001`
+- `SUPERNODE_URL` default: `http://localhost:8000`
+
+This keeps the frontend closer to the new Go storage/supernode flow while preserving the existing lattice expectations unless overridden by env vars.
+
+## Rebase / Merge Context
+The local Bobcoin branch was behind `origin/main` by dozens of commits. A direct push was rejected. I rebased the local WASM frontend commit onto the remote production branch and resolved conflicts by:
+- **keeping upstream 8.x production features**
+- **preserving the new WASM frontend work**
+- **updating versioning to `8.7.0` rather than overwriting remote history with the older `3.7.0` local numbering**
+
+## Validation
+Executed successfully:
+- `cd frontend && npm install`
+- `cd frontend && npm run build`
+
+Build result:
+- ✅ production Vite build completed successfully
+- ✅ PWA artifacts generated
+- ⚠ chunk-size warnings remain, but build passes
+- ⚠ existing browser-externalized module warnings from dependency graph remain, but build passes
+
+## Important Remaining Gap
+The frontend code is now ready to consume:
+- `/wasm_exec.js`
+- `/storage.wasm`
+
+However, these artifacts still need to be served into the Bobcoin frontend runtime environment. The top-level Bobtorrent repo should now copy or expose them automatically so this UI becomes operational without manual steps.
+
+## Recommended Next Step
+From the root repo:
+1. copy `build/storage.wasm` into `bobcoin/frontend/public/storage.wasm`
+2. copy `build/wasm_exec.js` into `bobcoin/frontend/public/wasm_exec.js`
+3. optionally extend `supernode-go` to match the richer `/stats`, `/add-torrent`, and `/remove-torrent` contract expected by the frontend
+
+## Summary
+- Upstream Bobcoin production features were preserved.
+- The new Go storage WASM UI is now layered on top of them.
+- The frontend build is passing.
+- The next major integration point is **artifact serving + supernode API parity**.

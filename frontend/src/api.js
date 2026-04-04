@@ -1,6 +1,6 @@
 export const API_URL = import.meta.env.VITE_GAME_SERVER_URL || 'http://localhost:3001';
 export const LATTICE_URL = import.meta.env.VITE_LATTICE_URL || 'http://localhost:4001';
-export const SUPERNODE_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8081';
+export const SUPERNODE_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8000';
 
 export const getSporaProof = async (challenge) => {
     try {

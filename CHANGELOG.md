@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.7.0] - 2026-04-03
+
+### Added
+- **Go Storage WASM Frontend Integration**: Added a browser-side Go storage client in `frontend/src/lib/storageWasm.js` that loads `wasm_exec.js` + `storage.wasm` and exposes the Bobtorrent Go storage kernel directly to the React application.
+- **Storage WASM Workbench** (`/supernode`): Added a new operator-facing panel to `Supernode.jsx` that encrypts local files with ChaCha20-Poly1305, shards them with Reed-Solomon (4+2), previews shard hashes, and exports a JSON manifest without sending the file to the network first.
+- **Runtime Visibility**: `SystemStatus.jsx` now probes whether the Go storage WASM kernel is actually available in the browser and surfaces that status in the diagnostics dashboard.
+
+### Changed
+- **Go Supernode Targeting**: The frontend now prefers the Go supernode service via `VITE_SUPERNODE_URL` / `http://localhost:8000` by default.
+- **Supernode Page Resilience**: Hardened `Supernode.jsx` to normalize partial `/stats` payloads so the UI degrades gracefully when connected to lighter Go service responses.
+
 ## [8.6.0] - 2026-04-03
 
 ### Added

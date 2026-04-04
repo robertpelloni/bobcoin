@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'react';
 import { SupernodeControls } from '../components/SupernodeControls';
-import { burnTokens } from '../api';
+import { StorageWasmWorkbench } from '../components/StorageWasmWorkbench';
+import { burnTokens, SUPERNODE_URL as API_URL } from '../api';
 import './Supernode.css';
 
-const API_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8081';
+function normalizeStats(data) {
+    return {
+        address: data?.address || 'UNKNOWN',
+        uptime: data?.uptime || 0,
+        network: {
+            peers: data?.network?.peers || 0,
+            downloadSpeed: data?.network?.downloadSpeed || 0,
+            uploadSpeed: data?.network?.uploadSpeed || 0,
+        },
+        storage: {
+            totalSize: data?.storage?.totalSize || 0,
+            torrents: Array.isArray(data?.storage?.torrents) ? data.storage.torrents : [],
+        },
+    };
+}
 
 export function Supernode() {
     const [stats, setStats] = useState(null);
@@ -15,12 +30,12 @@ export function Supernode() {
             const res = await fetch(`${API_URL}/stats`);
             if (!res.ok) throw new Error('Failed to fetch stats');
             const data = await res.json();
-            setStats(data);
+            setStats(normalizeStats(data));
             setLoading(false);
             setError(null);
         } catch (err) {
             console.error(err);
-            setError('Could not connect to Supernode API. Ensure Docker is running and port 8081 is accessible.');
+            setError(`Could not connect to Supernode API at ${API_URL}. Ensure the Go or legacy supernode is running and reachable.`);
         }
     };
 
@@ -178,6 +193,8 @@ export function Supernode() {
                     </tbody>
                 </table>
             </div>
+
+            <StorageWasmWorkbench />
 
             <div className="info-section">
                 <h3>HOW IT WORKS</h3>

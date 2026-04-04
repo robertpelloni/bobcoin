@@ -1,4 +1,4 @@
-# Session Handoff - 2026-04-04 (v8.16.0)
+# Session Handoff - 2026-04-04 (v8.17.0)
 
 ## Executive Summary
 This pass preserves the newer upstream `v8.15.0` Go-lattice parity hardening while layering an additional product-level trust/reputation overlay on top of the archive UX.
@@ -70,19 +70,30 @@ The Bobcoin archive system now supports:
 - search/filter discovery
 - owner-level trust/reputation overlays
 
+## Follow-Up Progress (v8.17.0)
+Manifest anchors now support richer signed publisher metadata:
+- publisher alias
+- website / profile URL
+- publisher statement
+
+This metadata is included in the publication proof message and is surfaced directly in Vault archive records and search.
+
+Additional validation:
+- `cd frontend && npm run build`
+- result: ✅ production build succeeds after signed publisher metadata integration
+
 ## Recommended Next Step
-1. **Expand provenance semantics further**
-   - richer signed metadata
-   - optional uploader profile overlays
-2. **Improve degraded recovery UX**
+1. **Improve degraded recovery UX**
    - partial shard availability handling
    - clearer recovery diagnostics
-3. **Strengthen archive ergonomics**
+2. **Strengthen archive ergonomics**
    - saved filters
    - grouping and custom sorting presets
+3. **Deepen publisher identity semantics**
+   - optional profile cards / avatar / linked proofs
 
 ## Summary
 - Upstream Bobcoin production features were preserved.
 - The Go storage/archive stack is now reused across Vault, Market, and Gallery.
-- Vault now acts as a trust-aware archive intelligence surface rather than a static list.
-- The next major integration point is **deeper provenance semantics + recovery ergonomics**.
+- Vault now acts as a trust-aware archive intelligence surface with explicit publisher metadata, not just heuristic scoring.
+- The next major integration point is **recovery ergonomics + richer publisher identity semantics**.

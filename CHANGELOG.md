@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.17.0] - 2026-04-04
+
+### Added
+- **Signed Publisher Metadata**: The storage workbench can now attach publisher alias, website, and statement metadata to a `publish_manifest` anchor block, with the metadata covered by the same signed publication proof.
+- **Vault Publisher Identity Surfacing**: Vault archive records now display publisher alias, profile URL, and publisher statement when present.
+- **Publisher Searchability**: Vault search now includes publisher identity metadata so users can discover content by publisher context rather than only hashes and locators.
+
 ## [8.16.0] - 2026-04-04
 
 ### Added

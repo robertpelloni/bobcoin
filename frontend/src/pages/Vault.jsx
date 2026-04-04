@@ -35,6 +35,9 @@ function matchesSearch(anchor, query) {
         anchor.manifestId,
         anchor.ciphertextHash,
         anchor.proofHash,
+        anchor.publisherAlias,
+        anchor.publisherWebsite,
+        anchor.publisherStatement,
         anchor.type,
     ]
         .map(normalizeString)
@@ -515,6 +518,9 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                 <span className="file-meta dim">MANIFEST: {short(manifestId, 20)} | BLOCK: {short(anchor.blockHash || anchor.id, 18)}</span>
                 {anchor.proofHash && <span className="file-meta dim">PROOF HASH: {short(anchor.proofHash, 24)}</span>}
                 {anchor.ciphertextHash && <span className="file-meta dim">CIPHERTEXT HASH: {short(anchor.ciphertextHash, 24)}</span>}
+                {anchor.publisherAlias && <span className="file-meta dim">PUBLISHER: {anchor.publisherAlias}</span>}
+                {anchor.publisherWebsite && <span className="file-meta dim">PROFILE: {anchor.publisherWebsite}</span>}
+                {anchor.publisherStatement && <span className="file-meta dim">STATEMENT: {anchor.publisherStatement}</span>}
                 <ProvenanceBadge anchor={anchor} ownerProfile={ownerProfile} />
             </div>
             <div className="anchor-actions">

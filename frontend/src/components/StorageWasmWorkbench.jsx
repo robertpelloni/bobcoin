@@ -53,6 +53,9 @@ export function StorageWasmWorkbench() {
     const [anchorState, setAnchorState] = useState('');
     const [anchoredResult, setAnchoredResult] = useState(null);
     const [myAnchors, setMyAnchors] = useState([]);
+    const [publisherAlias, setPublisherAlias] = useState('');
+    const [publisherWebsite, setPublisherWebsite] = useState('');
+    const [publisherStatement, setPublisherStatement] = useState('');
 
     useEffect(() => {
         let active = true;
@@ -289,7 +292,15 @@ export function StorageWasmWorkbench() {
                 throw new Error('The Go lattice does not yet know this wallet. Open or sync the account first.');
             }
 
-            const proofMessage = [manifestId, locator, manifestUrl, activeManifest.publishedAt || Date.now()].join('|');
+            const proofMessage = [
+                manifestId,
+                locator,
+                manifestUrl,
+                activeManifest.publishedAt || Date.now(),
+                publisherAlias.trim(),
+                publisherWebsite.trim(),
+                publisherStatement.trim(),
+            ].join('|');
             const proofHash = await hashData(proofMessage);
             const proofSignature = await signBlock(proofHash, keypair.privateKey);
 
@@ -306,6 +317,11 @@ export function StorageWasmWorkbench() {
                     name: activeManifest.source?.name || 'unnamed.bin',
                     size: activeManifest.source?.size || 0,
                     ciphertextHash: activeManifest.encryption?.ciphertextHash || '',
+                    publisher: {
+                        alias: publisherAlias.trim(),
+                        website: publisherWebsite.trim(),
+                        statement: publisherStatement.trim(),
+                    },
                     publicationProof: {
                         messageHash: proofHash,
                         signature: proofSignature,
@@ -409,6 +425,31 @@ export function StorageWasmWorkbench() {
                         <Metric label="Shard Layout" value={`${manifest.erasure.dataShards}+${manifest.erasure.parityShards}`} />
                         <Metric label="Total Shards" value={`${manifest.erasure.totalShards}`} />
                         <Metric label="Locator" value={(manifest.locator || manifest.experimentalLocator).slice(0, 32) + '...'} />
+                    </div>
+
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#0b0b0b', border: '1px solid #1e1e1e' }}>
+                        <div style={{ color: '#888', marginBottom: '0.75rem' }}>PUBLISHER PROVENANCE METADATA</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                            <input
+                                className="cyber-input"
+                                placeholder="Publisher Alias (e.g. CipherArchivist)"
+                                value={publisherAlias}
+                                onChange={(e) => setPublisherAlias(e.target.value)}
+                            />
+                            <input
+                                className="cyber-input"
+                                placeholder="Website / Profile URL"
+                                value={publisherWebsite}
+                                onChange={(e) => setPublisherWebsite(e.target.value)}
+                            />
+                            <textarea
+                                className="cyber-input"
+                                placeholder="Publisher Statement / Intent"
+                                value={publisherStatement}
+                                onChange={(e) => setPublisherStatement(e.target.value)}
+                                style={{ minHeight: '72px', gridColumn: '1 / -1' }}
+                            />
+                        </div>
                     </div>
 
                     {publishedResult && (

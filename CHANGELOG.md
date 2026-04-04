@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Gallery Archive Reuse**: `Gallery.jsx` now lets users mint NFTs directly from previously anchored manifests, making the archive a reusable asset source rather than a dead-end log.
 - **Cross-Surface Anchor Reuse**: Manifest anchors now flow through Vault, Market, and Gallery, establishing a broader archive-backed content lifecycle across the Bobcoin app.
 
+## [8.13.0] - 2026-04-04
+
+### Added
+- **Storage Market Archive Reuse**: `StorageMarket.jsx` now lets operators select previously anchored manifests directly from their Go-lattice archive when creating hosting bids.
+- **Gallery Archive Reuse**: `Gallery.jsx` now lets users mint NFTs directly from previously anchored manifests, making the archive a reusable asset source rather than a dead-end log.
+- **Cross-Surface Anchor Reuse**: Manifest anchors now flow through Vault, Market, and Gallery, establishing a broader archive-backed content lifecycle across the Bobcoin app.
+
 ## [8.12.0] - 2026-04-04
 
 ### Added

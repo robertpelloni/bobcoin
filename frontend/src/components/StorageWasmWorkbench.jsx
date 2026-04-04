@@ -52,6 +52,8 @@ function sourceHostFromReference(ref) {
     }
 }
 
+const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
+
 function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes }) {
     return {
         generatedAt: new Date().toISOString(),
@@ -80,6 +82,16 @@ function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo,
             restoredFile: restoredInfo || null,
         },
     };
+}
+
+function persistRecoveryReport(report) {
+    try {
+        const existing = JSON.parse(localStorage.getItem(RECOVERY_REPORTS_KEY) || '[]');
+        const next = [report, ...existing].slice(0, 50);
+        localStorage.setItem(RECOVERY_REPORTS_KEY, JSON.stringify(next));
+    } catch (error) {
+        console.error('Failed to persist recovery report locally:', error);
+    }
 }
 
 export function StorageWasmWorkbench() {
@@ -341,7 +353,7 @@ export function StorageWasmWorkbench() {
                 return acc;
             }, {});
 
-            setRestoreDiagnostics({
+            const diagnosticsPayload = {
                 totalShards: shardEntries.length,
                 dataShards,
                 parityShards,
@@ -350,9 +362,16 @@ export function StorageWasmWorkbench() {
                 recoverable,
                 failureSummary,
                 failedShards,
-            });
+            };
+            setRestoreDiagnostics(diagnosticsPayload);
 
             if (!recoverable) {
+                persistRecoveryReport(buildRecoveryReport({
+                    loadedManifest,
+                    restoreDiagnostics: diagnosticsPayload,
+                    restoredInfo: null,
+                    omittedShardIndexes,
+                }));
                 throw new Error(`Insufficient shards for recovery: have ${availableCount}, need at least ${dataShards}.`);
             }
 
@@ -373,12 +392,19 @@ export function StorageWasmWorkbench() {
             const mime = loadedManifest.source?.mime || 'application/octet-stream';
 
             downloadBytes(filename, restoredBytes, mime);
-            setRestoredInfo({
+            const restoredPayload = {
                 filename,
                 size: restoredBytes.length,
                 hash: restoredHash,
                 recoveredWithParity: failedShards.length > 0,
-            });
+            };
+            setRestoredInfo(restoredPayload);
+            persistRecoveryReport(buildRecoveryReport({
+                loadedManifest,
+                restoreDiagnostics: diagnosticsPayload,
+                restoredInfo: restoredPayload,
+                omittedShardIndexes,
+            }));
             setRestoreState(failedShards.length > 0 ? 'Restore complete via parity reconstruction. File downloaded locally.' : 'Restore complete. File downloaded locally.');
         } catch (error) {
             console.error(error);

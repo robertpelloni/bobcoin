@@ -5,12 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.28.0] - 2026-04-04
+## [8.29.0] - 2026-04-04
 
 ### Added
+- Mixed-history replay regression coverage for the Go lattice:
+  - multi-account replay involving `send`, `open`, `data_anchor`, `market_bid`, and `accept_bid`
+  - deterministic audit reconstruction of mixed derived state across accounts after manual corruption of runtime maps
+- Additional helper coverage for account-open SPoRA generation in the Go parity test suite.
 - **Failure Categorization**: Restore diagnostics now classify shard failures into categories such as operator omission, integrity mismatch, network fetch failure, missing shard, and unknown failure.
 - **Source Attribution**: Recovery diagnostics now record the attempted shard source reference and source host for each failed shard, making outage/corruption attribution more actionable.
 - **Failure Summary Reporting**: The recovery diagnostics panel now aggregates failure counts by category, improving operator triage during degraded restores.
+
+### Changed
+- Continued the parity strategy of testing replay and reconstruction across more realistic historical ledger shapes instead of only isolated single-feature flows.
+
+### Validation
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
 
 ## [8.27.0] - 2026-04-04
 

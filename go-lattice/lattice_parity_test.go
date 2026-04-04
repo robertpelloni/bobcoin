@@ -45,6 +45,18 @@ func validSpora(previousHash string) *SporaProof {
 	}
 }
 
+func validSporaForOpenAccount(account string) *SporaProof {
+	baseHash := Hash(account)
+	challenge64, _ := strconv.ParseInt(baseHash[:8], 16, 64)
+	challenge := int(challenge64)
+	infoHash := "anchor-seed"
+	return &SporaProof{
+		InfoHash:  infoHash,
+		Challenge: challenge,
+		ChunkHash: Hash(infoHash + strconv.Itoa(challenge)),
+	}
+}
+
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
 	participants := []string{"alice", "bob", "carol"}
 	addr1 := deterministicMultisigAddress(participants)
@@ -626,6 +638,142 @@ func TestAuditStateRebuildsPublishedManifestAnchorState(t *testing.T) {
 	}
 	if anchorMap["locator"] != "bobtorrent://manifest/manifest-2" {
 		t.Fatalf("expected rebuilt locator to survive replay, got %v", anchorMap["locator"])
+	}
+}
+
+func TestAuditStateRebuildsMixedHistoricalLedgerState(t *testing.T) {
+	keysA := DeriveKeypair("semantic parity mixed history A", 0)
+	keysB := DeriveKeypair("semantic parity mixed history B", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesisA := makeGenesisBlock(keysA, 1000)
+	signTestBlock(t, genesisA, keysA["privateKey"])
+	if err := l.ProcessBlock(genesisA, true); err != nil {
+		t.Fatalf("expected genesisA to succeed, got %v", err)
+	}
+
+	prevSend := genesisA.Hash
+	sendAB := &Block{
+		Type:          "send",
+		Account:       keysA["publicKey"],
+		Previous:      &prevSend,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          keysB["publicKey"],
+		Spora:         validSpora(genesisA.Hash),
+		Timestamp:     2,
+	}
+	signTestBlock(t, sendAB, keysA["privateKey"])
+	if err := l.ProcessBlock(sendAB, true); err != nil {
+		t.Fatalf("expected sendAB to succeed, got %v", err)
+	}
+
+	openB := &Block{
+		Type:          "open",
+		Account:       keysB["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendAB.Hash,
+		Spora:         validSporaForOpenAccount(keysB["publicKey"]),
+		Timestamp:     3,
+	}
+	signTestBlock(t, openB, keysB["privateKey"])
+	if err := l.ProcessBlock(openB, true); err != nil {
+		t.Fatalf("expected openB to succeed, got %v", err)
+	}
+
+	prevAnchor := sendAB.Hash
+	anchorA := &Block{
+		Type:          "data_anchor",
+		Account:       keysA["publicKey"],
+		Previous:      &prevAnchor,
+		Balance:       790,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "DATA_ANCHOR",
+		Spora:         validSpora(sendAB.Hash),
+		Payload:       map[string]interface{}{"name": "mixed-anchor.bin", "magnet": "magnet:?xt=urn:btih:mixed-anchor", "size": 55},
+		Timestamp:     4,
+	}
+	signTestBlock(t, anchorA, keysA["privateKey"])
+	if err := l.ProcessBlock(anchorA, true); err != nil {
+		t.Fatalf("expected anchorA to succeed, got %v", err)
+	}
+
+	prevBid := openB.Hash
+	bidB := &Block{
+		Type:          "market_bid",
+		Account:       keysB["publicKey"],
+		Previous:      &prevBid,
+		Balance:       150,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "STORAGE_MARKET",
+		Spora:         validSpora(openB.Hash),
+		Payload:       map[string]interface{}{"magnet": "magnet:?xt=urn:btih:mixed-bid"},
+		Timestamp:     5,
+	}
+	signTestBlock(t, bidB, keysB["privateKey"])
+	if err := l.ProcessBlock(bidB, true); err != nil {
+		t.Fatalf("expected bidB to succeed, got %v", err)
+	}
+
+	prevAccept := bidB.Hash
+	acceptB := &Block{
+		Type:          "accept_bid",
+		Account:       keysB["publicKey"],
+		Previous:      &prevAccept,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          bidB.Hash,
+		Spora:         validSpora(bidB.Hash),
+		Timestamp:     6,
+	}
+	signTestBlock(t, acceptB, keysB["privateKey"])
+	if err := l.ProcessBlock(acceptB, true); err != nil {
+		t.Fatalf("expected acceptB to succeed, got %v", err)
+	}
+
+	l.Anchors = map[string]interface{}{}
+	l.MarketBids = map[string]interface{}{}
+	l.StateHash = "corrupted"
+	l.MerkleRoot = "corrupted"
+
+	if err := l.AuditState(); err != nil {
+		t.Fatalf("expected mixed-history audit to succeed, got %v", err)
+	}
+
+	if len(l.Chains[keysA["publicKey"]]) != 3 {
+		t.Fatalf("expected account A chain length 3, got %d", len(l.Chains[keysA["publicKey"]]))
+	}
+	if len(l.Chains[keysB["publicKey"]]) != 3 {
+		t.Fatalf("expected account B chain length 3, got %d", len(l.Chains[keysB["publicKey"]]))
+	}
+	anchor, ok := l.Anchors[anchorA.Hash]
+	if !ok {
+		t.Fatalf("expected mixed-history audit to rebuild anchorA")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["owner"] != keysA["publicKey"] {
+		t.Fatalf("expected rebuilt anchor owner %q, got %v", keysA["publicKey"], anchorMap["owner"])
+	}
+	bid, ok := l.MarketBids[bidB.Hash]
+	if !ok {
+		t.Fatalf("expected mixed-history audit to rebuild market bid")
+	}
+	bidMap := bid.(map[string]interface{})
+	if bidMap["status"] != "ACCEPTED" {
+		t.Fatalf("expected rebuilt bid status ACCEPTED, got %v", bidMap["status"])
+	}
+	if bidMap["acceptedBy"] != keysB["publicKey"] {
+		t.Fatalf("expected rebuilt acceptedBy %q, got %v", keysB["publicKey"], bidMap["acceptedBy"])
+	}
+	if l.StateHash == "corrupted" || l.MerkleRoot == "corrupted" {
+		t.Fatalf("expected audit to restore mixed-history state hashes")
 	}
 }
 

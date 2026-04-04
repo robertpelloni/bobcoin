@@ -33,6 +33,7 @@
   - As of v8.22.0, proposal status is refreshed in Go both during block processing and proposal/vote reads so expired governance records do not remain indefinitely `Active`.
   - As of v8.24.0, the Go test suite explicitly covers the economic parity path for `accept_bid` and `data_anchor`, so these behaviors are now guarded by regression tests rather than only manual reasoning.
   - As of v8.26.0, the Go regression suite also covers swap lifecycle behavior, NFT transfer ownership semantics, and publish-manifest anchor replay through audit reconstruction.
+  - As of v8.28.0, the Go regression suite also covers mixed-history multi-account replay across `send`, `open`, `data_anchor`, `market_bid`, and `accept_bid`, with audit reconstruction expected to rebuild corrupted derived maps deterministically.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

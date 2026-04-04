@@ -36,6 +36,7 @@
   - As of v8.28.0, the Go regression suite also covers mixed-history multi-account replay across `send`, `open`, `data_anchor`, `market_bid`, and `accept_bid`, with audit reconstruction expected to rebuild corrupted derived maps deterministically.
   - As of v8.30.0, the Go parity suite also covers durable SQLite-backed recovery of mixed historical ledgers, not just in-memory replay, so restart semantics are now part of the regression surface.
   - As of v8.31.0, the durable recovery suite also covers restart-time reconstruction of NFT ownership changes, claimed swap state, and expired-governance terminal status inside larger multi-account historical ledgers.
+  - As of v8.33.0, Go audit replay no longer assumes a single global timestamp sort is sufficient; replay proceeds in dependency-resolving passes so same-timestamp cross-account dependencies can still reconstruct correctly.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

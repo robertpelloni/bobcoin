@@ -1,65 +1,45 @@
-# Session Handoff - 2026-04-04 (v8.32.0)
+# Session Handoff - 2026-04-04 (v8.33.0)
 
 ## Executive Summary
-This session merged two concurrent lines of progress without sacrificing either one:
-- deeper Go restart/recovery confidence through a larger durable mixed-history replay test suite
-- richer Vault operator workflow ergonomics through preset export/import and batch archive actions
+This session continued the Go parity pass by attacking a more subtle replay-order corner case: same-timestamp cross-account dependencies during audit reconstruction.
 
-The resulting branch is better in both protocol confidence and operator usability.
+The important outcome is that the Go audit engine no longer relies on a single deterministic timestamp sort being enough to replay all historical blocks successfully. It now replays in dependency-resolving passes, which is a stronger strategy for mixed-account histories.
 
-## Remote/Rebase Context
-A direct push was rejected because `origin/main` had advanced with upstream Vault workflow improvements:
-- preset export/import
-- batch archive actions
-- stronger grouped archive workflow ergonomics
+## What Changed
 
-That upstream work was preserved. This pass rebased the larger Go recovery test work on top and promoted the merged result to `v8.32.0`.
+### 1. Dependency-resolving audit replay passes
+**Files:**
+- `go-lattice/lattice.go`
 
-## What This Pass Adds
+Previously, `AuditState()` sorted blocks deterministically and replayed them in a single pass. That works for many histories, but it is not always sufficient when two dependent blocks share the same timestamp across different accounts.
 
-### 1. Larger durable mixed-history recovery regression coverage in Go
+Example risk:
+- Account A emits a `send`
+- Account B emits an `open` or `receive` depending on that send
+- both share the same timestamp
+- a naive sort can replay them in the wrong order even though the history is semantically valid
+
+### New behavior
+The Go audit path now:
+- performs deterministic initial ordering
+- attempts replay in passes
+- keeps unapplied blocks for later passes
+- succeeds as long as each pass makes forward progress
+- fails only if a full pass makes no progress
+
+This is effectively a lightweight dependency-resolving replay loop and is much more appropriate for the lattice model.
+
+### 2. Same-timestamp replay regression test
 **Files:**
 - `go-lattice/lattice_parity_test.go`
 
-Added a more comprehensive SQLite-backed recovery scenario that persists a larger multi-account historical ledger and then reconstructs it through normal cold-boot recovery.
+Added regression coverage proving that:
+- a `send` and dependent receiving-account `open` sharing the same timestamp can still be reconstructed correctly through audit replay
+- corrupted state hash / merkle root can still be restored after replay
+- the receiving account chain survives reconstruction correctly
 
-The durable historical path now includes:
-- `open`
-- `send`
-- receiving-account `open`
-- `publish_manifest`
-- `proposal`
-- `transfer_nft`
-- `swap_lock`
-- `swap_claim`
-
-This is a more realistic restart scenario than the earlier smaller recovery test.
-
-### 2. Restart-time NFT ownership verification
-The new recovery test verifies that after restart:
-- the minted NFT still exists
-- ownership changes made through `transfer_nft` survive recovery
-- the final recovered owner matches the expected recipient
-
-### 3. Restart-time swap lifecycle verification
-The new recovery test verifies that after restart:
-- the swap still exists
-- the swap status is `CLAIMED`
-- the recovered claimer attribution is correct
-
-### 4. Restart-time governance terminal-status verification
-The new recovery test verifies that after restart:
-- an expired proposal still exists in recovered state
-- its terminal status is correctly represented as `Rejected`
-
-### 5. Preserved upstream archive workflow improvements
-**Upstream work preserved in the merged state:**
-- preset export/import for saved archive investigations
-- batch export of the visible archive result set
-- batch copy of visible locators
-- stronger grouped archive workflow ergonomics
-
-This means the branch now advanced in both backend confidence and operator productivity.
+### 3. Deterministic ordering remains stable, but no longer over-trusted
+The sort order is still deterministic, but it is now only the starting point, not the whole replay strategy. That is an important conceptual improvement for the Go implementation.
 
 ## Validation Performed
 
@@ -84,17 +64,17 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass is important because it continues the shift from:
-- “feature exists in Go”
-- to “feature survives realistic persisted restart and reconstruction conditions in Go”
+This pass matters because replay-order bugs are exactly the kind of subtle issue that can invalidate a Go port even when feature lists look complete.
 
-At the same time, the archive workspace is becoming more operationally useful rather than just inspectable.
+The Go lattice is now stronger in a way that matters operationally:
+- not just deterministic
+- but also more resilient to valid same-timestamp dependency patterns in mixed-account history
 
 ## Remaining Gaps
 The largest remaining honest gaps are still:
 1. **Even nastier replay-order edge cases**
-   - more complex ordering mixes
-   - more deeply interleaved account histories
+   - more complex multi-account dependency webs
+   - more deeply interleaved histories
 2. **Residual lifecycle/economic corner cases**
    - additional recovery-order and demurrage-sensitive situations
 3. **Service ownership beyond lattice core**
@@ -106,14 +86,17 @@ The largest remaining honest gaps are still:
 
 ## Recommended Next Move
 The next best move remains:
-1. add even nastier replay-order corner-case tests
+1. add more complex replay-order corner-case tests
 2. continue turning remaining lifecycle assumptions into executable Go regression tests
 3. revisit whether the remaining Node services are intentionally canonical or should be ported
 
 ## Files Changed In This Session
 - `VERSION.md`
 - `CHANGELOG.md`
+- `TODO.md`
+- `MEMORY.md`
 - `HANDOFF.md`
+- `go-lattice/lattice.go`
 - `go-lattice/lattice_parity_test.go`
 
 ## Operational Note

@@ -973,6 +973,63 @@ func TestRecoveryRebuildsComplexHistoricalStateFromSQLite(t *testing.T) {
 	}
 }
 
+func TestAuditStateHandlesSameTimestampCrossAccountDependencies(t *testing.T) {
+	keysA := DeriveKeypair("semantic parity same ts A", 0)
+	keysB := DeriveKeypair("semantic parity same ts B", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesisA := makeGenesisBlock(keysA, 1000)
+	signTestBlock(t, genesisA, keysA["privateKey"])
+	if err := l.ProcessBlock(genesisA, true); err != nil {
+		t.Fatalf("expected genesisA to succeed, got %v", err)
+	}
+
+	sendAB := &Block{
+		Type:          "send",
+		Account:       keysA["publicKey"],
+		Previous:      &genesisA.Hash,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          keysB["publicKey"],
+		Spora:         validSpora(genesisA.Hash),
+		Timestamp:     10,
+	}
+	signTestBlock(t, sendAB, keysA["privateKey"])
+	if err := l.ProcessBlock(sendAB, true); err != nil {
+		t.Fatalf("expected sendAB to succeed, got %v", err)
+	}
+
+	openB := &Block{
+		Type:          "open",
+		Account:       keysB["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendAB.Hash,
+		Spora:         validSporaForOpenAccount(keysB["publicKey"]),
+		Timestamp:     10,
+	}
+	signTestBlock(t, openB, keysB["privateKey"])
+	if err := l.ProcessBlock(openB, true); err != nil {
+		t.Fatalf("expected openB to succeed, got %v", err)
+	}
+
+	l.Pending = map[string][]*PendingTx{}
+	l.StateHash = "broken"
+	l.MerkleRoot = "broken"
+	if err := l.AuditState(); err != nil {
+		t.Fatalf("expected same-timestamp audit replay to succeed, got %v", err)
+	}
+	if l.StateHash == "broken" || l.MerkleRoot == "broken" {
+		t.Fatalf("expected audit to recover state hashes for same-timestamp replay")
+	}
+	if len(l.Chains[keysB["publicKey"]]) != 1 {
+		t.Fatalf("expected receiving account chain length 1 after replay, got %d", len(l.Chains[keysB["publicKey"]]))
+	}
+}
+
 func TestRecoveryRebuildsMixedHistoricalStateFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "recovery.sqlite")
 	keysA := DeriveKeypair("semantic parity recovery A", 0)

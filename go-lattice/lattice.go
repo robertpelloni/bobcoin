@@ -845,24 +845,41 @@ func (l *Lattice) AuditState() error {
 		if bi.Timestamp != bj.Timestamp {
 			return bi.Timestamp < bj.Timestamp
 		}
-		if bi.Height != bj.Height {
-			return bi.Height < bj.Height
-		}
 		if bi.Account != bj.Account {
 			return bi.Account < bj.Account
+		}
+		if bi.Height != bj.Height {
+			return bi.Height < bj.Height
 		}
 		return bi.Hash < bj.Hash
 	})
 
 	shadow := newEphemeralLattice()
-	for _, entry := range ordered {
-		cloned, err := cloneBlock(entry.block)
-		if err != nil {
-			return fmt.Errorf("audit failed: could not clone block %s: %v", entry.block.Hash[:8], err)
+	remaining := append([]orderedBlock(nil), ordered...)
+	for len(remaining) > 0 {
+		nextRemaining := make([]orderedBlock, 0, len(remaining))
+		progress := false
+		var lastErr error
+		var lastHash string
+
+		for _, entry := range remaining {
+			cloned, err := cloneBlock(entry.block)
+			if err != nil {
+				return fmt.Errorf("audit failed: could not clone block %s: %v", entry.block.Hash[:8], err)
+			}
+			if err := shadow.ProcessBlock(cloned, true); err != nil {
+				nextRemaining = append(nextRemaining, entry)
+				lastErr = err
+				lastHash = entry.block.Hash
+				continue
+			}
+			progress = true
 		}
-		if err := shadow.ProcessBlock(cloned, true); err != nil {
-			return fmt.Errorf("audit failed during deterministic replay of block %s: %v", entry.block.Hash[:8], err)
+
+		if !progress {
+			return fmt.Errorf("audit failed during deterministic replay of block %s: %v", lastHash[:8], lastErr)
 		}
+		remaining = nextRemaining
 	}
 
 	l.Pending = shadow.Pending

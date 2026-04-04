@@ -14,6 +14,34 @@ import { encryptFileForVault } from '../cryptoUtils';
 import { StorageWasmWorkbench } from '../components/StorageWasmWorkbench';
 import './Vault.css';
 
+function normalizeString(value) {
+    return String(value || '').toLowerCase();
+}
+
+function short(value, length = 14) {
+    if (!value) return 'UNKNOWN';
+    return value.length > length ? `${value.slice(0, length)}...` : value;
+}
+
+function matchesSearch(anchor, query) {
+    if (!query) return true;
+    const haystack = [
+        anchor.name,
+        anchor.id,
+        anchor.blockHash,
+        anchor.owner,
+        anchor.locator,
+        anchor.magnet,
+        anchor.manifestId,
+        anchor.ciphertextHash,
+        anchor.proofHash,
+        anchor.type,
+    ]
+        .map(normalizeString)
+        .join(' ');
+    return haystack.includes(normalizeString(query));
+}
+
 export function Vault() {
     const [balance, setBalance] = useState(0);
     const [myAnchors, setMyAnchors] = useState([]);
@@ -25,6 +53,10 @@ export function Vault() {
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [cloakMode, setCloakMode] = useState(true);
+    const [search, setSearch] = useState('');
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [networkSearch, setNetworkSearch] = useState('');
+    const [showOnlySigned, setShowOnlySigned] = useState(false);
 
     useEffect(() => {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -43,11 +75,33 @@ export function Vault() {
         [legacyAnchors, keypair]
     );
 
+    const filteredOwnedEntries = useMemo(() => {
+        const combined = [
+            ...myAnchors.map(anchor => ({ ...anchor, sourceKind: 'manifest' })),
+            ...ownedLegacyAnchors.map(anchor => ({ ...anchor, sourceKind: 'legacy' })),
+        ];
+
+        return combined.filter(anchor => {
+            const anchorType = anchor.type || (anchor.sourceKind === 'legacy' ? 'data_anchor' : 'publish_manifest');
+            if (typeFilter !== 'all' && anchorType !== typeFilter) return false;
+            if (showOnlySigned && !anchor.proofSignature && !anchor.cloaked) return false;
+            return matchesSearch(anchor, search);
+        });
+    }, [myAnchors, ownedLegacyAnchors, search, typeFilter, showOnlySigned]);
+
+    const filteredNetworkAnchors = useMemo(() => {
+        return networkAnchors.filter(anchor => {
+            if (showOnlySigned && !anchor.proofSignature) return false;
+            return matchesSearch(anchor, networkSearch);
+        });
+    }, [networkAnchors, networkSearch, showOnlySigned]);
+
     const stats = useMemo(() => {
         const totalSize = ownedLegacyAnchors.reduce((sum, anchor) => sum + (anchor.size || anchor.originalSize || 0), 0);
         const published = myAnchors.filter(anchor => anchor.type === 'publish_manifest').length;
         const legacy = ownedLegacyAnchors.length;
-        return { totalSize, published, legacy };
+        const signed = myAnchors.filter(anchor => anchor.proofSignature).length;
+        return { totalSize, published, legacy, signed };
     }, [myAnchors, ownedLegacyAnchors]);
 
     const refresh = async (pubkey) => {
@@ -160,26 +214,55 @@ export function Vault() {
     return (
         <div className="vault-container">
             <h1 className="glitch" data-text="CYBER VAULT">CYBER VAULT</h1>
-            <p className="subtitle">GO-LATTICE ARCHIVE, MANIFEST PROVENANCE, LEGACY DATA ANCHORS, AND BROWSER-SIDE STORAGE ROUND-TRIPS</p>
+            <p className="subtitle">GO-LATTICE ARCHIVE, MANIFEST PROVENANCE, LEGACY DATA ANCHORS, DISCOVERY, AND BROWSER-SIDE STORAGE ROUND-TRIPS</p>
 
             <div className="vault-summary-grid">
                 <StatCard label="LIQUID BALANCE" value={`${balance} BOB`} accent="#ffd700" />
                 <StatCard label="MY MANIFEST ANCHORS" value={`${stats.published}`} accent="#0ff" />
+                <StatCard label="MY SIGNED ANCHORS" value={`${stats.signed}`} accent="#7dff7d" />
                 <StatCard label="MY LEGACY DATA ANCHORS" value={`${stats.legacy}`} accent="#f0f" />
                 <StatCard label="LEGACY ARCHIVED SIZE" value={`${(stats.totalSize / 1024).toFixed(2)} KB`} accent="#0f0" />
             </div>
 
             <div className="vault-section">
+                <h2>ARCHIVE DISCOVERY CONTROLS</h2>
+                <p className="section-copy">
+                    Search by filename, owner, locator, manifest ID, ciphertext hash, proof hash, or block hash. Filter the archive by anchor type
+                    and signed provenance to quickly locate trustworthy assets across the sovereign storage mesh.
+                </p>
+                <div className="vault-filters-grid">
+                    <input
+                        className="cyber-input"
+                        placeholder="SEARCH YOUR ARCHIVE..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <select className="cyber-input" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                        <option value="all">ALL TYPES</option>
+                        <option value="publish_manifest">MANIFEST ANCHORS</option>
+                        <option value="data_anchor">LEGACY DATA ANCHORS</option>
+                    </select>
+                    <label className="vault-checkbox-row">
+                        <input type="checkbox" checked={showOnlySigned} onChange={() => setShowOnlySigned(!showOnlySigned)} />
+                        <span>SIGNED / PROVENANCE-RICH ONLY</span>
+                    </label>
+                    <input
+                        className="cyber-input"
+                        placeholder="SEARCH NETWORK STREAM..."
+                        value={networkSearch}
+                        onChange={(e) => setNetworkSearch(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="vault-section">
                 <h2>LEGACY DATA ANCHOR PUBLISHER</h2>
                 <p className="section-copy">
-                    This compatibility panel preserves direct data-anchor uploads while the newer manifest pipeline matures. Cloak Mode
-                    encrypts the raw file bytes in the browser before they are uploaded to the network.
+                    This compatibility panel preserves direct data-anchor uploads while the newer manifest pipeline matures. Cloak Mode encrypts
+                    raw file bytes in the browser before they are uploaded to the network.
                 </p>
                 <div className="vault-toggle-row">
-                    <span
-                        className={`vault-toggle-label ${cloakMode ? 'active' : ''}`}
-                        title="Enable client-side AES-256-GCM encryption before upload."
-                    >
+                    <span className={`vault-toggle-label ${cloakMode ? 'active' : ''}`} title="Enable client-side AES-256-GCM encryption before upload.">
                         CLOAK MODE (AES-256-GCM)
                     </span>
                     <button
@@ -217,7 +300,7 @@ export function Vault() {
                         <h2>YOUR ANCHORED ARCHIVE</h2>
                         <p className="section-copy">
                             These entries combine Go-lattice manifest anchors with legacy data-anchor records owned by the current wallet.
-                            Together they show both the newer manifest-native archive and the compatibility archive path.
+                            You can now search, filter, and inspect provenance-rich archive records from a single surface.
                         </p>
                     </div>
                     {keypair && (
@@ -228,14 +311,13 @@ export function Vault() {
                 </div>
 
                 <div className="anchor-grid">
-                    {myAnchors.map(anchor => (
-                        <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} owned />
+                    {filteredOwnedEntries.map(anchor => (
+                        anchor.sourceKind === 'legacy'
+                            ? <LegacyAnchorCard key={anchor.id} anchor={anchor} />
+                            : <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} owned />
                     ))}
-                    {ownedLegacyAnchors.map(anchor => (
-                        <LegacyAnchorCard key={anchor.id} anchor={anchor} />
-                    ))}
-                    {!loading && myAnchors.length === 0 && ownedLegacyAnchors.length === 0 && (
-                        <p className="empty">NO PERSONAL ARCHIVE ENTRIES FOUND YET. PUBLISH A MANIFEST OR ANCHOR LEGACY DATA TO BEGIN.</p>
+                    {!loading && filteredOwnedEntries.length === 0 && (
+                        <p className="empty">NO PERSONAL ARCHIVE ENTRIES MATCH THE CURRENT FILTERS.</p>
                     )}
                 </div>
             </div>
@@ -245,14 +327,14 @@ export function Vault() {
             <div className="vault-section">
                 <h2>NETWORK MANIFEST STREAM</h2>
                 <p className="section-copy">
-                    The sovereign archive is no longer just a supernode-side registry. These records are the visible on-chain anchor
-                    layer for published manifests and data anchors, giving operators a provenance-aware view of the storage network.
+                    The sovereign archive is no longer just a supernode-side registry. These records are the visible on-chain anchor layer for
+                    published manifests and data anchors, giving operators a provenance-aware view of the storage network.
                 </p>
                 <div className="anchor-grid">
-                    {networkAnchors.slice(0, 12).map(anchor => (
+                    {filteredNetworkAnchors.slice(0, 12).map(anchor => (
                         <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} />
                     ))}
-                    {!loading && networkAnchors.length === 0 && <p className="empty">NO NETWORK MANIFEST ANCHORS HAVE BEEN INDEXED YET.</p>}
+                    {!loading && filteredNetworkAnchors.length === 0 && <p className="empty">NO NETWORK ANCHORS MATCH THE CURRENT FILTERS.</p>}
                 </div>
             </div>
         </div>
@@ -264,6 +346,18 @@ function StatCard({ label, value, accent }) {
         <div className="vault-stat-card" style={{ borderColor: accent }}>
             <div className="vault-stat-label">{label}</div>
             <div className="vault-stat-value" style={{ color: accent }}>{value}</div>
+        </div>
+    );
+}
+
+function ProvenanceBadge({ anchor }) {
+    const isSigned = !!anchor.proofSignature;
+    return (
+        <div className="provenance-row">
+            <span className={`vault-badge ${isSigned ? 'signed' : 'unsigned'}`}>{isSigned ? 'SIGNED' : 'UNSIGNED'}</span>
+            {anchor.ciphertextHash && <span className="vault-badge neutral">CIPHERTEXT</span>}
+            {anchor.locator && <span className="vault-badge neutral">LOCATOR</span>}
+            {anchor.cloaked && <span className="vault-badge cloaked">CLOAKED</span>}
         </div>
     );
 }
@@ -284,9 +378,12 @@ function AnchorCard({ anchor, owned = false }) {
                     {' | '}
                     {anchorType.toUpperCase()}
                     {' | '}
-                    OWNER: {(anchor.owner || 'UNKNOWN').slice(0, 12)}...
+                    OWNER: {short(anchor.owner)}
                 </span>
-                <span className="file-meta dim">BLOCK: {(anchor.blockHash || anchor.id || '').slice(0, 16)}...</span>
+                <span className="file-meta dim">MANIFEST: {short(manifestId, 20)} | BLOCK: {short(anchor.blockHash || anchor.id, 18)}</span>
+                {anchor.proofHash && <span className="file-meta dim">PROOF HASH: {short(anchor.proofHash, 24)}</span>}
+                {anchor.ciphertextHash && <span className="file-meta dim">CIPHERTEXT HASH: {short(anchor.ciphertextHash, 24)}</span>}
+                <ProvenanceBadge anchor={anchor} />
             </div>
             <div className="anchor-actions">
                 {manifestUrl && (
@@ -297,6 +394,11 @@ function AnchorCard({ anchor, owned = false }) {
                 {locator && (
                     <button className="cyber-button small secondary" onClick={() => navigator.clipboard.writeText(locator)}>
                         COPY LOCATOR
+                    </button>
+                )}
+                {anchor.owner && (
+                    <button className="cyber-button small secondary" onClick={() => navigator.clipboard.writeText(anchor.owner)}>
+                        COPY OWNER
                     </button>
                 )}
             </div>
@@ -311,16 +413,17 @@ function LegacyAnchorCard({ anchor }) {
             <div className="file-info">
                 <span className="file-name">
                     {anchor.name}
-                    {anchor.cloaked && <span className="vault-badge">CLOAKED</span>}
+                    {anchor.cloaked && <span className="vault-badge cloaked">CLOAKED</span>}
                 </span>
                 <span className="file-meta">
                     {(Number(anchor.size || anchor.originalSize || 0) / 1024).toFixed(2)} KB
                     {' | '}
                     DATA_ANCHOR
                     {' | '}
-                    OWNER: {(anchor.owner || '').slice(0, 12)}
+                    OWNER: {short(anchor.owner)}
                 </span>
-                <span className="file-meta dim">ID: {(anchor.id || '').slice(0, 16)}...</span>
+                <span className="file-meta dim">ID: {short(anchor.id, 18)}</span>
+                <ProvenanceBadge anchor={anchor} />
             </div>
             <div className="anchor-actions">
                 {anchor.magnet && (

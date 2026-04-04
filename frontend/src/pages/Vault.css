@@ -76,20 +76,41 @@
     color: #888;
     line-height: 1.6;
     max-width: 860px;
-    margin: 0 0 1rem;
+    margin: 0;
+}
+
+.vault-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.vault-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 42px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #222;
+    background: rgba(255, 255, 255, 0.02);
+    color: #aaa;
+    font-size: 0.8rem;
+}
+
+.vault-checkbox-row input {
+    accent-color: #0ff;
 }
 
 .vault-toggle-row {
     display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 1rem;
-    margin: 1rem 0 1.25rem;
-    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
 }
 
 .vault-toggle-label {
-    color: #555;
+    color: #777;
     font-size: 0.8rem;
     letter-spacing: 1px;
 }
@@ -100,37 +121,31 @@
 
 .toggle-btn {
     background: #111;
-    color: #aaa;
     border: 1px solid #333;
+    color: #aaa;
     padding: 0.4rem 0.9rem;
     cursor: pointer;
-    font-family: inherit;
-    letter-spacing: 1px;
-    transition: all 0.2s ease;
 }
 
 .toggle-btn.active {
-    color: #000;
-    background: #0ff;
     border-color: #0ff;
-    box-shadow: 0 0 12px rgba(0, 255, 255, 0.35);
+    color: #0ff;
 }
 
 .fee {
     color: #ff0055;
     font-size: 0.8rem;
     font-weight: bold;
-    margin-bottom: 1rem;
+    margin-bottom: 2rem;
 }
 
 .drop-zone {
     border: 2px dashed #222;
-    padding: 2rem;
-    margin-bottom: 1.25rem;
+    padding: 3rem;
+    margin-bottom: 2rem;
     position: relative;
     cursor: pointer;
     transition: all 0.3s;
-    text-align: center;
 }
 
 .drop-zone:hover {
@@ -152,7 +167,6 @@
     color: #555;
     font-size: 0.9rem;
     letter-spacing: 1px;
-    margin: 0;
 }
 
 .anchor-grid {
@@ -181,15 +195,16 @@
 }
 
 .anchor-card.legacy-owned {
-    border-color: #0ff;
-    background: rgba(0, 255, 255, 0.03);
+    border-color: #4444aa;
+    background: rgba(120, 120, 255, 0.04);
 }
 
 .anchor-icon,
 .file-icon {
+    font-size: 0.95rem;
     min-width: 72px;
+    text-align: center;
     color: #0ff;
-    font-size: 0.72rem;
     letter-spacing: 1px;
 }
 
@@ -198,7 +213,6 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    gap: 0.25rem;
 }
 
 .file-name {
@@ -206,13 +220,10 @@
     font-weight: bold;
     margin-bottom: 0.25rem;
     word-break: break-word;
-}
-
-.vault-badge {
-    margin-left: 0.75rem;
-    color: #ff0055;
-    font-size: 0.65rem;
-    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .file-meta {
@@ -232,6 +243,47 @@
     gap: 0.5rem;
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.provenance-row {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.55rem;
+}
+
+.vault-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #333;
+    background: rgba(255, 255, 255, 0.04);
+    color: #bbb;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+}
+
+.vault-badge.signed {
+    border-color: #0f0;
+    color: #0f0;
+    background: rgba(0, 255, 0, 0.08);
+}
+
+.vault-badge.unsigned {
+    border-color: #666;
+    color: #999;
+}
+
+.vault-badge.cloaked {
+    border-color: #f0f;
+    color: #f0f;
+    background: rgba(255, 0, 255, 0.08);
+}
+
+.vault-badge.neutral {
+    border-color: #0ff;
+    color: #0ff;
+    background: rgba(0, 255, 255, 0.05);
 }
 
 .empty {
@@ -256,17 +308,12 @@
         align-items: flex-start;
     }
 
-    .anchor-icon,
-    .file-icon {
-        min-width: auto;
-    }
-
     .anchor-actions {
         width: 100%;
         justify-content: flex-start;
     }
 
-    .drop-zone {
-        padding: 1.5rem;
+    .vault-filters-grid {
+        grid-template-columns: 1fr;
     }
 }

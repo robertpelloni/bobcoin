@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ed25519"
 	"math"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -774,6 +775,146 @@ func TestAuditStateRebuildsMixedHistoricalLedgerState(t *testing.T) {
 	}
 	if l.StateHash == "corrupted" || l.MerkleRoot == "corrupted" {
 		t.Fatalf("expected audit to restore mixed-history state hashes")
+	}
+}
+
+func TestRecoveryRebuildsMixedHistoricalStateFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "recovery.sqlite")
+	keysA := DeriveKeypair("semantic parity recovery A", 0)
+	keysB := DeriveKeypair("semantic parity recovery B", 0)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	genesisA := makeGenesisBlock(keysA, 1000)
+	signTestBlock(t, genesisA, keysA["privateKey"])
+	if err := l.ProcessBlock(genesisA, false); err != nil {
+		t.Fatalf("expected genesisA persistence to succeed, got %v", err)
+	}
+
+	prevSend := genesisA.Hash
+	sendAB := &Block{
+		Type:          "send",
+		Account:       keysA["publicKey"],
+		Previous:      &prevSend,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          keysB["publicKey"],
+		Spora:         validSpora(genesisA.Hash),
+		Timestamp:     2,
+	}
+	signTestBlock(t, sendAB, keysA["privateKey"])
+	if err := l.ProcessBlock(sendAB, false); err != nil {
+		t.Fatalf("expected persisted sendAB to succeed, got %v", err)
+	}
+
+	openB := &Block{
+		Type:          "open",
+		Account:       keysB["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendAB.Hash,
+		Spora:         validSporaForOpenAccount(keysB["publicKey"]),
+		Timestamp:     3,
+	}
+	signTestBlock(t, openB, keysB["privateKey"])
+	if err := l.ProcessBlock(openB, false); err != nil {
+		t.Fatalf("expected persisted openB to succeed, got %v", err)
+	}
+
+	prevManifest := sendAB.Hash
+	manifestA := &Block{
+		Type:          "publish_manifest",
+		Account:       keysA["publicKey"],
+		Previous:      &prevManifest,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "manifest-recovery",
+		Spora:         validSpora(sendAB.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "manifest-recovery",
+			"locator":     "bobtorrent://manifest/recovery",
+			"manifestUrl": "http://localhost:8000/manifests/recovery",
+			"name":        "recovery.bin",
+			"size":        256,
+		},
+		Timestamp: 4,
+	}
+	signTestBlock(t, manifestA, keysA["privateKey"])
+	if err := l.ProcessBlock(manifestA, false); err != nil {
+		t.Fatalf("expected persisted publish_manifest to succeed, got %v", err)
+	}
+
+	prevBid := openB.Hash
+	bidB := &Block{
+		Type:          "market_bid",
+		Account:       keysB["publicKey"],
+		Previous:      &prevBid,
+		Balance:       150,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "STORAGE_MARKET",
+		Spora:         validSpora(openB.Hash),
+		Payload:       map[string]interface{}{"magnet": "magnet:?xt=urn:btih:recovery-bid"},
+		Timestamp:     5,
+	}
+	signTestBlock(t, bidB, keysB["privateKey"])
+	if err := l.ProcessBlock(bidB, false); err != nil {
+		t.Fatalf("expected persisted bidB to succeed, got %v", err)
+	}
+
+	prevAccept := bidB.Hash
+	acceptB := &Block{
+		Type:          "accept_bid",
+		Account:       keysB["publicKey"],
+		Previous:      &prevAccept,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          bidB.Hash,
+		Spora:         validSpora(bidB.Hash),
+		Timestamp:     6,
+	}
+	signTestBlock(t, acceptB, keysB["privateKey"])
+	if err := l.ProcessBlock(acceptB, false); err != nil {
+		t.Fatalf("expected persisted acceptB to succeed, got %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if len(recovered.Chains[keysA["publicKey"]]) != 3 {
+		t.Fatalf("expected recovered account A chain length 3, got %d", len(recovered.Chains[keysA["publicKey"]]))
+	}
+	if len(recovered.Chains[keysB["publicKey"]]) != 3 {
+		t.Fatalf("expected recovered account B chain length 3, got %d", len(recovered.Chains[keysB["publicKey"]]))
+	}
+	anchor, ok := recovered.Anchors[manifestA.Hash]
+	if !ok {
+		t.Fatalf("expected recovered manifest anchor to exist")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["type"] != "publish_manifest" {
+		t.Fatalf("expected recovered anchor type publish_manifest, got %v", anchorMap["type"])
+	}
+	bid, ok := recovered.MarketBids[bidB.Hash]
+	if !ok {
+		t.Fatalf("expected recovered market bid to exist")
+	}
+	bidMap := bid.(map[string]interface{})
+	if bidMap["status"] != "ACCEPTED" {
+		t.Fatalf("expected recovered bid status ACCEPTED, got %v", bidMap["status"])
+	}
+	if bidMap["acceptedBy"] != keysB["publicKey"] {
+		t.Fatalf("expected recovered acceptedBy %q, got %v", keysB["publicKey"], bidMap["acceptedBy"])
 	}
 }
 

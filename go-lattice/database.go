@@ -12,6 +12,13 @@ type DBManager struct {
 	db *sql.DB
 }
 
+func (mgr *DBManager) Close() error {
+	if mgr == nil || mgr.db == nil {
+		return nil
+	}
+	return mgr.db.Close()
+}
+
 func NewDBManager(path string) *DBManager {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {

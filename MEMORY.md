@@ -34,6 +34,7 @@
   - As of v8.24.0, the Go test suite explicitly covers the economic parity path for `accept_bid` and `data_anchor`, so these behaviors are now guarded by regression tests rather than only manual reasoning.
   - As of v8.26.0, the Go regression suite also covers swap lifecycle behavior, NFT transfer ownership semantics, and publish-manifest anchor replay through audit reconstruction.
   - As of v8.28.0, the Go regression suite also covers mixed-history multi-account replay across `send`, `open`, `data_anchor`, `market_bid`, and `accept_bid`, with audit reconstruction expected to rebuild corrupted derived maps deterministically.
+  - As of v8.30.0, the Go parity suite also covers durable SQLite-backed recovery of mixed historical ledgers, not just in-memory replay, so restart semantics are now part of the regression surface.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

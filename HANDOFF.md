@@ -1,58 +1,46 @@
-# Session Handoff - 2026-04-04 (v8.29.0)
+# Session Handoff - 2026-04-04 (v8.30.0)
 
 ## Executive Summary
-This session merged two concurrent lines of progress without sacrificing either one:
-- stronger Go parity confidence through mixed-history replay regression coverage
-- richer operator diagnostics through categorized, attributable restore failures in the browser archive tooling
+This session continued the Go parity pass by stepping beyond in-memory replay and into durable restart semantics.
 
-The resulting branch is better in both protocol confidence and operational usability.
+The main outcome is that the Go regression suite now covers a persisted mixed-history ledger being replayed through real SQLite-backed cold-boot recovery, not just audit reconstruction in memory.
 
-## Remote/Rebase Context
-A direct push was rejected because `origin/main` had advanced with upstream restore-diagnostics improvements while the local branch had expanded Go mixed-history replay tests.
+That is an important maturity step because durable recovery behavior is one of the last places subtle parity drift can hide.
 
-This pass rebased the two together and promoted the merged result to `v8.29.0`.
+## What Changed
 
-## What This Pass Adds
-
-### 1. Mixed-history replay regression coverage in Go
+### 1. Persistent mixed-history recovery regression coverage
 **Files:**
+- `go-lattice/database.go`
 - `go-lattice/lattice_parity_test.go`
 
-Added broader replay-oriented test coverage for a multi-account ledger history involving:
+Added a stronger persistence-and-recovery test that:
+- writes a mixed historical ledger into a real SQLite database through normal `ProcessBlock(..., false)` paths
+- closes the underlying DB handle
+- constructs a fresh `Lattice` over the same database path
+- relies on normal cold-boot recovery to rebuild state
+
+The recovered history covers multiple accounts and interacting block types:
 - `open`
 - `send`
 - receiving-account `open`
-- `data_anchor`
+- `publish_manifest`
 - `market_bid`
 - `accept_bid`
 
-The test intentionally corrupts derived runtime maps and verifies that `AuditState()` reconstructs them correctly from historical chain data.
+### 2. Recovery-state assertions now cover derived maps after restart
+The new recovery test verifies that, after full reconstruction from disk:
+- account chain lengths are correct
+- manifest anchor state exists again
+- recovered anchor metadata still carries the correct type
+- market bid state exists again
+- accepted bid status remains `ACCEPTED`
+- `acceptedBy` attribution survives restart semantics
 
-What this verifies:
-- chain lengths survive replay
-- anchor state is rebuilt
-- market bid state is rebuilt
-- accepted bid attribution is rebuilt
-- state hash and merkle root recover from corrupted values
+This is more meaningful than only asserting raw block presence because it verifies the derived runtime structures that the rest of the system actually uses.
 
-This is more realistic than isolated feature-path tests and materially improves confidence in the Go audit path.
-
-### 2. Account-open SPoRA helper coverage
-**Files:**
-- `go-lattice/lattice_parity_test.go`
-
-Added helper support for generating valid SPoRA for non-genesis `open` blocks so replay tests reflect actual account-opening semantics instead of relying on shortcuts.
-
-### 3. Preserved upstream restore-failure categorization and source attribution
-**Upstream work preserved in the merged state:**
-- shard failure categorization
-- source attribution per failed shard
-- failure summary aggregation by category
-
-This means degraded restores are now much easier to diagnose operationally:
-- operators can distinguish omission vs integrity mismatch vs network failure vs missing-shard conditions
-- operators can see which source reference/host was involved
-- summary counts make triage faster
+### 3. DB lifecycle support for parity testing
+A lightweight `Close()` helper was added to the Go DB manager so the regression suite can exercise restart behavior cleanly without leaking open handles.
 
 ## Validation Performed
 
@@ -77,11 +65,28 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass continues the shift from:
-- “feature exists in Go”
-- to “feature survives realistic replay and reconstruction conditions in Go”
+This pass is important because it extends the parity effort from:
+- in-memory behavior
+- audit replay behavior
+- mixed-history reconstruction behavior
 
-At the same time, the archive recovery tooling is becoming more operationally credible by surfacing machine-actionable failure context instead of opaque errors.
+into:
+- persisted restart behavior
+
+At this point, the Go regression suite covers:
+- duplicate genesis rejection
+- proposal finalization refresh
+- rollback after failed persistence
+- audit reconstruction of derived state
+- `accept_bid`
+- `data_anchor`
+- `swap_lock` / `swap_claim`
+- `transfer_nft`
+- `publish_manifest` replay
+- mixed multi-account replay
+- durable SQLite-backed cold-boot reconstruction
+
+That is a significant increase in confidence for the Go lattice core.
 
 ## Remaining Gaps
 The largest remaining honest gaps are still:
@@ -90,7 +95,7 @@ The largest remaining honest gaps are still:
    - additional ordering edge cases
    - more complex cross-account replay sequences
 2. **Residual lifecycle/economic edge cases**
-   - additional recovery-order and demurrage edge cases
+   - more recovery-order and demurrage corner cases
 3. **Service ownership beyond lattice core**
    - `game-server` remains Node
    - `supertorrent` remains Node
@@ -100,14 +105,17 @@ The largest remaining honest gaps are still:
 
 ## Recommended Next Move
 The next best move remains:
-1. add more complex mixed-historical-ledger replay tests
-2. continue converting replay-order and lifecycle assumptions into Go regression tests
+1. add larger and nastier mixed-historical-ledger replay tests
+2. keep converting remaining lifecycle/recovery assumptions into regression tests
 3. revisit whether remaining Node services are intentionally canonical or should be ported
 
 ## Files Changed In This Session
 - `VERSION.md`
 - `CHANGELOG.md`
+- `TODO.md`
+- `MEMORY.md`
 - `HANDOFF.md`
+- `go-lattice/database.go`
 - `go-lattice/lattice_parity_test.go`
 
 ## Operational Note

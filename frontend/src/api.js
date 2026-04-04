@@ -101,6 +101,50 @@ export const publishStorageManifest = async (manifest) => {
     }
 };
 
+export const resolveManifestUrl = (reference) => {
+    const ref = (reference || '').trim();
+    if (!ref) throw new Error('Manifest reference is required.');
+
+    if (ref.startsWith('bobtorrent://manifest/')) {
+        const id = ref.replace('bobtorrent://manifest/', '');
+        return `${SUPERNODE_URL}/manifests/${id}`;
+    }
+    if (ref.startsWith('http://') || ref.startsWith('https://')) {
+        return ref;
+    }
+    return `${SUPERNODE_URL}/manifests/${ref}`;
+};
+
+export const getPublishedManifest = async (reference) => {
+    try {
+        const url = resolveManifestUrl(reference);
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(await res.text());
+        }
+        return await res.json();
+    } catch (e) {
+        console.error('Failed to fetch published manifest:', e);
+        throw e;
+    }
+};
+
+export const getPublishedShard = async (referenceOrUrl) => {
+    try {
+        const url = referenceOrUrl.startsWith('http://') || referenceOrUrl.startsWith('https://')
+            ? referenceOrUrl
+            : `${SUPERNODE_URL}/shards/${referenceOrUrl}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(await res.text());
+        }
+        return new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+        console.error('Failed to fetch shard:', e);
+        throw e;
+    }
+};
+
 export const burnTokens = async (amount, reason) => {
     try {
         const res = await fetch(`${API_URL}/burn`, {

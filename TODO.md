@@ -12,6 +12,7 @@
 ## UI/UX Polish
 - [x] **Go Storage WASM Integration (Frontend v1):** Added browser-side Go storage runtime loading, manifest generation, and a Supernode workbench for zero-trust upload preprocessing.
 - [x] **Go Storage Publication Flow (Frontend v2):** Extended the workbench to upload prepared shards to the Go supernode and publish a persisted manifest registry entry.
+- [x] **Go Storage Retrieval Flow (Frontend v3):** Added manifest loading, shard download, client-side reconstruction, Go WASM decryption, and restored-file download support.
 - [x] **Tooltips:** Ensured every button, input, and stat across major pages has a descriptive tooltip.
 - [x] **Mobile Responsiveness:** Audited the CSS and injected global media queries to ensure desktop dashboard views collapse gracefully on mobile screens.
 - [x] **Version Display:** Injected the global version string dynamically into the footer using Vite defines.

@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { publishStorageManifest, uploadStorageShard } from '../api';
+import { getPublishedManifest, getPublishedShard, publishStorageManifest, uploadStorageShard } from '../api';
 import { createStorageWasmClient, probeStorageWasmAvailability, sha256Hex } from '../lib/storageWasm';
 
 function downloadJson(filename, value) {
     const blob = new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadBytes(filename, bytes, mime = 'application/octet-stream') {
+    const blob = new Blob([bytes], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -27,11 +37,16 @@ export function StorageWasmWorkbench() {
     const [file, setFile] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [publishing, setPublishing] = useState(false);
+    const [restoring, setRestoring] = useState(false);
     const [manifest, setManifest] = useState(null);
     const [preparedShards, setPreparedShards] = useState([]);
     const [copyState, setCopyState] = useState('idle');
     const [publishState, setPublishState] = useState('');
     const [publishedResult, setPublishedResult] = useState(null);
+    const [manifestRef, setManifestRef] = useState('');
+    const [loadedManifest, setLoadedManifest] = useState(null);
+    const [restoreState, setRestoreState] = useState('');
+    const [restoredInfo, setRestoredInfo] = useState(null);
 
     useEffect(() => {
         let active = true;
@@ -46,6 +61,7 @@ export function StorageWasmWorkbench() {
     }, []);
 
     const shardPreview = useMemo(() => manifest?.erasure?.shards?.slice(0, 3) || [], [manifest]);
+    const loadedShardPreview = useMemo(() => loadedManifest?.erasure?.shards?.slice(0, 3) || [], [loadedManifest]);
 
     const handlePrepare = async () => {
         if (!file) {
@@ -57,6 +73,9 @@ export function StorageWasmWorkbench() {
         setCopyState('idle');
         setPublishState('');
         setPublishedResult(null);
+        setLoadedManifest(null);
+        setRestoredInfo(null);
+        setRestoreState('');
 
         try {
             const client = await createStorageWasmClient();
@@ -133,6 +152,7 @@ export function StorageWasmWorkbench() {
             const published = await publishStorageManifest(manifest);
             setManifest(published.manifest || manifest);
             setPublishedResult(published);
+            setManifestRef(published.locator || published.id || '');
             setPublishState('Manifest published to Go supernode registry.');
         } catch (error) {
             console.error(error);
@@ -140,6 +160,83 @@ export function StorageWasmWorkbench() {
             alert(`Publishing failed: ${error.message}`);
         } finally {
             setPublishing(false);
+        }
+    };
+
+    const handleLoadManifest = async () => {
+        if (!manifestRef.trim()) {
+            alert('Enter a manifest locator, manifest ID, or manifest URL first.');
+            return;
+        }
+
+        setRestoreState('Loading manifest...');
+        setRestoredInfo(null);
+        try {
+            const fetched = await getPublishedManifest(manifestRef.trim());
+            setLoadedManifest(fetched);
+            setRestoreState('Manifest loaded. Ready to restore.');
+        } catch (error) {
+            console.error(error);
+            setRestoreState('');
+            alert(`Failed to load manifest: ${error.message}`);
+        }
+    };
+
+    const handleRestore = async () => {
+        if (!loadedManifest) {
+            alert('Load a manifest first.');
+            return;
+        }
+
+        setRestoring(true);
+        setRestoreState('Fetching shards...');
+        setRestoredInfo(null);
+
+        try {
+            const client = await createStorageWasmClient();
+            const shardEntries = [...(loadedManifest.erasure?.shards || [])].sort((a, b) => a.index - b.index);
+            const shards = [];
+
+            for (let i = 0; i < shardEntries.length; i++) {
+                const shard = shardEntries[i];
+                setRestoreState(`Downloading shard ${i + 1} / ${shardEntries.length}...`);
+                const bytes = await getPublishedShard(shard.url || shard.hash);
+                const computedHash = await sha256Hex(bytes);
+                if (computedHash !== shard.hash) {
+                    throw new Error(`Shard hash mismatch at index ${shard.index}: expected ${shard.hash}, got ${computedHash}`);
+                }
+                shards[shard.index] = bytes;
+            }
+
+            setRestoreState('Reconstructing ciphertext via Reed-Solomon...');
+            const reconstructed = client.decodeErasure(shards);
+
+            setRestoreState('Decrypting restored blob...');
+            const plaintext = client.decrypt(
+                reconstructed,
+                loadedManifest.encryption.key,
+                loadedManifest.encryption.nonce,
+            );
+
+            const originalSize = loadedManifest.source?.size || plaintext.length;
+            const restoredBytes = plaintext.slice(0, originalSize);
+            const restoredHash = await sha256Hex(restoredBytes);
+            const filename = loadedManifest.source?.name || `${loadedManifest.manifestId || 'restored-file'}.bin`;
+            const mime = loadedManifest.source?.mime || 'application/octet-stream';
+
+            downloadBytes(filename, restoredBytes, mime);
+            setRestoredInfo({
+                filename,
+                size: restoredBytes.length,
+                hash: restoredHash,
+            });
+            setRestoreState('Restore complete. File downloaded locally.');
+        } catch (error) {
+            console.error(error);
+            setRestoreState('');
+            alert(`Restore failed: ${error.message}`);
+        } finally {
+            setRestoring(false);
         }
     };
 
@@ -159,9 +256,8 @@ export function StorageWasmWorkbench() {
         <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.65)', border: '1px solid #333' }}>
             <h2 style={{ color: '#0ff', marginTop: 0 }}>BROWSER STORAGE KERNEL (GO WASM)</h2>
             <p style={{ color: '#888', lineHeight: 1.6 }}>
-                This workbench runs the Go Bobtorrent storage kernel directly in the browser. It encrypts the selected file with
-                ChaCha20-Poly1305, shards it with Reed-Solomon (4+2), and can now publish the prepared shards and manifest into the
-                Go supernode registry.
+                This workbench runs the Go Bobtorrent storage kernel directly in the browser. It encrypts files, erasure-codes them,
+                publishes shards to the Go supernode registry, and can now restore a published file by loading the manifest back into the browser.
             </p>
 
             <div style={{ marginBottom: '1rem', color: runtimeStatus === 'ready' ? '#0f0' : runtimeStatus === 'checking' ? '#ff0' : '#ff0055' }}>
@@ -244,6 +340,61 @@ export function StorageWasmWorkbench() {
                     </div>
                 </div>
             )}
+
+            <div style={{ marginTop: '2rem', borderTop: '1px solid #222', paddingTop: '1rem' }}>
+                <h3 style={{ color: '#fff', marginTop: 0 }}>RESTORE PUBLISHED FILE</h3>
+                <p style={{ color: '#888', lineHeight: 1.6 }}>
+                    Load a manifest by locator, manifest ID, or manifest URL. The browser will fetch the published shards, verify their hashes,
+                    reconstruct the ciphertext, decrypt it with the Go WASM kernel, and download the restored file locally.
+                </p>
+
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    <input
+                        type="text"
+                        value={manifestRef}
+                        onChange={(e) => setManifestRef(e.target.value)}
+                        placeholder="bobtorrent://manifest/<id> or http://localhost:8000/manifests/<id>"
+                        className="cyber-input"
+                        style={{ flex: 1, minWidth: '320px' }}
+                    />
+                    <button className="cyber-button" onClick={handleLoadManifest} disabled={restoring || !manifestRef.trim()}>
+                        LOAD MANIFEST
+                    </button>
+                    <button className="cyber-button" onClick={handleRestore} disabled={restoring || !loadedManifest}>
+                        {restoring ? 'RESTORING...' : 'RESTORE FILE'}
+                    </button>
+                </div>
+
+                {restoreState && <div style={{ marginBottom: '1rem', color: '#0ff', fontSize: '0.9rem' }}>{restoreState}</div>}
+
+                {loadedManifest && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#0b0b0b', border: '1px solid #1e1e1e' }}>
+                        <div style={{ color: '#fff', fontWeight: 700, marginBottom: '0.75rem' }}>LOADED MANIFEST</div>
+                        <div style={{ color: '#bbb', marginBottom: '0.35rem' }}>NAME: <span style={{ color: '#fff' }}>{loadedManifest.source?.name}</span></div>
+                        <div style={{ color: '#bbb', marginBottom: '0.35rem' }}>SIZE: <span style={{ color: '#fff' }}>{loadedManifest.source?.size} bytes</span></div>
+                        <div style={{ color: '#bbb', marginBottom: '0.35rem' }}>LOCATOR: <code style={{ color: '#0ff' }}>{loadedManifest.locator || `bobtorrent://manifest/${loadedManifest.manifestId}`}</code></div>
+                        <div style={{ marginTop: '1rem' }}>
+                            <div style={{ color: '#888', marginBottom: '0.5rem' }}>PUBLISHED SHARDS</div>
+                            {loadedShardPreview.map(shard => (
+                                <div key={shard.index} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.45rem 0', borderBottom: '1px solid #151515', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                                    <span style={{ color: '#fff' }}>#{shard.index}</span>
+                                    <span style={{ color: '#888', flex: 1 }}>{shard.hash.slice(0, 28)}...</span>
+                                    <span style={{ color: '#0ff' }}>{shard.size} bytes</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {restoredInfo && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#091109', border: '1px solid #0f0' }}>
+                        <div style={{ color: '#0f0', fontWeight: 700, marginBottom: '0.5rem' }}>RESTORE COMPLETE</div>
+                        <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>FILENAME: <span style={{ color: '#fff' }}>{restoredInfo.filename}</span></div>
+                        <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.35rem' }}>SIZE: <span style={{ color: '#fff' }}>{restoredInfo.size} bytes</span></div>
+                        <div style={{ color: '#bbb', fontSize: '0.9rem' }}>RESTORED SHA-256: <code style={{ color: '#0ff' }}>{restoredInfo.hash}</code></div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

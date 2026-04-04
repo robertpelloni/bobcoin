@@ -1,4 +1,4 @@
-# Session Handoff - 2026-04-03 (v8.8.0)
+# Session Handoff - 2026-04-03 (v8.9.0)
 
 ## Overview
 This session extended the already-advanced Bobcoin production branch by adding a **browser-side Go storage WASM integration layer** to the frontend. The goal was to begin connecting the Bobcoin UI to the newer Bobtorrent Go storage stack without regressing the existing high-end Go-lattice / snapshot / wallet hardening work already present on `origin/main`.
@@ -88,18 +88,31 @@ Additional validation after the publish-flow upgrade:
 - `cd frontend && npm run build`
 - result: ✅ build still succeeds after the upload/publish integration
 
+## Follow-Up Progress (v8.9.0)
+The retrieval side has now been added to the Bobcoin frontend workbench:
+- manifest reference input accepts locator / id / direct URL
+- the browser can fetch a published manifest from the Go supernode
+- the browser downloads referenced shards
+- shard hashes are re-verified client-side
+- the Go WASM runtime reconstructs the ciphertext and decrypts the original file
+- the restored file is downloaded back to the operator machine
+
+Additional validation:
+- `cd frontend && npm run build`
+- result: ✅ build succeeds after retrieval-flow wiring
+
 ## Recommended Next Step
 1. **Anchor manifest metadata on the lattice**
    - publish manifest IDs into storage-market / NFT / dedicated manifest blocks
-2. **Add retrieval UX**
-   - fetch published manifest JSON
-   - reconstruct missing shards
-   - decrypt back into the original file
-3. **Add uploader authentication / signing**
+   - preserve publication provenance on-chain
+2. **Add uploader authentication / signing**
    - bind publications to Bobcoin wallet identity
+3. **Add richer retrieval options**
+   - partial/missing shard recovery UX
+   - optional integrity comparison against user-provided original hash
 
 ## Summary
 - Upstream Bobcoin production features were preserved.
 - The Go storage WASM UI is now layered on top of them.
-- The workbench has moved from preprocessing-only to a real supernode publication flow.
-- The next major integration point is **lattice anchoring + retrieval UX**.
+- The workbench now supports both publication and restoration round-trips.
+- The next major integration point is **lattice anchoring + identity binding**.

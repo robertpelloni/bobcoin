@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.9.0] - 2026-04-03
+
+### Added
+- **Browser-Side Retrieval UX**: The `StorageWasmWorkbench` can now load a published manifest by locator, manifest ID, or URL, fetch the referenced shards, verify shard hashes, reconstruct the ciphertext with Go WASM Reed-Solomon, decrypt it with Go WASM ChaCha20-Poly1305, and download the restored file locally.
+- **Manifest Fetch API**: Added `getPublishedManifest()` and `getPublishedShard()` helpers so the frontend can consume the Go supernode registry directly.
+- **Restore Diagnostics UI**: Added live restore-state messaging plus restored file hash/size reporting after successful reconstruction.
+
 ## [8.8.0] - 2026-04-03
 
 ### Added

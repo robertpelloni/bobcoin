@@ -47,6 +47,7 @@
 - [x] **Vault Archive Browser**: Integrated Go-lattice manifest anchors into the dedicated `/vault` archive view so archived publications are visible as a first-class product surface.
 - [x] **Archive Reuse in Market & Gallery**: Manifest anchors can now be selected directly when placing hosting bids or minting NFTs, making the archive reusable across product surfaces.
 - [x] **Archive Discovery & Provenance**: Vault now exposes search/filter controls and signed/cloaked provenance badging for anchored content across personal and network archive views.
+- [x] **Archive Trust & Reputation Overlay**: Vault now derives lightweight trust scores, tier badges, owner-level provenance summaries, and a sovereign publisher leaderboard.
 - [x] **DEX / Token Swap UI**: Built a high-fidelity sovereign exchange interface at `/dex` and implemented a native on-chain AMM engine ($x * y = k$) in Go.
 - [x] **Wallet Hardening (Mnemonic Backup)**: Implemented 12-word seed phrases and account restoration to prevent fund loss from cache clearing.
 - [x] **Durable Data UI**: Built the **Cyber-Vault** interface for anchoring permanent file storage to the SPoRA-backed network.

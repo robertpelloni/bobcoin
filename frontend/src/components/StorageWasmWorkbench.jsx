@@ -94,6 +94,7 @@ function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo,
             recoverable: restoreDiagnostics?.recoverable ?? false,
             failureSummary: restoreDiagnostics?.failureSummary || {},
             failedShards: restoreDiagnostics?.failedShards || [],
+            successfulShards: restoreDiagnostics?.successfulShards || [],
             restoredFile: restoredInfo || null,
         },
     };
@@ -102,7 +103,7 @@ function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo,
 function persistRecoveryReport(report) {
     try {
         const existing = JSON.parse(localStorage.getItem(RECOVERY_REPORTS_KEY) || '[]');
-        const next = [report, ...existing].slice(0, 50);
+        const next = [report, ...existing].slice(0, 200);
         localStorage.setItem(RECOVERY_REPORTS_KEY, JSON.stringify(next));
     } catch (error) {
         console.error('Failed to persist recovery report locally:', error);
@@ -304,6 +305,7 @@ export function StorageWasmWorkbench() {
             const shardEntries = [...(loadedManifest.erasure?.shards || [])].sort((a, b) => a.index - b.index);
             const shards = [];
             const failedShards = [];
+            const successfulShards = [];
             const omittedSet = new Set(
                 omittedShardIndexes
                     .split(',')
@@ -346,6 +348,13 @@ export function StorageWasmWorkbench() {
                         shards[shard.index] = null;
                         continue;
                     }
+                    successfulShards.push({
+                        index: shard.index,
+                        source: sourceReference,
+                        sourceHost,
+                        hash: shard.hash,
+                        size: bytes.length,
+                    });
                     shards[shard.index] = bytes;
                 } catch (error) {
                     failedShards.push({
@@ -377,6 +386,7 @@ export function StorageWasmWorkbench() {
                 recoverable,
                 failureSummary,
                 failedShards,
+                successfulShards,
             };
             setRestoreDiagnostics(diagnosticsPayload);
 

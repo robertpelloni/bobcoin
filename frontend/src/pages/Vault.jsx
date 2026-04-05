@@ -133,6 +133,7 @@ function buildOwnerProfiles(manifestAnchors, legacyAnchors) {
 
 const VAULT_PRESETS_KEY = 'bobcoin_vault_filter_presets';
 const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function sortAnchors(anchors, sortMode, ownerProfiles) {
     const copy = [...anchors];
@@ -176,17 +177,74 @@ function groupAnchors(anchors, groupMode) {
     }));
 }
 
+function parseReportTimestamp(value) {
+    const timestamp = Date.parse(value || '');
+    return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function formatRelativeTimestamp(value) {
+    const timestamp = parseReportTimestamp(value);
+    if (!timestamp) return 'UNKNOWN';
+    const diff = Date.now() - timestamp;
+    if (diff < DAY_MS) {
+        const hours = Math.max(1, Math.round(diff / (60 * 60 * 1000)));
+        return `${hours}H AGO`;
+    }
+    const days = Math.max(1, Math.round(diff / DAY_MS));
+    return `${days}D AGO`;
+}
+
+function sourceHealthTier(score) {
+    if (score >= 85) return { label: 'ROBUST', className: 'health-robust' };
+    if (score >= 60) return { label: 'WATCH', className: 'health-watch' };
+    return { label: 'FRAGILE', className: 'health-fragile' };
+}
+
+function classifySourceTrend(profile) {
+    const recentObservations = profile.recent7dFailures + profile.recent7dSuccesses;
+    const previousObservations = profile.previous7dFailures + profile.previous7dSuccesses;
+    const recentFailureRate = recentObservations > 0 ? profile.recent7dFailures / recentObservations : 0;
+    const previousFailureRate = previousObservations > 0 ? profile.previous7dFailures / previousObservations : 0;
+
+    if (recentObservations > 0 && previousObservations === 0) {
+        return { label: 'NEW', className: 'trend-new' };
+    }
+    if (recentObservations === 0 && previousObservations === 0) {
+        return { label: 'QUIET', className: 'trend-quiet' };
+    }
+    if ((recentFailureRate - previousFailureRate) >= 0.2 || profile.recent7dFailures >= profile.previous7dFailures + 2) {
+        return { label: 'DEGRADING', className: 'trend-degrading' };
+    }
+    if ((previousFailureRate - recentFailureRate) >= 0.2 || profile.previous7dFailures >= profile.recent7dFailures + 2) {
+        return { label: 'IMPROVING', className: 'trend-improving' };
+    }
+    return { label: 'STABLE', className: 'trend-stable' };
+}
+
 function buildSourceProfiles(reports) {
     const profiles = new Map();
+    const now = Date.now();
+
     const touch = (host) => {
         const key = host || 'unknown-source';
         if (!profiles.has(key)) {
             profiles.set(key, {
                 host: key,
                 failures: 0,
-                successfulReports: 0,
+                successfulFetches: 0,
+                successfulRestores: 0,
+                parityRecoveries: 0,
+                reportCount: 0,
                 categories: {},
                 latestSeen: null,
+                firstSeen: null,
+                recent7dFailures: 0,
+                previous7dFailures: 0,
+                recent7dSuccesses: 0,
+                previous7dSuccesses: 0,
+                last30dFailures: 0,
+                last30dSuccesses: 0,
+                manifestIds: new Set(),
             });
         }
         return profiles.get(key);
@@ -194,20 +252,95 @@ function buildSourceProfiles(reports) {
 
     for (const report of reports) {
         const generatedAt = report.generatedAt || null;
-        if (report.recovery?.restoredFile) {
-            const successProfile = touch('successful-recovery');
-            successProfile.successfulReports += 1;
-            successProfile.latestSeen = generatedAt || successProfile.latestSeen;
+        const timestamp = parseReportTimestamp(generatedAt);
+        const age = timestamp == null ? null : now - timestamp;
+        const inRecent7d = age != null && age <= 7 * DAY_MS;
+        const inPrevious7d = age != null && age > 7 * DAY_MS && age <= 14 * DAY_MS;
+        const inLast30d = age != null && age <= 30 * DAY_MS;
+        const manifestId = report.manifest?.id || report.manifest?.ciphertextHash || null;
+        const restoredWithParity = !!report.recovery?.restoredFile?.recoveredWithParity;
+        const reportHosts = new Set();
+
+        for (const success of report.recovery?.successfulShards || []) {
+            const profile = touch(success.sourceHost || success.source || 'unknown-source');
+            profile.successfulFetches += 1;
+            if (report.recovery?.restoredFile) profile.successfulRestores += 1;
+            if (restoredWithParity) profile.parityRecoveries += 1;
+            if (generatedAt) {
+                profile.latestSeen = !profile.latestSeen || generatedAt > profile.latestSeen ? generatedAt : profile.latestSeen;
+                profile.firstSeen = !profile.firstSeen || generatedAt < profile.firstSeen ? generatedAt : profile.firstSeen;
+            }
+            if (manifestId) profile.manifestIds.add(manifestId);
+            if (inRecent7d) profile.recent7dSuccesses += 1;
+            if (inPrevious7d) profile.previous7dSuccesses += 1;
+            if (inLast30d) profile.last30dSuccesses += 1;
+            reportHosts.add(profile.host);
         }
+
         for (const failure of report.recovery?.failedShards || []) {
             const profile = touch(failure.sourceHost || failure.source || 'unknown-source');
             profile.failures += 1;
-            profile.latestSeen = generatedAt || profile.latestSeen;
+            if (generatedAt) {
+                profile.latestSeen = !profile.latestSeen || generatedAt > profile.latestSeen ? generatedAt : profile.latestSeen;
+                profile.firstSeen = !profile.firstSeen || generatedAt < profile.firstSeen ? generatedAt : profile.firstSeen;
+            }
+            if (manifestId) profile.manifestIds.add(manifestId);
             profile.categories[failure.category] = (profile.categories[failure.category] || 0) + 1;
+            if (inRecent7d) profile.recent7dFailures += 1;
+            if (inPrevious7d) profile.previous7dFailures += 1;
+            if (inLast30d) profile.last30dFailures += 1;
+            reportHosts.add(profile.host);
+        }
+
+        for (const host of reportHosts) {
+            touch(host).reportCount += 1;
         }
     }
 
-    return Array.from(profiles.values()).sort((a, b) => b.failures - a.failures || b.successfulReports - a.successfulReports);
+    return Array.from(profiles.values())
+        .map((profile) => {
+            const totalObservations = profile.failures + profile.successfulFetches;
+            const reliabilityScore = totalObservations > 0
+                ? Math.round((profile.successfulFetches / totalObservations) * 100)
+                : 0;
+            const trend = classifySourceTrend(profile);
+            const health = sourceHealthTier(reliabilityScore);
+            const attentionScore = (profile.recent7dFailures * 4) + (profile.last30dFailures * 2) + profile.failures - profile.recent7dSuccesses;
+            return {
+                ...profile,
+                manifestCount: profile.manifestIds.size,
+                totalObservations,
+                reliabilityScore,
+                trend,
+                health,
+                attentionScore,
+            };
+        })
+        .sort((a, b) => b.attentionScore - a.attentionScore || b.failures - a.failures || a.reliabilityScore - b.reliabilityScore);
+}
+
+function buildSourceOverview(sourceProfiles, reports) {
+    const successfulRestores = reports.filter(report => report.recovery?.restoredFile).length;
+    const parityRecoveries = reports.filter(report => report.recovery?.restoredFile?.recoveredWithParity).length;
+    const recent7dFailures = sourceProfiles.reduce((sum, profile) => sum + profile.recent7dFailures, 0);
+    const recent7dSuccesses = sourceProfiles.reduce((sum, profile) => sum + profile.recent7dSuccesses, 0);
+    const topAtRisk = sourceProfiles.find(profile => profile.failures > 0) || null;
+    const healthiest = [...sourceProfiles]
+        .filter(profile => profile.totalObservations > 0)
+        .sort((a, b) => b.reliabilityScore - a.reliabilityScore || b.successfulFetches - a.successfulFetches)[0] || null;
+    const improving = sourceProfiles.find(profile => profile.trend.label === 'IMPROVING') || null;
+
+    return {
+        totalReports: reports.length,
+        successfulRestores,
+        parityRecoveries,
+        distinctSources: sourceProfiles.length,
+        recent7dFailures,
+        recent7dSuccesses,
+        topAtRisk,
+        healthiest,
+        improving,
+    };
 }
 
 export function Vault() {
@@ -300,6 +433,7 @@ export function Vault() {
     const groupedNetworkEntries = useMemo(() => groupAnchors(filteredNetworkAnchors.slice(0, 12), groupMode), [filteredNetworkAnchors, groupMode]);
 
     const sourceProfiles = useMemo(() => buildSourceProfiles(recoveryReports), [recoveryReports]);
+    const sourceOverview = useMemo(() => buildSourceOverview(sourceProfiles, recoveryReports), [sourceProfiles, recoveryReports]);
 
     const stats = useMemo(() => {
         const totalSize = ownedLegacyAnchors.reduce((sum, anchor) => sum + (anchor.size || anchor.originalSize || 0), 0);
@@ -612,22 +746,66 @@ export function Vault() {
             <div className="vault-section leaderboard-section">
                 <div className="section-header-row">
                     <div>
-                        <h2>SOURCE RELIABILITY SNAPSHOT</h2>
+                        <h2>LONG-HORIZON SOURCE RELIABILITY</h2>
                         <p className="section-copy">
-                            Recovery reports are now persisted locally, allowing the archive workspace to summarize which shard sources fail most often,
-                            which hosts appear healthiest, and where operators should focus future diagnostics.
+                            Recovery reports are now mined for longer-horizon source behavior, comparing recent 7-day activity with the prior week,
+                            scoring each source by successful shard fetches versus failures, and surfacing which hosts are degrading, stabilizing, or improving.
                         </p>
+                    </div>
+                </div>
+                <div className="vault-summary-grid reliability-summary-grid">
+                    <StatCard label="RECOVERY REPORTS RETAINED" value={`${sourceOverview.totalReports}`} accent="#0ff" />
+                    <StatCard label="DISTINCT SOURCES OBSERVED" value={`${sourceOverview.distinctSources}`} accent="#ffd700" />
+                    <StatCard label="7D SOURCE FAILURES" value={`${sourceOverview.recent7dFailures}`} accent="#ff8080" />
+                    <StatCard label="7D SOURCE SUCCESSES" value={`${sourceOverview.recent7dSuccesses}`} accent="#7dff7d" />
+                    <StatCard label="SUCCESSFUL RESTORES" value={`${sourceOverview.successfulRestores}`} accent="#7dff7d" />
+                    <StatCard label="PARITY RECOVERIES" value={`${sourceOverview.parityRecoveries}`} accent="#ffb347" />
+                </div>
+                <div className="source-insight-row">
+                    <div className="source-insight-card">
+                        <div className="vault-stat-label">NEEDS ATTENTION</div>
+                        <div className="source-insight-value">{sourceOverview.topAtRisk?.host || 'NO FAILING HOSTS YET'}</div>
+                        <div className="leaderboard-meta">
+                            {sourceOverview.topAtRisk
+                                ? `TREND ${sourceOverview.topAtRisk.trend.label} • RELIABILITY ${sourceOverview.topAtRisk.reliabilityScore}/100`
+                                : 'No host has accumulated failure evidence yet.'}
+                        </div>
+                    </div>
+                    <div className="source-insight-card">
+                        <div className="vault-stat-label">HEALTHIEST OBSERVED SOURCE</div>
+                        <div className="source-insight-value">{sourceOverview.healthiest?.host || 'NOT ENOUGH DATA YET'}</div>
+                        <div className="leaderboard-meta">
+                            {sourceOverview.healthiest
+                                ? `TREND ${sourceOverview.healthiest.trend.label} • RELIABILITY ${sourceOverview.healthiest.reliabilityScore}/100`
+                                : 'Health ranking appears once successful shard observations accumulate.'}
+                        </div>
+                    </div>
+                    <div className="source-insight-card">
+                        <div className="vault-stat-label">IMPROVING SOURCE</div>
+                        <div className="source-insight-value">{sourceOverview.improving?.host || 'NONE YET'}</div>
+                        <div className="leaderboard-meta">
+                            {sourceOverview.improving
+                                ? `PREV 7D FAILURES ${sourceOverview.improving.previous7dFailures} → ${sourceOverview.improving.recent7dFailures}`
+                                : 'No host has yet shown a clear week-over-week recovery trend.'}
+                        </div>
                     </div>
                 </div>
                 <div className="leaderboard-grid">
                     {sourceProfiles.slice(0, 8).map((profile) => (
-                        <div key={profile.host} className="leaderboard-card">
+                        <div key={profile.host} className="leaderboard-card source-profile-card">
                             <div className="leaderboard-owner">{profile.host}</div>
-                            <div className="leaderboard-score">FAILURES {profile.failures}</div>
-                            <div className="leaderboard-meta">SUCCESSFUL REPORTS: {profile.successfulReports}</div>
-                            <div className="leaderboard-meta">LATEST SEEN: {profile.latestSeen || 'UNKNOWN'}</div>
+                            <div className="source-badge-row">
+                                <span className={`vault-badge ${profile.health.className}`}>{profile.health.label}</span>
+                                <span className={`vault-badge ${profile.trend.className}`}>{profile.trend.label}</span>
+                                <span className="vault-badge neutral">MANIFESTS {profile.manifestCount}</span>
+                            </div>
+                            <div className="leaderboard-score">RELIABILITY {profile.reliabilityScore}/100</div>
+                            <div className="leaderboard-meta">7D FAILURES/SUCCESSES: {profile.recent7dFailures} / {profile.recent7dSuccesses}</div>
+                            <div className="leaderboard-meta">PREV 7D FAILURES/SUCCESSES: {profile.previous7dFailures} / {profile.previous7dSuccesses}</div>
+                            <div className="leaderboard-meta">ALL-TIME FAILURES/SUCCESSES: {profile.failures} / {profile.successfulFetches}</div>
+                            <div className="leaderboard-meta">REPORTS: {profile.reportCount} • LAST SEEN: {formatRelativeTimestamp(profile.latestSeen)} • FIRST SEEN: {formatRelativeTimestamp(profile.firstSeen)}</div>
                             <div className="leaderboard-meta">
-                                {Object.entries(profile.categories).map(([category, count]) => `${category}:${count}`).join(' • ') || 'NO FAILURE CATEGORIES'}
+                                {Object.entries(profile.categories).map(([category, count]) => `${category}:${count}`).join(' • ') || 'NO FAILURE CATEGORIES YET'}
                             </div>
                         </div>
                     ))}

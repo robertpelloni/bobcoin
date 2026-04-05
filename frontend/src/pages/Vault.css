@@ -159,10 +159,47 @@
     gap: 1rem;
 }
 
+.reliability-summary-grid {
+    margin: 0 0 1.25rem;
+}
+
+.source-insight-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.source-insight-card {
+    border: 1px solid #2b3a3a;
+    background: rgba(0, 255, 255, 0.04);
+    padding: 1rem;
+}
+
+.source-insight-value {
+    color: #fff;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin-bottom: 0.45rem;
+    word-break: break-word;
+}
+
 .leaderboard-card {
     border: 1px solid #3a2b12;
     background: rgba(255, 180, 0, 0.04);
     padding: 1rem;
+}
+
+.source-profile-card {
+    border-color: #153d3d;
+    background: linear-gradient(180deg, rgba(0, 255, 255, 0.05), rgba(0, 0, 0, 0.35));
+}
+
+.source-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 0.55rem 0;
 }
 
 .leaderboard-rank {
@@ -445,6 +482,49 @@
     border-color: #ffb347;
     color: #ffb347;
     background: rgba(255, 179, 71, 0.08);
+}
+
+.vault-badge.health-robust {
+    border-color: #0f0;
+    color: #0f0;
+    background: rgba(0, 255, 0, 0.08);
+}
+
+.vault-badge.health-watch {
+    border-color: #ffb347;
+    color: #ffb347;
+    background: rgba(255, 179, 71, 0.08);
+}
+
+.vault-badge.health-fragile {
+    border-color: #ff8080;
+    color: #ff8080;
+    background: rgba(255, 128, 128, 0.08);
+}
+
+.vault-badge.trend-improving {
+    border-color: #7dff7d;
+    color: #7dff7d;
+    background: rgba(125, 255, 125, 0.08);
+}
+
+.vault-badge.trend-degrading {
+    border-color: #ff8080;
+    color: #ff8080;
+    background: rgba(255, 128, 128, 0.08);
+}
+
+.vault-badge.trend-stable,
+.vault-badge.trend-quiet {
+    border-color: #0ff;
+    color: #0ff;
+    background: rgba(0, 255, 255, 0.05);
+}
+
+.vault-badge.trend-new {
+    border-color: #d28cff;
+    color: #d28cff;
+    background: rgba(210, 140, 255, 0.08);
 }
 
 .vault-badge.tier-sovereign {

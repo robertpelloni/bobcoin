@@ -7,6 +7,7 @@ This Go service ports the reasonable orchestration/control-plane behavior from `
 - runtime system wallet creation/loading
 - SQLite bid/transaction persistence
 - `/status`
+- WebSocket matchmaking/signaling on the root path
 - `/bankroll`
 - `/mint`
 - `/burn`
@@ -19,10 +20,9 @@ This Go service ports the reasonable orchestration/control-plane behavior from `
 
 ## Current Reasonable Gaps
 The original Node service still contains additional behavior that has not yet been fully mirrored here, including:
-- WebSocket matchmaking for multiplayer signaling
 - FHE oracle endpoints
 - SP1/ZK verification flow in `/submit-proof`
-- marketplace router/database nuances beyond the initial control-plane port
+- deeper marketplace/gameplay orchestration nuances beyond the initial control-plane port
 
 This Go port therefore focuses first on the core game-server control plane and lattice bridge surface, without overclaiming full feature parity yet.
 

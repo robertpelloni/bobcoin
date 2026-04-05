@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.56.0] - 2026-04-05
+
+### Added
+- WebSocket matchmaking/signaling support in `go-game-server/`, porting the reasonable multiplayer signaling responsibilities from the Node `game-server` root WebSocket server into Go.
+- Root-path WebSocket upgrade handling in `go-game-server` so the Go service can now respond to the frontend rhythm-game matchmaking flow without relying on the Node signaling surface.
+
+### Changed
+- Extended the initial Go game-server control-plane port beyond pure HTTP orchestration into live multiplayer signaling, while still keeping FHE and SP1/ZK verification as explicitly unfinished specialist gaps.
+- Updated the `go-game-server` port documentation to reflect that matchmaking/signaling is now part of the Go scope.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go mod tidy`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.55.0] - 2026-04-05
 
 ### Added

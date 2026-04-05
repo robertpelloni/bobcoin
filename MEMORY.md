@@ -72,6 +72,8 @@
   - As of v8.54.0, mirrored parity inventory is also rendered into `docs/ai/testing/parity-scenario-matrix.md` via `npm run parity:matrix`, so the shared scenario/fragment/test-reference catalogs now produce human-readable audit documentation as well as executable validation.
   - As of v8.55.0, `go-game-server/` ports the game-server control plane into Go: system wallet/bootstrap, SQLite bid/transaction persistence, `/status`, `/bankroll`, `/mint`, `/burn`, `/transactions`, `/market/bids`, `/market/bid`, and `/market/accept`.
   - As of v8.55.0, the platform now has initial Go control-plane ports for both remaining major Node services (`supertorrent` and `game-server`), even though full feature parity for transport, matchmaking, FHE, and ZK verification is still pending.
+  - As of v8.56.0, `go-game-server/` also ports the WebSocket matchmaking/signaling server used by the rhythm-game multiplayer flow, so one of the previously outstanding game-server real-time responsibilities is now covered in Go.
+  - As of v8.56.0, the most significant remaining game-server-specific Go gaps are now the FHE oracle and the SP1/ZK `/submit-proof` flow, rather than the basic HTTP control plane or multiplayer signaling shell.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

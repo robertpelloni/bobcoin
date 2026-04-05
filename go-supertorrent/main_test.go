@@ -112,6 +112,94 @@ func TestAcceptBidOnLattice(t *testing.T) {
 	}
 }
 
+func TestBootstrapWalletOnLattice(t *testing.T) {
+	var openedBlock map[string]interface{}
+	var mintRequested bool
+	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/mint" {
+			t.Fatalf("unexpected game server path: %s", r.URL.Path)
+		}
+		mintRequested = true
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "bootstrap-send-hash"})
+	}))
+	defer gameServer.Close()
+
+	var frontierCalls int
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/frontier/"):
+			frontierCalls++
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{})
+		case strings.HasPrefix(r.URL.Path, "/pending/"):
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"pending": []map[string]interface{}{{"hash": "bootstrap-send-hash", "amount": 1.0}}})
+		case r.URL.Path == "/process":
+			_ = json.NewDecoder(r.Body).Decode(&openedBlock)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "opened-hash"})
+		default:
+			t.Fatalf("unexpected lattice path: %s", r.URL.Path)
+		}
+	}))
+	defer lattice.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.GameServerURL = gameServer.URL
+	service.cfg.LatticeURL = lattice.URL
+	service.bootstrapWalletOnLattice()
+
+	if !mintRequested {
+		t.Fatalf("expected bootstrap flow to request mint")
+	}
+	if frontierCalls == 0 {
+		t.Fatalf("expected bootstrap flow to query frontier")
+	}
+	blockPayload, ok := openedBlock["block"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected bootstrap process call to include block payload")
+	}
+	if blockPayload["type"] != "open" {
+		t.Fatalf("expected bootstrap block type open, got %v", blockPayload["type"])
+	}
+	if blockPayload["link"] != "bootstrap-send-hash" {
+		t.Fatalf("expected bootstrap link to target mint hash, got %v", blockPayload["link"])
+	}
+}
+
+func TestProcessOpenBidsOnce(t *testing.T) {
+	var processedBlock map[string]interface{}
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/market/bids":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"bids": []map[string]interface{}{{"id": "open-bid-1", "magnet": "magnet:?xt=urn:btih:1234512345123451234512345123451234512345", "amount": 7.5, "status": "OPEN"}}})
+		case strings.HasPrefix(r.URL.Path, "/frontier/"):
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"frontier": "abcdef1234567890abcdef1234567890abcdef12", "balance": 10.0, "height": 2})
+		case r.URL.Path == "/process":
+			_ = json.NewDecoder(r.Body).Decode(&processedBlock)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "accepted-block-hash"})
+		default:
+			t.Fatalf("unexpected lattice path during open-bid scan: %s", r.URL.Path)
+		}
+	}))
+	defer lattice.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.LatticeURL = lattice.URL
+	if err := service.processOpenBidsOnce(); err != nil {
+		t.Fatalf("expected processOpenBidsOnce to succeed, got %v", err)
+	}
+
+	infoHash := magnetInfoHash("magnet:?xt=urn:btih:1234512345123451234512345123451234512345")
+	service.mu.RLock()
+	_, ok := service.torrents[infoHash]
+	service.mu.RUnlock()
+	if !ok {
+		t.Fatalf("expected open bid magnet to be tracked after processing")
+	}
+	blockPayload, ok := processedBlock["block"].(map[string]interface{})
+	if !ok || blockPayload["type"] != "accept_bid" {
+		t.Fatalf("expected accept_bid block submission after processing open bids, got %+v", processedBlock)
+	}
+}
+
 func TestHandleUploadTracksTorrent(t *testing.T) {
 	service := newTestSuperTorrentService(t)
 	body := &strings.Builder{}

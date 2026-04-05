@@ -276,27 +276,34 @@ func (s *SuperTorrentService) pollOpenBids() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		var resp APIResponse
-		if err := s.getJSON(s.cfg.LatticeURL+"/market/bids", &resp); err != nil {
-			continue
-		}
-		for _, bid := range resp.Bids {
-			if bid.Status != "OPEN" || bid.Magnet == "" {
-				continue
-			}
-			infoHash := magnetInfoHash(bid.Magnet)
-			s.mu.RLock()
-			_, alreadyTracking := s.torrents[infoHash]
-			s.mu.RUnlock()
-			if alreadyTracking {
-				continue
-			}
-			s.trackTorrent(TorrentRecord{Magnet: bid.Magnet, InfoHash: infoHash, Name: "market-bid-" + shortHash(bid.ID), AddedAt: time.Now().UnixMilli(), Source: "market-bid", Accepted: true})
-			if err := s.acceptBidOnLattice(bid); err != nil {
-				log.Printf("[go-supertorrent] failed to accept bid %s: %v", shortHash(bid.ID), err)
-			}
+		if err := s.processOpenBidsOnce(); err != nil {
+			log.Printf("[go-supertorrent] open bid polling error: %v", err)
 		}
 	}
+}
+
+func (s *SuperTorrentService) processOpenBidsOnce() error {
+	var resp APIResponse
+	if err := s.getJSON(s.cfg.LatticeURL+"/market/bids", &resp); err != nil {
+		return err
+	}
+	for _, bid := range resp.Bids {
+		if bid.Status != "OPEN" || bid.Magnet == "" {
+			continue
+		}
+		infoHash := magnetInfoHash(bid.Magnet)
+		s.mu.RLock()
+		_, alreadyTracking := s.torrents[infoHash]
+		s.mu.RUnlock()
+		if alreadyTracking {
+			continue
+		}
+		s.trackTorrent(TorrentRecord{Magnet: bid.Magnet, InfoHash: infoHash, Name: "market-bid-" + shortHash(bid.ID), AddedAt: time.Now().UnixMilli(), Source: "market-bid", Accepted: true})
+		if err := s.acceptBidOnLattice(bid); err != nil {
+			log.Printf("[go-supertorrent] failed to accept bid %s: %v", shortHash(bid.ID), err)
+		}
+	}
+	return nil
 }
 
 func (s *SuperTorrentService) acceptBidOnLattice(bid Bid) error {

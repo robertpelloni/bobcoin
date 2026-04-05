@@ -84,6 +84,8 @@
   - As of v8.60.0, Windows temp-directory cleanup issues in Go game-server tests were resolved by explicitly closing SQLite handles in test cleanup.
   - As of v8.61.0, `go-supertorrent/main_test.go` now provides executable Go regression coverage for the supernode control-plane shell itself: torrent add/remove behavior, SPoRA response behavior, lattice accept-bid submission, and upload tracking.
   - As of v8.61.0, both new Go service shells (`go-game-server` and `go-supertorrent`) now have first-wave executable Go regression coverage instead of relying only on successful builds.
+  - As of v8.62.0, `go-supertorrent/` now also exposes its open-bid scan as a single-pass helper (`processOpenBidsOnce()`), making bootstrap and market-accept orchestration directly testable instead of only indirectly covered through long-running polling loops.
+  - As of v8.62.0, the Go supertorrent tests now cover bootstrap/open flow from minted pending funds and single-pass open-bid processing, not just lower-level endpoint behavior.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

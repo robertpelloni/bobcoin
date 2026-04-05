@@ -1,40 +1,49 @@
-# Session Handoff - 2026-04-05 (v8.61.0)
+# Session Handoff - 2026-04-05 (v8.62.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by giving `go-supertorrent/` its first real Go regression test suite.
+This session continued the Go-port campaign by deepening the quality and testability of `go-supertorrent/`.
 
-That matters because the supertorrent control-plane port has now reached the same quality threshold previously established for `go-game-server/`: it is no longer guarded only by successful builds, but also by executable service tests.
+The key outcome is that the Go supertorrent control-plane port now has higher-value orchestration coverage instead of only endpoint-level tests. In particular, bootstrap/open behavior and market-bid polling logic are now directly testable through a single-pass helper.
 
-The result is that both new Go service shells now have first-wave Go regression coverage.
+That is useful because long-running service loops are much easier to evolve safely once their core per-iteration logic is testable in isolation.
 
 ## What Changed
 
-### 1. Added `go-supertorrent/main_test.go`
+### 1. Added higher-value Go tests for `go-supertorrent/`
 **File:** `go-supertorrent/main_test.go`
 
-The new Go service regression coverage includes:
-- add/remove torrent registry behavior
-- `/spora/:challenge` response behavior
-- lattice `accept_bid` submission flow
-- multipart upload tracking behavior
+The Go supertorrent regression coverage now includes:
+- `TestBootstrapWalletOnLattice`
+- `TestProcessOpenBidsOnce`
+- plus the previously added add/remove, SPoRA, accept-bid, and upload tests
 
-### Covered behaviors
-The tests validate:
-- manual torrent tracking via `/add-torrent`
-- torrent removal via `/remove-torrent`
-- SPoRA challenge response payload generation
-- correct `accept_bid` block submission shape against a mocked lattice
-- upload ingestion and torrent-registry tracking for uploaded files
+### New covered behaviors
+These tests validate:
+- bootstrap mint request flow from the Go supertorrent service to the game-server
+- pending-funds retrieval
+- lattice `open` block construction for supernode wallet bootstrap
+- one-shot open-bid scan and market-accept behavior through a directly testable helper
+- registry tracking of accepted market-bid magnets
 
-This is meaningful because it turns the supertorrent Go shell into something that is regression-guarded rather than build-only.
+This is a stronger quality level than only testing isolated endpoints.
 
-### 2. Fixed Go build hygiene in `go-supertorrent/`
+### 2. Refactored bid polling into a directly testable helper
 **File:** `go-supertorrent/main.go`
 
-Adjusted dynamic error propagation to use explicit formatting:
+Added:
+- `processOpenBidsOnce()`
+
+And updated the long-running ticker loop to call it.
+
+That matters because the market polling logic now has a testable unit with the infinite loop stripped away. This is exactly the kind of refactoring that makes service migration safer as complexity grows.
+
+### 3. Fixed explicit error propagation in `go-supertorrent/`
+**File:** `go-supertorrent/main.go`
+
+Adjusted dynamic error propagation to use:
 - `fmt.Errorf("%s", resp.Error)`
 
-This keeps the build/test behavior explicit and avoids format-string issues during Go checks.
+This keeps the Go build/test path explicit and avoids non-constant format-string issues.
 
 ## Validation Performed
 
@@ -84,33 +93,26 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because the new Go service shells are now both crossing from:
-- “it builds”
-into
-- “its core shell behaviors are regression-tested”
+This pass matters because service migration is not just about adding more endpoints. It is also about making those services maintainable once they grow.
 
-That is an important quality milestone for the broader service-layer Go migration.
+By extracting and testing `processOpenBidsOnce()`, the Go supertorrent service is now in a better position to absorb future behavior without hiding everything inside an infinite ticker loop.
 
-At this point:
-- `go-game-server/` has shell-level tests
-- `go-supertorrent/` now also has shell-level tests
-
-This reduces the risk of service-layer regression as further Go migration work continues.
+The same principle will be useful for future Go service migration work too.
 
 ## Findings / Analysis
 
-### Key finding 1: the service-shell-first migration strategy now has a matching test strategy
-A useful pattern is emerging:
+### Key finding 1: long-running loops should be broken into testable units early
+The move from “ticker loop only” to “ticker loop calling a single-pass helper” is a small design improvement, but it has outsized testing and maintenance benefits.
+
+That pattern is worth reusing whenever other Go service loops grow more complex.
+
+### Key finding 2: service-shell-first migration is now being matched by service-testability-first hardening
+The repo is settling into a healthy pattern for service migration:
 1. port the reasonable service shell into Go
-2. once the shell reaches meaningful breadth, add first-wave Go regression tests
-3. then continue expanding into deeper specialist behavior
+2. once the shell is meaningful, add first-wave Go tests
+3. refactor long-running behavior into smaller testable helpers as needed
 
-That is a healthier migration sequence than waiting too long to add tests or trying to port the hardest specialist behavior first.
-
-### Key finding 2: `go-supertorrent/` is now in a much better state for future growth
-With basic shell tests in place, future supernode porting work can build on a more stable foundation.
-
-That should make it safer to continue expanding the Go port without accidentally regressing the current control-plane behavior.
+That is a strong operational pattern to keep following.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -120,9 +122,9 @@ The largest remaining honest gaps are now:
 
 ## Recommended Next Move
 The best next move now is:
-1. continue the staged Go migration of the hardest remaining specialist service features
-2. keep adding targeted Go tests as each service shell broadens further
-3. preserve the parity/testing/documentation backbone while the platform service layer becomes more Go-native
+1. continue deepening the new Go service shells where the next increment is still reasonable
+2. keep turning any long-running service behavior into testable helper units as complexity grows
+3. preserve the parity/testing/documentation backbone while the platform broadens further beyond the lattice core
 
 ## Files Changed In This Session
 - `VERSION.md`

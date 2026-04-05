@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"math"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -56,6 +57,17 @@ func validSporaForOpenAccount(account string) *SporaProof {
 		Challenge: challenge,
 		ChunkHash: Hash(infoHash + strconv.Itoa(challenge)),
 	}
+}
+
+func deriveDescendingKeypairs(seed string, count int) []map[string]string {
+	keys := make([]map[string]string, count)
+	for i := 0; i < count; i++ {
+		keys[i] = DeriveKeypair(seed, i)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i]["publicKey"] > keys[j]["publicKey"]
+	})
+	return keys
 }
 
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
@@ -974,44 +986,48 @@ func TestRecoveryRebuildsComplexHistoricalStateFromSQLite(t *testing.T) {
 }
 
 func TestAuditStateHandlesSameTimestampCrossAccountDependencies(t *testing.T) {
-	keysA := DeriveKeypair("semantic parity same ts A", 0)
-	keysB := DeriveKeypair("semantic parity same ts B", 0)
+	keys := deriveDescendingKeypairs("semantic parity same ts", 2)
+	sender := keys[0]
+	receiver := keys[1]
+	if sender["publicKey"] <= receiver["publicKey"] {
+		t.Fatalf("expected sender account ordering to sort after receiver")
+	}
 	l := NewLattice(NewDBManager(":memory:"))
 
-	genesisA := makeGenesisBlock(keysA, 1000)
-	signTestBlock(t, genesisA, keysA["privateKey"])
-	if err := l.ProcessBlock(genesisA, true); err != nil {
-		t.Fatalf("expected genesisA to succeed, got %v", err)
+	genesis := makeGenesisBlock(sender, 1000)
+	signTestBlock(t, genesis, sender["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis to succeed, got %v", err)
 	}
 
 	sendAB := &Block{
 		Type:          "send",
-		Account:       keysA["publicKey"],
-		Previous:      &genesisA.Hash,
+		Account:       sender["publicKey"],
+		Previous:      &genesis.Hash,
 		Balance:       800,
 		StakedBalance: 0,
 		Height:        1,
-		Link:          keysB["publicKey"],
-		Spora:         validSpora(genesisA.Hash),
+		Link:          receiver["publicKey"],
+		Spora:         validSpora(genesis.Hash),
 		Timestamp:     10,
 	}
-	signTestBlock(t, sendAB, keysA["privateKey"])
+	signTestBlock(t, sendAB, sender["privateKey"])
 	if err := l.ProcessBlock(sendAB, true); err != nil {
 		t.Fatalf("expected sendAB to succeed, got %v", err)
 	}
 
 	openB := &Block{
 		Type:          "open",
-		Account:       keysB["publicKey"],
+		Account:       receiver["publicKey"],
 		Previous:      nil,
 		Balance:       200,
 		StakedBalance: 0,
 		Height:        0,
 		Link:          sendAB.Hash,
-		Spora:         validSporaForOpenAccount(keysB["publicKey"]),
+		Spora:         validSporaForOpenAccount(receiver["publicKey"]),
 		Timestamp:     10,
 	}
-	signTestBlock(t, openB, keysB["privateKey"])
+	signTestBlock(t, openB, receiver["privateKey"])
 	if err := l.ProcessBlock(openB, true); err != nil {
 		t.Fatalf("expected openB to succeed, got %v", err)
 	}
@@ -1025,8 +1041,114 @@ func TestAuditStateHandlesSameTimestampCrossAccountDependencies(t *testing.T) {
 	if l.StateHash == "broken" || l.MerkleRoot == "broken" {
 		t.Fatalf("expected audit to recover state hashes for same-timestamp replay")
 	}
-	if len(l.Chains[keysB["publicKey"]]) != 1 {
-		t.Fatalf("expected receiving account chain length 1 after replay, got %d", len(l.Chains[keysB["publicKey"]]))
+	if len(l.Chains[receiver["publicKey"]]) != 1 {
+		t.Fatalf("expected receiving account chain length 1 after replay, got %d", len(l.Chains[receiver["publicKey"]]))
+	}
+}
+
+func TestRecoveryHandlesCascadingSameTimestampDependenciesFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "same-timestamp-recovery.sqlite")
+	keys := deriveDescendingKeypairs("semantic parity recovery cascade", 3)
+	sender := keys[0]
+	relay := keys[1]
+	receiver := keys[2]
+	if !(sender["publicKey"] > relay["publicKey"] && relay["publicKey"] > receiver["publicKey"]) {
+		t.Fatalf("expected descending account ordering for deterministic hostile replay")
+	}
+
+	mgr := NewDBManager(dbPath)
+	genesis := makeGenesisBlock(sender, 1000)
+	signTestBlock(t, genesis, sender["privateKey"])
+	if err := mgr.SaveBlock(genesis); err != nil {
+		t.Fatalf("failed to persist genesis block: %v", err)
+	}
+
+	sendToRelay := &Block{
+		Type:          "send",
+		Account:       sender["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          relay["publicKey"],
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     10,
+	}
+	signTestBlock(t, sendToRelay, sender["privateKey"])
+	if err := mgr.SaveBlock(sendToRelay); err != nil {
+		t.Fatalf("failed to persist sendToRelay block: %v", err)
+	}
+
+	openRelay := &Block{
+		Type:          "open",
+		Account:       relay["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToRelay.Hash,
+		Spora:         validSporaForOpenAccount(relay["publicKey"]),
+		Timestamp:     10,
+	}
+	signTestBlock(t, openRelay, relay["privateKey"])
+	if err := mgr.SaveBlock(openRelay); err != nil {
+		t.Fatalf("failed to persist openRelay block: %v", err)
+	}
+
+	sendToReceiver := &Block{
+		Type:          "send",
+		Account:       relay["publicKey"],
+		Previous:      &openRelay.Hash,
+		Balance:       150,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          receiver["publicKey"],
+		Spora:         validSpora(openRelay.Hash),
+		Timestamp:     10,
+	}
+	signTestBlock(t, sendToReceiver, relay["privateKey"])
+	if err := mgr.SaveBlock(sendToReceiver); err != nil {
+		t.Fatalf("failed to persist sendToReceiver block: %v", err)
+	}
+
+	openReceiver := &Block{
+		Type:          "open",
+		Account:       receiver["publicKey"],
+		Previous:      nil,
+		Balance:       50,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToReceiver.Hash,
+		Spora:         validSporaForOpenAccount(receiver["publicKey"]),
+		Timestamp:     10,
+	}
+	signTestBlock(t, openReceiver, receiver["privateKey"])
+	if err := mgr.SaveBlock(openReceiver); err != nil {
+		t.Fatalf("failed to persist openReceiver block: %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before same-timestamp recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if len(recovered.Chains[sender["publicKey"]]) != 2 {
+		t.Fatalf("expected recovered sender chain length 2, got %d", len(recovered.Chains[sender["publicKey"]]))
+	}
+	if len(recovered.Chains[relay["publicKey"]]) != 2 {
+		t.Fatalf("expected recovered relay chain length 2, got %d", len(recovered.Chains[relay["publicKey"]]))
+	}
+	if len(recovered.Chains[receiver["publicKey"]]) != 1 {
+		t.Fatalf("expected recovered receiver chain length 1, got %d", len(recovered.Chains[receiver["publicKey"]]))
+	}
+	frontier := recovered.Chains[receiver["publicKey"]][len(recovered.Chains[receiver["publicKey"]])-1]
+	if math.Abs(frontier.Balance-50) > 0.001 {
+		t.Fatalf("expected recovered receiver balance 50, got %+v", frontier)
+	}
+	if len(recovered.Pending[relay["publicKey"]]) != 0 || len(recovered.Pending[receiver["publicKey"]]) != 0 {
+		t.Fatalf("expected no recovered pending transactions for fully received same-timestamp cascade")
 	}
 }
 

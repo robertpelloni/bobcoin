@@ -129,13 +129,35 @@ func (l *Lattice) Recovery() {
 		return
 	}
 
+	type recoveryFailure struct {
+		block *Block
+		err   error
+	}
+
+	remaining := append([]*Block(nil), blocks...)
 	recovered := 0
-	for _, b := range blocks {
-		if err := l.ProcessBlock(b, true); err != nil {
-			fmt.Printf("[Recovery Error] Block %s rejected during replay: %v\n", b.Hash[:8], err)
-			continue
+	for len(remaining) > 0 {
+		nextRemaining := make([]*Block, 0, len(remaining))
+		failures := make([]recoveryFailure, 0, len(remaining))
+		progress := false
+
+		for _, b := range remaining {
+			if err := l.ProcessBlock(b, true); err != nil {
+				nextRemaining = append(nextRemaining, b)
+				failures = append(failures, recoveryFailure{block: b, err: err})
+				continue
+			}
+			recovered++
+			progress = true
 		}
-		recovered++
+
+		if !progress {
+			for _, failure := range failures {
+				fmt.Printf("[Recovery Error] Block %s rejected during replay: %v\n", failure.block.Hash[:8], failure.err)
+			}
+			break
+		}
+		remaining = nextRemaining
 	}
 	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", recovered, l.StateHash[:16])
 }

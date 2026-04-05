@@ -57,13 +57,13 @@ func (mgr *DBManager) LoadBlocksAfter(hash string) ([]*Block, error) {
 	var err error
 
 	if hash == "" {
-		rows, err = mgr.db.Query("SELECT data FROM blocks ORDER BY timestamp ASC")
+		rows, err = mgr.db.Query("SELECT data FROM blocks ORDER BY timestamp ASC, account ASC, height ASC, hash ASC")
 	} else {
 		// Use a subquery to find the timestamp of the anchor block and get all blocks after it
 		rows, err = mgr.db.Query(`
 			SELECT data FROM blocks 
 			WHERE timestamp > (SELECT timestamp FROM blocks WHERE hash = ?)
-			ORDER BY timestamp ASC`, hash)
+			ORDER BY timestamp ASC, account ASC, height ASC, hash ASC`, hash)
 	}
 
 	if err != nil {
@@ -87,7 +87,7 @@ func (mgr *DBManager) LoadBlocksAfter(hash string) ([]*Block, error) {
 }
 
 func (mgr *DBManager) LoadAllBlocks() ([]*Block, error) {
-	rows, err := mgr.db.Query("SELECT data FROM blocks ORDER BY timestamp ASC")
+	rows, err := mgr.db.Query("SELECT data FROM blocks ORDER BY timestamp ASC, account ASC, height ASC, hash ASC")
 	if err != nil {
 		return nil, err
 	}

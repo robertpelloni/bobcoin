@@ -37,6 +37,7 @@
   - As of v8.30.0, the Go parity suite also covers durable SQLite-backed recovery of mixed historical ledgers, not just in-memory replay, so restart semantics are now part of the regression surface.
   - As of v8.31.0, the durable recovery suite also covers restart-time reconstruction of NFT ownership changes, claimed swap state, and expired-governance terminal status inside larger multi-account historical ledgers.
   - As of v8.33.0, Go audit replay no longer assumes a single global timestamp sort is sufficient; replay proceeds in dependency-resolving passes so same-timestamp cross-account dependencies can still reconstruct correctly.
+  - As of v8.34.0, cold-boot SQLite recovery follows the same dependency-resolving replay model, and persisted block reads are deterministically ordered by timestamp/account/height/hash so restart behavior is both stable and robust against same-timestamp cascading dependencies.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

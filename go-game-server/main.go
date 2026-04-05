@@ -559,7 +559,7 @@ func (s *Service) sendSystemFunds(address string, amount float64, zkProof string
 		return "", err
 	}
 	if !resp.Success {
-		return "", fmt.Errorf(resp.Error)
+		return "", fmt.Errorf("%s", resp.Error)
 	}
 	s.systemFrontier = &block.Hash
 	s.systemBalance = newBalance

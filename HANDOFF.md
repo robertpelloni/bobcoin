@@ -1,56 +1,54 @@
-# Session Handoff - 2026-04-05 (v8.59.0)
+# Session Handoff - 2026-04-05 (v8.60.0)
 
 ## Executive Summary
-This session continued the practical Go-port campaign by tightening the `go-game-server/` proof-submission shell so it can optionally defer verification to an external backend verifier when one is configured.
+This session continued the Go-port campaign by hardening `go-game-server/` with its first real Go test suite.
 
-That matters because it moves the Go game-server one step closer to honest backend verification integration without overclaiming full SP1 parity yet.
-
-The new state is:
-- `go-game-server/` still supports the current local fallback verification behavior
-- but it can now optionally call a backend verifier at `ZK_SERVICE_URL/verify`
-- so the gap is narrower and more explicitly about true backend semantics rather than the total absence of a verification bridge
+That is an important step because the service-layer Go migration has now progressed far enough that build-only validation is no longer sufficient. The new tests turn the most important shell behaviors of the Go game-server into executable regression coverage.
 
 ## What Changed
 
-### 1. Added optional verification-bridge behavior to `/submit-proof`
-**Files:**
-- `go-game-server/main.go`
-- `go-game-server/README.md`
+### 1. Added `go-game-server/main_test.go`
+**File:** `go-game-server/main_test.go`
 
-The Go game-server proof-submission path now:
-- parses and validates the proof payload as before
-- computes a verification hash as before
-- checks whether a verification bridge is configured via `ZK_SERVICE_URL`
-- if configured, attempts to POST the proof payload to `ZK_SERVICE_URL/verify`
-- interprets verification results from common fields such as:
-  - `verified`
-  - `zkVerified`
-  - `valid`
-- falls back to the existing score-threshold behavior when no usable external verification result is available
+The initial Go service regression coverage now includes:
+- `TestVerifyProofUsesBridgeWhenAvailable`
+- `TestVerifyProofFallsBackToScoreThreshold`
+- `TestFHEOracleBridgeEndpoint`
+- `TestMatchmakingSignalingFlow`
 
-This is the right intermediate step because it adds a real verification hook without pretending that the full SP1 backend semantics are already complete in Go.
+### Covered behaviors
+These tests validate:
+- `/submit-proof` bridge preference behavior when an external verifier is available
+- fallback score-threshold proof behavior when no usable verifier result exists
+- `/fhe-oracle` passthrough behavior to a configured bridge endpoint
+- WebSocket matchmaking/signaling shell behavior:
+  - `FIND_MATCH`
+  - `MATCH_FOUND`
+  - `SIGNAL`
+  - `OPPONENT_DISCONNECTED`
 
-### 2. Honest remaining boundary stays intact
-The Go game-server still does **not** claim full SP1 parity yet.
+This is meaningful because it converts the newest Go service-shell work from “builds successfully” into “behaves as intended under executable tests.”
 
-The remaining meaningful `game-server`-specific Go gaps are still primarily:
-- full backend SP1 verification parity and deeper proof semantics
-- true native FHE behavior
-- deeper gameplay/orchestration specifics beyond the current shell
+### 2. Fixed Go build/test hygiene in `go-game-server/`
+**File:** `go-game-server/main.go`
 
-But the proof path is now closer to the eventual target than it was before this pass.
+Two practical hardening fixes were made while adding tests:
+- dynamic error propagation now uses explicit formatting (`fmt.Errorf("%s", resp.Error)`) so the Go build remains happy
+- the new tests explicitly close SQLite handles during cleanup, fixing Windows temp-directory cleanup failures caused by open DB handles
+
+These are small but important reliability improvements for the new Go service test workflow.
 
 ## Validation Performed
 
 ### go-game-server
 Commands run:
 - `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go mod tidy`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
 - `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
-- dependency resolution succeeded
+- tests passed
 - build succeeded
 
 ### go-supertorrent
@@ -86,32 +84,31 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because it moves the Go game-server beyond a purely self-contained fallback shell and gives it a credible external verification integration point.
+This pass matters because service-layer Go migration is now entering the stage where regressions are a real risk unless the shell behavior is tested directly.
 
-That is a meaningful tightening of the migration path:
-- before, the Go service could only perform its internal fallback logic
-- now, it can begin participating in a more realistic verification topology when a backend verifier is available
+The game-server port already covers:
+- control-plane HTTP
+- matchmaking/signaling shell
+- proof-submission shell
+- FHE bridge shell
 
-This does not solve full SP1 parity by itself, but it is exactly the kind of reasonable intermediate port step that helps reduce the remaining Node-only or incomplete service surface without pretending the hard part is done.
+With this pass, those newer behaviors are no longer guarded only by successful builds. They are now guarded by executable Go tests.
+
+That is an important quality milestone for the Go migration.
 
 ## Findings / Analysis
 
-### Key finding 1: bridge-first remains the right pattern for specialized verification flows
-The current proof-submission path follows the same healthy migration pattern already used elsewhere:
-- port the orchestration shell first
-- add external integration points next
-- leave true deep backend parity as an explicit, honest follow-up
+### Key finding 1: service shells should start getting first-class tests as soon as they stabilize
+The `go-game-server/` surface is now large enough that tests add real value immediately.
 
-That is a much safer and more maintainable sequence than trying to claim instant native parity prematurely.
+This suggests a healthy pattern going forward:
+- once a new Go service shell reaches a reasonable breadth,
+- add targeted Go tests before stacking too many more features on top.
 
-### Key finding 2: the remaining `game-server` gaps are now increasingly backend-specific
-At this point, the biggest `game-server`-specific Go gaps are not basic request handling, signaling, or orchestration shell behavior.
+### Key finding 2: Windows-specific DB cleanup needs to stay in mind for Go service tests
+The SQLite cleanup issue was a useful reminder that service tests with persistent temp DBs need explicit resource cleanup, especially on Windows.
 
-They are now increasingly focused on the actual specialist backend engines:
-- native/true FHE execution
-- native/true SP1 verification semantics
-
-That is an encouraging migration state because the shell around those features is increasingly in Go.
+That should remain part of the standard pattern for future Go service tests in this repo.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -122,9 +119,9 @@ The largest remaining honest gaps are now:
 
 ## Recommended Next Move
 The best next move now is:
-1. decide whether the next highest-value `game-server` step is a tighter real SP1 bridge contract or deeper native FHE planning
-2. continue expanding `go-supertorrent/` where practical
-3. keep preserving the parity/testing/documentation backbone while the service layer keeps moving into Go
+1. continue expanding `go-game-server/` carefully while keeping the new test discipline intact
+2. begin adding a similar first-wave Go test harness for `go-supertorrent/`
+3. keep the Go lattice and shared parity documentation as the architectural/testing backbone while the service layer broadens
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -133,7 +130,7 @@ The best next move now is:
 - `MEMORY.md`
 - `TODO.md`
 - `go-game-server/main.go`
-- `go-game-server/README.md`
+- `go-game-server/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

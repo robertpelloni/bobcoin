@@ -319,7 +319,7 @@ func (s *SuperTorrentService) acceptBidOnLattice(bid Bid) error {
 		return err
 	}
 	if !resp.Success {
-		return fmt.Errorf(resp.Error)
+		return fmt.Errorf("%s", resp.Error)
 	}
 	return nil
 }

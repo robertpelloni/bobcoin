@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.61.0] - 2026-04-05
+
+### Added
+- Initial Go service regression coverage for `go-supertorrent/` in `go-supertorrent/main_test.go`, including:
+  - add/remove torrent registry behavior
+  - `/spora/:challenge` response behavior
+  - lattice `accept_bid` block submission flow
+  - multipart upload tracking behavior
+
+### Changed
+- Hardened the new Go supertorrent control-plane port by moving it beyond build-only validation and into executable Go service tests.
+- Continued the practical Go migration pattern of adding first-wave regression coverage once a service shell reaches a meaningful breadth.
+- Fixed dynamic error propagation in `go-supertorrent/` so Go build/test behavior stays explicit and stable.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.60.0] - 2026-04-05
 
 ### Added

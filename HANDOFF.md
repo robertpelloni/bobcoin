@@ -1,62 +1,62 @@
-# Session Handoff - 2026-04-05 (v8.60.0)
+# Session Handoff - 2026-04-05 (v8.61.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by hardening `go-game-server/` with its first real Go test suite.
+This session continued the Go-port campaign by giving `go-supertorrent/` its first real Go regression test suite.
 
-That is an important step because the service-layer Go migration has now progressed far enough that build-only validation is no longer sufficient. The new tests turn the most important shell behaviors of the Go game-server into executable regression coverage.
+That matters because the supertorrent control-plane port has now reached the same quality threshold previously established for `go-game-server/`: it is no longer guarded only by successful builds, but also by executable service tests.
+
+The result is that both new Go service shells now have first-wave Go regression coverage.
 
 ## What Changed
 
-### 1. Added `go-game-server/main_test.go`
-**File:** `go-game-server/main_test.go`
+### 1. Added `go-supertorrent/main_test.go`
+**File:** `go-supertorrent/main_test.go`
 
-The initial Go service regression coverage now includes:
-- `TestVerifyProofUsesBridgeWhenAvailable`
-- `TestVerifyProofFallsBackToScoreThreshold`
-- `TestFHEOracleBridgeEndpoint`
-- `TestMatchmakingSignalingFlow`
+The new Go service regression coverage includes:
+- add/remove torrent registry behavior
+- `/spora/:challenge` response behavior
+- lattice `accept_bid` submission flow
+- multipart upload tracking behavior
 
 ### Covered behaviors
-These tests validate:
-- `/submit-proof` bridge preference behavior when an external verifier is available
-- fallback score-threshold proof behavior when no usable verifier result exists
-- `/fhe-oracle` passthrough behavior to a configured bridge endpoint
-- WebSocket matchmaking/signaling shell behavior:
-  - `FIND_MATCH`
-  - `MATCH_FOUND`
-  - `SIGNAL`
-  - `OPPONENT_DISCONNECTED`
+The tests validate:
+- manual torrent tracking via `/add-torrent`
+- torrent removal via `/remove-torrent`
+- SPoRA challenge response payload generation
+- correct `accept_bid` block submission shape against a mocked lattice
+- upload ingestion and torrent-registry tracking for uploaded files
 
-This is meaningful because it converts the newest Go service-shell work from “builds successfully” into “behaves as intended under executable tests.”
+This is meaningful because it turns the supertorrent Go shell into something that is regression-guarded rather than build-only.
 
-### 2. Fixed Go build/test hygiene in `go-game-server/`
-**File:** `go-game-server/main.go`
+### 2. Fixed Go build hygiene in `go-supertorrent/`
+**File:** `go-supertorrent/main.go`
 
-Two practical hardening fixes were made while adding tests:
-- dynamic error propagation now uses explicit formatting (`fmt.Errorf("%s", resp.Error)`) so the Go build remains happy
-- the new tests explicitly close SQLite handles during cleanup, fixing Windows temp-directory cleanup failures caused by open DB handles
+Adjusted dynamic error propagation to use explicit formatting:
+- `fmt.Errorf("%s", resp.Error)`
 
-These are small but important reliability improvements for the new Go service test workflow.
+This keeps the build/test behavior explicit and avoids format-string issues during Go checks.
 
 ## Validation Performed
 
-### go-game-server
+### go-supertorrent
 Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
 - tests passed
 - build succeeded
 
-### go-supertorrent
-Command run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
+### go-game-server
+Commands run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
 
 Result:
 - build succeeded
+- tests passed
 
 ### Node reference lattice
 Command run:
@@ -84,44 +84,45 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because service-layer Go migration is now entering the stage where regressions are a real risk unless the shell behavior is tested directly.
+This pass matters because the new Go service shells are now both crossing from:
+- “it builds”
+into
+- “its core shell behaviors are regression-tested”
 
-The game-server port already covers:
-- control-plane HTTP
-- matchmaking/signaling shell
-- proof-submission shell
-- FHE bridge shell
+That is an important quality milestone for the broader service-layer Go migration.
 
-With this pass, those newer behaviors are no longer guarded only by successful builds. They are now guarded by executable Go tests.
+At this point:
+- `go-game-server/` has shell-level tests
+- `go-supertorrent/` now also has shell-level tests
 
-That is an important quality milestone for the Go migration.
+This reduces the risk of service-layer regression as further Go migration work continues.
 
 ## Findings / Analysis
 
-### Key finding 1: service shells should start getting first-class tests as soon as they stabilize
-The `go-game-server/` surface is now large enough that tests add real value immediately.
+### Key finding 1: the service-shell-first migration strategy now has a matching test strategy
+A useful pattern is emerging:
+1. port the reasonable service shell into Go
+2. once the shell reaches meaningful breadth, add first-wave Go regression tests
+3. then continue expanding into deeper specialist behavior
 
-This suggests a healthy pattern going forward:
-- once a new Go service shell reaches a reasonable breadth,
-- add targeted Go tests before stacking too many more features on top.
+That is a healthier migration sequence than waiting too long to add tests or trying to port the hardest specialist behavior first.
 
-### Key finding 2: Windows-specific DB cleanup needs to stay in mind for Go service tests
-The SQLite cleanup issue was a useful reminder that service tests with persistent temp DBs need explicit resource cleanup, especially on Windows.
+### Key finding 2: `go-supertorrent/` is now in a much better state for future growth
+With basic shell tests in place, future supernode porting work can build on a more stable foundation.
 
-That should remain part of the standard pattern for future Go service tests in this repo.
+That should make it safer to continue expanding the Go port without accidentally regressing the current control-plane behavior.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
-1. `go-game-server/` does not yet implement full backend SP1 verification parity for `/submit-proof`
-2. `go-game-server/` does not yet implement true native FHE behavior
-3. `go-supertorrent/` does not yet replace full WebTorrent/WebRTC transport behavior
-4. platform-wide “all-Go” is still not honest yet
+1. `go-game-server/` still lacks true native FHE behavior and full SP1 backend verification parity
+2. `go-supertorrent/` still does not replace full WebTorrent/WebRTC transport behavior
+3. platform-wide “all-Go” is still not honest yet
 
 ## Recommended Next Move
 The best next move now is:
-1. continue expanding `go-game-server/` carefully while keeping the new test discipline intact
-2. begin adding a similar first-wave Go test harness for `go-supertorrent/`
-3. keep the Go lattice and shared parity documentation as the architectural/testing backbone while the service layer broadens
+1. continue the staged Go migration of the hardest remaining specialist service features
+2. keep adding targeted Go tests as each service shell broadens further
+3. preserve the parity/testing/documentation backbone while the platform service layer becomes more Go-native
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -129,8 +130,8 @@ The best next move now is:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-game-server/main.go`
-- `go-game-server/main_test.go`
+- `go-supertorrent/main.go`
+- `go-supertorrent/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

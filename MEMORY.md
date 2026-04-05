@@ -82,6 +82,8 @@
   - As of v8.59.0, the most meaningful remaining `/submit-proof` gap is now full backend SP1 verification parity and deeper proof semantics, not the absence of any external verification hook.
   - As of v8.60.0, `go-game-server/main_test.go` now provides executable Go regression coverage for the new game-server shell itself: verification-bridge preference, fallback verification, FHE bridge passthrough, and WebSocket matchmaking/signaling.
   - As of v8.60.0, Windows temp-directory cleanup issues in Go game-server tests were resolved by explicitly closing SQLite handles in test cleanup.
+  - As of v8.61.0, `go-supertorrent/main_test.go` now provides executable Go regression coverage for the supernode control-plane shell itself: torrent add/remove behavior, SPoRA response behavior, lattice accept-bid submission, and upload tracking.
+  - As of v8.61.0, both new Go service shells (`go-game-server` and `go-supertorrent`) now have first-wave executable Go regression coverage instead of relying only on successful builds.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

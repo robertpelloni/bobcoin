@@ -78,6 +78,8 @@
   - As of v8.57.0, the most meaningful remaining game-server-specific Go gap is now true SP1 backend verification parity plus FHE oracle behavior, rather than basic proof-submission orchestration.
   - As of v8.58.0, `go-game-server/` also ports the current `/fhe-oracle` orchestration boundary into Go as a bridge shell: encrypted payload validation, configurable upstream forwarding, and passthrough response handling.
   - As of v8.58.0, the most significant remaining game-server-specific Go gap is now true native FHE behavior plus true SP1 backend verification parity, rather than the surrounding service endpoints.
+  - As of v8.59.0, `go-game-server/` also supports an optional `/submit-proof` verification bridge via `ZK_SERVICE_URL/verify`, so the Go proof-submission shell can prefer an external verifier result while preserving the current fallback behavior.
+  - As of v8.59.0, the most meaningful remaining `/submit-proof` gap is now full backend SP1 verification parity and deeper proof semantics, not the absence of any external verification hook.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.59.0] - 2026-04-05
+
+### Added
+- Optional `/submit-proof` verification bridge behavior in `go-game-server/`, allowing the Go game-server to forward proof payloads to a configured backend verifier at `ZK_SERVICE_URL/verify` when available.
+- `go-game-server/README.md` now documents `/submit-proof` as an orchestration shell with optional verification-bridge support, clarifying the current honest midpoint between pure heuristic validation and full backend SP1 parity.
+
+### Changed
+- Extended the Go game-server proof-submission shell so it can prefer an external verification result when a verification bridge is configured, while preserving the current score-threshold fallback for compatibility.
+- Narrowed the most meaningful remaining `/submit-proof` gap from “any external verification path” to “full SP1 backend verification parity and deeper proof semantics.”
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go mod tidy`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.58.0] - 2026-04-05
 
 ### Added

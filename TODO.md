@@ -6,7 +6,7 @@
 - [x] **Go API Parity Hardening:** Restored missing Go-Lattice compatibility endpoints (`/pending`, `/chain`, `/anchors`, `/proposals`, `/market/bids`, `/multisigs`) and normalized legacy client blocks at ingress.
 - [x] **Go API Parity Hardening (Phase 2):** Added `/frontier`, `/anchors/:account`, `/votes/:proposalHash`, `/nfts`, `/nfts/:account`, and `/multisig/:account`, plus broader bootstrap snapshot parity.
 - [x] **Vault Encryption Hardening:** Replaced the incorrect JSON-style file cloaking flow with binary-safe AES-256-GCM encryption metadata for uploaded artifacts.
-- [ ] **SP1 ZK Service Robustness:** Current `/submit-proof` endpoint assumes SP1 execution output. Upgrade this to actually call the rust backend verification endpoint when SP1 is running.
+- [ ] **SP1 ZK Service Robustness:** Current `/submit-proof` path is now ported into `go-game-server/` with optional verification-bridge support, but full parity still requires wiring it to the real Rust backend verification endpoint and semantics when SP1 is running.
 
 ## Recommended Next Pass
 - [ ] **Cloaked Retrieval Flow:** Add first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI.

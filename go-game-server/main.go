@@ -97,6 +97,14 @@ type ProofSubmissionRequest struct {
 	Proof map[string]interface{} `json:"proof"`
 }
 
+type ZKVerificationBridgeResponse struct {
+	Success    bool   `json:"success"`
+	Verified   *bool  `json:"verified,omitempty"`
+	ZKVerified *bool  `json:"zkVerified,omitempty"`
+	Valid      *bool  `json:"valid,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
 type SignalMessage struct {
 	Type      string      `json:"type"`
 	Initiator bool        `json:"initiator,omitempty"`
@@ -346,7 +354,7 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	verificationHash := hashString(string(proofJSON))
 	address, _ := publicValues["address"].(string)
 	score, _ := publicValues["score"].(float64)
-	zkVerified := score >= 1000
+	zkVerified := s.verifyProof(publicValues, req.Proof)
 	if !zkVerified {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Cryptographic trace verification failed."})
 		return
@@ -365,6 +373,26 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: amount, Type: "MINT", Hash: hash})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": hash, "zkVerified": true})
+}
+
+func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[string]interface{}) bool {
+	if s.cfg.ZKServiceURL != "" {
+		var bridgeResp ZKVerificationBridgeResponse
+		verifyURL := strings.TrimRight(s.cfg.ZKServiceURL, "/") + "/verify"
+		if err := s.postJSON(verifyURL, map[string]interface{}{"proof": proof}, &bridgeResp); err == nil && bridgeResp.Success {
+			if bridgeResp.Verified != nil {
+				return *bridgeResp.Verified
+			}
+			if bridgeResp.ZKVerified != nil {
+				return *bridgeResp.ZKVerified
+			}
+			if bridgeResp.Valid != nil {
+				return *bridgeResp.Valid
+			}
+		}
+	}
+	score, _ := publicValues["score"].(float64)
+	return score >= 1000
 }
 
 func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {

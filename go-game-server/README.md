@@ -12,7 +12,7 @@ This Go service ports the reasonable orchestration/control-plane behavior from `
 - `/mint`
 - `/burn`
 - `/fhe-oracle` bridge shell
-- `/submit-proof`
+- `/submit-proof` orchestration shell with optional verification bridge
 - `/transactions`
 - `/market/bids`
 - `/market/bid`
@@ -23,7 +23,7 @@ This Go service ports the reasonable orchestration/control-plane behavior from `
 ## Current Reasonable Gaps
 The original Node service still contains additional behavior that has not yet been fully mirrored here, including:
 - true native FHE oracle parity beyond the current `/fhe-oracle` bridge shell
-- true SP1/ZK backend verification parity beyond the current `/submit-proof` orchestration shell
+- full SP1/ZK backend verification parity beyond the current `/submit-proof` orchestration shell and optional verification bridge
 - deeper marketplace/gameplay orchestration nuances beyond the initial control-plane port
 
 This Go port therefore focuses first on the core game-server control plane and lattice bridge surface, without overclaiming full feature parity yet.

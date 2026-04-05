@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.69.0] - 2026-04-05
+
+### Added
+- **Diagnostics Comparison Review**: Vault now compares imported signed diagnostics packages against the operator’s current local diagnostics, surfacing shared/local-only/imported-only sources plus the most materially changed hosts.
+
+### Changed
+- **Trust Workflow Depth**: Signed diagnostics package review now goes beyond signature validity and helps operators understand whether a received package is older, newer, narrower, richer, or materially different from the current local source-health view.
+
+### Validation
+- `cd frontend && npm run build`
+
 ## [8.68.0] - 2026-04-05
 
 ### Added

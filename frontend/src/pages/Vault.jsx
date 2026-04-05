@@ -438,6 +438,72 @@ async function verifyDiagnosticsPackage(value) {
     };
 }
 
+function indexSourceProfilesByHost(sources) {
+    return new Map((sources || []).map(source => [source.host, source]));
+}
+
+function buildDiagnosticsComparison(localDiagnostics, importedDiagnostics) {
+    if (!localDiagnostics || !importedDiagnostics) return null;
+
+    const localSources = indexSourceProfilesByHost(localDiagnostics.sources);
+    const importedSources = indexSourceProfilesByHost(importedDiagnostics.sources);
+    const sharedHosts = [];
+    const localOnlyHosts = [];
+    const importedOnlyHosts = [];
+    const changedHosts = [];
+
+    for (const [host, localSource] of localSources.entries()) {
+        const importedSource = importedSources.get(host);
+        if (!importedSource) {
+            localOnlyHosts.push(host);
+            continue;
+        }
+        sharedHosts.push(host);
+        const reliabilityDelta = (localSource.reliabilityScore || 0) - (importedSource.reliabilityScore || 0);
+        const recentFailureDelta = (localSource.recent7dFailures || 0) - (importedSource.recent7dFailures || 0);
+        const recentSuccessDelta = (localSource.recent7dSuccesses || 0) - (importedSource.recent7dSuccesses || 0);
+        if (reliabilityDelta !== 0 || recentFailureDelta !== 0 || recentSuccessDelta !== 0 || localSource.trend !== importedSource.trend) {
+            changedHosts.push({
+                host,
+                local: compactSourceProfile(localSource),
+                imported: compactSourceProfile(importedSource),
+                reliabilityDelta,
+                recentFailureDelta,
+                recentSuccessDelta,
+            });
+        }
+    }
+
+    for (const host of importedSources.keys()) {
+        if (!localSources.has(host)) {
+            importedOnlyHosts.push(host);
+        }
+    }
+
+    changedHosts.sort((a, b) => Math.abs(b.reliabilityDelta) - Math.abs(a.reliabilityDelta) || Math.abs(b.recentFailureDelta) - Math.abs(a.recentFailureDelta));
+
+    const localExportedAt = Date.parse(localDiagnostics.exportedAt || '') || 0;
+    const importedExportedAt = Date.parse(importedDiagnostics.exportedAt || '') || 0;
+    let freshness = 'SAME_WINDOW';
+    if (localExportedAt > importedExportedAt) freshness = 'LOCAL_NEWER';
+    if (importedExportedAt > localExportedAt) freshness = 'IMPORTED_NEWER';
+
+    return {
+        freshness,
+        sharedHostCount: sharedHosts.length,
+        localOnlyCount: localOnlyHosts.length,
+        importedOnlyCount: importedOnlyHosts.length,
+        changedHostCount: changedHosts.length,
+        localOnlyHosts: localOnlyHosts.slice(0, 8),
+        importedOnlyHosts: importedOnlyHosts.slice(0, 8),
+        changedHosts: changedHosts.slice(0, 6),
+        localDistinctSources: localDiagnostics?.overview?.distinctSources || 0,
+        importedDistinctSources: importedDiagnostics?.overview?.distinctSources || 0,
+        localTotalReports: localDiagnostics?.overview?.totalReports || 0,
+        importedTotalReports: importedDiagnostics?.overview?.totalReports || 0,
+    };
+}
+
 function buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, reports) {
     const rankedByReliability = [...sourceProfiles]
         .filter(profile => profile.totalObservations > 0)
@@ -581,6 +647,7 @@ export function Vault() {
 
     const sourceProfiles = useMemo(() => buildSourceProfiles(recoveryReports), [recoveryReports]);
     const sourceOverview = useMemo(() => buildSourceOverview(sourceProfiles, recoveryReports), [sourceProfiles, recoveryReports]);
+    const currentDiagnostics = useMemo(() => buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, recoveryReports), [sourceProfiles, sourceOverview, recoveryReports]);
 
     const stats = useMemo(() => {
         const totalSize = ownedLegacyAnchors.reduce((sum, anchor) => sum + (anchor.size || anchor.originalSize || 0), 0);
@@ -667,13 +734,12 @@ export function Vault() {
     };
 
     const exportComparativeSourceDiagnostics = () => {
-        downloadJson('vault-source-comparative-diagnostics.json', buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, recoveryReports));
+        downloadJson('vault-source-comparative-diagnostics.json', currentDiagnostics);
     };
 
     const exportSignedComparativeSourceDiagnostics = async () => {
         try {
-            const diagnostics = buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, recoveryReports);
-            const signedPackage = await buildSignedDiagnosticsPackage(diagnostics, keypair);
+            const signedPackage = await buildSignedDiagnosticsPackage(currentDiagnostics, keypair);
             downloadJson('vault-source-comparative-diagnostics.signed.json', signedPackage);
             setDiagnosticsPackageReview({
                 source: 'local-export',
@@ -681,6 +747,7 @@ export function Vault() {
                 exporter: signedPackage.exporter,
                 package: signedPackage,
                 computedHash: signedPackage.signature.messageHash,
+                comparison: buildDiagnosticsComparison(currentDiagnostics, signedPackage.diagnostics),
             });
         } catch (error) {
             alert(error.message);
@@ -699,6 +766,7 @@ export function Vault() {
                 exporter: verified.package.exporter,
                 package: verified.package,
                 computedHash: verified.computedHash,
+                comparison: buildDiagnosticsComparison(currentDiagnostics, verified.package.diagnostics),
             });
             if (!verified.signatureValid) {
                 alert('Diagnostics package loaded, but its signature could not be verified.');
@@ -1006,7 +1074,33 @@ export function Vault() {
                             </span>
                             <span className="vault-badge neutral">SOURCES {diagnosticsPackageReview.package?.diagnostics?.overview?.distinctSources || 0}</span>
                             <span className="vault-badge neutral">REPORTS {diagnosticsPackageReview.package?.diagnostics?.overview?.totalReports || 0}</span>
+                            {diagnosticsPackageReview.comparison && <span className="vault-badge neutral">{diagnosticsPackageReview.comparison.freshness}</span>}
                         </div>
+                        {diagnosticsPackageReview.comparison && (
+                            <div className="diagnostics-comparison-grid">
+                                <div className="leaderboard-meta">SHARED SOURCES: {diagnosticsPackageReview.comparison.sharedHostCount}</div>
+                                <div className="leaderboard-meta">LOCAL ONLY: {diagnosticsPackageReview.comparison.localOnlyCount}</div>
+                                <div className="leaderboard-meta">IMPORTED ONLY: {diagnosticsPackageReview.comparison.importedOnlyCount}</div>
+                                <div className="leaderboard-meta">CHANGED SOURCES: {diagnosticsPackageReview.comparison.changedHostCount}</div>
+                                <div className="leaderboard-meta">LOCAL REPORTS: {diagnosticsPackageReview.comparison.localTotalReports}</div>
+                                <div className="leaderboard-meta">IMPORTED REPORTS: {diagnosticsPackageReview.comparison.importedTotalReports}</div>
+                            </div>
+                        )}
+                        {diagnosticsPackageReview.comparison?.changedHosts?.length > 0 && (
+                            <div className="diagnostics-delta-list">
+                                {diagnosticsPackageReview.comparison.changedHosts.map((entry) => (
+                                    <div key={entry.host} className="leaderboard-meta">
+                                        {entry.host}: RELIABILITY Δ {entry.reliabilityDelta > 0 ? '+' : ''}{entry.reliabilityDelta} • 7D FAILURES Δ {entry.recentFailureDelta > 0 ? '+' : ''}{entry.recentFailureDelta} • LOCAL {entry.local.trend} / IMPORTED {entry.imported.trend}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {diagnosticsPackageReview.comparison?.localOnlyHosts?.length > 0 && (
+                            <div className="leaderboard-meta">LOCAL-ONLY HOSTS: {diagnosticsPackageReview.comparison.localOnlyHosts.join(' • ')}</div>
+                        )}
+                        {diagnosticsPackageReview.comparison?.importedOnlyHosts?.length > 0 && (
+                            <div className="leaderboard-meta">IMPORTED-ONLY HOSTS: {diagnosticsPackageReview.comparison.importedOnlyHosts.join(' • ')}</div>
+                        )}
                     </div>
                 )}
                 <div className="leaderboard-grid">

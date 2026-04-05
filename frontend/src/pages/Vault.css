@@ -200,6 +200,21 @@
     background: rgba(64, 255, 160, 0.05);
 }
 
+.diagnostics-comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.5rem 1rem;
+    margin-top: 0.85rem;
+    margin-bottom: 0.85rem;
+}
+
+.diagnostics-delta-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
 .source-insight-value {
     color: #fff;
     font-family: monospace;

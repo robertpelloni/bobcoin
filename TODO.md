@@ -13,6 +13,7 @@
 - [ ] **Chunk Splitting Audit:** The frontend still emits a >500 kB main chunk. Introduce manual chunking for `node-seal`, `three.js`, and heavy dashboard routes.
 - [x] **Exportable Comparative Source Diagnostics:** Vault now exports retained recovery-report comparisons, source leaderboards, trend buckets, and per-source reliability summaries as portable JSON.
 - [x] **Signed Shareable Diagnostics Packages:** Vault now exports and verifies signed comparative diagnostics packages using Bobcoin wallet signatures.
+- [x] **Diagnostics Comparison Review:** Vault now compares imported signed diagnostics packages against the current local diagnostics view, surfacing freshness, overlap, and changed-source deltas.
 - [x] **Signaling Migration Plan:** WebRTC matchmaking signaling now has a Go-native default path via the supernode while retaining explicit override capability for legacy/specialized deployments.
 - [ ] **Signaling Hardening:** Add richer multi-room/session controls, stale-peer cleanup telemetry, and broader end-to-end signaling regression coverage if multiplayer becomes a higher-priority surface.
 - [x] **Governance Finalization (Basic):** Proposal status now refreshes in Go and expired items resolve to terminal states on processing/read paths.

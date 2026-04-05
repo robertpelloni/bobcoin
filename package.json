@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "parity:matrix": "node testing/render-parity-matrix.mjs"
+  },
   "dependencies": {
     "node-fetch": "^3.3.2"
   }

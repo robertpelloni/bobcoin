@@ -5,12 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+<<<<<<< HEAD
 ## [8.53.0] - 2026-04-05
 
 ### Added
 - **Structured Attestation Metadata**: Publisher proof entries can now carry `kind`, `label`, `url`, and optional `issuer` metadata instead of only a raw type hint plus URL.
 - **Richer Attestation Cards**: Vault now renders publisher attestations as structured cards showing proof type, human-readable label, and issuer context rather than only compact proof badges.
 - **Searchable Attestation Context**: Vault search now indexes attestation labels and issuers in addition to URLs and proof kinds.
+=======
+## [8.54.0] - 2026-04-05
+
+### Added
+- Initial `go-supertorrent/` Go port of the SuperTorrent / supernode control plane, including:
+  - wallet creation/loading
+  - persisted torrent registry
+  - core anchor tracking
+  - `/stats`
+  - `/add-torrent`
+  - `/remove-torrent`
+  - `/upload`
+  - `/spora/:challenge`
+  - lattice bootstrap/open flow
+  - market bid polling and `accept_bid` submission
+- Generated mirrored parity documentation in `docs/ai/testing/parity-scenario-matrix.md`, rendered from the shared scenario and fixture catalogs.
+- Root script `npm run parity:matrix` for regenerating the mirrored parity matrix.
+- Explicit Node/Go test references in the shared parity scenario catalog, including the demurrage-sensitive dual-collector-action mirrored scenario.
+
+### Changed
+- Began the practical Go port of the remaining Node-native supernode control plane without attempting to overclaim full BitTorrent transport parity before the control-plane foundation exists.
+- Advanced the parity campaign again by tying scenario inventory, fixture fragments, and concrete test references into generated testing documentation.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go mod tidy`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+- `cd . && npm run parity:matrix`
+>>>>>>> 1eee9838 (feat(go): add initial supertorrent control-plane port v8.54.0)
 
 ## [8.52.0] - 2026-04-05
 

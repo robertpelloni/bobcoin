@@ -21,7 +21,8 @@
   - Go bootstrap snapshots now include proposals, votes, market bids, swaps, NFTs, anchors, and multisigs.
   - Go now rejects unknown block types explicitly and delays state-hash mutation until successful block application.
 - Remaining architectural truth:
-  - `game-server` and `supertorrent` are still Node services.
+  - `game-server` is still Node-native.
+  - `supertorrent` now has an initial Go control-plane port in `go-supertorrent/`, but full BitTorrent/WebRTC engine parity is still incomplete.
   - Rust/SP1 remains the correct place for proof generation/verification.
   - Some semantics still need final reconciliation between Node and Go, especially around economic edge cases and non-lattice service behavior.
 - Audit architecture note:
@@ -67,6 +68,8 @@
   - As of v8.51.0, the shared scenario catalog now explicitly tracks the demurrage-sensitive dual-collector-action mirrored scenario, keeping the newer economic replay surface visible in the shared parity inventory.
   - As of v8.52.0, the shared parity scenario catalog also records explicit `nodeTest` and `goTest` references for each mirrored scenario, so the catalog now points at concrete executable coverage instead of only describing scenario shape.
   - As of v8.52.0, both Node and Go validate those explicit test references, making test-to-scenario drift executable in addition to scenario-to-fragment drift.
+  - As of v8.54.0, `go-supertorrent/` ports the supernode control plane into Go: wallet/bootstrap flow, torrent registry persistence, `/stats`, `/add-torrent`, `/remove-torrent`, `/upload`, `/spora/:challenge`, and lattice market bid polling/acceptance.
+  - As of v8.54.0, mirrored parity inventory is also rendered into `docs/ai/testing/parity-scenario-matrix.md` via `npm run parity:matrix`, so the shared scenario/fragment/test-reference catalogs now produce human-readable audit documentation as well as executable validation.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

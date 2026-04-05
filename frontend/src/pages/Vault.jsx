@@ -10,7 +10,7 @@ import {
 } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
-import { encryptFileForVault } from '../cryptoUtils';
+import { encryptFileForVault, hashData, signBlock, verifySignature } from '../cryptoUtils';
 import { StorageWasmWorkbench } from '../components/StorageWasmWorkbench';
 import './Vault.css';
 
@@ -139,6 +139,7 @@ function buildOwnerProfiles(manifestAnchors, legacyAnchors) {
 
 const VAULT_PRESETS_KEY = 'bobcoin_vault_filter_presets';
 const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
+const SOURCE_DIAGNOSTICS_PACKAGE_FORMAT = 'bobcoin-source-diagnostics-package-v1';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function sortAnchors(anchors, sortMode, ownerProfiles) {
@@ -377,6 +378,66 @@ function compactSourceProfile(profile) {
     };
 }
 
+function canonicalizeForSigning(value) {
+    if (Array.isArray(value)) {
+        return value.map(canonicalizeForSigning);
+    }
+    if (value && typeof value === 'object') {
+        return Object.keys(value)
+            .sort()
+            .reduce((acc, key) => {
+                acc[key] = canonicalizeForSigning(value[key]);
+                return acc;
+            }, {});
+    }
+    return value;
+}
+
+async function buildSignedDiagnosticsPackage(diagnostics, keypair) {
+    if (!keypair?.publicKey || !keypair?.privateKey) {
+        throw new Error('Unlock a Bobcoin wallet before exporting a signed diagnostics package.');
+    }
+    const canonicalDiagnostics = canonicalizeForSigning(diagnostics);
+    const diagnosticsHash = await hashData(JSON.stringify(canonicalDiagnostics));
+    const signature = await signBlock(diagnosticsHash, keypair.privateKey);
+    return {
+        format: SOURCE_DIAGNOSTICS_PACKAGE_FORMAT,
+        exportedAt: new Date().toISOString(),
+        exporter: {
+            publicKey: keypair.publicKey,
+            derivationPath: keypair.derivationPath || null,
+            index: Number.isInteger(keypair.index) ? keypair.index : null,
+        },
+        signature: {
+            algorithm: 'ed25519-sha256-base58',
+            messageHash: diagnosticsHash,
+            signature,
+        },
+        diagnostics: canonicalDiagnostics,
+    };
+}
+
+async function verifyDiagnosticsPackage(value) {
+    if (!value || value.format !== SOURCE_DIAGNOSTICS_PACKAGE_FORMAT) {
+        throw new Error('Unsupported diagnostics package format.');
+    }
+    if (!value.exporter?.publicKey || !value.signature?.messageHash || !value.signature?.signature || !value.diagnostics) {
+        throw new Error('Diagnostics package is missing required signature metadata.');
+    }
+    const canonicalDiagnostics = canonicalizeForSigning(value.diagnostics);
+    const computedHash = await hashData(JSON.stringify(canonicalDiagnostics));
+    const signatureValid = computedHash === value.signature.messageHash
+        && verifySignature(value.signature.messageHash, value.signature.signature, value.exporter.publicKey);
+    return {
+        package: {
+            ...value,
+            diagnostics: canonicalDiagnostics,
+        },
+        computedHash,
+        signatureValid,
+    };
+}
+
 function buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, reports) {
     const rankedByReliability = [...sourceProfiles]
         .filter(profile => profile.totalObservations > 0)
@@ -448,6 +509,7 @@ export function Vault() {
     const [presetName, setPresetName] = useState('');
     const [savedPresets, setSavedPresets] = useState([]);
     const [recoveryReports, setRecoveryReports] = useState([]);
+    const [diagnosticsPackageReview, setDiagnosticsPackageReview] = useState(null);
 
     useEffect(() => {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -606,6 +668,47 @@ export function Vault() {
 
     const exportComparativeSourceDiagnostics = () => {
         downloadJson('vault-source-comparative-diagnostics.json', buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, recoveryReports));
+    };
+
+    const exportSignedComparativeSourceDiagnostics = async () => {
+        try {
+            const diagnostics = buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, recoveryReports);
+            const signedPackage = await buildSignedDiagnosticsPackage(diagnostics, keypair);
+            downloadJson('vault-source-comparative-diagnostics.signed.json', signedPackage);
+            setDiagnosticsPackageReview({
+                source: 'local-export',
+                verified: true,
+                exporter: signedPackage.exporter,
+                package: signedPackage,
+                computedHash: signedPackage.signature.messageHash,
+            });
+        } catch (error) {
+            alert(error.message);
+        }
+    };
+
+    const importSignedComparativeSourceDiagnostics = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            const parsed = JSON.parse(await file.text());
+            const verified = await verifyDiagnosticsPackage(parsed);
+            setDiagnosticsPackageReview({
+                source: file.name,
+                verified: verified.signatureValid,
+                exporter: verified.package.exporter,
+                package: verified.package,
+                computedHash: verified.computedHash,
+            });
+            if (!verified.signatureValid) {
+                alert('Diagnostics package loaded, but its signature could not be verified.');
+            }
+        } catch (error) {
+            alert(`Failed to import signed diagnostics package: ${error.message}`);
+            setDiagnosticsPackageReview(null);
+        } finally {
+            event.target.value = '';
+        }
     };
 
     const copyVisibleLocators = async () => {
@@ -843,6 +946,11 @@ export function Vault() {
                     </div>
                     <div className="section-actions-row">
                         <button className="cyber-button small secondary" onClick={exportComparativeSourceDiagnostics}>EXPORT COMPARATIVE DIAGNOSTICS</button>
+                        <button className="cyber-button small secondary" onClick={exportSignedComparativeSourceDiagnostics}>EXPORT SIGNED PACKAGE</button>
+                        <label className="vault-import-label">
+                            <span className="cyber-button small secondary">IMPORT SIGNED PACKAGE</span>
+                            <input type="file" accept="application/json" onChange={importSignedComparativeSourceDiagnostics} />
+                        </label>
                     </div>
                 </div>
                 <div className="vault-summary-grid reliability-summary-grid">
@@ -882,6 +990,25 @@ export function Vault() {
                         </div>
                     </div>
                 </div>
+                {diagnosticsPackageReview && (
+                    <div className={`diagnostics-package-review ${diagnosticsPackageReview.verified ? 'verified' : 'invalid'}`}>
+                        <div className="vault-stat-label">SIGNED DIAGNOSTICS PACKAGE REVIEW</div>
+                        <div className="source-insight-value">{diagnosticsPackageReview.source}</div>
+                        <div className="leaderboard-meta">
+                            EXPORTER: {diagnosticsPackageReview.exporter?.publicKey || 'UNKNOWN'}
+                        </div>
+                        <div className="leaderboard-meta">
+                            HASH: {diagnosticsPackageReview.computedHash}
+                        </div>
+                        <div className="source-badge-row" style={{ marginTop: '0.75rem' }}>
+                            <span className={`vault-badge ${diagnosticsPackageReview.verified ? 'health-robust' : 'health-fragile'}`}>
+                                {diagnosticsPackageReview.verified ? 'SIGNATURE VERIFIED' : 'SIGNATURE INVALID'}
+                            </span>
+                            <span className="vault-badge neutral">SOURCES {diagnosticsPackageReview.package?.diagnostics?.overview?.distinctSources || 0}</span>
+                            <span className="vault-badge neutral">REPORTS {diagnosticsPackageReview.package?.diagnostics?.overview?.totalReports || 0}</span>
+                        </div>
+                    </div>
+                )}
                 <div className="leaderboard-grid">
                     {sourceProfiles.slice(0, 8).map((profile) => (
                         <div key={profile.host} className="leaderboard-card source-profile-card">

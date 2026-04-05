@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.68.0] - 2026-04-05
+
+### Added
+- **Signed Diagnostics Packages**: Vault can now export comparative source diagnostics as signed shareable packages using the active Bobcoin wallet keypair.
+- **Diagnostics Verification Workflow**: Vault can now import signed diagnostics packages, recompute canonical payload hashes, verify the embedded Ed25519 signature, and surface package review metadata in-browser.
+
+### Changed
+- **Shareable Reliability Evidence**: Comparative source diagnostics are no longer limited to unsigned JSON export; operators can now produce attributable diagnostic artifacts suitable for handoff and authenticity checks.
+
+### Validation
+- `cd frontend && npm run build`
+
 ## [8.67.0] - 2026-04-05
 
 ### Added

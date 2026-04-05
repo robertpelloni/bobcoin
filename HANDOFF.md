@@ -1,31 +1,39 @@
-# Session Handoff - 2026-04-05 (v8.67.0)
+# Session Handoff - 2026-04-05 (v8.68.0)
 
 ## Executive Summary
-This pass extends the long-horizon reliability system with an operator-portable export path. Vault already computed comparative source health in-browser; now it can export a structured comparative diagnostics bundle so the same evidence can be reviewed offline, attached to incident notes, or handed across operators without screenshots.
+This pass upgrades comparative source diagnostics from plain exportable JSON into signed shareable packages. Vault can now sign diagnostics with the active Bobcoin wallet keypair, and it can also import and verify received packages by recomputing the canonical payload hash and checking the embedded Ed25519 signature.
 
 ## What This Pass Added
 
-### 1. Comparative source diagnostics export bundle
+### 1. Signed comparative diagnostics packages
 **Files:**
 - `frontend/src/pages/Vault.jsx`
 - `frontend/src/pages/Vault.css`
 
-Vault now exports `vault-source-comparative-diagnostics.json` containing:
-- retention summary for locally retained recovery reports
-- overview metrics (restores, parity recoveries, recent successes/failures, healthiest/at-risk/improving/degrading sources)
-- reliability leaderboards
-- attention-ranked sources
-- trend buckets (`degrading`, `improving`, `stable`, `new`, `quiet`)
-- per-source compact counters and category breakdowns
+Vault now supports:
+- exporting a plain comparative diagnostics JSON bundle
+- exporting a signed diagnostics package
+- importing a signed diagnostics package for local verification/review
 
-### 2. UX integration
-The long-horizon source reliability section now includes a dedicated export action so operators can export comparative diagnostics directly from the same place they inspect trends.
+The signed package includes:
+- package format identifier
+- exporter public key and derivation metadata (when available)
+- canonical diagnostics payload
+- diagnostics payload hash
+- Ed25519 signature over the payload hash
+
+### 2. In-browser verification UX
+Vault now verifies imported diagnostics packages by:
+- canonicalizing the embedded diagnostics payload
+- recomputing the payload hash
+- verifying the signature against the embedded public key
+- surfacing the verification result and package metadata in the reliability section
 
 ## Validation
 Executed successfully:
 - `cd frontend && npm run build`
 
 ## Recommended Next Step
-1. Continue the operator-facing diagnostics push by considering signed/encrypted export bundles later on
-2. Keep improving frontend chunk splitting around `node-seal`
+1. Keep improving frontend chunk splitting around `node-seal`
+2. Continue deeper operator-facing diagnostics and provenance workflows
 3. Continue replacing remaining specialized simulation layers where reasonable

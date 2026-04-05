@@ -183,6 +183,23 @@
     padding: 1rem;
 }
 
+.diagnostics-package-review {
+    border: 1px solid #2b3a3a;
+    background: rgba(0, 255, 255, 0.05);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.diagnostics-package-review.invalid {
+    border-color: #552222;
+    background: rgba(255, 64, 64, 0.06);
+}
+
+.diagnostics-package-review.verified {
+    border-color: #1f5a3b;
+    background: rgba(64, 255, 160, 0.05);
+}
+
 .source-insight-value {
     color: #fff;
     font-family: monospace;

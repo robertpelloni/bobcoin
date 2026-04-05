@@ -49,6 +49,7 @@
 - [x] **Archive Discovery & Provenance**: Vault now exposes search/filter controls and signed/cloaked provenance badging for anchored content across personal and network archive views.
 - [x] **Archive Trust & Reputation Overlay**: Vault now derives lightweight trust scores, tier badges, owner-level provenance summaries, and a sovereign publisher leaderboard.
 - [x] **Comparative Source Diagnostics Export**: Vault can now export comparative reliability diagnostics derived from retained recovery reports, making longer-horizon source behavior portable outside the browser session.
+- [x] **Signed Shareable Diagnostics Packages**: Vault can now sign comparative diagnostics exports with the active Bobcoin wallet and verify imported packages in-browser, making reliability evidence attributable and easier to hand across operators.
 - [x] **DEX / Token Swap UI**: Built a high-fidelity sovereign exchange interface at `/dex` and implemented a native on-chain AMM engine ($x * y = k$) in Go.
 - [x] **Wallet Hardening (Mnemonic Backup)**: Implemented 12-word seed phrases and account restoration to prevent fund loss from cache clearing.
 - [x] **Durable Data UI**: Built the **Cyber-Vault** interface for anchoring permanent file storage to the SPoRA-backed network.

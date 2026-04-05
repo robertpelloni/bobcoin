@@ -53,6 +53,8 @@
   - As of v8.43.0, Go durable recovery also validates recovered `data_anchor` typing and recovered NFT ownership inside the same same-timestamp mixed ledger, not just proposal and swap state.
   - As of v8.45.0, the Node reference lattice also supports typed `publish_manifest` anchor processing, so manifest-style anchors are no longer missing from the mirrored cross-client replay surface.
   - As of v8.45.0, both Node and Go now exercise same-timestamp mixed ledgers that preserve governance state, HTLC lifecycle state, NFT ownership, `publish_manifest` anchors, and `data_anchor` typing together.
+  - As of v8.46.0, both Node and Go now also exercise a larger three-account same-timestamp mixed ledger that combines governance, voting, market bids, NFT ownership transfer, HTLC lifecycle state, `publish_manifest`, and later `data_anchor` finalization.
+  - As of v8.46.0, Go durable recovery now explicitly validates accepted market bid reconstruction inside the same broader same-timestamp mixed ledger, not just proposals, swaps, NFTs, and anchors.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

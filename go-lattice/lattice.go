@@ -137,27 +137,37 @@ func (l *Lattice) Recovery() {
 	remaining := append([]*Block(nil), blocks...)
 	recovered := 0
 	for len(remaining) > 0 {
-		nextRemaining := make([]*Block, 0, len(remaining))
-		failures := make([]recoveryFailure, 0, len(remaining))
-		progress := false
-
-		for _, b := range remaining {
-			if err := l.ProcessBlock(b, true); err != nil {
-				nextRemaining = append(nextRemaining, b)
-				failures = append(failures, recoveryFailure{block: b, err: err})
-				continue
-			}
-			recovered++
-			progress = true
+		bucketEnd := 1
+		for bucketEnd < len(remaining) && remaining[bucketEnd].Timestamp == remaining[0].Timestamp {
+			bucketEnd++
 		}
+		bucket := append([]*Block(nil), remaining[:bucketEnd]...)
+		remaining = remaining[bucketEnd:]
 
-		if !progress {
-			for _, failure := range failures {
-				fmt.Printf("[Recovery Error] Block %s rejected during replay: %v\n", failure.block.Hash[:8], failure.err)
+		for len(bucket) > 0 {
+			nextBucket := make([]*Block, 0, len(bucket))
+			failures := make([]recoveryFailure, 0, len(bucket))
+			progress := false
+
+			for _, b := range bucket {
+				if err := l.ProcessBlock(b, true); err != nil {
+					nextBucket = append(nextBucket, b)
+					failures = append(failures, recoveryFailure{block: b, err: err})
+					continue
+				}
+				recovered++
+				progress = true
 			}
-			break
+
+			if !progress {
+				for _, failure := range failures {
+					fmt.Printf("[Recovery Error] Block %s rejected during replay: %v\n", failure.block.Hash[:8], failure.err)
+				}
+				remaining = nil
+				break
+			}
+			bucket = nextBucket
 		}
-		remaining = nextRemaining
 	}
 	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", recovered, l.StateHash[:16])
 }
@@ -499,7 +509,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		}
 		endTime, _ := proposal["endTime"].(string)
 		if endTime != "" {
-			if parsed, err := time.Parse(time.RFC3339, endTime); err == nil && time.Now().After(parsed) {
+			if parsed, err := time.Parse(time.RFC3339, endTime); err == nil && block.Timestamp >= parsed.UnixMilli() {
 				return fmt.Errorf("proposal is closed")
 			}
 		}
@@ -879,29 +889,38 @@ func (l *Lattice) AuditState() error {
 	shadow := newEphemeralLattice()
 	remaining := append([]orderedBlock(nil), ordered...)
 	for len(remaining) > 0 {
-		nextRemaining := make([]orderedBlock, 0, len(remaining))
-		progress := false
-		var lastErr error
-		var lastHash string
-
-		for _, entry := range remaining {
-			cloned, err := cloneBlock(entry.block)
-			if err != nil {
-				return fmt.Errorf("audit failed: could not clone block %s: %v", entry.block.Hash[:8], err)
-			}
-			if err := shadow.ProcessBlock(cloned, true); err != nil {
-				nextRemaining = append(nextRemaining, entry)
-				lastErr = err
-				lastHash = entry.block.Hash
-				continue
-			}
-			progress = true
+		bucketEnd := 1
+		for bucketEnd < len(remaining) && remaining[bucketEnd].block.Timestamp == remaining[0].block.Timestamp {
+			bucketEnd++
 		}
+		bucket := append([]orderedBlock(nil), remaining[:bucketEnd]...)
+		remaining = remaining[bucketEnd:]
 
-		if !progress {
-			return fmt.Errorf("audit failed during deterministic replay of block %s: %v", lastHash[:8], lastErr)
+		for len(bucket) > 0 {
+			nextBucket := make([]orderedBlock, 0, len(bucket))
+			progress := false
+			var lastErr error
+			var lastHash string
+
+			for _, entry := range bucket {
+				cloned, err := cloneBlock(entry.block)
+				if err != nil {
+					return fmt.Errorf("audit failed: could not clone block %s: %v", entry.block.Hash[:8], err)
+				}
+				if err := shadow.ProcessBlock(cloned, true); err != nil {
+					nextBucket = append(nextBucket, entry)
+					lastErr = err
+					lastHash = entry.block.Hash
+					continue
+				}
+				progress = true
+			}
+
+			if !progress {
+				return fmt.Errorf("audit failed during deterministic replay of block %s: %v", lastHash[:8], lastErr)
+			}
+			bucket = nextBucket
 		}
-		remaining = nextRemaining
 	}
 
 	l.Pending = shadow.Pending

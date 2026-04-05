@@ -1046,6 +1046,227 @@ func TestAuditStateHandlesSameTimestampCrossAccountDependencies(t *testing.T) {
 	}
 }
 
+func TestHistoricalVoteUsesBlockTimestampNotWallClock(t *testing.T) {
+	keys := deriveDescendingKeypairs("semantic parity historical vote", 2)
+	proposer := keys[0]
+	voter := keys[1]
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(proposer, 1000)
+	signTestBlock(t, genesis, proposer["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected proposer genesis to succeed, got %v", err)
+	}
+
+	sendToVoter := &Block{
+		Type:          "send",
+		Account:       proposer["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       800,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          voter["publicKey"],
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     2,
+	}
+	signTestBlock(t, sendToVoter, proposer["privateKey"])
+	if err := l.ProcessBlock(sendToVoter, true); err != nil {
+		t.Fatalf("expected sendToVoter to succeed, got %v", err)
+	}
+
+	openVoter := &Block{
+		Type:          "open",
+		Account:       voter["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToVoter.Hash,
+		Spora:         validSporaForOpenAccount(voter["publicKey"]),
+		Timestamp:     3,
+	}
+	signTestBlock(t, openVoter, voter["privateKey"])
+	if err := l.ProcessBlock(openVoter, true); err != nil {
+		t.Fatalf("expected openVoter to succeed, got %v", err)
+	}
+
+	proposal := &Block{
+		Type:          "proposal",
+		Account:       proposer["publicKey"],
+		Previous:      &sendToVoter.Hash,
+		Balance:       790,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "DAO_PROPOSAL",
+		Spora:         validSpora(sendToVoter.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Historical deterministic vote",
+			"endTime": time.Unix(5, 0).Format(time.RFC3339),
+		},
+		Timestamp: 4,
+	}
+	signTestBlock(t, proposal, proposer["privateKey"])
+	if err := l.ProcessBlock(proposal, true); err != nil {
+		t.Fatalf("expected proposal to succeed, got %v", err)
+	}
+
+	vote := &Block{
+		Type:          "vote",
+		Account:       voter["publicKey"],
+		Previous:      &openVoter.Hash,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          proposal.Hash,
+		Spora:         validSpora(openVoter.Hash),
+		Payload:       map[string]interface{}{"vote": "FOR"},
+		Timestamp:     5,
+	}
+	signTestBlock(t, vote, voter["privateKey"])
+	if err := l.ProcessBlock(vote, true); err != nil {
+		t.Fatalf("expected historical vote before proposal expiry to succeed, got %v", err)
+	}
+
+	votes := l.Votes[proposal.Hash]
+	if _, ok := votes[voter["publicKey"]]; !ok {
+		t.Fatalf("expected historical vote to be recorded")
+	}
+}
+
+func TestAuditStateReplaysSameTimestampVoteBeforeLaterExpiry(t *testing.T) {
+	keys := deriveDescendingKeypairs("semantic parity same ts proposal vote", 2)
+	proposer := keys[0]
+	voter := keys[1]
+	if proposer["publicKey"] <= voter["publicKey"] {
+		t.Fatalf("expected proposer account ordering to sort after voter")
+	}
+	l := NewLattice(NewDBManager(":memory:"))
+	base := time.Now().Add(time.Hour).Truncate(time.Second).UnixMilli()
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       proposer["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     base - 3000,
+	}
+	signTestBlock(t, genesis, proposer["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected proposer genesis to succeed, got %v", err)
+	}
+
+	sendBalance := l.GetBalance(proposer["publicKey"], base-2000) - 200
+	sendToVoter := &Block{
+		Type:          "send",
+		Account:       proposer["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       sendBalance,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          voter["publicKey"],
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     base - 2000,
+	}
+	signTestBlock(t, sendToVoter, proposer["privateKey"])
+	if err := l.ProcessBlock(sendToVoter, true); err != nil {
+		t.Fatalf("expected sendToVoter to succeed, got %v", err)
+	}
+
+	openVoter := &Block{
+		Type:          "open",
+		Account:       voter["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToVoter.Hash,
+		Spora:         validSporaForOpenAccount(voter["publicKey"]),
+		Timestamp:     base - 1000,
+	}
+	signTestBlock(t, openVoter, voter["privateKey"])
+	if err := l.ProcessBlock(openVoter, true); err != nil {
+		t.Fatalf("expected openVoter to succeed, got %v", err)
+	}
+
+	proposalBalance := l.GetBalance(proposer["publicKey"], base) - 10
+	proposal := &Block{
+		Type:          "proposal",
+		Account:       proposer["publicKey"],
+		Previous:      &sendToVoter.Hash,
+		Balance:       proposalBalance,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "DAO_PROPOSAL",
+		Spora:         validSpora(sendToVoter.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Same timestamp proposal vote",
+			"endTime": time.UnixMilli(base + 1000).Format(time.RFC3339),
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, proposal, proposer["privateKey"])
+	if err := l.ProcessBlock(proposal, true); err != nil {
+		t.Fatalf("expected proposal to succeed, got %v", err)
+	}
+
+	voteBalance := l.GetBalance(voter["publicKey"], base)
+	vote := &Block{
+		Type:          "vote",
+		Account:       voter["publicKey"],
+		Previous:      &openVoter.Hash,
+		Balance:       voteBalance,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          proposal.Hash,
+		Spora:         validSpora(openVoter.Hash),
+		Payload:       map[string]interface{}{"vote": "FOR"},
+		Timestamp:     base,
+	}
+	signTestBlock(t, vote, voter["privateKey"])
+	if err := l.ProcessBlock(vote, true); err != nil {
+		t.Fatalf("expected same-timestamp vote to succeed, got %v", err)
+	}
+
+	manifestBalance := l.GetBalance(proposer["publicKey"], base+2000)
+	manifest := &Block{
+		Type:          "publish_manifest",
+		Account:       proposer["publicKey"],
+		Previous:      &proposal.Hash,
+		Balance:       manifestBalance,
+		StakedBalance: 0,
+		Height:        3,
+		Link:          "proposal-vote-manifest",
+		Spora:         validSpora(proposal.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "proposal-vote-manifest",
+			"locator":     "bobtorrent://manifest/proposal-vote",
+			"manifestUrl": "http://localhost:8000/manifests/proposal-vote",
+		},
+		Timestamp: base + 2000,
+	}
+	signTestBlock(t, manifest, proposer["privateKey"])
+	if err := l.ProcessBlock(manifest, true); err != nil {
+		t.Fatalf("expected post-expiry manifest to succeed, got %v", err)
+	}
+
+	l.StateHash = "broken"
+	l.MerkleRoot = "broken"
+	l.Pending = map[string][]*PendingTx{}
+	if err := l.AuditState(); err != nil {
+		t.Fatalf("expected audit replay of same-timestamp vote before later expiry to succeed, got %v", err)
+	}
+	proposalMap := l.Proposals[proposal.Hash].(map[string]interface{})
+	if proposalMap["status"] != "Passed" {
+		t.Fatalf("expected replayed proposal status Passed, got %v", proposalMap["status"])
+	}
+	if _, ok := l.Votes[proposal.Hash][voter["publicKey"]]; !ok {
+		t.Fatalf("expected replayed vote to be preserved after audit")
+	}
+}
+
 func TestRecoveryHandlesCascadingSameTimestampDependenciesFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "same-timestamp-recovery.sqlite")
 	keys := deriveDescendingKeypairs("semantic parity recovery cascade", 3)
@@ -1149,6 +1370,147 @@ func TestRecoveryHandlesCascadingSameTimestampDependenciesFromSQLite(t *testing.
 	}
 	if len(recovered.Pending[relay["publicKey"]]) != 0 || len(recovered.Pending[receiver["publicKey"]]) != 0 {
 		t.Fatalf("expected no recovered pending transactions for fully received same-timestamp cascade")
+	}
+}
+
+func TestRecoveryReplaysSameTimestampVoteBeforeLaterExpiryFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "proposal-vote-recovery.sqlite")
+	keys := deriveDescendingKeypairs("semantic parity recovery proposal vote", 2)
+	proposer := keys[0]
+	voter := keys[1]
+	if proposer["publicKey"] <= voter["publicKey"] {
+		t.Fatalf("expected proposer account ordering to sort after voter")
+	}
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+	base := time.Now().Add(time.Hour).Truncate(time.Second).UnixMilli()
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       proposer["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     base - 3000,
+	}
+	signTestBlock(t, genesis, proposer["privateKey"])
+	if err := l.ProcessBlock(genesis, false); err != nil {
+		t.Fatalf("expected proposer genesis persistence to succeed, got %v", err)
+	}
+
+	sendBalance := l.GetBalance(proposer["publicKey"], base-2000) - 200
+	sendToVoter := &Block{
+		Type:          "send",
+		Account:       proposer["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       sendBalance,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          voter["publicKey"],
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     base - 2000,
+	}
+	signTestBlock(t, sendToVoter, proposer["privateKey"])
+	if err := l.ProcessBlock(sendToVoter, false); err != nil {
+		t.Fatalf("expected sendToVoter persistence to succeed, got %v", err)
+	}
+
+	openVoter := &Block{
+		Type:          "open",
+		Account:       voter["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToVoter.Hash,
+		Spora:         validSporaForOpenAccount(voter["publicKey"]),
+		Timestamp:     base - 1000,
+	}
+	signTestBlock(t, openVoter, voter["privateKey"])
+	if err := l.ProcessBlock(openVoter, false); err != nil {
+		t.Fatalf("expected openVoter persistence to succeed, got %v", err)
+	}
+
+	proposalBalance := l.GetBalance(proposer["publicKey"], base) - 10
+	proposal := &Block{
+		Type:          "proposal",
+		Account:       proposer["publicKey"],
+		Previous:      &sendToVoter.Hash,
+		Balance:       proposalBalance,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "DAO_PROPOSAL",
+		Spora:         validSpora(sendToVoter.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Durable same timestamp proposal vote",
+			"endTime": time.UnixMilli(base + 1000).Format(time.RFC3339),
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, proposal, proposer["privateKey"])
+	if err := l.ProcessBlock(proposal, false); err != nil {
+		t.Fatalf("expected proposal persistence to succeed, got %v", err)
+	}
+
+	voteBalance := l.GetBalance(voter["publicKey"], base)
+	vote := &Block{
+		Type:          "vote",
+		Account:       voter["publicKey"],
+		Previous:      &openVoter.Hash,
+		Balance:       voteBalance,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          proposal.Hash,
+		Spora:         validSpora(openVoter.Hash),
+		Payload:       map[string]interface{}{"vote": "FOR"},
+		Timestamp:     base,
+	}
+	signTestBlock(t, vote, voter["privateKey"])
+	if err := l.ProcessBlock(vote, false); err != nil {
+		t.Fatalf("expected vote persistence to succeed, got %v", err)
+	}
+
+	manifestBalance := l.GetBalance(proposer["publicKey"], base+2000)
+	manifest := &Block{
+		Type:          "publish_manifest",
+		Account:       proposer["publicKey"],
+		Previous:      &proposal.Hash,
+		Balance:       manifestBalance,
+		StakedBalance: 0,
+		Height:        3,
+		Link:          "durable-proposal-vote-manifest",
+		Spora:         validSpora(proposal.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "durable-proposal-vote-manifest",
+			"locator":     "bobtorrent://manifest/durable-proposal-vote",
+			"manifestUrl": "http://localhost:8000/manifests/durable-proposal-vote",
+		},
+		Timestamp: base + 2000,
+	}
+	signTestBlock(t, manifest, proposer["privateKey"])
+	if err := l.ProcessBlock(manifest, false); err != nil {
+		t.Fatalf("expected manifest persistence to succeed, got %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before proposal vote recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	proposalMap, ok := recovered.Proposals[proposal.Hash].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected recovered proposal to exist")
+	}
+	if proposalMap["status"] != "Passed" {
+		t.Fatalf("expected recovered proposal status Passed, got %v", proposalMap["status"])
+	}
+	if _, ok := recovered.Votes[proposal.Hash][voter["publicKey"]]; !ok {
+		t.Fatalf("expected recovered vote to be preserved after restart")
 	}
 }
 

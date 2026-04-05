@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.37.0] - 2026-04-05
+
+### Added
+- Governance replay regression coverage for the Go lattice:
+  - historical votes now explicitly test block-timestamp-based validity instead of accidentally depending on wall-clock time
+  - same-timestamp `proposal`/`vote` replay with a later post-expiry block is now covered in both audit and SQLite-backed cold-boot recovery
+  - hostile account-ordering coverage now proves earlier-timestamp governance work cannot be invalidated by later-timestamp blocks during replay
+
+### Changed
+- Hardened Go replay semantics so dependency resolution is completed within each timestamp bucket before later timestamps are processed in both audit replay and cold-boot recovery.
+- Fixed vote validation to compare proposal expiry against the block's timestamp instead of the machine's current wall clock, making replay deterministic and historically correct.
+
+### Validation
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.36.0] - 2026-04-04
 
 ### Added

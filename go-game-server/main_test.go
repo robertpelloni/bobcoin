@@ -94,6 +94,107 @@ func TestFHEOracleBridgeEndpoint(t *testing.T) {
 	}
 }
 
+func TestSubmitProofEndpointUsesBridgeAndMints(t *testing.T) {
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/verify" {
+			t.Fatalf("expected /verify path, got %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "verified": true})
+	}))
+	defer bridge.Close()
+
+	var processedBlock map[string]interface{}
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/frontier/"):
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"frontier": "abcdef1234567890abcdef1234567890abcdef12", "balance": 1000000.0, "height": 0})
+		case r.URL.Path == "/process":
+			_ = json.NewDecoder(r.Body).Decode(&processedBlock)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "minted-hash"})
+		default:
+			t.Fatalf("unexpected lattice path: %s", r.URL.Path)
+		}
+	}))
+	defer lattice.Close()
+
+	service := newTestService(t)
+	service.cfg.ZKServiceURL = bridge.URL
+	service.cfg.LatticeURL = lattice.URL
+	frontier := "prefetched-frontier"
+	service.systemFrontier = &frontier
+
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"playerId":"p1","publicValues":{"address":"player-address","score":10}}}`))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 from submit-proof bridge path, got %d with %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode submit-proof response: %v", err)
+	}
+	if body["zkVerified"] != true {
+		t.Fatalf("expected zkVerified true, got %v", body["zkVerified"])
+	}
+	blockPayload, ok := processedBlock["block"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected process payload to include block")
+	}
+	if blockPayload["type"] != "send" {
+		t.Fatalf("expected send block from proof mint, got %v", blockPayload["type"])
+	}
+	if blockPayload["link"] != "player-address" {
+		t.Fatalf("expected minted send to target player address, got %v", blockPayload["link"])
+	}
+}
+
+func TestMintEndpointSendsSystemFunds(t *testing.T) {
+	var processedBlock map[string]interface{}
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/frontier/"):
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"frontier": "abcdef1234567890abcdef1234567890abcdef12", "balance": 1000000.0, "height": 0})
+		case r.URL.Path == "/process":
+			_ = json.NewDecoder(r.Body).Decode(&processedBlock)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "minted-hash"})
+		default:
+			t.Fatalf("unexpected lattice path: %s", r.URL.Path)
+		}
+	}))
+	defer lattice.Close()
+
+	service := newTestService(t)
+	service.cfg.LatticeURL = lattice.URL
+	frontier := "prefetched-frontier"
+	service.systemFrontier = &frontier
+
+	req := httptest.NewRequest(http.MethodPost, "/mint", strings.NewReader(`{"amount":25,"reason":"test-mint","address":"wallet-target"}`))
+	rec := httptest.NewRecorder()
+	service.handleMint(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 from mint endpoint, got %d with %s", rec.Code, rec.Body.String())
+	}
+	blockPayload, ok := processedBlock["block"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected process payload to include block")
+	}
+	if blockPayload["type"] != "send" || blockPayload["link"] != "wallet-target" {
+		t.Fatalf("expected send block to wallet-target, got %+v", blockPayload)
+	}
+}
+
+func TestFHEOracleBridgeNotConfigured(t *testing.T) {
+	service := newTestService(t)
+	req := httptest.NewRequest(http.MethodPost, "/fhe-oracle", strings.NewReader(`{"cipherText":"cipher-123"}`))
+	rec := httptest.NewRecorder()
+	service.handleFHEOracle(rec, req)
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("expected 501 when FHE bridge is missing, got %d", rec.Code)
+	}
+}
+
 func TestMatchmakingSignalingFlow(t *testing.T) {
 	service := newTestService(t)
 	mux := http.NewServeMux()

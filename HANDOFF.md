@@ -1,71 +1,64 @@
-# Session Handoff - 2026-04-05 (v8.62.0)
+# Session Handoff - 2026-04-05 (v8.63.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by deepening the quality and testability of `go-supertorrent/`.
+This session continued the Go-port campaign by deepening `go-game-server/` test coverage from helper-level checks into higher-value endpoint-level orchestration tests.
 
-The key outcome is that the Go supertorrent control-plane port now has higher-value orchestration coverage instead of only endpoint-level tests. In particular, bootstrap/open behavior and market-bid polling logic are now directly testable through a single-pass helper.
-
-That is useful because long-running service loops are much easier to evolve safely once their core per-iteration logic is testable in isolation.
+That matters because the game-server Go port is now broad enough that it is useful to validate not only isolated helper functions, but also the actual HTTP handler paths that drive minting, proof processing, and FHE-shell behavior.
 
 ## What Changed
 
-### 1. Added higher-value Go tests for `go-supertorrent/`
-**File:** `go-supertorrent/main_test.go`
+### 1. Expanded `go-game-server/main_test.go`
+**File:** `go-game-server/main_test.go`
 
-The Go supertorrent regression coverage now includes:
-- `TestBootstrapWalletOnLattice`
-- `TestProcessOpenBidsOnce`
-- plus the previously added add/remove, SPoRA, accept-bid, and upload tests
+Added higher-value HTTP-oriented service tests:
+- `TestSubmitProofEndpointUsesBridgeAndMints`
+- `TestMintEndpointSendsSystemFunds`
+- `TestFHEOracleBridgeNotConfigured`
 
-### New covered behaviors
-These tests validate:
-- bootstrap mint request flow from the Go supertorrent service to the game-server
-- pending-funds retrieval
-- lattice `open` block construction for supernode wallet bootstrap
-- one-shot open-bid scan and market-accept behavior through a directly testable helper
-- registry tracking of accepted market-bid magnets
+### Covered behaviors
+These tests now validate:
+- `/submit-proof` using an external verification bridge result and minting through the lattice bridge
+- `/mint` sending system funds through the lattice bridge to the requested address
+- `/fhe-oracle` returning an explicit not-implemented response when no bridge is configured
 
-This is a stronger quality level than only testing isolated endpoints.
+This complements the earlier helper-level tests for:
+- verification-bridge preference
+- fallback score-threshold behavior
+- FHE bridge passthrough
+- WebSocket matchmaking/signaling
 
-### 2. Refactored bid polling into a directly testable helper
-**File:** `go-supertorrent/main.go`
+Together, this means the Go game-server shell is now covered at both:
+- helper level
+- endpoint/orchestration level
 
-Added:
-- `processOpenBidsOnce()`
+### 2. Higher-confidence game-server shell coverage
+With these additions, the current Go game-server shell now has executable coverage around the most important currently-ported service boundaries:
+- mint orchestration
+- proof-submission orchestration
+- FHE bridge-shell behavior
+- matchmaking/signaling shell behavior
 
-And updated the long-running ticker loop to call it.
-
-That matters because the market polling logic now has a testable unit with the infinite loop stripped away. This is exactly the kind of refactoring that makes service migration safer as complexity grows.
-
-### 3. Fixed explicit error propagation in `go-supertorrent/`
-**File:** `go-supertorrent/main.go`
-
-Adjusted dynamic error propagation to use:
-- `fmt.Errorf("%s", resp.Error)`
-
-This keeps the Go build/test path explicit and avoids non-constant format-string issues.
+That is a more mature test surface than simple build success or isolated helper checks alone.
 
 ## Validation Performed
 
-### go-supertorrent
+### go-game-server
 Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
 - tests passed
 - build succeeded
 
-### go-game-server
-Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
+### go-supertorrent
+Command run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - build succeeded
-- tests passed
 
 ### Node reference lattice
 Command run:
@@ -93,38 +86,40 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because service migration is not just about adding more endpoints. It is also about making those services maintainable once they grow.
+This pass matters because the game-server Go migration is now entering a more reliable maintenance phase.
 
-By extracting and testing `processOpenBidsOnce()`, the Go supertorrent service is now in a better position to absorb future behavior without hiding everything inside an infinite ticker loop.
+The shell is no longer just ported — its important handler paths are now under executable regression coverage.
 
-The same principle will be useful for future Go service migration work too.
+That means future Go migration work in `go-game-server/` has a stronger safety net, especially around the gameplay-to-lattice orchestration boundaries.
 
 ## Findings / Analysis
 
-### Key finding 1: long-running loops should be broken into testable units early
-The move from “ticker loop only” to “ticker loop calling a single-pass helper” is a small design improvement, but it has outsized testing and maintenance benefits.
+### Key finding 1: endpoint-level tests become necessary once the service shell broadens
+Helper-level tests are useful, but once a Go service starts handling several real request/response flows, handler-level tests become much more valuable.
 
-That pattern is worth reusing whenever other Go service loops grow more complex.
+This pass confirms that `go-game-server/` has reached that point.
 
-### Key finding 2: service-shell-first migration is now being matched by service-testability-first hardening
-The repo is settling into a healthy pattern for service migration:
-1. port the reasonable service shell into Go
-2. once the shell is meaningful, add first-wave Go tests
-3. refactor long-running behavior into smaller testable helpers as needed
+### Key finding 2: the service migration pattern is getting healthier over time
+A good pattern is now visible across the Go service migration work:
+1. port the reasonable service shell
+2. add helper-level tests
+3. add endpoint-level orchestration tests
+4. only then continue pushing deeper into specialist behavior
 
-That is a strong operational pattern to keep following.
+That is a robust way to migrate service responsibilities without letting quality lag too far behind functionality.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
-1. `go-game-server/` still lacks true native FHE behavior and full SP1 backend verification parity
-2. `go-supertorrent/` still does not replace full WebTorrent/WebRTC transport behavior
-3. platform-wide “all-Go” is still not honest yet
+1. `go-game-server/` still lacks full backend SP1 verification parity for `/submit-proof`
+2. `go-game-server/` still lacks true native FHE behavior
+3. `go-supertorrent/` still does not replace full WebTorrent/WebRTC transport behavior
+4. platform-wide “all-Go” is still not honest yet
 
 ## Recommended Next Move
 The best next move now is:
-1. continue deepening the new Go service shells where the next increment is still reasonable
-2. keep turning any long-running service behavior into testable helper units as complexity grows
-3. preserve the parity/testing/documentation backbone while the platform broadens further beyond the lattice core
+1. continue expanding service-layer tests as new Go behavior lands
+2. keep porting the next reasonable specialist slices only where the shell is now stable enough to support them
+3. preserve the parity/testing/documentation backbone as the broader platform migration continues
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -132,8 +127,7 @@ The best next move now is:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-supertorrent/main.go`
-- `go-supertorrent/main_test.go`
+- `go-game-server/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

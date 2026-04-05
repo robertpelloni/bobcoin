@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.63.0] - 2026-04-05
+
+### Added
+- Expanded Go service regression coverage for `go-game-server/` with endpoint-level orchestration tests in `go-game-server/main_test.go`, including:
+  - `/submit-proof` bridge-driven mint flow
+  - `/mint` system-send orchestration flow
+  - `/fhe-oracle` not-configured behavior
+- The new tests now validate the Go game-server shell not only at helper level, but also through higher-value HTTP handler paths that drive lattice minting behavior.
+
+### Changed
+- Hardened the Go game-server port by turning more of its gameplay-to-ledger service shell into executable endpoint-level regression coverage.
+- Continued the service migration pattern of validating bridge-first orchestration paths with real handler tests before claiming deeper backend parity.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go test ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.62.0] - 2026-04-05
 
 ### Added

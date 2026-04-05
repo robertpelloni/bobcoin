@@ -86,6 +86,8 @@
   - As of v8.61.0, both new Go service shells (`go-game-server` and `go-supertorrent`) now have first-wave executable Go regression coverage instead of relying only on successful builds.
   - As of v8.62.0, `go-supertorrent/` now also exposes its open-bid scan as a single-pass helper (`processOpenBidsOnce()`), making bootstrap and market-accept orchestration directly testable instead of only indirectly covered through long-running polling loops.
   - As of v8.62.0, the Go supertorrent tests now cover bootstrap/open flow from minted pending funds and single-pass open-bid processing, not just lower-level endpoint behavior.
+  - As of v8.63.0, `go-game-server/main_test.go` now also covers higher-value handler-level orchestration paths (`/submit-proof`, `/mint`, and `/fhe-oracle` not-configured behavior), not just lower-level helper behavior.
+  - As of v8.63.0, the Go game-server shell is now tested at both helper level and endpoint level for its current proof/mint/FHE orchestration boundaries.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

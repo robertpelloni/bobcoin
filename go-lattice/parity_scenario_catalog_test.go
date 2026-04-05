@@ -45,8 +45,8 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 	if err := json.Unmarshal(scenarioData, &catalog); err != nil {
 		t.Fatalf("failed to parse parity scenario catalog: %v", err)
 	}
-	if catalog.Version < 2 {
-		t.Fatalf("expected scenario catalog version >= 2 for fixture fragment references, got %d", catalog.Version)
+	if catalog.Version < 3 {
+		t.Fatalf("expected scenario catalog version >= 3 for richer fixture fragment references, got %d", catalog.Version)
 	}
 
 	fragmentCatalogPath := filepath.Clean(filepath.Join("..", "testing", "parity-fixture-fragments.json"))
@@ -59,8 +59,8 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 	if err := json.Unmarshal(fragmentData, &fragmentCatalog); err != nil {
 		t.Fatalf("failed to parse parity fixture fragment catalog: %v", err)
 	}
-	if fragmentCatalog.Version < 1 {
-		t.Fatalf("expected positive fixture fragment catalog version, got %d", fragmentCatalog.Version)
+	if fragmentCatalog.Version < 2 {
+		t.Fatalf("expected fixture fragment catalog version >= 2 for governance-extension fragments, got %d", fragmentCatalog.Version)
 	}
 
 	scenariosByID := make(map[string]parityScenario, len(catalog.Scenarios))
@@ -78,6 +78,7 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"same_timestamp_governance_swap_nft_manifest",
 		"multi_account_same_timestamp_mixed",
 		"demurrage_multi_account_same_timestamp_mixed",
+		"multi_account_same_timestamp_dual_collector_actions",
 	}
 
 	requiredFragmentIDs := []string{
@@ -88,6 +89,7 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"same-timestamp-htlc-core",
 		"same-timestamp-nft-core",
 		"collector-market-bid-core",
+		"collector-vote-extension",
 		"manifest-anchor-core",
 		"demurrage-balance-pressure",
 	}

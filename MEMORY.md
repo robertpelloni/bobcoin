@@ -61,6 +61,8 @@
   - As of v8.48.0, both Node and Go test suites validate the shared replay scenario catalog, so scenario-catalog drift is now executable rather than purely documentary.
   - As of v8.49.0, shared replay fixture fragments are now documented in `testing/parity-fixture-fragments.json`, so the parity campaign has started to inventory reusable building blocks, not just whole mirrored scenarios.
   - As of v8.49.0, both Node and Go test suites validate scenario-to-fragment references, making fixture-fragment drift executable as the mirrored parity surface grows.
+  - As of v8.50.0, both Node and Go now also exercise a three-account same-timestamp mirrored scenario where the collector performs dual same-bucket actions (`vote` then `market_bid`) on its own chain, increasing replay pressure beyond one-action-per-secondary-account patterns.
+  - As of v8.50.0, the shared parity catalogs now model this richer structure explicitly via the `collector-vote-extension` fixture fragment and the `multi_account_same_timestamp_dual_collector_actions` scenario entry.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

@@ -2679,6 +2679,380 @@ func TestRecoveryReplaysMultiAccountSameTimestampMixedLedgerFromSQLite(t *testin
 	}
 }
 
+func TestRecoveryReplaysMultiAccountSameTimestampDualCollectorActionsFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "multi-account-dual-collector-actions.sqlite")
+	keys := deriveDescendingKeypairs("semantic parity dual collector same timestamp", 3)
+	proposer := keys[0]
+	voter := keys[1]
+	collector := keys[2]
+	if !(proposer["publicKey"] > voter["publicKey"] && voter["publicKey"] > collector["publicKey"]) {
+		t.Fatalf("expected descending account ordering for hostile replay")
+	}
+	secret := "go-dual-collector-same-timestamp-secret"
+	secretHash := Hash(secret)
+	base := int64(450000)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       proposer["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     base - 5000,
+	}
+	signTestBlock(t, genesis, proposer["privateKey"])
+	if err := l.ProcessBlock(genesis, false); err != nil {
+		t.Fatalf("expected proposer genesis persistence to succeed, got %v", err)
+	}
+
+	sendToVoter := &Block{
+		Type:          "send",
+		Account:       proposer["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base-4000) - 200,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          voter["publicKey"],
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     base - 4000,
+	}
+	signTestBlock(t, sendToVoter, proposer["privateKey"])
+	if err := l.ProcessBlock(sendToVoter, false); err != nil {
+		t.Fatalf("expected sendToVoter persistence to succeed, got %v", err)
+	}
+
+	openVoter := &Block{
+		Type:          "open",
+		Account:       voter["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToVoter.Hash,
+		Spora:         validSporaForOpenAccount(voter["publicKey"]),
+		Timestamp:     base - 3500,
+	}
+	signTestBlock(t, openVoter, voter["privateKey"])
+	if err := l.ProcessBlock(openVoter, false); err != nil {
+		t.Fatalf("expected openVoter persistence to succeed, got %v", err)
+	}
+
+	sendToCollector := &Block{
+		Type:          "send",
+		Account:       proposer["publicKey"],
+		Previous:      &sendToVoter.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base-3000) - 150,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          collector["publicKey"],
+		Spora:         validSpora(sendToVoter.Hash),
+		Timestamp:     base - 3000,
+	}
+	signTestBlock(t, sendToCollector, proposer["privateKey"])
+	if err := l.ProcessBlock(sendToCollector, false); err != nil {
+		t.Fatalf("expected sendToCollector persistence to succeed, got %v", err)
+	}
+
+	openCollector := &Block{
+		Type:          "open",
+		Account:       collector["publicKey"],
+		Previous:      nil,
+		Balance:       150,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToCollector.Hash,
+		Spora:         validSporaForOpenAccount(collector["publicKey"]),
+		Timestamp:     base - 2500,
+	}
+	signTestBlock(t, openCollector, collector["privateKey"])
+	if err := l.ProcessBlock(openCollector, false); err != nil {
+		t.Fatalf("expected openCollector persistence to succeed, got %v", err)
+	}
+
+	proposal := &Block{
+		Type:          "proposal",
+		Account:       proposer["publicKey"],
+		Previous:      &sendToCollector.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 10,
+		StakedBalance: 0,
+		Height:        3,
+		Link:          "DAO_PROPOSAL",
+		Spora:         validSpora(sendToCollector.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Multi-account same-timestamp dual collector actions ledger",
+			"endTime": time.UnixMilli(base + 1000).Format(time.RFC3339),
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, proposal, proposer["privateKey"])
+	if err := l.ProcessBlock(proposal, false); err != nil {
+		t.Fatalf("expected proposal persistence to succeed, got %v", err)
+	}
+
+	voterVote := &Block{
+		Type:          "vote",
+		Account:       voter["publicKey"],
+		Previous:      &openVoter.Hash,
+		Balance:       l.GetBalance(voter["publicKey"], base),
+		StakedBalance: 0,
+		Height:        1,
+		Link:          proposal.Hash,
+		Spora:         validSpora(openVoter.Hash),
+		Payload:       map[string]interface{}{"vote": "FOR"},
+		Timestamp:     base,
+	}
+	signTestBlock(t, voterVote, voter["privateKey"])
+	if err := l.ProcessBlock(voterVote, false); err != nil {
+		t.Fatalf("expected voterVote persistence to succeed, got %v", err)
+	}
+
+	collectorVote := &Block{
+		Type:          "vote",
+		Account:       collector["publicKey"],
+		Previous:      &openCollector.Hash,
+		Balance:       l.GetBalance(collector["publicKey"], base),
+		StakedBalance: 0,
+		Height:        1,
+		Link:          proposal.Hash,
+		Spora:         validSpora(openCollector.Hash),
+		Payload:       map[string]interface{}{"vote": "FOR"},
+		Timestamp:     base,
+	}
+	signTestBlock(t, collectorVote, collector["privateKey"])
+	if err := l.ProcessBlock(collectorVote, false); err != nil {
+		t.Fatalf("expected collectorVote persistence to succeed, got %v", err)
+	}
+
+	marketBid := &Block{
+		Type:          "market_bid",
+		Account:       collector["publicKey"],
+		Previous:      &collectorVote.Hash,
+		Balance:       l.GetBalance(collector["publicKey"], base) - 25,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "STORAGE_MARKET",
+		Spora:         validSpora(collectorVote.Hash),
+		Payload:       map[string]interface{}{"magnet": "magnet:?xt=urn:btih:go-dual-collector-bid"},
+		Timestamp:     base,
+	}
+	signTestBlock(t, marketBid, collector["privateKey"])
+	if err := l.ProcessBlock(marketBid, false); err != nil {
+		t.Fatalf("expected marketBid persistence to succeed, got %v", err)
+	}
+
+	mintNft := &Block{
+		Type:          "mint_nft",
+		Account:       proposer["publicKey"],
+		Previous:      &proposal.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 50,
+		StakedBalance: 0,
+		Height:        4,
+		Link:          "NFT_MINT",
+		Spora:         validSpora(proposal.Hash),
+		Payload: map[string]interface{}{
+			"name":        "Go Dual Collector Artifact",
+			"magnet":      "magnet:?xt=urn:btih:go-dual-collector-nft",
+			"description": "dual collector same timestamp NFT",
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, mintNft, proposer["privateKey"])
+	if err := l.ProcessBlock(mintNft, false); err != nil {
+		t.Fatalf("expected mintNft persistence to succeed, got %v", err)
+	}
+
+	transferNft := &Block{
+		Type:          "transfer_nft",
+		Account:       proposer["publicKey"],
+		Previous:      &mintNft.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 1,
+		StakedBalance: 0,
+		Height:        5,
+		Link:          mintNft.Hash,
+		Spora:         validSpora(mintNft.Hash),
+		Payload: map[string]interface{}{
+			"recipient": collector["publicKey"],
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, transferNft, proposer["privateKey"])
+	if err := l.ProcessBlock(transferNft, false); err != nil {
+		t.Fatalf("expected transferNft persistence to succeed, got %v", err)
+	}
+
+	swapLock := &Block{
+		Type:          "swap_lock",
+		Account:       proposer["publicKey"],
+		Previous:      &transferNft.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 75,
+		StakedBalance: 0,
+		Height:        6,
+		Link:          "HTLC_LOCK",
+		Spora:         validSpora(transferNft.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  proposer["publicKey"],
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, swapLock, proposer["privateKey"])
+	if err := l.ProcessBlock(swapLock, false); err != nil {
+		t.Fatalf("expected swapLock persistence to succeed, got %v", err)
+	}
+
+	manifest := &Block{
+		Type:          "publish_manifest",
+		Account:       proposer["publicKey"],
+		Previous:      &swapLock.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base),
+		StakedBalance: 0,
+		Height:        7,
+		Link:          "go-dual-collector-manifest",
+		Spora:         validSpora(swapLock.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "go-dual-collector-manifest",
+			"locator":     "bobtorrent://manifest/go-dual-collector",
+			"manifestUrl": "http://localhost:8000/manifests/go-dual-collector",
+			"name":        "go-dual-collector-manifest.json",
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, manifest, proposer["privateKey"])
+	if err := l.ProcessBlock(manifest, false); err != nil {
+		t.Fatalf("expected manifest persistence to succeed, got %v", err)
+	}
+
+	swapClaim := &Block{
+		Type:          "swap_claim",
+		Account:       proposer["publicKey"],
+		Previous:      &manifest.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base+500) + l.Swaps[secretHash].Amount,
+		StakedBalance: 0,
+		Height:        8,
+		Link:          "HTLC_CLAIM",
+		Spora:         validSpora(manifest.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: base + 500,
+	}
+	signTestBlock(t, swapClaim, proposer["privateKey"])
+	if err := l.ProcessBlock(swapClaim, false); err != nil {
+		t.Fatalf("expected swapClaim persistence to succeed, got %v", err)
+	}
+
+	acceptBid := &Block{
+		Type:          "accept_bid",
+		Account:       proposer["publicKey"],
+		Previous:      &swapClaim.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base+1500) + l.MarketBids[marketBid.Hash].(map[string]interface{})["amount"].(float64),
+		StakedBalance: 0,
+		Height:        9,
+		Link:          marketBid.Hash,
+		Spora:         validSpora(swapClaim.Hash),
+		Timestamp:     base + 1500,
+	}
+	signTestBlock(t, acceptBid, proposer["privateKey"])
+	if err := l.ProcessBlock(acceptBid, false); err != nil {
+		t.Fatalf("expected acceptBid persistence to succeed, got %v", err)
+	}
+
+	anchorBlock := &Block{
+		Type:          "data_anchor",
+		Account:       proposer["publicKey"],
+		Previous:      &acceptBid.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base+2000) - 1,
+		StakedBalance: 0,
+		Height:        10,
+		Link:          "DATA_ANCHOR",
+		Spora:         validSpora(acceptBid.Hash),
+		Payload: map[string]interface{}{
+			"magnet": "magnet:?xt=urn:btih:go-dual-collector-finalizer",
+			"name":   "go-dual-collector-finalizer.bin",
+			"size":   1,
+		},
+		Timestamp: base + 2000,
+	}
+	signTestBlock(t, anchorBlock, proposer["privateKey"])
+	if err := l.ProcessBlock(anchorBlock, false); err != nil {
+		t.Fatalf("expected anchorBlock persistence to succeed, got %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before dual collector recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if len(recovered.Chains[proposer["publicKey"]]) != 11 {
+		t.Fatalf("expected recovered proposer chain length 11, got %d", len(recovered.Chains[proposer["publicKey"]]))
+	}
+	if len(recovered.Chains[voter["publicKey"]]) != 2 {
+		t.Fatalf("expected recovered voter chain length 2, got %d", len(recovered.Chains[voter["publicKey"]]))
+	}
+	if len(recovered.Chains[collector["publicKey"]]) != 3 {
+		t.Fatalf("expected recovered collector chain length 3, got %d", len(recovered.Chains[collector["publicKey"]]))
+	}
+	proposalMap, ok := recovered.Proposals[proposal.Hash].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected recovered proposal to exist")
+	}
+	if proposalMap["status"] != "Passed" {
+		t.Fatalf("expected recovered proposal status Passed, got %v", proposalMap["status"])
+	}
+	if _, ok := recovered.Votes[proposal.Hash][voter["publicKey"]]; !ok {
+		t.Fatalf("expected recovered voter vote to be preserved")
+	}
+	if _, ok := recovered.Votes[proposal.Hash][collector["publicKey"]]; !ok {
+		t.Fatalf("expected recovered collector vote to be preserved")
+	}
+	swap := recovered.Swaps[secretHash]
+	if swap == nil || swap.Status != "CLAIMED" {
+		t.Fatalf("expected recovered swap to be CLAIMED, got %+v", swap)
+	}
+	nft, ok := recovered.Nfts[mintNft.Hash]
+	if !ok {
+		t.Fatalf("expected recovered NFT to exist")
+	}
+	nftMap := nft.(map[string]interface{})
+	if nftMap["owner"] != collector["publicKey"] {
+		t.Fatalf("expected recovered NFT owner %q, got %v", collector["publicKey"], nftMap["owner"])
+	}
+	bid, ok := recovered.MarketBids[marketBid.Hash].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected recovered market bid to exist")
+	}
+	if bid["status"] != "ACCEPTED" {
+		t.Fatalf("expected recovered market bid status ACCEPTED, got %v", bid["status"])
+	}
+	if bid["acceptedBy"] != proposer["publicKey"] {
+		t.Fatalf("expected recovered acceptedBy %q, got %v", proposer["publicKey"], bid["acceptedBy"])
+	}
+	manifestAnchor, ok := recovered.Anchors[manifest.Hash]
+	if !ok {
+		t.Fatalf("expected recovered manifest anchor to exist")
+	}
+	manifestAnchorMap := manifestAnchor.(map[string]interface{})
+	if manifestAnchorMap["type"] != "publish_manifest" {
+		t.Fatalf("expected recovered manifest anchor type publish_manifest, got %v", manifestAnchorMap["type"])
+	}
+	anchor, ok := recovered.Anchors[anchorBlock.Hash]
+	if !ok {
+		t.Fatalf("expected recovered data anchor to exist")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["type"] != "data_anchor" {
+		t.Fatalf("expected recovered anchor type data_anchor, got %v", anchorMap["type"])
+	}
+}
+
 func TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "demurrage-multi-account-same-timestamp.sqlite")
 	keys := deriveDescendingKeypairs("semantic parity demurrage multi account same timestamp", 3)

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "description": "Reusable mirrored replay fixture fragments referenced by the parity scenario catalog.",
   "fragments": [
     {
@@ -36,6 +36,11 @@
       "id": "collector-market-bid-core",
       "category": "market-core",
       "features": ["market-bid", "accept-bid", "multi-account"]
+    },
+    {
+      "id": "collector-vote-extension",
+      "category": "governance-extension",
+      "features": ["vote", "multi-account", "same-timestamp"]
     },
     {
       "id": "manifest-anchor-core",

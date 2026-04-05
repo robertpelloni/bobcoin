@@ -61,6 +61,7 @@ function testScenarioCatalogTracksMirroredReplayCoverage() {
         'same_timestamp_governance_swap_nft_manifest',
         'multi_account_same_timestamp_mixed',
         'demurrage_multi_account_same_timestamp_mixed',
+        'multi_account_same_timestamp_dual_collector_actions',
     ];
 
     const requiredFragmentIds = [
@@ -71,12 +72,13 @@ function testScenarioCatalogTracksMirroredReplayCoverage() {
         'same-timestamp-htlc-core',
         'same-timestamp-nft-core',
         'collector-market-bid-core',
+        'collector-vote-extension',
         'manifest-anchor-core',
         'demurrage-balance-pressure',
     ];
 
-    assert.ok(scenarioCatalog.version >= 2, 'scenario catalog should be upgraded for fragment references');
-    assert.ok(fixtureFragmentCatalog.version >= 1, 'fixture fragment catalog should have a positive version');
+    assert.ok(scenarioCatalog.version >= 3, 'scenario catalog should be upgraded for richer fragment-aware scenarios');
+    assert.ok(fixtureFragmentCatalog.version >= 2, 'fixture fragment catalog should have a version that includes vote-extension fragments');
 
     for (const fragmentId of requiredFragmentIds) {
         const fragment = getFragment(fragmentId);
@@ -1163,6 +1165,250 @@ function testMultiAccountSameTimestampMixedLedgerSemantics() {
     assert.equal(lattice.anchors[finalizer.hash].type, 'data_anchor', 'multi-account same-timestamp ledger should persist data_anchor anchor type');
 }
 
+function testMultiAccountSameTimestampDualCollectorActionsSemantics() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node semantic parity dual collector proposer');
+    const voter = deriveKeypair('node semantic parity dual collector voter');
+    const collector = deriveKeypair('node semantic parity dual collector collector');
+    const secret = 'node-dual-collector-same-timestamp-secret';
+    const secretHash = hash(secret);
+    const base = 450000;
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, base - 5000, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const sendToVoter = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: lattice.getBalance(proposer.publicKey, base - 4000) - 200,
+        link: voter.publicKey,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+    }, base - 4000, proposer.privateKey);
+    lattice.processBlock(sendToVoter);
+
+    const openVoter = createSignedBlock({
+        type: 'open',
+        account: voter.publicKey,
+        previous: null,
+        balance: 200,
+        link: sendToVoter.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(voter.publicKey),
+    }, base - 3500, voter.privateKey);
+    lattice.processBlock(openVoter);
+
+    const sendToCollector = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: sendToVoter.hash,
+        balance: lattice.getBalance(proposer.publicKey, base - 3000) - 150,
+        link: collector.publicKey,
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(sendToVoter.hash),
+    }, base - 3000, proposer.privateKey);
+    lattice.processBlock(sendToCollector);
+
+    const openCollector = createSignedBlock({
+        type: 'open',
+        account: collector.publicKey,
+        previous: null,
+        balance: 150,
+        link: sendToCollector.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(collector.publicKey),
+    }, base - 2500, collector.privateKey);
+    lattice.processBlock(openCollector);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: sendToCollector.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 10,
+        link: 'DAO_PROPOSAL',
+        height: 3,
+        staked_balance: 0,
+        spora: validSpora(sendToCollector.hash),
+        payload: {
+            title: 'Multi-account same-timestamp dual collector actions ledger',
+            endTime: new Date(base + 1000).toISOString(),
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    const voterVote = createSignedBlock({
+        type: 'vote',
+        account: voter.publicKey,
+        previous: openVoter.hash,
+        balance: lattice.getBalance(voter.publicKey, base),
+        link: proposal.hash,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openVoter.hash),
+        payload: { vote: 'FOR' },
+    }, base, voter.privateKey);
+    lattice.processBlock(voterVote);
+
+    const collectorVote = createSignedBlock({
+        type: 'vote',
+        account: collector.publicKey,
+        previous: openCollector.hash,
+        balance: lattice.getBalance(collector.publicKey, base),
+        link: proposal.hash,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openCollector.hash),
+        payload: { vote: 'FOR' },
+    }, base, collector.privateKey);
+    lattice.processBlock(collectorVote);
+
+    const marketBid = createSignedBlock({
+        type: 'market_bid',
+        account: collector.publicKey,
+        previous: collectorVote.hash,
+        balance: lattice.getBalance(collector.publicKey, base) - 25,
+        link: 'STORAGE_MARKET',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(collectorVote.hash),
+        payload: { magnet: 'magnet:?xt=urn:btih:node-dual-collector-bid' },
+    }, base, collector.privateKey);
+    lattice.processBlock(marketBid);
+
+    const mintNft = createSignedBlock({
+        type: 'mint_nft',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 50,
+        link: 'NFT_MINT',
+        height: 4,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: {
+            name: 'Node Dual Collector Artifact',
+            magnet: 'magnet:?xt=urn:btih:node-dual-collector-nft',
+            description: 'dual collector same timestamp NFT',
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(mintNft);
+
+    const transferNft = createSignedBlock({
+        type: 'transfer_nft',
+        account: proposer.publicKey,
+        previous: mintNft.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 1,
+        link: mintNft.hash,
+        height: 5,
+        staked_balance: 0,
+        spora: validSpora(mintNft.hash),
+        payload: {
+            recipient: collector.publicKey,
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(transferNft);
+
+    const swapLock = createSignedBlock({
+        type: 'swap_lock',
+        account: proposer.publicKey,
+        previous: transferNft.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 75,
+        link: 'HTLC_LOCK',
+        height: 6,
+        staked_balance: 0,
+        spora: validSpora(transferNft.hash),
+        payload: {
+            secretHash,
+            recipient: proposer.publicKey,
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(swapLock);
+
+    const manifest = createSignedBlock({
+        type: 'publish_manifest',
+        account: proposer.publicKey,
+        previous: swapLock.hash,
+        balance: lattice.getBalance(proposer.publicKey, base),
+        link: 'MANIFEST_PUBLISH',
+        height: 7,
+        staked_balance: 0,
+        spora: validSpora(swapLock.hash),
+        payload: {
+            manifestId: 'node-dual-collector-manifest',
+            locator: 'bobtorrent://manifest/node-dual-collector',
+            manifestUrl: 'http://localhost:8000/manifests/node-dual-collector',
+            name: 'node-dual-collector-manifest.json',
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(manifest);
+
+    const swapClaim = createSignedBlock({
+        type: 'swap_claim',
+        account: proposer.publicKey,
+        previous: manifest.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 500) + lattice.swaps[secretHash].amount,
+        link: 'HTLC_CLAIM',
+        height: 8,
+        staked_balance: 0,
+        spora: validSpora(manifest.hash),
+        payload: {
+            secret,
+            secretHash,
+        },
+    }, base + 500, proposer.privateKey);
+    lattice.processBlock(swapClaim);
+
+    const acceptBid = createSignedBlock({
+        type: 'accept_bid',
+        account: proposer.publicKey,
+        previous: swapClaim.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 1500) + lattice.marketBids[marketBid.hash].amount,
+        link: marketBid.hash,
+        height: 9,
+        staked_balance: 0,
+        spora: validSpora(swapClaim.hash),
+    }, base + 1500, proposer.privateKey);
+    lattice.processBlock(acceptBid);
+
+    const finalizer = createSignedBlock({
+        type: 'data_anchor',
+        account: proposer.publicKey,
+        previous: acceptBid.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 2000) - 1,
+        link: 'DATA_ANCHOR',
+        height: 10,
+        staked_balance: 0,
+        spora: validSpora(acceptBid.hash),
+        payload: {
+            magnet: 'magnet:?xt=urn:btih:node-dual-collector-finalizer',
+            name: 'node-dual-collector-finalizer.bin',
+            size: 1,
+        },
+    }, base + 2000, proposer.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.proposals[proposal.hash].status, 'Passed', 'dual collector action ledger should finalize proposal as Passed');
+    assert.ok(lattice.votes[proposal.hash][voter.publicKey], 'dual collector action ledger should preserve voter vote');
+    assert.ok(lattice.votes[proposal.hash][collector.publicKey], 'dual collector action ledger should preserve collector vote');
+    assert.equal(lattice.swaps[secretHash].status, 'CLAIMED', 'dual collector action ledger should preserve claimed swap state');
+    assert.equal(lattice.nfts[mintNft.hash].owner, collector.publicKey, 'dual collector action ledger should transfer NFT ownership to collector');
+    assert.equal(lattice.marketBids[marketBid.hash].status, 'ACCEPTED', 'dual collector action ledger should preserve accepted bid state');
+    assert.equal(lattice.anchors[manifest.hash].type, 'publish_manifest', 'dual collector action ledger should persist publish_manifest anchor type');
+    assert.equal(lattice.anchors[finalizer.hash].type, 'data_anchor', 'dual collector action ledger should persist data_anchor anchor type');
+}
+
 function testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics() {
     const lattice = new Lattice();
     const proposer = deriveKeypair('node semantic parity demurrage multi proposer');
@@ -1536,6 +1782,7 @@ function run() {
     testSameTimestampGovernanceSwapAndNftSemantics();
     testSameTimestampGovernanceSwapNftAndManifestSemantics();
     testMultiAccountSameTimestampMixedLedgerSemantics();
+    testMultiAccountSameTimestampDualCollectorActionsSemantics();
     testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics();
     testDemurrageSensitiveMixedLedgerSemantics();
     console.log('Node replay semantics tests passed.');

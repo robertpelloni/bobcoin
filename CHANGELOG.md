@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.50.0] - 2026-04-05
+
+### Added
+- New mirrored three-account same-timestamp replay coverage where the collector performs dual same-bucket actions:
+  - Node replay semantics now cover a three-account ledger where the collector both votes and places a market bid at the same timestamp as the proposer's governance, NFT, HTLC, and manifest actions
+  - Go now covers durable SQLite-backed recovery of the mirrored dual-collector-action same-timestamp ledger under hostile ordering
+- The new scenario verifies that both voter and collector votes are preserved, accepted-bid state is reconstructed, NFT ownership transfer remains correct, and typed manifest/data-anchor reconstruction survives alongside the broader mixed ledger.
+- Shared parity catalogs now describe this richer mirrored scenario through the new `collector-vote-extension` fixture fragment and the `multi_account_same_timestamp_dual_collector_actions` scenario entry.
+
+### Changed
+- Advanced the mirrored parity surface from three-account same-timestamp mixed ledgers into a variant where one non-proposer account performs multiple same-timestamp actions on its own chain, increasing pressure on both cross-account and same-account replay correctness.
+- Strengthened scenario/fragment catalog validation by requiring the new dual-collector-action mirrored scenario and its supporting fixture fragment on both Node and Go sides.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.49.0] - 2026-04-05
 
 ### Added

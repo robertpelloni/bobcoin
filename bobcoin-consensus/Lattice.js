@@ -152,6 +152,15 @@ export class Lattice {
         return frontier.staked_balance || 0;
     }
 
+    refreshProposalStatusesAt(atMs) {
+        for (const proposal of Object.values(this.proposals)) {
+            if (!proposal || proposal.status !== 'Active' || !proposal.endTime) continue;
+            const parsedEndTime = new Date(proposal.endTime).getTime();
+            if (Number.isNaN(parsedEndTime) || atMs < parsedEndTime) continue;
+            proposal.status = proposal.votesFor > proposal.votesAgainst ? 'Passed' : 'Rejected';
+        }
+    }
+
     /**
      * Process an incoming block
      */
@@ -208,6 +217,8 @@ export class Lattice {
         }
 
         // Verify state transitions based on type
+        this.refreshProposalStatusesAt(block.timestamp);
+
         // Apply Demurrage to the previous balance before any new operations
         let previousBalance = frontier ? frontier.balance : 0;
         if (frontier && frontier.timestamp) {

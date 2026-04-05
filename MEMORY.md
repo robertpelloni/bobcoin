@@ -43,6 +43,8 @@
   - As of v8.38.0, Go HTLC claim validity is also determined by the claim block timestamp rather than wall-clock time, and the default `swap_lock` expiry is derived from the block timestamp rather than machine time, removing another replay-time nondeterminism source.
   - As of v8.39.0, the Node reference lattice has been aligned on the same replay-critical time semantics: proposal votes and HTLC claims are validated against block timestamps, and default HTLC expiry derives from block timestamp rather than `Date.now()`.
   - As of v8.39.0, `bobcoin-consensus/npm test` now provides executable replay-semantics regression coverage for the Node reference implementation instead of having no real test command.
+  - As of v8.40.0, the Node reference lattice now refreshes/finalizes proposal status from ledger time during block processing, bringing normal proposal lifecycle advancement closer to the Go implementation.
+  - As of v8.40.0, the Node replay suite also covers mixed governance + HTLC histories so cross-client parity work is no longer limited to isolated single-feature time semantics.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

@@ -1,87 +1,63 @@
-# Session Handoff - 2026-04-05 (v8.39.0)
+# Session Handoff - 2026-04-05 (v8.40.0)
 
 ## Executive Summary
-This session extended the replay-determinism hardening work beyond the Go port and into the Node reference lattice.
+This session continued the cross-client replay parity pass by hardening the Node reference lattice beyond isolated time checks and into actual proposal lifecycle advancement.
 
-That was the right next move because the Go side had just eliminated multiple wall-clock-dependent replay bugs, but the Node reference still retained the same semantic hazards via `Date.now()`.
+The result is a stronger parity position between Go and Node:
+- Node already had ledger-time fixes for proposal voting and HTLCs from the previous pass
+- Node now also advances proposal terminal status from ledger time during block processing
+- Node replay coverage now includes mixed governance + HTLC ledgers instead of only single-feature cases
 
-The result is a more honest cross-client parity position:
-- Go replay remains ledger-time-driven
-- Node reference replay is now aligned on the same replay-critical time semantics
-- Node now has executable replay regressions instead of an empty placeholder test command
+That is important because parity risks often hide in interactions between features, not just in isolated validation rules.
 
 ## What Changed
 
-### 1. Node governance vote validation now uses ledger time
+### 1. Node proposal lifecycle now refreshes on later ledger-time blocks
 **File:** `bobcoin-consensus/Lattice.js`
 
-Previously, the Node reference validated proposal voting using:
-- `Date.now() > new Date(proposal.endTime).getTime()`
+Previously, the Node reference lattice could accept proposal votes using ledger time, but proposal terminal status itself was still effectively stale unless something external interpreted it.
 
-That meant a historically valid vote could fail in replay simply because the machine clock had advanced beyond the proposal's end time.
-
-### New behavior
-Node voting now checks proposal expiry against:
-- `block.timestamp`
-
-This matches the corrected Go behavior and makes historical vote replay deterministic instead of observer-time-dependent.
-
-### 2. Node HTLC claim validation now uses ledger time
-**File:** `bobcoin-consensus/Lattice.js`
-
-Previously, Node validated HTLC claim expiry using:
-- `Date.now() > swap.expiry`
-
-That created the same replay hazard seen earlier in Go:
-- a historically valid claim could fail later just because replay happened long after the original claim event
+That left an important semantic gap with the Go lattice, which already refreshes proposal status based on block time.
 
 ### New behavior
-Node HTLC claims now validate using:
-- `block.timestamp > swap.expiry`
+Added:
+- `refreshProposalStatusesAt(atMs)`
 
-This makes Node swap replay historically deterministic as well.
+And invoked it during `processBlock(block)`.
 
-### 3. Node default HTLC expiry is now deterministic
-**File:** `bobcoin-consensus/Lattice.js`
+That means Node now:
+- scans active proposals
+- parses each `endTime`
+- finalizes proposals when a later ledger-time block reaches or passes expiry
+- marks them `Passed` or `Rejected` based on existing vote totals
 
-Previously, Node created implicit HTLC expiry using:
-- `Date.now() + 3600000`
+This is materially closer to the Go model and better reflects actual ledger-time lifecycle semantics.
 
-That meant the same `swap_lock` block could materialize different expiry values depending on when it was replayed.
+### 2. Node replay tests now cover proposal finalization, not just vote admission
+**File:** `bobcoin-consensus/test_replay_semantics.js`
 
-### New behavior
-Node now derives default HTLC expiry from ledger time:
-- `block.timestamp + 3600000`
+Added a regression proving that:
+- a proposal can receive a valid vote before expiry
+- a later ledger-time block finalizes the proposal status
+- the proposal ends as `Passed` when vote totals warrant it
 
-This matches the newer Go behavior and removes another cross-client nondeterminism source.
+This is important because allowing a vote before expiry is only half the lifecycle story. The status transition itself also has to remain consistent.
 
-## New Node Regression Coverage
-**Files:**
-- `bobcoin-consensus/test_replay_semantics.js`
-- `bobcoin-consensus/package.json`
+### 3. Node replay tests now cover mixed governance + HTLC histories
+**File:** `bobcoin-consensus/test_replay_semantics.js`
 
-Added a dedicated replay-semantics regression script for the Node reference implementation.
+Added a mixed-feature regression ledger that combines:
+- proposal creation
+- vote submission
+- HTLC lock
+- HTLC claim
+- later ledger-time finalizer block
 
-### New cases covered
-1. **Historical governance vote validation**
-   - verifies a vote is accepted because its block timestamp is before proposal expiry
-   - does not depend on the current wall clock
+The test verifies together that:
+- the proposal finalizes as `Passed`
+- the HTLC remains `CLAIMED`
 
-2. **Historical HTLC claim validation**
-   - verifies a swap claim is accepted because its block timestamp is before swap expiry
-   - does not depend on the current wall clock
-
-3. **Deterministic default HTLC expiry derivation**
-   - verifies omitted HTLC expiry defaults to `block.timestamp + 1h`
-   - proves Node materializes the same swap state on replay
-
-### Test command improvement
-`bobcoin-consensus/package.json` previously had a placeholder test script that always failed.
-
-It now runs:
-- `node test_replay_semantics.js`
-
-So Node replay semantics are now executable and validated, not just assumed.
+This is a stronger parity test than isolated single-feature checks because it proves the Node reference can sustain multiple replay-sensitive semantics inside one historical ledger.
 
 ## Validation Performed
 
@@ -111,48 +87,52 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because parity cannot honestly be claimed if the reference client and the Go port disagree on replay-critical time semantics.
+This pass matters because parity bugs rarely stay confined to one feature.
 
-Before this pass:
-- Go had been hardened away from wall-clock replay logic
-- Node still had `Date.now()`-driven behavior for proposal voting and HTLCs
+A client can look correct when you test:
+- only governance
+- only HTLCs
+- only isolated time checks
 
-That meant the two clients could diverge historically even if they appeared functionally similar at a feature level.
+But still diverge when those features coexist in the same ledger and later ledger-time events mutate lifecycle state.
 
-After this pass:
-- the Node reference is materially closer to Go on historical validation rules
-- both clients now derive replay-critical governance and HTLC time behavior from ledger time instead of observer time
-- both sides now have executable regression coverage for the relevant semantic area
+This pass improves the Node reference in exactly that area:
+- proposal lifecycle advancement now follows ledger time during processing
+- mixed governance + HTLC history is now executable and tested
+
+That moves the project closer to true semantic parity rather than isolated behavioral coincidence.
 
 ## Findings / Analysis
 
-### Key finding 1: parity work must sometimes move the reference too
-The recent Go hardening exposed that some "reference" behavior in Node was not actually a good semantic target because it was observer-time-dependent.
+### Key finding 1: time semantics and lifecycle semantics are distinct parity layers
+The previous Node pass fixed validation-time semantics:
+- votes should compare against `block.timestamp`
+- swaps should compare against `block.timestamp`
 
-That is an important lesson:
-- parity is not always "copy the old behavior"
-- sometimes parity requires correcting both clients toward deterministic ledger semantics
+This pass fixed lifecycle-advancement semantics:
+- proposals should also finalize from ledger time as later blocks arrive
 
-### Key finding 2: replay-critical time semantics are now becoming a project-wide invariant
-A clear invariant is emerging across the lattice core:
-- replay-critical validation should use block timestamps
-- replay-critical derived defaults should use block timestamps
-- observer time is acceptable for UI/status surfaces, but not historical consensus replay
+Those are related, but not identical, parity concerns.
 
-That principle now holds across both Go and Node in the governance and HTLC paths.
+### Key finding 2: mixed-feature ledgers are the next honest test surface
+Single-feature regression tests are necessary, but they are not enough.
+
+The strongest parity confidence comes from ledgers where multiple time-sensitive systems coexist and evolve together.
+
+This is why the mixed governance + HTLC Node test is useful: it begins turning cross-feature semantic assumptions into executable evidence.
 
 ### Remaining likely high-value edge classes
 The next likely targets are:
-1. mixed governance + HTLC histories across both clients
-2. same-timestamp dependency webs that combine governance, swaps, and manifests
-3. demurrage-sensitive cross-client replay parity under dependency-heavy histories
-4. any remaining Node or service-side validation paths that still depend on `Date.now()` in historically sensitive ways
+1. cross-client mixed-feature ledgers that exercise the same scenario in both Node and Go
+2. same-timestamp mixed governance + HTLC dependency webs
+3. demurrage-sensitive multi-feature histories where elapsed-time accounting matters alongside lifecycle state
+4. any remaining replay-sensitive Node paths that still lag Go behavior beyond what current tests cover
 
 ## Recommended Next Move
 The best next move remains:
-1. build mixed governance + HTLC replay ledgers across Go and Node
-2. stress same-timestamp multi-feature histories
-3. continue auditing both implementations for any remaining wall-clock-dependent replay semantics
+1. build an explicitly mirrored mixed-feature ledger scenario across both Node and Go
+2. extend that scenario into same-timestamp dependency-heavy histories
+3. then push into demurrage-sensitive mixed-feature parity tests
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -161,7 +141,6 @@ The best next move remains:
 - `MEMORY.md`
 - `HANDOFF.md`
 - `bobcoin-consensus/Lattice.js`
-- `bobcoin-consensus/package.json`
 - `bobcoin-consensus/test_replay_semantics.js`
 
 ## Operational Note

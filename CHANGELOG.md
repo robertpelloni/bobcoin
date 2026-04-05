@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.40.0] - 2026-04-05
+
+### Added
+- Stronger Node reference replay regression coverage for mixed-feature semantics in `bobcoin-consensus/test_replay_semantics.js`:
+  - proposal terminal-status finalization on later ledger-time blocks
+  - mixed governance + HTLC historical ledgers where both proposal passage and swap claim state must remain correct together
+
+### Changed
+- Added `refreshProposalStatusesAt(atMs)` to the Node reference lattice and invoked it during block processing so proposal lifecycle state now advances from ledger time instead of being left stale indefinitely.
+- Improved Node parity with the Go lattice by making later ledger-time blocks finalize proposal outcomes during normal processing, not just by allowing votes before expiry.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.39.0] - 2026-04-05
 
 ### Added

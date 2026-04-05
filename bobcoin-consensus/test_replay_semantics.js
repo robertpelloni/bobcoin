@@ -198,10 +198,225 @@ function testDefaultSwapExpiryUsesLedgerTime() {
     );
 }
 
+function testProposalFinalizesOnLaterLedgerTime() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node semantic parity finalize proposer');
+    const voter = deriveKeypair('node semantic parity finalize voter');
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const sendToVoter = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: 800,
+        link: voter.publicKey,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+    }, 2, proposer.privateKey);
+    lattice.processBlock(sendToVoter);
+
+    const openVoter = createSignedBlock({
+        type: 'open',
+        account: voter.publicKey,
+        previous: null,
+        balance: 200,
+        link: sendToVoter.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(voter.publicKey),
+    }, 3, voter.privateKey);
+    lattice.processBlock(openVoter);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: sendToVoter.hash,
+        balance: lattice.getBalance(proposer.publicKey, 1000) - 10,
+        link: 'DAO_PROPOSAL',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(sendToVoter.hash),
+        payload: {
+            title: 'Proposal finalizes on later ledger time',
+            endTime: new Date(2000).toISOString(),
+        },
+    }, 1000, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: voter.publicKey,
+        previous: openVoter.hash,
+        balance: lattice.getBalance(voter.publicKey, 1500),
+        link: proposal.hash,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openVoter.hash),
+        payload: { vote: 'FOR' },
+    }, 1500, voter.privateKey);
+    lattice.processBlock(vote);
+
+    const finalizer = createSignedBlock({
+        type: 'data_anchor',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: lattice.getBalance(proposer.publicKey, 3000) - 1,
+        link: 'DATA_ANCHOR',
+        height: 3,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: {
+            magnet: 'magnet:?xt=urn:btih:node-proposal-finalizer',
+            name: 'proposal-finalizer.bin',
+            size: 1,
+        },
+    }, 3000, proposer.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.proposals[proposal.hash].status, 'Passed', 'later ledger-time block should finalize proposal status');
+}
+
+function testMixedGovernanceAndSwapLedgerSemantics() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node semantic parity mixed proposer');
+    const voter = deriveKeypair('node semantic parity mixed voter');
+    const secret = 'node-mixed-governance-swap-secret';
+    const secretHash = hash(secret);
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const sendToVoter = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: 800,
+        link: voter.publicKey,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+    }, 2, proposer.privateKey);
+    lattice.processBlock(sendToVoter);
+
+    const openVoter = createSignedBlock({
+        type: 'open',
+        account: voter.publicKey,
+        previous: null,
+        balance: 200,
+        link: sendToVoter.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(voter.publicKey),
+    }, 3, voter.privateKey);
+    lattice.processBlock(openVoter);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: sendToVoter.hash,
+        balance: lattice.getBalance(proposer.publicKey, 1000) - 10,
+        link: 'DAO_PROPOSAL',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(sendToVoter.hash),
+        payload: {
+            title: 'Mixed governance and swap ledger',
+            endTime: new Date(2500).toISOString(),
+        },
+    }, 1000, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: voter.publicKey,
+        previous: openVoter.hash,
+        balance: lattice.getBalance(voter.publicKey, 1500),
+        link: proposal.hash,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openVoter.hash),
+        payload: { vote: 'FOR' },
+    }, 1500, voter.privateKey);
+    lattice.processBlock(vote);
+
+    const swapLock = createSignedBlock({
+        type: 'swap_lock',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: lattice.getBalance(proposer.publicKey, 1600) - 75,
+        link: 'HTLC_LOCK',
+        height: 3,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: {
+            secretHash,
+            recipient: proposer.publicKey,
+        },
+    }, 1600, proposer.privateKey);
+    lattice.processBlock(swapLock);
+
+    const swapClaim = createSignedBlock({
+        type: 'swap_claim',
+        account: proposer.publicKey,
+        previous: swapLock.hash,
+        balance: lattice.getBalance(proposer.publicKey, 1700) + lattice.swaps[secretHash].amount,
+        link: 'HTLC_CLAIM',
+        height: 4,
+        staked_balance: 0,
+        spora: validSpora(swapLock.hash),
+        payload: {
+            secret,
+            secretHash,
+        },
+    }, 1700, proposer.privateKey);
+    lattice.processBlock(swapClaim);
+
+    const finalizer = createSignedBlock({
+        type: 'data_anchor',
+        account: proposer.publicKey,
+        previous: swapClaim.hash,
+        balance: lattice.getBalance(proposer.publicKey, 3000) - 1,
+        link: 'DATA_ANCHOR',
+        height: 5,
+        staked_balance: 0,
+        spora: validSpora(swapClaim.hash),
+        payload: {
+            magnet: 'magnet:?xt=urn:btih:node-mixed-finalizer',
+            name: 'mixed-finalizer.bin',
+            size: 1,
+        },
+    }, 3000, proposer.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.proposals[proposal.hash].status, 'Passed', 'mixed ledger should finalize proposal as Passed');
+    assert.equal(lattice.swaps[secretHash].status, 'CLAIMED', 'mixed ledger should preserve claimed swap state');
+}
+
 function run() {
     testHistoricalVoteUsesBlockTimestamp();
     testHistoricalSwapClaimUsesBlockTimestamp();
     testDefaultSwapExpiryUsesLedgerTime();
+    testProposalFinalizesOnLaterLedgerTime();
+    testMixedGovernanceAndSwapLedgerSemantics();
     console.log('Node replay semantics tests passed.');
 }
 

@@ -40,6 +40,7 @@
   - As of v8.34.0, cold-boot SQLite recovery follows the same dependency-resolving replay model, and persisted block reads are deterministically ordered by timestamp/account/height/hash so restart behavior is both stable and robust against same-timestamp cascading dependencies.
   - As of v8.37.0, Go replay resolves dependencies within each timestamp bucket before advancing to later timestamps, preventing later governance-expiry transitions from invalidating deferred same-timestamp proposal/vote history during replay.
   - As of v8.37.0, vote validity in Go is determined by the block timestamp, not wall-clock time, so historical replay and recovery remain deterministic even long after the original proposal expired in real time.
+  - As of v8.38.0, Go HTLC claim validity is also determined by the claim block timestamp rather than wall-clock time, and the default `swap_lock` expiry is derived from the block timestamp rather than machine time, removing another replay-time nondeterminism source.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

@@ -383,7 +383,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if swap.Status != "LOCKED" {
 			return fmt.Errorf("swap already claimed or expired")
 		}
-		if time.Now().UnixMilli() > swap.Expiry {
+		if block.Timestamp > swap.Expiry {
 			return fmt.Errorf("swap expired")
 		}
 		secret, _ := payload["secret"].(string)
@@ -549,7 +549,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		bid["acceptedBy"] = block.Account
 	} else if block.Type == "swap_lock" {
 		payload := block.Payload.(map[string]interface{})
-		expiry := int64(time.Now().UnixMilli() + 3600000)
+		expiry := block.Timestamp + 3600000
 		switch v := payload["expiry"].(type) {
 		case float64:
 			expiry = int64(v)

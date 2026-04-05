@@ -1,75 +1,70 @@
-# Session Handoff - 2026-04-05 (v8.37.0)
+# Session Handoff - 2026-04-05 (v8.38.0)
 
 ## Executive Summary
-This session continued the Go parity hardening pass by targeting a deeper replay-order/governance interaction bug class.
+This session continued the replay-determinism hardening pass by removing another wall-clock dependency from the Go lattice: HTLC swap expiry validation.
 
-The key outcome is that Go replay is now more historically correct for proposal/vote lifecycles:
-- replay finishes dependency resolution inside each timestamp bucket before moving to later timestamps
-- vote validity is now checked against the block's timestamp instead of wall-clock time
+The key outcome is that Go replay and recovery are now more historically honest for swap lifecycles as well as governance lifecycles.
 
-Those two changes close an important category of false replay failures that could have appeared during audit or cold-boot recovery.
+In practical terms:
+- swap claims are validated against ledger time (`block.Timestamp`), not machine time
+- default swap expiries are derived from the block timestamp, not `time.Now()`
+- durable tests now cover both historical HTLC claims and recovery of implicit/default expiry semantics
 
 ## What Changed
 
-### 1. Timestamp-bucket replay semantics for audit and recovery
+### 1. Swap-claim expiry validation now uses ledger time
 **File:** `go-lattice/lattice.go`
 
-Previously, replay was dependency-resolving across the full ordered list, but it could still let later-timestamp blocks run before all earlier-timestamp deferred blocks had been fully settled.
+Previously, Go validated `swap_claim` expiry using `time.Now().UnixMilli()`.
 
-That was a real correctness risk for governance history.
-
-### Failure shape identified
-A subtle but valid history can look like this:
-- account A creates a proposal at timestamp `T`
-- account B votes on that proposal at the same timestamp `T`
-- deterministic ordering places the vote before the proposal, so the vote is deferred
-- a later block at timestamp `T+Δ` gets processed in the same replay pass
-- that later block advances proposal status refresh beyond the proposal end time
-- the deferred vote is retried later and now incorrectly fails because the proposal appears closed
-
-That means a replay engine could incorrectly reject a historically valid vote just because later timestamps were allowed to overtake unresolved same-timestamp work.
+That had the same class of problem the proposal/vote logic had before the last pass:
+- a historically valid claim could fail later simply because replay happened long after the original event
+- cold-boot recovery would become less correct as real time advanced
+- audit and recovery could diverge from the actual ledger semantics
 
 ### New behavior
-Both `AuditState()` and `Recovery()` now:
-- process blocks in deterministic order
-- isolate work by timestamp bucket
-- resolve dependencies within each timestamp bucket until no more progress is possible
-- only then advance to the next timestamp bucket
+`swap_claim` now checks:
+- `block.Timestamp > swap.Expiry`
 
-This preserves deterministic replay while also respecting temporal correctness.
+instead of:
+- `time.Now().UnixMilli() > swap.Expiry`
 
-### 2. Vote validation no longer depends on wall-clock time
+That makes HTLC replay historically deterministic.
+
+### 2. Default swap expiry is now derived from block time
 **File:** `go-lattice/lattice.go`
 
-A second issue surfaced during this pass:
-- vote validation compared proposal expiry against `time.Now()`
-- that makes historical replay nondeterministic and eventually wrong
-- a historically valid vote could fail years later simply because the machine clock moved on
+A second nondeterminism existed in `swap_lock` materialization:
+- when no expiry was provided, Go defaulted to `time.Now() + 1h`
+
+That meant the same historical `swap_lock` block could materialize different expiry values depending on when it was replayed.
 
 ### New behavior
-Vote validation now compares proposal expiry against `block.Timestamp`.
+When `swap_lock` omits an explicit expiry, Go now derives it from ledger time:
+- `block.Timestamp + 3600000`
 
-That means:
-- replay is deterministic
-- historical validation is based on ledger time, not wall-clock time
-- cold-boot recovery and audit no longer become less correct as real time passes
+This means:
+- the same block always yields the same swap expiry on replay
+- recovery remains deterministic
+- persisted state reconstruction does not drift with observer time
 
-### 3. New governance replay regression coverage
+## New Regression Coverage
 **File:** `go-lattice/lattice_parity_test.go`
 
-Added regression coverage for three important cases:
+### 1. Historical swap claim uses block time, not wall clock
+Added a regression proving that:
+- a swap locked in the distant past can still be claimed successfully during replay when the claim block timestamp is before the HTLC expiry
+- the test remains valid even though real-world time is far beyond the swap expiry
 
-#### A. Historical vote validity is based on block time
-A new test proves that a vote with an old historical timestamp can still replay correctly when it was cast before the proposal's expiry, even though the current machine clock is far beyond that expiry.
+This is the direct HTLC analogue of the earlier historical governance vote fix.
 
-#### B. Audit replay survives same-timestamp proposal/vote dependencies with later expiry
-A new audit regression proves that:
-- a `proposal` and dependent `vote` at the same timestamp can replay correctly under hostile account ordering
-- a later post-expiry block does not incorrectly invalidate the deferred vote during replay
-- final governance state is reconstructed correctly as `Passed`
+### 2. SQLite-backed recovery reconstructs default swap expiry deterministically
+Added a durable recovery regression proving that:
+- a `swap_lock` persisted without an explicit expiry still reconstructs a deterministic expiry after cold boot
+- the recovered expiry equals `lockBlock.Timestamp + 1h`
+- a subsequent claim with a valid block timestamp succeeds on the recovered lattice
 
-#### C. Cold-boot SQLite recovery survives the same governance pattern
-A new durable recovery regression proves the same scenario survives restart from SQLite, not just in-memory audit replay.
+That turns another replay assumption into executable proof.
 
 ## Validation Performed
 
@@ -94,44 +89,47 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This is a meaningful upgrade in semantic honesty.
+This is another meaningful step away from feature-count parity and toward honest historical semantics.
 
-The important insight is that replay correctness is not just about dependency ordering in the abstract. It is also about temporal boundaries.
+The broader pattern now visible in the Go port is:
+- any replay-critical validation tied to wall-clock time is suspect
+- any default state materialization tied to wall-clock time is suspect
 
-If later timestamps are allowed to overtake unresolved earlier-timestamp work, then replay can invent failures that never happened on the original ledger.
+Those patterns have now been removed for:
+- proposal/vote expiry
+- swap claim expiry
+- implicit/default HTLC expiry derivation
 
-And if proposal expiry is checked against wall-clock time, then the same ledger can become "less valid" every day in replay, which is fundamentally wrong for deterministic consensus reconstruction.
-
-This session removed both of those failure modes.
+That materially improves restart and audit determinism.
 
 ## Findings / Analysis
 
-### Key finding 1: dependency-aware replay was necessary but not yet sufficient
-The earlier replay-pass hardening solved a broad class of same-timestamp dependency problems.
+### Key finding 1: wall-clock drift is a recurring replay hazard
+This pass confirms a useful rule of thumb for the Go lattice:
+- if a consensus/replay path references `time.Now()` for historical validation or derived state, it is probably wrong or at least dangerously nondeterministic
 
-But governance exposed the next layer:
-- dependency resolution must happen before later timestamp buckets are allowed to mutate derived time-sensitive state
-- otherwise replay can be structurally deterministic and still semantically wrong
+Replay-critical logic should almost always derive from:
+- the block timestamp
+- persisted state
+- deterministic ordering
 
-### Key finding 2: replay must use ledger time, not observer time
-Consensus replay cannot safely depend on `time.Now()` for historical validation.
+### Key finding 2: default-derived fields matter just as much as validation
+It is not enough to fix validation checks.
 
-For honest replay semantics, the only valid temporal reference is the ledger's own timestamp model.
-
-The new vote fix aligns Go with that principle.
+Even when a block validates, replay can still diverge if derived state is generated from observer time instead of ledger time. The `swap_lock` default expiry issue was exactly that kind of bug.
 
 ### Remaining likely high-value edge classes
-The next likely edge classes are:
-1. same-timestamp mixed-feature ledgers combining governance with swaps, manifests, and NFT transfers
-2. demurrage-sensitive histories where multiple dependent actions happen around meaningful elapsed-time boundaries
-3. larger restart ledgers where several cross-account dependency chains coexist inside the same timestamp bucket
-4. service-level behavior outside the lattice core that may still rely on wall-clock assumptions
+The next likely targets are now:
+1. larger mixed-feature same-timestamp ledgers combining governance and HTLCs
+2. demurrage-sensitive restart histories with multiple dependent actions around meaningful elapsed-time boundaries
+3. additional replay-critical paths that may still depend on wall-clock time outside the lattice core
+4. Node reference-side semantic mismatches where Node still uses `Date.now()` for historical validation
 
 ## Recommended Next Move
 The best next move remains:
-1. build larger mixed-feature same-timestamp restart ledgers
-2. stress demurrage-sensitive replay boundaries with dependency-heavy histories
-3. continue removing any remaining wall-clock-dependent validation from replay-critical paths
+1. build mixed governance + HTLC restart ledgers
+2. stress demurrage-sensitive replay boundaries under dependency-heavy histories
+3. continue auditing replay-critical logic for any remaining wall-clock-derived semantics
 
 ## Files Changed In This Session
 - `VERSION.md`

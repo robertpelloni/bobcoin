@@ -1267,6 +1267,143 @@ func TestAuditStateReplaysSameTimestampVoteBeforeLaterExpiry(t *testing.T) {
 	}
 }
 
+func TestSwapClaimUsesBlockTimestampNotWallClock(t *testing.T) {
+	keys := DeriveKeypair("semantic parity historical swap claim", 0)
+	l := NewLattice(NewDBManager(":memory:"))
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("expected genesis block to succeed, got %v", err)
+	}
+
+	secret := "historical-swap-secret"
+	secretHash := Hash(secret)
+	prevLock := genesis.Hash
+	lockBlock := &Block{
+		Type:          "swap_lock",
+		Account:       keys["publicKey"],
+		Previous:      &prevLock,
+		Balance:       925,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "HTLC_LOCK",
+		Spora:         validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  keys["publicKey"],
+			"expiry":     float64(5),
+		},
+		Timestamp: 2,
+	}
+	signTestBlock(t, lockBlock, keys["privateKey"])
+	if err := l.ProcessBlock(lockBlock, true); err != nil {
+		t.Fatalf("expected swap_lock to succeed, got %v", err)
+	}
+
+	prevClaim := lockBlock.Hash
+	claimBlock := &Block{
+		Type:          "swap_claim",
+		Account:       keys["publicKey"],
+		Previous:      &prevClaim,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "HTLC_CLAIM",
+		Spora:         validSpora(lockBlock.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: 4,
+	}
+	signTestBlock(t, claimBlock, keys["privateKey"])
+	if err := l.ProcessBlock(claimBlock, true); err != nil {
+		t.Fatalf("expected historical swap_claim before expiry to succeed, got %v", err)
+	}
+
+	swap := l.Swaps[secretHash]
+	if swap == nil || swap.Status != "CLAIMED" {
+		t.Fatalf("expected claimed swap state after historical replay, got %+v", swap)
+	}
+}
+
+func TestRecoveryRebuildsDefaultSwapExpiryWithoutPayload(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "default-swap-expiry.sqlite")
+	keys := DeriveKeypair("semantic parity default swap expiry", 0)
+	secret := "default-swap-expiry-secret"
+	secretHash := Hash(secret)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, false); err != nil {
+		t.Fatalf("expected persisted genesis block to succeed, got %v", err)
+	}
+
+	prevLock := genesis.Hash
+	lockBlock := &Block{
+		Type:          "swap_lock",
+		Account:       keys["publicKey"],
+		Previous:      &prevLock,
+		Balance:       925,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          "HTLC_LOCK",
+		Spora:         validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  keys["publicKey"],
+		},
+		Timestamp: 2000,
+	}
+	signTestBlock(t, lockBlock, keys["privateKey"])
+	if err := l.ProcessBlock(lockBlock, false); err != nil {
+		t.Fatalf("expected persisted swap_lock to succeed, got %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before default expiry recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	swap := recovered.Swaps[secretHash]
+	if swap == nil {
+		t.Fatalf("expected recovered swap to exist")
+	}
+	expectedExpiry := lockBlock.Timestamp + 3600000
+	if swap.Expiry != expectedExpiry {
+		t.Fatalf("expected deterministic recovered swap expiry %d, got %d", expectedExpiry, swap.Expiry)
+	}
+
+	claimTimestamp := lockBlock.Timestamp + 1000
+	expectedClaimBalance := recovered.GetBalance(keys["publicKey"], claimTimestamp) + swap.Amount
+	prevClaim := lockBlock.Hash
+	claimBlock := &Block{
+		Type:          "swap_claim",
+		Account:       keys["publicKey"],
+		Previous:      &prevClaim,
+		Balance:       expectedClaimBalance,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "HTLC_CLAIM",
+		Spora:         validSpora(lockBlock.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: claimTimestamp,
+	}
+	signTestBlock(t, claimBlock, keys["privateKey"])
+	if err := recovered.ProcessBlock(claimBlock, true); err != nil {
+		t.Fatalf("expected recovered swap_claim with default expiry to succeed, got %v", err)
+	}
+}
+
 func TestRecoveryHandlesCascadingSameTimestampDependenciesFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "same-timestamp-recovery.sqlite")
 	keys := deriveDescendingKeypairs("semantic parity recovery cascade", 3)

@@ -74,6 +74,8 @@
   - As of v8.55.0, the platform now has initial Go control-plane ports for both remaining major Node services (`supertorrent` and `game-server`), even though full feature parity for transport, matchmaking, FHE, and ZK verification is still pending.
   - As of v8.56.0, `go-game-server/` also ports the WebSocket matchmaking/signaling server used by the rhythm-game multiplayer flow, so one of the previously outstanding game-server real-time responsibilities is now covered in Go.
   - As of v8.56.0, the most significant remaining game-server-specific Go gaps are now the FHE oracle and the SP1/ZK `/submit-proof` flow, rather than the basic HTTP control plane or multiplayer signaling shell.
+  - As of v8.57.0, `go-game-server/` also ports the current `/submit-proof` orchestration shell into Go: proof payload validation, current score-threshold verification behavior, verification hash derivation, lattice mint/send flow, and local mint transaction recording.
+  - As of v8.57.0, the most meaningful remaining game-server-specific Go gap is now true SP1 backend verification parity plus FHE oracle behavior, rather than basic proof-submission orchestration.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

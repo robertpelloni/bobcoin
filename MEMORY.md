@@ -41,6 +41,8 @@
   - As of v8.37.0, Go replay resolves dependencies within each timestamp bucket before advancing to later timestamps, preventing later governance-expiry transitions from invalidating deferred same-timestamp proposal/vote history during replay.
   - As of v8.37.0, vote validity in Go is determined by the block timestamp, not wall-clock time, so historical replay and recovery remain deterministic even long after the original proposal expired in real time.
   - As of v8.38.0, Go HTLC claim validity is also determined by the claim block timestamp rather than wall-clock time, and the default `swap_lock` expiry is derived from the block timestamp rather than machine time, removing another replay-time nondeterminism source.
+  - As of v8.39.0, the Node reference lattice has been aligned on the same replay-critical time semantics: proposal votes and HTLC claims are validated against block timestamps, and default HTLC expiry derives from block timestamp rather than `Date.now()`.
+  - As of v8.39.0, `bobcoin-consensus/npm test` now provides executable replay-semantics regression coverage for the Node reference implementation instead of having no real test command.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

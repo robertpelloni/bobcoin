@@ -289,7 +289,8 @@ export class Lattice {
             const proposalHash = block.link;
             const proposal = this.proposals[proposalHash];
             if (!proposal) throw new Error("Target proposal not found");
-            if (proposal.status !== 'Active' || Date.now() > new Date(proposal.endTime).getTime()) {
+            const proposalEndTime = new Date(proposal.endTime).getTime();
+            if (proposal.status !== 'Active' || (!Number.isNaN(proposalEndTime) && block.timestamp >= proposalEndTime)) {
                 throw new Error("Proposal is closed");
             }
 
@@ -365,7 +366,7 @@ export class Lattice {
                 sender: account,
                 recipient: block.payload.recipient,
                 amount: amount,
-                expiry: block.payload.expiry || (Date.now() + 3600000), // Default 1 hour
+                expiry: block.payload.expiry ?? (block.timestamp + 3600000), // Default 1 hour from ledger time
                 status: 'LOCKED'
             };
         } else if (block.type === 'swap_claim') {
@@ -375,7 +376,7 @@ export class Lattice {
             
             if (!swap) throw new Error("Swap not found");
             if (swap.status !== 'LOCKED') throw new Error("Swap already claimed or expired");
-            if (Date.now() > swap.expiry) throw new Error("Swap expired");
+            if (block.timestamp > swap.expiry) throw new Error("Swap expired");
             
             const hashed = crypto.createHash('sha256').update(secret).digest('hex');
             if (hashed !== secretHash) throw new Error("Invalid secret for HTLC claim");

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.39.0] - 2026-04-05
+
+### Added
+- Node reference replay regression coverage in `bobcoin-consensus/test_replay_semantics.js` for:
+  - historical governance vote validation by block timestamp
+  - historical HTLC claim validation by block timestamp
+  - deterministic default HTLC expiry derivation from ledger time
+- `bobcoin-consensus` now exposes those replay checks through `npm test`.
+
+### Changed
+- Aligned Node lattice replay semantics with the newer Go behavior for replay-critical time handling:
+  - proposal voting now checks expiry against `block.timestamp` instead of `Date.now()`
+  - HTLC claims now check expiry against `block.timestamp` instead of `Date.now()`
+  - implicit HTLC expiry now defaults to `block.timestamp + 1h` instead of machine time
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.38.0] - 2026-04-05
 
 ### Added

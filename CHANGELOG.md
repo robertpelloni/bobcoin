@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.67.0] - 2026-04-05
+
+### Added
+- **Exportable Comparative Source Diagnostics**: Vault can now export a structured JSON bundle summarizing retained recovery reports, source leaderboards, trend buckets, comparative host rankings, and per-source failure/success counters.
+
+### Changed
+- **Reliability Export Workflow**: The long-horizon source reliability section now includes a dedicated export action so operators can carry comparative diagnostics out of the browser for offline review, incident handoff, or external analysis.
+
+### Validation
+- `cd frontend && npm run build`
+
 ## [8.66.0] - 2026-04-05
 
 ### Changed

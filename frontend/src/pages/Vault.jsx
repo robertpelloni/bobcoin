@@ -335,6 +335,7 @@ function buildSourceOverview(sourceProfiles, reports) {
         .filter(profile => profile.totalObservations > 0)
         .sort((a, b) => b.reliabilityScore - a.reliabilityScore || b.successfulFetches - a.successfulFetches)[0] || null;
     const improving = sourceProfiles.find(profile => profile.trend.label === 'IMPROVING') || null;
+    const degrading = sourceProfiles.find(profile => profile.trend.label === 'DEGRADING') || null;
 
     return {
         totalReports: reports.length,
@@ -346,6 +347,84 @@ function buildSourceOverview(sourceProfiles, reports) {
         topAtRisk,
         healthiest,
         improving,
+        degrading,
+    };
+}
+
+function compactSourceProfile(profile) {
+    if (!profile) return null;
+    return {
+        host: profile.host,
+        health: profile.health?.label || 'UNKNOWN',
+        trend: profile.trend?.label || 'UNKNOWN',
+        reliabilityScore: profile.reliabilityScore,
+        totalObservations: profile.totalObservations,
+        reportCount: profile.reportCount,
+        manifestCount: profile.manifestCount,
+        failures: profile.failures,
+        successfulFetches: profile.successfulFetches,
+        successfulRestores: profile.successfulRestores,
+        parityRecoveries: profile.parityRecoveries,
+        recent7dFailures: profile.recent7dFailures,
+        recent7dSuccesses: profile.recent7dSuccesses,
+        previous7dFailures: profile.previous7dFailures,
+        previous7dSuccesses: profile.previous7dSuccesses,
+        last30dFailures: profile.last30dFailures,
+        last30dSuccesses: profile.last30dSuccesses,
+        latestSeen: profile.latestSeen,
+        firstSeen: profile.firstSeen,
+        categories: profile.categories,
+    };
+}
+
+function buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, reports) {
+    const rankedByReliability = [...sourceProfiles]
+        .filter(profile => profile.totalObservations > 0)
+        .sort((a, b) => b.reliabilityScore - a.reliabilityScore || b.successfulFetches - a.successfulFetches || a.failures - b.failures)
+        .slice(0, 10)
+        .map(compactSourceProfile);
+
+    const rankedByAttention = [...sourceProfiles]
+        .filter(profile => profile.failures > 0 || profile.recent7dFailures > 0)
+        .sort((a, b) => b.attentionScore - a.attentionScore || b.failures - a.failures || a.reliabilityScore - b.reliabilityScore)
+        .slice(0, 10)
+        .map(compactSourceProfile);
+
+    const trendBuckets = {
+        degrading: sourceProfiles.filter(profile => profile.trend.label === 'DEGRADING').slice(0, 10).map(compactSourceProfile),
+        improving: sourceProfiles.filter(profile => profile.trend.label === 'IMPROVING').slice(0, 10).map(compactSourceProfile),
+        stable: sourceProfiles.filter(profile => profile.trend.label === 'STABLE').slice(0, 10).map(compactSourceProfile),
+        new: sourceProfiles.filter(profile => profile.trend.label === 'NEW').slice(0, 10).map(compactSourceProfile),
+        quiet: sourceProfiles.filter(profile => profile.trend.label === 'QUIET').slice(0, 10).map(compactSourceProfile),
+    };
+
+    return {
+        exportedAt: new Date().toISOString(),
+        retention: {
+            retainedRecoveryReports: reports.length,
+            distinctSourcesObserved: sourceOverview.distinctSources,
+        },
+        overview: {
+            totalReports: sourceOverview.totalReports,
+            successfulRestores: sourceOverview.successfulRestores,
+            parityRecoveries: sourceOverview.parityRecoveries,
+            distinctSources: sourceOverview.distinctSources,
+            recent7dFailures: sourceOverview.recent7dFailures,
+            recent7dSuccesses: sourceOverview.recent7dSuccesses,
+            healthiest: compactSourceProfile(sourceOverview.healthiest),
+            topAtRisk: compactSourceProfile(sourceOverview.topAtRisk),
+            improving: compactSourceProfile(sourceOverview.improving),
+            degrading: compactSourceProfile(sourceOverview.degrading),
+        },
+        leaderboards: {
+            rankedByReliability,
+            rankedByAttention,
+        },
+        trendBuckets,
+        sources: sourceProfiles.map(profile => ({
+            ...compactSourceProfile(profile),
+            attentionScore: profile.attentionScore,
+        })),
     };
 }
 
@@ -523,6 +602,10 @@ export function Vault() {
             owned: filteredOwnedEntries,
             network: filteredNetworkAnchors.slice(0, 12),
         });
+    };
+
+    const exportComparativeSourceDiagnostics = () => {
+        downloadJson('vault-source-comparative-diagnostics.json', buildComparativeSourceDiagnostics(sourceProfiles, sourceOverview, recoveryReports));
     };
 
     const copyVisibleLocators = async () => {
@@ -757,6 +840,9 @@ export function Vault() {
                             Recovery reports are now mined for longer-horizon source behavior, comparing recent 7-day activity with the prior week,
                             scoring each source by successful shard fetches versus failures, and surfacing which hosts are degrading, stabilizing, or improving.
                         </p>
+                    </div>
+                    <div className="section-actions-row">
+                        <button className="cyber-button small secondary" onClick={exportComparativeSourceDiagnostics}>EXPORT COMPARATIVE DIAGNOSTICS</button>
                     </div>
                 </div>
                 <div className="vault-summary-grid reliability-summary-grid">

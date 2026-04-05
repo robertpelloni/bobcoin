@@ -11,6 +11,7 @@
 ## Recommended Next Pass
 - [ ] **Cloaked Retrieval Flow:** Add first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI.
 - [ ] **Chunk Splitting Audit:** The frontend still emits a >500 kB main chunk. Introduce manual chunking for `node-seal`, `three.js`, and heavy dashboard routes.
+- [x] **Exportable Comparative Source Diagnostics:** Vault now exports retained recovery-report comparisons, source leaderboards, trend buckets, and per-source reliability summaries as portable JSON.
 - [x] **Signaling Migration Plan:** WebRTC matchmaking signaling now has a Go-native default path via the supernode while retaining explicit override capability for legacy/specialized deployments.
 - [ ] **Signaling Hardening:** Add richer multi-room/session controls, stale-peer cleanup telemetry, and broader end-to-end signaling regression coverage if multiplayer becomes a higher-priority surface.
 - [x] **Governance Finalization (Basic):** Proposal status now refreshes in Go and expired items resolve to terminal states on processing/read paths.

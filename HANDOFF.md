@@ -1,28 +1,31 @@
-# Session Handoff - 2026-04-05 (v8.66.0)
+# Session Handoff - 2026-04-05 (v8.67.0)
 
 ## Executive Summary
-This pass completes the next practical runtime migration step by making Bobcoin default its WebRTC signaling path toward the Go supernode as well. HTTP compatibility traffic was already Go-first; now the lightweight matchmaking websocket path is Go-first too, while still preserving explicit signaling overrides for specialized or legacy deployments.
+This pass extends the long-horizon reliability system with an operator-portable export path. Vault already computed comparative source health in-browser; now it can export a structured comparative diagnostics bundle so the same evidence can be reviewed offline, attached to incident notes, or handed across operators without screenshots.
 
 ## What This Pass Added
 
-### 1. Go-first signaling default
+### 1. Comparative source diagnostics export bundle
 **Files:**
-- `frontend/src/api.js`
-- `frontend/src/pages/SystemStatus.jsx`
+- `frontend/src/pages/Vault.jsx`
+- `frontend/src/pages/Vault.css`
 
-Changes:
-- signaling now defaults to the Go supernode origin unless explicitly overridden
-- explicit `VITE_GAME_SIGNALING_URL` still wins when operators want a different signaling target
-- System Status now labels signaling as `GO WS` or `LEGACY WS`
+Vault now exports `vault-source-comparative-diagnostics.json` containing:
+- retention summary for locally retained recovery reports
+- overview metrics (restores, parity recoveries, recent successes/failures, healthiest/at-risk/improving/degrading sources)
+- reliability leaderboards
+- attention-ranked sources
+- trend buckets (`degrading`, `improving`, `stable`, `new`, `quiet`)
+- per-source compact counters and category breakdowns
 
-### 2. Strategic effect
-This reduces one of the last practical reasons for the Bobcoin frontend to depend on the legacy Node game-server during normal operation.
+### 2. UX integration
+The long-horizon source reliability section now includes a dedicated export action so operators can export comparative diagnostics directly from the same place they inspect trends.
 
 ## Validation
 Executed successfully:
 - `cd frontend && npm run build`
 
 ## Recommended Next Step
-1. Continue hardening the Go signaling path with broader regression coverage if multiplayer becomes a first-class priority
-2. Keep replacing remaining specialized Node-only duties where reasonable
-3. Continue frontend chunk-splitting work around `node-seal`
+1. Continue the operator-facing diagnostics push by considering signed/encrypted export bundles later on
+2. Keep improving frontend chunk splitting around `node-seal`
+3. Continue replacing remaining specialized simulation layers where reasonable

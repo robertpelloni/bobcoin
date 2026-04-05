@@ -1102,6 +1102,235 @@ function testMultiAccountSameTimestampMixedLedgerSemantics() {
     assert.equal(lattice.anchors[finalizer.hash].type, 'data_anchor', 'multi-account same-timestamp ledger should persist data_anchor anchor type');
 }
 
+function testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node semantic parity demurrage multi proposer');
+    const voter = deriveKeypair('node semantic parity demurrage multi voter');
+    const collector = deriveKeypair('node semantic parity demurrage multi collector');
+    const secret = 'node-demurrage-multi-account-secret';
+    const secretHash = hash(secret);
+    const base = 500000;
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, base - 120000, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const sendToVoter = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: lattice.getBalance(proposer.publicKey, base - 90000) - 200,
+        link: voter.publicKey,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+    }, base - 90000, proposer.privateKey);
+    lattice.processBlock(sendToVoter);
+
+    const openVoter = createSignedBlock({
+        type: 'open',
+        account: voter.publicKey,
+        previous: null,
+        balance: 200,
+        link: sendToVoter.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(voter.publicKey),
+    }, base - 89000, voter.privateKey);
+    lattice.processBlock(openVoter);
+
+    const sendToCollector = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: sendToVoter.hash,
+        balance: lattice.getBalance(proposer.publicKey, base - 60000) - 150,
+        link: collector.publicKey,
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(sendToVoter.hash),
+    }, base - 60000, proposer.privateKey);
+    lattice.processBlock(sendToCollector);
+
+    const openCollector = createSignedBlock({
+        type: 'open',
+        account: collector.publicKey,
+        previous: null,
+        balance: 150,
+        link: sendToCollector.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(collector.publicKey),
+    }, base - 59000, collector.privateKey);
+    lattice.processBlock(openCollector);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: sendToCollector.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 10,
+        link: 'DAO_PROPOSAL',
+        height: 3,
+        staked_balance: 0,
+        spora: validSpora(sendToCollector.hash),
+        payload: {
+            title: 'Demurrage-sensitive multi-account same-timestamp ledger',
+            endTime: new Date(base + 1000).toISOString(),
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: voter.publicKey,
+        previous: openVoter.hash,
+        balance: lattice.getBalance(voter.publicKey, base),
+        link: proposal.hash,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openVoter.hash),
+        payload: { vote: 'FOR' },
+    }, base, voter.privateKey);
+    lattice.processBlock(vote);
+
+    const marketBid = createSignedBlock({
+        type: 'market_bid',
+        account: collector.publicKey,
+        previous: openCollector.hash,
+        balance: lattice.getBalance(collector.publicKey, base) - 25,
+        link: 'STORAGE_MARKET',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openCollector.hash),
+        payload: { magnet: 'magnet:?xt=urn:btih:node-demurrage-multi-bid' },
+    }, base, collector.privateKey);
+    lattice.processBlock(marketBid);
+
+    const mintNft = createSignedBlock({
+        type: 'mint_nft',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 50,
+        link: 'NFT_MINT',
+        height: 4,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: {
+            name: 'Node Demurrage Multi Artifact',
+            magnet: 'magnet:?xt=urn:btih:node-demurrage-multi-nft',
+            description: 'demurrage-sensitive multi-account NFT',
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(mintNft);
+
+    const transferNft = createSignedBlock({
+        type: 'transfer_nft',
+        account: proposer.publicKey,
+        previous: mintNft.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 1,
+        link: mintNft.hash,
+        height: 5,
+        staked_balance: 0,
+        spora: validSpora(mintNft.hash),
+        payload: {
+            recipient: collector.publicKey,
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(transferNft);
+
+    const swapLock = createSignedBlock({
+        type: 'swap_lock',
+        account: proposer.publicKey,
+        previous: transferNft.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 75,
+        link: 'HTLC_LOCK',
+        height: 6,
+        staked_balance: 0,
+        spora: validSpora(transferNft.hash),
+        payload: {
+            secretHash,
+            recipient: proposer.publicKey,
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(swapLock);
+
+    const manifest = createSignedBlock({
+        type: 'publish_manifest',
+        account: proposer.publicKey,
+        previous: swapLock.hash,
+        balance: lattice.getBalance(proposer.publicKey, base),
+        link: 'MANIFEST_PUBLISH',
+        height: 7,
+        staked_balance: 0,
+        spora: validSpora(swapLock.hash),
+        payload: {
+            manifestId: 'node-demurrage-multi-manifest',
+            locator: 'bobtorrent://manifest/node-demurrage-multi',
+            manifestUrl: 'http://localhost:8000/manifests/node-demurrage-multi',
+            name: 'node-demurrage-multi-manifest.json',
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(manifest);
+
+    const swapClaim = createSignedBlock({
+        type: 'swap_claim',
+        account: proposer.publicKey,
+        previous: manifest.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 500) + lattice.swaps[secretHash].amount,
+        link: 'HTLC_CLAIM',
+        height: 8,
+        staked_balance: 0,
+        spora: validSpora(manifest.hash),
+        payload: {
+            secret,
+            secretHash,
+        },
+    }, base + 500, proposer.privateKey);
+    lattice.processBlock(swapClaim);
+
+    const acceptBid = createSignedBlock({
+        type: 'accept_bid',
+        account: proposer.publicKey,
+        previous: swapClaim.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 1500) + lattice.marketBids[marketBid.hash].amount,
+        link: marketBid.hash,
+        height: 9,
+        staked_balance: 0,
+        spora: validSpora(swapClaim.hash),
+    }, base + 1500, proposer.privateKey);
+    lattice.processBlock(acceptBid);
+
+    const finalizer = createSignedBlock({
+        type: 'data_anchor',
+        account: proposer.publicKey,
+        previous: acceptBid.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 3000) - 1,
+        link: 'DATA_ANCHOR',
+        height: 10,
+        staked_balance: 0,
+        spora: validSpora(acceptBid.hash),
+        payload: {
+            magnet: 'magnet:?xt=urn:btih:node-demurrage-multi-finalizer',
+            name: 'node-demurrage-multi-finalizer.bin',
+            size: 1,
+        },
+    }, base + 3000, proposer.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.proposals[proposal.hash].status, 'Passed', 'demurrage-sensitive multi-account ledger should finalize proposal as Passed');
+    assert.equal(lattice.swaps[secretHash].status, 'CLAIMED', 'demurrage-sensitive multi-account ledger should preserve claimed swap state');
+    assert.equal(lattice.nfts[mintNft.hash].owner, collector.publicKey, 'demurrage-sensitive multi-account ledger should transfer NFT ownership to collector');
+    assert.equal(lattice.marketBids[marketBid.hash].status, 'ACCEPTED', 'demurrage-sensitive multi-account ledger should preserve accepted bid state');
+    assert.equal(lattice.anchors[manifest.hash].type, 'publish_manifest', 'demurrage-sensitive multi-account ledger should persist publish_manifest anchor type');
+    assert.equal(lattice.anchors[finalizer.hash].type, 'data_anchor', 'demurrage-sensitive multi-account ledger should persist data_anchor anchor type');
+}
+
 function testDemurrageSensitiveMixedLedgerSemantics() {
     const lattice = new Lattice();
     const proposer = deriveKeypair('node semantic parity demurrage proposer');
@@ -1245,6 +1474,7 @@ function run() {
     testSameTimestampGovernanceSwapAndNftSemantics();
     testSameTimestampGovernanceSwapNftAndManifestSemantics();
     testMultiAccountSameTimestampMixedLedgerSemantics();
+    testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics();
     testDemurrageSensitiveMixedLedgerSemantics();
     console.log('Node replay semantics tests passed.');
 }

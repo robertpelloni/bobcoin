@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.47.0] - 2026-04-05
+
+### Added
+- Demurrage-sensitive three-account same-timestamp replay coverage across both lattice implementations:
+  - Node replay semantics now cover a three-account same-timestamp ledger where elapsed-time-sensitive proposer balances feed governance, market bids, NFT transfer, HTLC lifecycle, `publish_manifest`, `accept_bid`, and later `data_anchor` finalization
+  - Go now covers durable SQLite-backed recovery of the mirrored demurrage-sensitive three-account same-timestamp ledger under hostile ordering
+- The new scenarios verify together that demurrage-adjusted balances, proposal passage, vote preservation, accepted-bid state, claimed swap state, NFT ownership transfer, manifest-anchor reconstruction, and data-anchor reconstruction remain coherent inside a broader replay-sensitive historical ledger.
+
+### Changed
+- Extended the parity campaign from larger three-account same-timestamp mixed ledgers into demurrage-sensitive variants, adding elapsed-time pressure to the same replay-order and mixed-feature stress surface.
+- Strengthened the Go durable recovery suite with a demurrage-sensitive multi-account market/governance/swap/NFT/manifest scenario that validates recovered frontier balance as well as accepted bid, anchor, and ownership state.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.46.0] - 2026-04-05
 
 ### Added

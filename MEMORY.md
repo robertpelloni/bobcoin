@@ -55,6 +55,8 @@
   - As of v8.45.0, both Node and Go now exercise same-timestamp mixed ledgers that preserve governance state, HTLC lifecycle state, NFT ownership, `publish_manifest` anchors, and `data_anchor` typing together.
   - As of v8.46.0, both Node and Go now also exercise a larger three-account same-timestamp mixed ledger that combines governance, voting, market bids, NFT ownership transfer, HTLC lifecycle state, `publish_manifest`, and later `data_anchor` finalization.
   - As of v8.46.0, Go durable recovery now explicitly validates accepted market bid reconstruction inside the same broader same-timestamp mixed ledger, not just proposals, swaps, NFTs, and anchors.
+  - As of v8.47.0, both Node and Go now also exercise a demurrage-sensitive three-account same-timestamp mixed ledger, so elapsed-time pressure is now combined with replay-order pressure and multi-feature state interactions in mirrored scenarios.
+  - As of v8.47.0, Go durable recovery also validates recovered proposer frontier balance inside the demurrage-sensitive broader mixed ledger, not just logical state maps such as proposals, swaps, bids, NFTs, and anchors.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

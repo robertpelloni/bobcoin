@@ -434,14 +434,43 @@
 }
 
 .publisher-proofs {
-    display: flex;
-    gap: 0.45rem;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.6rem;
     margin-top: 0.6rem;
 }
 
-.publisher-proof-link {
+.publisher-proof-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
     text-decoration: none;
+    border: 1px solid #173030;
+    background: rgba(0, 255, 255, 0.04);
+    padding: 0.65rem;
+}
+
+.publisher-proof-card:hover {
+    border-color: #0ff;
+    background: rgba(0, 255, 255, 0.07);
+}
+
+.publisher-proof-kind {
+    width: fit-content;
+}
+
+.publisher-proof-title {
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: bold;
+    word-break: break-word;
+}
+
+.publisher-proof-issuer {
+    color: #8aa;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    word-break: break-word;
 }
 
 .vault-badge {

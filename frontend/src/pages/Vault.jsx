@@ -51,6 +51,8 @@ function matchesSearch(anchor, query) {
         anchor.publisherAvatar,
         ...(anchor.publisherProofs || []),
         ...(anchor.publisherProofKinds || []),
+        ...(anchor.publisherProofLabels || []),
+        ...(anchor.publisherProofIssuers || []),
         anchor.type,
     ]
         .map(normalizeString)
@@ -80,9 +82,13 @@ function tierForScore(score) {
 function normalizePublisherProofs(anchor) {
     const proofs = Array.isArray(anchor.publisherProofs) ? anchor.publisherProofs : [];
     const kinds = Array.isArray(anchor.publisherProofKinds) ? anchor.publisherProofKinds : [];
+    const labels = Array.isArray(anchor.publisherProofLabels) ? anchor.publisherProofLabels : [];
+    const issuers = Array.isArray(anchor.publisherProofIssuers) ? anchor.publisherProofIssuers : [];
     return proofs.map((url, index) => ({
         url,
         kind: kinds[index] || 'link',
+        label: labels[index] || '',
+        issuer: issuers[index] || '',
     }));
 }
 
@@ -971,7 +977,11 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                 {normalizePublisherProofs(anchor).length > 0 && (
                     <div className="publisher-proofs">
                         {normalizePublisherProofs(anchor).map((proof) => (
-                            <a key={`${proof.kind}-${proof.url}`} href={proof.url} target="_blank" rel="noreferrer" className="vault-badge neutral publisher-proof-link">{proof.kind.toUpperCase()}</a>
+                            <a key={`${proof.kind}-${proof.url}`} href={proof.url} target="_blank" rel="noreferrer" className="publisher-proof-card">
+                                <span className="vault-badge neutral publisher-proof-kind">{proof.kind.toUpperCase()}</span>
+                                <span className="publisher-proof-title">{proof.label || proof.url}</span>
+                                {proof.issuer && <span className="publisher-proof-issuer">ISSUER: {proof.issuer}</span>}
+                            </a>
                         ))}
                     </div>
                 )}

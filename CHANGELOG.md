@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.53.0] - 2026-04-05
+
+### Added
+- **Structured Attestation Metadata**: Publisher proof entries can now carry `kind`, `label`, `url`, and optional `issuer` metadata instead of only a raw type hint plus URL.
+- **Richer Attestation Cards**: Vault now renders publisher attestations as structured cards showing proof type, human-readable label, and issuer context rather than only compact proof badges.
+- **Searchable Attestation Context**: Vault search now indexes attestation labels and issuers in addition to URLs and proof kinds.
+
 ## [8.52.0] - 2026-04-05
 
 ### Added
@@ -177,6 +184,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
 - `cd go-lattice && go test ./...`
 - `cd frontend && npm run build`
+=======
+## [8.44.0] - 2026-04-05
+
+### Added
+- **Structured Attestation Metadata**: Publisher proof entries can now carry `kind`, `label`, `url`, and optional `issuer` metadata instead of only a raw type hint plus URL.
+- **Richer Attestation Cards**: Vault now renders publisher attestations as structured cards showing proof type, human-readable label, and issuer context rather than only compact proof badges.
+- **Searchable Attestation Context**: Vault search now indexes attestation labels and issuers in addition to URLs and proof kinds.
+>>>>>>> 5976bc5 (feat(provenance): add structured publisher attestations (v8.44.0))
 
 ## [8.43.0] - 2026-04-05
 

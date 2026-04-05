@@ -35,6 +35,7 @@
 - [x] **Source Reliability Snapshot (Frontend v16):** Added host-level reliability summaries derived from persisted recovery reports inside the Vault diagnostics surface.
 - [x] **Typed Publisher Proof Semantics (Frontend v17):** Added proof kind parsing/persistence and typed proof badges for publisher attestation links.
 - [x] **Long-Horizon Source Reliability Analytics (Frontend v18):** Added comparative source health scoring, week-over-week trend labels, and wider local recovery-report retention.
+- [x] **Structured Publisher Attestations (Frontend v19):** Added proof labels/issuers plus richer attestation cards for publisher identity evidence.
 - [x] **Saved Archive Presets & Grouping (Frontend v11):** Added reusable filter presets plus owner/type grouping modes to the Vault archive intelligence surface.
 - [x] **Publisher Profile Overlay (Frontend v12):** Added avatar/profile/proof-link metadata to manifest anchors and surfaced those linked identity cues inside Vault archive cards.
 - [x] **Exportable Recovery Reports (Frontend v13):** Added downloadable JSON recovery reports capturing shard failures, parity sufficiency, omitted-shard tests, and restored-file metadata.

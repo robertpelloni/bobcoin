@@ -58,11 +58,22 @@ function parsePublisherProofInputs(value) {
         .map(v => v.trim())
         .filter(Boolean)
         .map((entry) => {
-            const [maybeKind, ...rest] = entry.split('|');
-            if (rest.length === 0) {
-                return { kind: 'link', url: maybeKind.trim() };
+            const parts = entry.split('|').map(part => part.trim()).filter(Boolean);
+            if (parts.length === 1) {
+                return { kind: 'link', label: '', url: parts[0], issuer: '' };
             }
-            return { kind: maybeKind.trim() || 'link', url: rest.join('|').trim() };
+            if (parts.length === 2) {
+                return { kind: parts[0] || 'link', label: '', url: parts[1], issuer: '' };
+            }
+            if (parts.length === 3) {
+                return { kind: parts[0] || 'link', label: parts[1], url: parts[2], issuer: '' };
+            }
+            return {
+                kind: parts[0] || 'link',
+                label: parts[1],
+                url: parts[2],
+                issuer: parts.slice(3).join('|'),
+            };
         })
         .filter(proof => proof.url);
 }
@@ -478,7 +489,7 @@ export function StorageWasmWorkbench() {
                 publisherWebsite.trim(),
                 publisherStatement.trim(),
                 publisherAvatar.trim(),
-                normalizedProofs.map(proof => `${proof.kind}:${proof.url}`).join('|'),
+                normalizedProofs.map(proof => `${proof.kind}:${proof.label || ''}:${proof.url}:${proof.issuer || ''}`).join('|'),
             ].join('|');
             const proofHash = await hashData(proofMessage);
             const proofSignature = await signBlock(proofHash, keypair.privateKey);
@@ -638,7 +649,7 @@ export function StorageWasmWorkbench() {
                             />
                             <textarea
                                 className="cyber-input"
-                                placeholder="Proof entries (kind|url), comma or newline separated"
+                                placeholder="Proof entries: kind|label|url|issuer (issuer optional)"
                                 value={publisherProofs}
                                 onChange={(e) => setPublisherProofs(e.target.value)}
                                 style={{ minHeight: '72px', gridColumn: '1 / -1' }}

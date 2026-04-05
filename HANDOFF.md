@@ -1,81 +1,56 @@
-# Session Handoff - 2026-04-05 (v8.47.0)
+# Session Handoff - 2026-04-05 (v8.48.0)
 
 ## Executive Summary
-This session continued the parity campaign by taking the larger three-account same-timestamp mixed ledger and making it demurrage-sensitive.
+This session continued the parity campaign by taking the first concrete step toward fixture-driven mirrored scenario definitions.
 
-That is an important escalation because it combines three separate stress dimensions in one mirrored historical scenario:
-- replay-order pressure from same-timestamp multi-account interactions
-- broader mixed-feature pressure from governance, market, HTLC, NFT, and anchor state
-- elapsed-time pressure from demurrage-sensitive balances feeding later block validity
+Instead of relying only on increasingly large, increasingly sophisticated test files to implicitly define the active replay surface, the project now has a shared scenario catalog that both Node and Go validate.
 
-The result is that both lattice implementations now exercise a demurrage-sensitive three-account same-timestamp mixed ledger, and the Go side proves the scenario through durable SQLite-backed recovery under hostile ordering.
+That matters because the parity work has reached a scale where scenario drift becomes a real maintenance risk. A shared catalog does not replace executable tests, but it creates a clearer contract for what mirrored replay coverage is supposed to exist across implementations.
 
 ## What Changed
 
-### 1. Node replay suite now covers a demurrage-sensitive three-account same-timestamp mixed ledger
+### 1. Added a shared mirrored replay scenario catalog
+**File:** `testing/parity-scenarios.json`
+
+Created a shared catalog of active mirrored replay scenarios, including:
+- scenario ID
+- category
+- feature surfaces
+- account counts
+- whether durable Go recovery coverage exists
+- whether Node replay coverage exists
+- documented expectations
+
+The catalog currently covers the active mirrored replay surfaces such as:
+- same-timestamp governance + HTLC
+- same-timestamp governance + HTLC + NFT
+- same-timestamp governance + HTLC + NFT + manifest
+- multi-account same-timestamp mixed ledger
+- demurrage-sensitive multi-account same-timestamp mixed ledger
+
+This is the first explicit shared parity inventory in the repo.
+
+### 2. Node replay suite now validates the shared scenario catalog
 **File:** `bobcoin-consensus/test_replay_semantics.js`
 
-Added a new Node replay regression with:
-- proposer
-- voter
-- collector
+Added:
+- shared catalog loading from `testing/parity-scenarios.json`
+- a replay-catalog validation test that asserts required mirrored replay scenarios remain present and marked as Node-covered
 
-### Historical ledger shape
-The scenario includes:
-- proposer genesis far enough in the past for visible demurrage effects
-- proposer sends to voter after elapsed time
-- voter opens
-- proposer sends to collector after more elapsed time
-- collector opens
-- proposal at timestamp `T`
-- vote at timestamp `T`
-- collector market bid at timestamp `T`
-- proposer NFT mint at timestamp `T`
-- proposer NFT transfer to collector at timestamp `T`
-- proposer HTLC lock at timestamp `T`
-- proposer `publish_manifest` at timestamp `T`
-- proposer HTLC claim shortly after
-- proposer `accept_bid` later
-- proposer `data_anchor` finalizer later
+This means the Node suite now checks not only replay behavior, but also whether the shared parity inventory still matches the active intended surface.
 
-### Node assertions
-The scenario verifies together that:
-- proposal finalizes as `Passed`
-- swap state is `CLAIMED`
-- NFT ownership transfers to the collector
-- market bid becomes `ACCEPTED`
-- manifest anchor is typed `publish_manifest`
-- final anchor is typed `data_anchor`
+### 3. Go durable recovery suite now validates the shared scenario catalog
+**File:** `go-lattice/parity_scenario_catalog_test.go`
 
-This is stronger than the non-demurrage version because all of those states now depend on balances that have decayed over meaningful elapsed time.
+Added a Go-side test that:
+- reads the shared scenario catalog
+- verifies required mirrored replay scenarios are present
+- verifies they remain categorized as mirrored replay coverage
+- verifies they are marked as durable Go recovery coverage
+- verifies documented expectations remain present
+- verifies the demurrage multi-account scenario still declares demurrage and a three-account shape
 
-### 2. Go now covers durable recovery of the mirrored demurrage-sensitive three-account same-timestamp ledger
-**File:** `go-lattice/lattice_parity_test.go`
-
-Added a new SQLite-backed recovery regression for the mirrored demurrage-sensitive broader ledger.
-
-The account ordering is again intentionally hostile:
-- proposer sorts after voter
-- voter sorts after collector
-
-That keeps the replay test honest while also forcing recovery to reconstruct balances and derived state correctly under elapsed-time pressure.
-
-### Recovered-state assertions
-The durable recovery test verifies that after restart:
-- proposer chain length is correct
-- voter chain length is correct
-- collector chain length is correct
-- recovered proposal status is `Passed`
-- recovered vote state is preserved
-- recovered swap state is `CLAIMED`
-- recovered NFT ownership transfers to the collector
-- recovered market bid exists and is `ACCEPTED`
-- recovered accepted bid attribution points to the proposer
-- recovered manifest anchor exists and is typed `publish_manifest`
-- recovered data anchor exists and is typed `data_anchor`
-- recovered proposer frontier balance matches the expected final demurrage-sensitive balance
-
-That last balance assertion is important because it validates not only logical state maps, but also the concrete recovered economic state of the proposer chain.
+This is useful because the Go side now also guards the shared scenario contract rather than leaving the catalog purely documentary.
 
 ## Validation Performed
 
@@ -85,6 +60,7 @@ Command run:
 
 Result:
 - Node replay semantics tests passed
+- shared scenario catalog validation passed
 
 ### Go lattice
 Commands run:
@@ -96,6 +72,7 @@ Result:
 - formatting succeeded
 - build succeeded
 - tests passed
+- shared scenario catalog validation passed
 
 ### Frontend
 Command run:
@@ -107,46 +84,52 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because replay and recovery bugs often hide in the interaction between:
-- ordering
-- derived state
-- economics
+This pass matters because the parity effort has grown from a few isolated tests into a serious cross-client semantic campaign.
 
-A client might preserve all the right maps and ownership transitions, yet still drift on the actual recovered balances once elapsed time becomes significant.
+At that scale, there is a real risk that:
+- a mirrored scenario exists in Go but not Node
+- a Node replay scenario drifts conceptually from its Go recovery counterpart
+- scenario names and intended feature surfaces become tribal knowledge buried inside test code
 
-By making the larger same-timestamp mixed ledger demurrage-sensitive, this pass pushes parity testing closer to real semantic/economic correctness instead of only structural correctness.
+The shared scenario catalog does not solve all of that by itself, but it does establish a clearer, executable inventory of what the project currently treats as the mirrored replay surface.
+
+That is a useful step toward deeper fixture-driven alignment.
 
 ## Findings / Analysis
 
-### Key finding 1: demurrage-sensitive mixed ledgers are a stronger economic parity surface
-Prior passes established strong coverage for:
-- replay order
-- lifecycle semantics
-- ownership semantics
-- anchor reconstruction
+### Key finding 1: parity maintenance now needs explicit inventory, not just more tests
+The recent sequence of work added:
+- same-timestamp mixed ledgers
+- NFT-aware mixed ledgers
+- manifest-aware mixed ledgers
+- three-account mixed ledgers
+- demurrage-sensitive multi-account mixed ledgers
 
-This pass adds another layer:
-- whether those histories still reconstruct correctly when liquid balances have materially decayed over time
+At that point, keeping the active mirrored scenario set implicit inside test bodies becomes fragile.
 
-That is a more honest approximation of actual economic replay correctness.
+The new catalog gives the project a clearer parity index.
 
-### Key finding 2: frontier balance assertions are worth keeping in recovery tests
-The broader mixed-state assertions are valuable, but explicitly checking the recovered frontier balance adds an important economic correctness signal.
+### Key finding 2: executable documentation is preferable to passive documentation
+A markdown note about current scenarios would help, but it could silently drift.
 
-That pattern is worth continuing in future durable recovery tests whenever demurrage is a meaningful part of the historical ledger.
+By making both Node and Go test suites validate the catalog, the project now treats parity inventory itself as something worth testing.
+
+That is much more aligned with the broader direction of this work:
+- turn assumptions into executable artifacts
+- reduce semantic drift between implementations
 
 ### Remaining likely high-value edge classes
 The next likely targets are:
-1. even larger multi-account same-timestamp webs with more than one recipient-side same-bucket dependency surface
-2. fixture-driven mirrored historical scenarios so Node and Go stay explicitly aligned as test complexity grows
-3. broader API/service assumptions outside the lattice core that may still lag the increasingly strong replay semantics now present in consensus/state tests
-4. eventual explicit scenario catalogs so semantic coverage is easier to audit feature-by-feature
+1. using the scenario catalog to drive more explicit shared fixture execution patterns rather than only static validation
+2. expanding the catalog as larger multi-account mixed ledgers are added
+3. eventually defining partial reusable fixture fragments for recurring structures such as proposer/voter/collector same-timestamp webs
+4. continuing to extend the hardest scenarios on the Go side through durable SQLite recovery
 
 ## Recommended Next Move
 The best next move remains:
-1. continue scaling the same-timestamp multi-account mixed ledgers carefully
-2. keep the hardest scenarios durable on the Go side via SQLite-backed recovery
-3. begin considering fixture-driven mirrored scenario definitions as complexity increases further
+1. continue building larger mirrored replay scenarios
+2. start considering whether portions of those scenarios can be generated from shared fixture fragments
+3. keep the Go side as the durable recovery proving ground while the Node side remains the lightweight reference harness
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -154,8 +137,9 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
+- `testing/parity-scenarios.json`
 - `bobcoin-consensus/test_replay_semantics.js`
-- `go-lattice/lattice_parity_test.go`
+- `go-lattice/parity_scenario_catalog_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

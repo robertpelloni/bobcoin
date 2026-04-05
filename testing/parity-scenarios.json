@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "description": "Shared mirrored replay scenario catalog for Node reference and Go durable recovery parity work.",
+  "scenarios": [
+    {
+      "id": "same_timestamp_governance_swap",
+      "category": "mirrored-replay",
+      "features": ["governance", "vote", "htlc", "same-timestamp"],
+      "accounts": 2,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "expectations": ["proposal-passed", "vote-preserved", "swap-claimed"]
+    },
+    {
+      "id": "same_timestamp_governance_swap_nft",
+      "category": "mirrored-replay",
+      "features": ["governance", "vote", "htlc", "nft", "same-timestamp"],
+      "accounts": 2,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "expectations": ["proposal-passed", "vote-preserved", "swap-claimed", "nft-owner-transferred"]
+    },
+    {
+      "id": "same_timestamp_governance_swap_nft_manifest",
+      "category": "mirrored-replay",
+      "features": ["governance", "vote", "htlc", "nft", "publish-manifest", "data-anchor", "same-timestamp"],
+      "accounts": 2,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "expectations": ["proposal-passed", "vote-preserved", "swap-claimed", "nft-owner-transferred", "manifest-anchor-typed", "data-anchor-typed"]
+    },
+    {
+      "id": "multi_account_same_timestamp_mixed",
+      "category": "mirrored-replay",
+      "features": ["governance", "vote", "market-bid", "accept-bid", "htlc", "nft", "publish-manifest", "data-anchor", "same-timestamp"],
+      "accounts": 3,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "expectations": ["proposal-passed", "vote-preserved", "swap-claimed", "nft-owner-transferred", "bid-accepted", "manifest-anchor-typed", "data-anchor-typed"]
+    },
+    {
+      "id": "demurrage_multi_account_same_timestamp_mixed",
+      "category": "mirrored-replay",
+      "features": ["demurrage", "governance", "vote", "market-bid", "accept-bid", "htlc", "nft", "publish-manifest", "data-anchor", "same-timestamp"],
+      "accounts": 3,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "expectations": ["proposal-passed", "vote-preserved", "swap-claimed", "nft-owner-transferred", "bid-accepted", "manifest-anchor-typed", "data-anchor-typed", "frontier-balance-recovered"]
+    }
+  ]
+}

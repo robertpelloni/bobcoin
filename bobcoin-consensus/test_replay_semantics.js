@@ -1,9 +1,22 @@
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Block } from './Block.js';
 import { Lattice } from './Lattice.js';
 import { deriveKeypair, hash } from './cryptoUtils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const scenarioCatalog = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '../testing/parity-scenarios.json'), 'utf8'),
+);
+
+function getScenario(id) {
+    return scenarioCatalog.scenarios.find((scenario) => scenario.id === id);
+}
 
 function validSpora(previousHash) {
     const challenge = parseInt(previousHash.slice(0, 8), 16);
@@ -32,6 +45,23 @@ function createSignedBlock(data, timestamp, privateKey) {
     block.hash = block.calculateHash();
     block.signBlock(privateKey);
     return block;
+}
+
+function testScenarioCatalogTracksMirroredReplayCoverage() {
+    const requiredScenarioIds = [
+        'same_timestamp_governance_swap',
+        'same_timestamp_governance_swap_nft',
+        'same_timestamp_governance_swap_nft_manifest',
+        'multi_account_same_timestamp_mixed',
+        'demurrage_multi_account_same_timestamp_mixed',
+    ];
+
+    for (const scenarioId of requiredScenarioIds) {
+        const scenario = getScenario(scenarioId);
+        assert.ok(scenario, `scenario catalog should include ${scenarioId}`);
+        assert.equal(scenario.nodeReplayCovered, true, `${scenarioId} should be marked as covered by Node replay tests`);
+        assert.equal(scenario.category, 'mirrored-replay', `${scenarioId} should remain in mirrored replay catalog`);
+    }
 }
 
 function testHistoricalVoteUsesBlockTimestamp() {
@@ -1465,6 +1495,7 @@ function testDemurrageSensitiveMixedLedgerSemantics() {
 }
 
 function run() {
+    testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
     testHistoricalSwapClaimUsesBlockTimestamp();
     testDefaultSwapExpiryUsesLedgerTime();

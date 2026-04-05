@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.48.0] - 2026-04-05
+
+### Added
+- Shared mirrored replay scenario catalog in `testing/parity-scenarios.json` describing the active cross-client parity scenarios, their feature surfaces, account counts, and expected outcomes.
+- Node replay semantics now validate that the shared scenario catalog still includes the required mirrored replay scenarios.
+- Go now validates the shared scenario catalog through `go-lattice/parity_scenario_catalog_test.go`, ensuring the durable recovery side and the Node replay side stay aligned on which mirrored scenarios are considered part of the active parity surface.
+
+### Changed
+- Began moving the parity campaign toward fixture-driven mirrored scenario definitions instead of relying only on scattered implicit test knowledge.
+- Strengthened the parity workflow by making scenario-catalog drift executable in both Node and Go test suites.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.47.0] - 2026-04-05
 
 ### Added

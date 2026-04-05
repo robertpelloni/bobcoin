@@ -1,48 +1,41 @@
-# Session Handoff - 2026-04-05 (v8.57.0)
+# Session Handoff - 2026-04-05 (v8.58.0)
 
 ## Executive Summary
-This session continued the practical Go-port campaign by extending `go-game-server/` beyond HTTP control-plane endpoints and WebSocket matchmaking into the current proof-submission orchestration shell.
+This session continued the practical Go-port campaign by extending `go-game-server/` into the current FHE orchestration boundary.
 
-That is a useful next step because the Go game-server can now handle one of the more important lattice-bridge gameplay flows:
-- receive proof payload
-- validate structure
-- apply the current score-threshold verification rule
-- derive a verification hash
-- mint/send through the lattice bridge when the proof is considered valid
-- record the resulting mint transaction locally
+The major outcome is that the Go game-server now supports the `/fhe-oracle` service shell as a bridge endpoint. That means the Go port now covers not only HTTP control plane, matchmaking/signaling, and proof-submission orchestration, but also the current external-orchestrated homomorphic-computation boundary.
 
-This still does not overclaim true SP1 backend verification parity, but it moves the Go port meaningfully closer to the current Node runtime surface.
+This still does not overclaim true native FHE parity, but it meaningfully reduces the remaining Node-only service shell around the FHE flow.
 
 ## What Changed
 
-### 1. Added `/submit-proof` orchestration to `go-game-server/`
+### 1. Added `/fhe-oracle` bridge shell to `go-game-server/`
 **Files:**
 - `go-game-server/main.go`
 - `go-game-server/README.md`
 
 The Go game-server now supports:
-- `POST /submit-proof`
+- `POST /fhe-oracle`
 
-### Ported behavior
+### Ported orchestration behavior
 The Go implementation now handles:
-- proof payload parsing and validation
-- `publicValues` extraction
-- current score-threshold verification behavior (`score >= 1000`)
-- verification hash derivation from the submitted proof payload
-- lattice mint/send orchestration for verified proofs
-- local mint transaction recording
+- encrypted payload parsing and validation
+- `cipherText` presence checks
+- configurable forwarding to an upstream FHE worker via `FHE_ORACLE_BRIDGE_URL`
+- passthrough response handling back to callers
+- explicit `Not Implemented` behavior when no bridge is configured
 
-That mirrors the current practical orchestration shell of the Node endpoint without pretending that the underlying proof verification engine has already been fully ported.
+This is the reasonable shell-level port of the FHE boundary without pretending Go now natively executes the underlying homomorphic computation.
 
 ### 2. Honest remaining boundary stays intact
 This pass still keeps an honest scope boundary.
 
 The remaining meaningful `game-server`-specific Go gaps are now primarily:
+- true native FHE behavior (rather than bridge-shell orchestration)
 - true SP1 backend verification parity in `/submit-proof`
-- FHE oracle behavior
 - any deeper gameplay/orchestration specifics beyond the current shell
 
-That is now a narrower and more focused list than before.
+That is an even narrower and more specialized remaining surface than before.
 
 ## Validation Performed
 
@@ -90,50 +83,49 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because it moves `go-game-server/` closer to real gameplay-connected orchestration rather than only administrative control-plane work.
+This pass matters because it moves `go-game-server/` closer to the real gameplay/computation boundary of the platform.
 
-After the previous pass, the Go game-server already covered:
+After the last two passes, the Go game-server already covered:
 - HTTP orchestration endpoints
 - wallet/bootstrap behavior
 - bid/transaction persistence
 - matchmaking/signaling shell
+- proof-submission orchestration shell
 
 Now it also covers:
-- the current proof-submission shell used to drive mint flows into the lattice
+- the current FHE orchestration boundary used by the frontend
 
-That is a meaningful reduction in the remaining Node-only runtime surface.
+That is another meaningful reduction in the remaining Node-only service shell.
 
 ## Findings / Analysis
 
-### Key finding 1: the `game-server` migration is now reaching the more important gameplay bridge paths
-This is no longer just porting status endpoints and bookkeeping.
+### Key finding 1: bridge-shell-first remains the right pattern for specialist computation flows
+This pass confirms the same migration pattern is still the right one for the harder specialist subsystems:
+- port the service/orchestration shell first
+- keep explicit boundaries around the true specialized computation engine
+- avoid overclaiming native parity too early
 
-The Go game-server now covers:
-- mint/burn orchestration
-- matchmaking shell
-- proof-submission orchestration
+That is particularly important for FHE, where the service interface and the computation engine are very different migration problems.
 
-That means the port is beginning to touch the higher-value gameplay-to-ledger boundary.
-
-### Key finding 2: the remaining `game-server` gaps are now more clearly specialist-only
-The most meaningful remaining gaps are now much more concentrated around:
+### Key finding 2: the remaining `game-server` gaps are now increasingly specialist-only
+At this point, the most meaningful `game-server` gaps are concentrated around:
+- true native FHE execution parity
 - true SP1 backend verification parity
-- FHE oracle functionality
 
-That is a healthier migration state because the remaining work is now increasingly “specialized subsystems” instead of “core service shell.”
+That is a healthier migration state because the basic service shell is increasingly in Go, and the remaining work is more clearly about specialized computation backends.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
-1. `go-game-server/` does not yet implement true SP1 backend verification parity for `/submit-proof`
-2. `go-game-server/` does not yet port FHE oracle behavior
+1. `go-game-server/` does not yet implement true native FHE behavior
+2. `go-game-server/` does not yet implement true SP1 backend verification parity for `/submit-proof`
 3. `go-supertorrent/` does not yet replace full WebTorrent/WebRTC transport behavior
 4. platform-wide “all-Go” is still not honest yet
 
 ## Recommended Next Move
 The best next move now is:
-1. evaluate whether the next reasonable `game-server` Go step is FHE orchestration shell work or a tighter SP1 verification bridge
+1. evaluate whether the next practical `game-server` Go step is a tighter SP1 verification bridge or a deeper native FHE strategy
 2. continue expanding `go-supertorrent/` where practical
-3. keep preserving the parity/testing/documentation backbone while the platform service layer keeps moving into Go
+3. keep preserving the parity/testing/documentation backbone while the service layer keeps moving into Go
 
 ## Files Changed In This Session
 - `VERSION.md`

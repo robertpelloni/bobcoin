@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.58.0] - 2026-04-05
+
+### Added
+- `/fhe-oracle` bridge shell in `go-game-server/`, porting the current reasonable game-server FHE orchestration boundary into Go:
+  - encrypted payload validation
+  - configurable bridge forwarding via `FHE_ORACLE_BRIDGE_URL`
+  - passthrough response handling from an external FHE worker
+- `go-game-server/README.md` now documents `/fhe-oracle` as part of the Go game-server scope while keeping honest boundaries around true native FHE parity.
+
+### Changed
+- Extended the Go game-server port beyond proof submission and matchmaking into the current FHE orchestration shell, while still keeping honest scope boundaries around true native homomorphic computation parity.
+- Narrowed the most significant remaining `go-game-server`-specific gaps to native FHE behavior and true SP1 backend verification parity rather than the surrounding service shell.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go mod tidy`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.57.0] - 2026-04-05
 
 ### Added

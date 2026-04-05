@@ -11,6 +11,7 @@ This Go service ports the reasonable orchestration/control-plane behavior from `
 - `/bankroll`
 - `/mint`
 - `/burn`
+- `/fhe-oracle` bridge shell
 - `/submit-proof`
 - `/transactions`
 - `/market/bids`
@@ -21,7 +22,7 @@ This Go service ports the reasonable orchestration/control-plane behavior from `
 
 ## Current Reasonable Gaps
 The original Node service still contains additional behavior that has not yet been fully mirrored here, including:
-- FHE oracle endpoints
+- true native FHE oracle parity beyond the current `/fhe-oracle` bridge shell
 - true SP1/ZK backend verification parity beyond the current `/submit-proof` orchestration shell
 - deeper marketplace/gameplay orchestration nuances beyond the initial control-plane port
 

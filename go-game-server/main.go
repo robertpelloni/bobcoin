@@ -23,12 +23,13 @@ import (
 )
 
 type Config struct {
-	Port         string
-	LatticeURL   string
-	SupernodeURL string
-	DBPath       string
-	WalletFile   string
-	ZKServiceURL string
+	Port               string
+	LatticeURL         string
+	SupernodeURL       string
+	DBPath             string
+	WalletFile         string
+	ZKServiceURL       string
+	FHEOracleBridgeURL string
 }
 
 type Wallet struct {
@@ -124,12 +125,13 @@ var coreArcadeAnchorMagnet = "magnet:?xt=urn:btih:1234567890abcdef1234567890abcd
 
 func main() {
 	cfg := Config{
-		Port:         envOrDefault("GAME_SERVER_PORT", "3001"),
-		LatticeURL:   envOrDefault("LATTICE_URL", "http://localhost:4001"),
-		SupernodeURL: envOrDefault("SUPERNODE_URL", "http://localhost:8081"),
-		DBPath:       envOrDefault("GAME_SERVER_DB_PATH", filepath.Join("go-game-server", "database.sqlite")),
-		WalletFile:   envOrDefault("GAME_SERVER_WALLET_FILE", filepath.Join("go-game-server", "system-wallet.json")),
-		ZKServiceURL: envOrDefault("ZK_SERVICE_URL", "http://localhost:8080"),
+		Port:               envOrDefault("GAME_SERVER_PORT", "3001"),
+		LatticeURL:         envOrDefault("LATTICE_URL", "http://localhost:4001"),
+		SupernodeURL:       envOrDefault("SUPERNODE_URL", "http://localhost:8081"),
+		DBPath:             envOrDefault("GAME_SERVER_DB_PATH", filepath.Join("go-game-server", "database.sqlite")),
+		WalletFile:         envOrDefault("GAME_SERVER_WALLET_FILE", filepath.Join("go-game-server", "system-wallet.json")),
+		ZKServiceURL:       envOrDefault("ZK_SERVICE_URL", "http://localhost:8080"),
+		FHEOracleBridgeURL: envOrDefault("FHE_ORACLE_BRIDGE_URL", ""),
 	}
 
 	service, err := NewService(cfg)
@@ -145,6 +147,7 @@ func main() {
 	mux.HandleFunc("/bankroll", service.handleBankroll)
 	mux.HandleFunc("/mint", service.handleMint)
 	mux.HandleFunc("/burn", service.handleBurn)
+	mux.HandleFunc("/fhe-oracle", service.handleFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleSubmitProof)
 	mux.HandleFunc("/transactions", service.handleTransactions)
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
@@ -293,6 +296,32 @@ func (s *Service) handleMint(w http.ResponseWriter, r *http.Request) {
 	txID := "tx_mint_" + shortHash(hash+req.Address)
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: req.Amount, Type: "MINT", Hash: hash})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": hash})
+}
+
+func (s *Service) handleFHEOracle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]interface{}{"success": false, "error": "method not allowed"})
+		return
+	}
+	if s.cfg.FHEOracleBridgeURL == "" {
+		writeJSON(w, http.StatusNotImplemented, map[string]interface{}{"success": false, "error": "FHE oracle bridge is not configured"})
+		return
+	}
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Encrypted payload missing"})
+		return
+	}
+	if payload["cipherText"] == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Encrypted payload missing"})
+		return
+	}
+	var bridgeResp map[string]interface{}
+	if err := s.postJSON(s.cfg.FHEOracleBridgeURL, payload, &bridgeResp); err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, bridgeResp)
 }
 
 func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {

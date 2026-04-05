@@ -13,9 +13,16 @@ const __dirname = path.dirname(__filename);
 const scenarioCatalog = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, '../testing/parity-scenarios.json'), 'utf8'),
 );
+const fixtureFragmentCatalog = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '../testing/parity-fixture-fragments.json'), 'utf8'),
+);
 
 function getScenario(id) {
     return scenarioCatalog.scenarios.find((scenario) => scenario.id === id);
+}
+
+function getFragment(id) {
+    return fixtureFragmentCatalog.fragments.find((fragment) => fragment.id === id);
 }
 
 function validSpora(previousHash) {
@@ -56,11 +63,35 @@ function testScenarioCatalogTracksMirroredReplayCoverage() {
         'demurrage_multi_account_same_timestamp_mixed',
     ];
 
+    const requiredFragmentIds = [
+        'proposer-genesis',
+        'proposer-sends-to-voter',
+        'proposer-sends-to-collector',
+        'same-timestamp-governance-core',
+        'same-timestamp-htlc-core',
+        'same-timestamp-nft-core',
+        'collector-market-bid-core',
+        'manifest-anchor-core',
+        'demurrage-balance-pressure',
+    ];
+
+    assert.ok(scenarioCatalog.version >= 2, 'scenario catalog should be upgraded for fragment references');
+    assert.ok(fixtureFragmentCatalog.version >= 1, 'fixture fragment catalog should have a positive version');
+
+    for (const fragmentId of requiredFragmentIds) {
+        const fragment = getFragment(fragmentId);
+        assert.ok(fragment, `fixture fragment catalog should include ${fragmentId}`);
+    }
+
     for (const scenarioId of requiredScenarioIds) {
         const scenario = getScenario(scenarioId);
         assert.ok(scenario, `scenario catalog should include ${scenarioId}`);
         assert.equal(scenario.nodeReplayCovered, true, `${scenarioId} should be marked as covered by Node replay tests`);
         assert.equal(scenario.category, 'mirrored-replay', `${scenarioId} should remain in mirrored replay catalog`);
+        assert.ok(Array.isArray(scenario.fragments) && scenario.fragments.length > 0, `${scenarioId} should reference shared fixture fragments`);
+        for (const fragmentId of scenario.fragments) {
+            assert.ok(getFragment(fragmentId), `${scenarioId} should only reference known fixture fragments`);
+        }
     }
 }
 

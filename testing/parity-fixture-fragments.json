@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "description": "Reusable mirrored replay fixture fragments referenced by the parity scenario catalog.",
+  "fragments": [
+    {
+      "id": "proposer-genesis",
+      "category": "account-bootstrap",
+      "features": ["open", "genesis"]
+    },
+    {
+      "id": "proposer-sends-to-voter",
+      "category": "funding-leg",
+      "features": ["send", "open", "pending-receive"]
+    },
+    {
+      "id": "proposer-sends-to-collector",
+      "category": "funding-leg",
+      "features": ["send", "open", "pending-receive", "multi-account"]
+    },
+    {
+      "id": "same-timestamp-governance-core",
+      "category": "same-timestamp-core",
+      "features": ["proposal", "vote", "same-timestamp"]
+    },
+    {
+      "id": "same-timestamp-htlc-core",
+      "category": "same-timestamp-core",
+      "features": ["swap-lock", "swap-claim", "same-timestamp"]
+    },
+    {
+      "id": "same-timestamp-nft-core",
+      "category": "same-timestamp-core",
+      "features": ["mint-nft", "transfer-nft", "same-timestamp"]
+    },
+    {
+      "id": "collector-market-bid-core",
+      "category": "market-core",
+      "features": ["market-bid", "accept-bid", "multi-account"]
+    },
+    {
+      "id": "manifest-anchor-core",
+      "category": "anchor-core",
+      "features": ["publish-manifest", "data-anchor"]
+    },
+    {
+      "id": "demurrage-balance-pressure",
+      "category": "economic-pressure",
+      "features": ["demurrage", "elapsed-time"]
+    }
+  ]
+}

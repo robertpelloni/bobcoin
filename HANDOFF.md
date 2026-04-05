@@ -1,56 +1,70 @@
-# Session Handoff - 2026-04-05 (v8.48.0)
+# Session Handoff - 2026-04-05 (v8.49.0)
 
 ## Executive Summary
-This session continued the parity campaign by taking the first concrete step toward fixture-driven mirrored scenario definitions.
+This session continued the parity campaign by taking the next concrete step beyond a shared scenario inventory and toward fixture-driven mirrored scenario definitions.
 
-Instead of relying only on increasingly large, increasingly sophisticated test files to implicitly define the active replay surface, the project now has a shared scenario catalog that both Node and Go validate.
+The project now has not only:
+- a shared mirrored replay scenario catalog
+but also:
+- a shared fixture fragment catalog describing reusable conceptual building blocks that those mirrored scenarios are composed from
 
-That matters because the parity work has reached a scale where scenario drift becomes a real maintenance risk. A shared catalog does not replace executable tests, but it creates a clearer contract for what mirrored replay coverage is supposed to exist across implementations.
+That is useful because the parity surface is now large enough that whole-scenario inventory alone is not the only drift risk. Reusable structure itself can drift too.
 
 ## What Changed
 
-### 1. Added a shared mirrored replay scenario catalog
+### 1. Added a shared replay fixture fragment catalog
+**File:** `testing/parity-fixture-fragments.json`
+
+Created a shared fragment catalog describing reusable parity building blocks such as:
+- proposer genesis bootstrap
+- proposer-to-voter funding leg
+- proposer-to-collector funding leg
+- same-timestamp governance core
+- same-timestamp HTLC core
+- same-timestamp NFT core
+- collector market-bid core
+- manifest/data-anchor core
+- demurrage balance pressure
+
+This does not yet generate full executable ledgers automatically, but it gives the parity work a clearer reusable vocabulary.
+
+### 2. Evolved the shared scenario catalog to reference fragments
 **File:** `testing/parity-scenarios.json`
 
-Created a shared catalog of active mirrored replay scenarios, including:
-- scenario ID
-- category
-- feature surfaces
-- account counts
-- whether durable Go recovery coverage exists
-- whether Node replay coverage exists
-- documented expectations
+Upgraded the scenario catalog to version 2 and added explicit `fragments` references for each mirrored replay scenario.
 
-The catalog currently covers the active mirrored replay surfaces such as:
-- same-timestamp governance + HTLC
-- same-timestamp governance + HTLC + NFT
-- same-timestamp governance + HTLC + NFT + manifest
-- multi-account same-timestamp mixed ledger
-- demurrage-sensitive multi-account same-timestamp mixed ledger
+That means the active mirrored scenarios are now documented not only by:
+- name
+- features
+- expectations
 
-This is the first explicit shared parity inventory in the repo.
+but also by the reusable building blocks they are conceptually composed from.
 
-### 2. Node replay suite now validates the shared scenario catalog
+This is a meaningful step toward deeper fixture-driven alignment.
+
+### 3. Node replay suite now validates scenario-to-fragment references
 **File:** `bobcoin-consensus/test_replay_semantics.js`
 
-Added:
-- shared catalog loading from `testing/parity-scenarios.json`
-- a replay-catalog validation test that asserts required mirrored replay scenarios remain present and marked as Node-covered
+Extended the Node catalog validation so it now:
+- loads the shared fixture fragment catalog
+- verifies required fragments exist
+- verifies required scenarios exist
+- verifies scenarios reference known fixture fragments
+- verifies the catalog version has advanced appropriately for fragment references
 
-This means the Node suite now checks not only replay behavior, but also whether the shared parity inventory still matches the active intended surface.
+This makes fragment drift executable on the Node side, not just scenario drift.
 
-### 3. Go durable recovery suite now validates the shared scenario catalog
+### 4. Go catalog validation now checks fragment references too
 **File:** `go-lattice/parity_scenario_catalog_test.go`
 
-Added a Go-side test that:
-- reads the shared scenario catalog
-- verifies required mirrored replay scenarios are present
-- verifies they remain categorized as mirrored replay coverage
-- verifies they are marked as durable Go recovery coverage
-- verifies documented expectations remain present
-- verifies the demurrage multi-account scenario still declares demurrage and a three-account shape
+Extended the Go-side catalog validation so it now:
+- loads the shared fixture fragment catalog
+- verifies required fragment IDs exist
+- verifies required mirrored scenarios reference shared fixture fragments
+- verifies all referenced fragment IDs resolve correctly
+- verifies catalog versions are appropriate
 
-This is useful because the Go side now also guards the shared scenario contract rather than leaving the catalog purely documentary.
+This means both lattice implementations now validate the shared parity vocabulary, not just the shared scenario list.
 
 ## Validation Performed
 
@@ -61,6 +75,7 @@ Command run:
 Result:
 - Node replay semantics tests passed
 - shared scenario catalog validation passed
+- shared fixture fragment validation passed
 
 ### Go lattice
 Commands run:
@@ -73,6 +88,7 @@ Result:
 - build succeeded
 - tests passed
 - shared scenario catalog validation passed
+- shared fixture fragment validation passed
 
 ### Frontend
 Command run:
@@ -84,52 +100,48 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because the parity effort has grown from a few isolated tests into a serious cross-client semantic campaign.
+This pass matters because the parity effort now has two different kinds of maintenance risk:
+1. whole mirrored scenarios drifting apart
+2. the underlying reusable building blocks drifting apart
 
-At that scale, there is a real risk that:
-- a mirrored scenario exists in Go but not Node
-- a Node replay scenario drifts conceptually from its Go recovery counterpart
-- scenario names and intended feature surfaces become tribal knowledge buried inside test code
+The earlier scenario catalog started addressing the first problem.
+This new fragment catalog starts addressing the second.
 
-The shared scenario catalog does not solve all of that by itself, but it does establish a clearer, executable inventory of what the project currently treats as the mirrored replay surface.
-
-That is a useful step toward deeper fixture-driven alignment.
+That makes the parity campaign more structured and more extensible as coverage continues to grow.
 
 ## Findings / Analysis
 
-### Key finding 1: parity maintenance now needs explicit inventory, not just more tests
-The recent sequence of work added:
-- same-timestamp mixed ledgers
-- NFT-aware mixed ledgers
-- manifest-aware mixed ledgers
-- three-account mixed ledgers
-- demurrage-sensitive multi-account mixed ledgers
+### Key finding 1: reusable parity vocabulary is becoming necessary
+The recent parity work now spans:
+- governance cores
+- HTLC cores
+- NFT ownership transitions
+- market bid/accept flows
+- manifest/anchor flows
+- demurrage pressure
+- same-timestamp multi-account funding legs
 
-At that point, keeping the active mirrored scenario set implicit inside test bodies becomes fragile.
+Once those structures recur across many mirrored scenarios, it becomes useful to name them explicitly instead of rediscovering them informally in every new test.
 
-The new catalog gives the project a clearer parity index.
+The fragment catalog is the first concrete step in that direction.
 
-### Key finding 2: executable documentation is preferable to passive documentation
-A markdown note about current scenarios would help, but it could silently drift.
+### Key finding 2: executable inventories are preferable to passive inventories
+As with the scenario catalog pass, the important part is not only documenting fragment structure, but also validating it in tests.
 
-By making both Node and Go test suites validate the catalog, the project now treats parity inventory itself as something worth testing.
-
-That is much more aligned with the broader direction of this work:
-- turn assumptions into executable artifacts
-- reduce semantic drift between implementations
+That keeps the new parity vocabulary from turning into stale documentation.
 
 ### Remaining likely high-value edge classes
 The next likely targets are:
-1. using the scenario catalog to drive more explicit shared fixture execution patterns rather than only static validation
-2. expanding the catalog as larger multi-account mixed ledgers are added
-3. eventually defining partial reusable fixture fragments for recurring structures such as proposer/voter/collector same-timestamp webs
-4. continuing to extend the hardest scenarios on the Go side through durable SQLite recovery
+1. using the fragment catalog to drive more explicit shared scenario assembly rather than only validation
+2. adding larger multi-account same-timestamp webs that reuse the same fragment structure in more combinations
+3. continuing to keep the hardest mirrored scenarios durable on the Go side through SQLite-backed recovery
+4. eventually defining clearer scenario families so coverage growth is easier to audit by feature cluster
 
 ## Recommended Next Move
 The best next move remains:
-1. continue building larger mirrored replay scenarios
-2. start considering whether portions of those scenarios can be generated from shared fixture fragments
-3. keep the Go side as the durable recovery proving ground while the Node side remains the lightweight reference harness
+1. begin using fragment references more actively when adding new mirrored scenarios
+2. continue scaling larger same-timestamp multi-account mixed ledgers
+3. keep the Go side as the durable recovery proving ground while the Node side remains the fast reference harness
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -138,6 +150,7 @@ The best next move remains:
 - `MEMORY.md`
 - `TODO.md`
 - `testing/parity-scenarios.json`
+- `testing/parity-fixture-fragments.json`
 - `bobcoin-consensus/test_replay_semantics.js`
 - `go-lattice/parity_scenario_catalog_test.go`
 

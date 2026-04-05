@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.49.0] - 2026-04-05
+
+### Added
+- Shared replay fixture fragment catalog in `testing/parity-fixture-fragments.json` describing reusable mirrored parity building blocks such as proposer bootstrap, same-timestamp governance core, HTLC core, NFT core, manifest/anchor core, and demurrage pressure.
+- Node replay semantics now validate that mirrored replay scenarios reference known shared fixture fragments.
+- Go now validates shared fixture fragment references through `go-lattice/parity_scenario_catalog_test.go`, making scenario-to-fragment drift executable on both sides.
+
+### Changed
+- Advanced the parity campaign another step toward fixture-driven mirrored scenarios by evolving the shared scenario catalog to include explicit fragment references.
+- Strengthened the shared parity inventory so mirrored scenarios are now documented not only as whole ledgers, but also in terms of reusable conceptual building blocks.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.48.0] - 2026-04-05
 
 ### Added

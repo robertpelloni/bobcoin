@@ -59,6 +59,8 @@
   - As of v8.47.0, Go durable recovery also validates recovered proposer frontier balance inside the demurrage-sensitive broader mixed ledger, not just logical state maps such as proposals, swaps, bids, NFTs, and anchors.
   - As of v8.48.0, mirrored replay scenarios are now documented in `testing/parity-scenarios.json`, giving the parity campaign a shared scenario catalog rather than relying only on scattered test code.
   - As of v8.48.0, both Node and Go test suites validate the shared replay scenario catalog, so scenario-catalog drift is now executable rather than purely documentary.
+  - As of v8.49.0, shared replay fixture fragments are now documented in `testing/parity-fixture-fragments.json`, so the parity campaign has started to inventory reusable building blocks, not just whole mirrored scenarios.
+  - As of v8.49.0, both Node and Go test suites validate scenario-to-fragment references, making fixture-fragment drift executable as the mirrored parity surface grows.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

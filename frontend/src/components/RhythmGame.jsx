@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import SimplePeer from 'simple-peer';
-import { API_URL } from '../api';
+import { SIGNALING_URL } from '../api';
 import { playHitSound, playMatchSound, startAmbientDrone, getAnalyzer } from '../audio/AudioEngine';
 import { checkAndUnlock } from '../AchievementService';
 import './RhythmGame.css';
@@ -64,7 +64,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
 
     const initMatchmaking = () => {
         setMatchStatus('SEARCHING');
-        const wsUrl = API_URL.replace('http', 'ws');
+        const wsUrl = SIGNALING_URL.replace('http', 'ws');
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 

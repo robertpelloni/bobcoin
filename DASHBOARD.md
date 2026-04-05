@@ -9,7 +9,7 @@ The Bobcoin repository is structured as a Monorepo containing several distinct, 
 ```text
 bobcoin/
 ├── frontend/           # React/Vite UI Application (Port 5173)
-├── game-server/        # Node.js/Express Orchestrator & Governance DB (Host Port 3001)
+├── game-server/        # Legacy Node signaling/oracle helper service (Host Port 3001)
 ├── supertorrent/       # Node.js WebTorrent Storage Node & Solana Bridge (Host Port 8081)
 ├── proof-of-play/      # Rust SP1 Zero-Knowledge Service
 └── research/           # External ecosystem reference repositories

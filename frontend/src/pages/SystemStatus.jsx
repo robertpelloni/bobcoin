@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CyberGrid3D } from '../components/CyberGrid3D';
-import { LATTICE_URL, SUPERNODE_URL } from '../api';
+import { API_URL, LATTICE_URL, SIGNALING_URL, SUPERNODE_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { probeStorageWasmAvailability } from '../lib/storageWasm';
 import './SystemStatus.css';
@@ -102,10 +102,34 @@ export function SystemStatus() {
 
     const checkHealth = async () => {
         try {
-            await fetch('http://localhost:3001/status');
-            setServices(s => ({ ...s, gameServer: 'ONLINE' }));
+            await fetch(`${API_URL}/status`);
+            setServices(s => ({ ...s, gameServer: `ONLINE (${API_URL === SUPERNODE_URL ? 'GO HTTP' : 'LEGACY HTTP'})` }));
         } catch {
             setServices(s => ({ ...s, gameServer: 'OFFLINE' }));
+        }
+
+        try {
+            const wsScheme = SIGNALING_URL.startsWith('https://') ? 'wss://' : 'ws://';
+            const wsTarget = SIGNALING_URL.replace(/^https?:\/\//, wsScheme);
+            const ws = new WebSocket(wsTarget);
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    ws.close();
+                    reject(new Error('signaling timeout'));
+                }, 3000);
+                ws.onopen = () => {
+                    clearTimeout(timeout);
+                    ws.close();
+                    resolve();
+                };
+                ws.onerror = () => {
+                    clearTimeout(timeout);
+                    reject(new Error('signaling unavailable'));
+                };
+            });
+            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING ONLINE` }));
+        } catch {
+            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING OFFLINE` }));
         }
 
         try {
@@ -145,7 +169,6 @@ export function SystemStatus() {
             setServices(s => ({ ...s, lattice: 'OFFLINE' }));
         }
 
-        setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)' }));
     };
 
     useEffect(() => {

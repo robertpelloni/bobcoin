@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.41.0] - 2026-04-05
+
+### Added
+- Mirrored mixed-feature replay regression coverage across both lattice implementations:
+  - Go now covers durable SQLite-backed recovery of a demurrage-sensitive governance + HTLC ledger
+  - Node now covers a demurrage-sensitive mixed governance + HTLC historical ledger in the replay semantics suite
+- The new mirrored scenarios prove that proposal passage, swap claim state, and demurrage-adjusted balances can remain coherent together rather than only in isolated feature tests.
+
+### Changed
+- Extended cross-client parity validation from isolated ledger-time fixes into mixed-feature historical ledgers where governance, HTLCs, later finalizer blocks, and demurrage all interact.
+- Strengthened Node replay semantics tests to use a later ledger-time finalizer block in a demurrage-sensitive mixed ledger.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.40.0] - 2026-04-05
 
 ### Added

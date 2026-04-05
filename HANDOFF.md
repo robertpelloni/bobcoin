@@ -1,68 +1,63 @@
-# Session Handoff - 2026-04-05 (v8.40.0)
+# Session Handoff - 2026-04-05 (v8.41.0)
 
 ## Executive Summary
-This session continued the cross-client replay parity pass by hardening the Node reference lattice beyond isolated time checks and into actual proposal lifecycle advancement.
+This session continued the cross-client replay parity pass by moving from mixed-feature Node-only coverage to a more honestly mirrored cross-client scenario.
 
-The result is a stronger parity position between Go and Node:
-- Node already had ledger-time fixes for proposal voting and HTLCs from the previous pass
-- Node now also advances proposal terminal status from ledger time during block processing
-- Node replay coverage now includes mixed governance + HTLC ledgers instead of only single-feature cases
+The key outcome is that both lattice implementations now exercise mixed governance + HTLC historical ledgers, and the Go side now does so through durable SQLite-backed recovery under demurrage-sensitive conditions.
 
-That is important because parity risks often hide in interactions between features, not just in isolated validation rules.
+That is a stronger form of evidence than isolated per-feature regressions because it proves several replay-sensitive systems can remain coherent together inside the same historical ledger.
 
 ## What Changed
 
-### 1. Node proposal lifecycle now refreshes on later ledger-time blocks
-**File:** `bobcoin-consensus/Lattice.js`
+### 1. Go now has a durable demurrage-sensitive mixed governance + HTLC recovery regression
+**File:** `go-lattice/lattice_parity_test.go`
 
-Previously, the Node reference lattice could accept proposal votes using ledger time, but proposal terminal status itself was still effectively stale unless something external interpreted it.
-
-That left an important semantic gap with the Go lattice, which already refreshes proposal status based on block time.
-
-### New behavior
-Added:
-- `refreshProposalStatusesAt(atMs)`
-
-And invoked it during `processBlock(block)`.
-
-That means Node now:
-- scans active proposals
-- parses each `endTime`
-- finalizes proposals when a later ledger-time block reaches or passes expiry
-- marks them `Passed` or `Rejected` based on existing vote totals
-
-This is materially closer to the Go model and better reflects actual ledger-time lifecycle semantics.
-
-### 2. Node replay tests now cover proposal finalization, not just vote admission
-**File:** `bobcoin-consensus/test_replay_semantics.js`
-
-Added a regression proving that:
-- a proposal can receive a valid vote before expiry
-- a later ledger-time block finalizes the proposal status
-- the proposal ends as `Passed` when vote totals warrant it
-
-This is important because allowing a vote before expiry is only half the lifecycle story. The status transition itself also has to remain consistent.
-
-### 3. Node replay tests now cover mixed governance + HTLC histories
-**File:** `bobcoin-consensus/test_replay_semantics.js`
-
-Added a mixed-feature regression ledger that combines:
-- proposal creation
-- vote submission
+Added a new SQLite-backed recovery test that persists and reloads a mixed-feature ledger involving:
+- proposer genesis
+- demurrage-sensitive send to a voter
+- voter open
+- proposal creation after meaningful elapsed time
+- vote submission using demurrage-adjusted balance
 - HTLC lock
 - HTLC claim
+- later manifest publication after proposal expiry threshold
+
+The recovered-state assertions verify together that:
+- proposer chain length is correct
+- voter chain length is correct
+- proposal status finalizes to `Passed`
+- vote state survives restart
+- swap status survives restart as `CLAIMED`
+- final proposer frontier balance matches the demurrage-adjusted expected manifest balance
+- recovered anchor state includes the published manifest
+
+This is important because it exercises several historically sensitive mechanisms in one persisted ledger:
+- demurrage
+- governance lifecycle
+- HTLC lifecycle
+- anchor reconstruction
+- restart recovery
+
+### 2. Node replay suite now includes a demurrage-sensitive mixed ledger scenario
+**File:** `bobcoin-consensus/test_replay_semantics.js`
+
+Added a new Node replay regression covering a demurrage-sensitive mixed ledger with:
+- elapsed-time-sensitive proposer balance decay
+- governance proposal + vote
+- HTLC lock + claim
 - later ledger-time finalizer block
 
-The test verifies together that:
-- the proposal finalizes as `Passed`
-- the HTLC remains `CLAIMED`
+The assertions verify together that:
+- proposal status finalizes as `Passed`
+- HTLC state remains `CLAIMED`
+- final frontier balance matches the expected demurrage-adjusted finalizer balance
 
-This is a stronger parity test than isolated single-feature checks because it proves the Node reference can sustain multiple replay-sensitive semantics inside one historical ledger.
+This extends the Node reference beyond basic time semantics and into a more realistic multi-feature ledger shape.
 
 ## Validation Performed
 
 ### Node reference lattice
-Command run:
+Commands run:
 - `cd C:/Users/hyper/workspace/bobcoin/bobcoin-consensus && npm test`
 
 Result:
@@ -70,10 +65,12 @@ Result:
 
 ### Go lattice
 Commands run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && gofmt -w *.go`
 - `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
 - `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go test ./...`
 
 Result:
+- formatting succeeded
 - build succeeded
 - tests passed
 
@@ -87,52 +84,48 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because parity bugs rarely stay confined to one feature.
+This pass matters because parity confidence gets stronger when the same kind of historical ledger is exercised on both sides.
 
-A client can look correct when you test:
-- only governance
-- only HTLCs
-- only isolated time checks
+Before this pass:
+- Node had mixed governance + HTLC replay coverage
+- Go had strong replay/recovery coverage, but not yet the same demurrage-sensitive mixed ledger shape mirrored across clients
 
-But still diverge when those features coexist in the same ledger and later ledger-time events mutate lifecycle state.
+After this pass:
+- Node and Go both cover mixed governance + HTLC histories
+- Go additionally validates the scenario through persisted restart recovery
+- demurrage-sensitive interactions are no longer only an implicit assumption
 
-This pass improves the Node reference in exactly that area:
-- proposal lifecycle advancement now follows ledger time during processing
-- mixed governance + HTLC history is now executable and tested
-
-That moves the project closer to true semantic parity rather than isolated behavioral coincidence.
+That is a more honest basis for saying the implementations are converging semantically.
 
 ## Findings / Analysis
 
-### Key finding 1: time semantics and lifecycle semantics are distinct parity layers
-The previous Node pass fixed validation-time semantics:
-- votes should compare against `block.timestamp`
-- swaps should compare against `block.timestamp`
+### Key finding 1: mirrored mixed-feature ledgers are more informative than isolated parity checks
+A client pair can appear aligned when you compare:
+- votes in isolation
+- swaps in isolation
+- demurrage in isolation
 
-This pass fixed lifecycle-advancement semantics:
-- proposals should also finalize from ledger time as later blocks arrive
+But the real semantic question is whether all of those systems stay coherent together when historical time advances and a node restarts.
 
-Those are related, but not identical, parity concerns.
+This session took a concrete step toward that stronger test surface.
 
-### Key finding 2: mixed-feature ledgers are the next honest test surface
-Single-feature regression tests are necessary, but they are not enough.
+### Key finding 2: persisted recovery remains the higher-value proving ground
+The Node replay suite is useful and now much stronger than before, but the Go SQLite recovery test is especially valuable because restart behavior is where many subtle parity bugs emerge.
 
-The strongest parity confidence comes from ledgers where multiple time-sensitive systems coexist and evolve together.
-
-This is why the mixed governance + HTLC Node test is useful: it begins turning cross-feature semantic assumptions into executable evidence.
+That means durable mixed-feature recovery tests should continue to be one of the highest-leverage parity investments.
 
 ### Remaining likely high-value edge classes
 The next likely targets are:
-1. cross-client mixed-feature ledgers that exercise the same scenario in both Node and Go
-2. same-timestamp mixed governance + HTLC dependency webs
-3. demurrage-sensitive multi-feature histories where elapsed-time accounting matters alongside lifecycle state
-4. any remaining replay-sensitive Node paths that still lag Go behavior beyond what current tests cover
+1. same-timestamp mixed-feature ledgers mirrored across Node and Go
+2. larger dependency webs where governance, HTLCs, manifests, and NFT ownership changes coexist
+3. even nastier demurrage-sensitive restart histories with more elapsed-time boundaries and multiple accounts
+4. explicit fixture-driven cross-client scenario definitions shared conceptually between Node and Go tests
 
 ## Recommended Next Move
 The best next move remains:
-1. build an explicitly mirrored mixed-feature ledger scenario across both Node and Go
-2. extend that scenario into same-timestamp dependency-heavy histories
-3. then push into demurrage-sensitive mixed-feature parity tests
+1. build mirrored same-timestamp mixed-feature ledgers across Node and Go
+2. extend them to include NFTs or manifests alongside governance + HTLCs
+3. continue preferring durable recovery tests on the Go side for the hardest scenarios
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -140,8 +133,8 @@ The best next move remains:
 - `TODO.md`
 - `MEMORY.md`
 - `HANDOFF.md`
-- `bobcoin-consensus/Lattice.js`
 - `bobcoin-consensus/test_replay_semantics.js`
+- `go-lattice/lattice_parity_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

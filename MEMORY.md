@@ -88,6 +88,8 @@
   - As of v8.62.0, the Go supertorrent tests now cover bootstrap/open flow from minted pending funds and single-pass open-bid processing, not just lower-level endpoint behavior.
   - As of v8.63.0, `go-game-server/main_test.go` now also covers higher-value handler-level orchestration paths (`/submit-proof`, `/mint`, and `/fhe-oracle` not-configured behavior), not just lower-level helper behavior.
   - As of v8.63.0, the Go game-server shell is now tested at both helper level and endpoint level for its current proof/mint/FHE orchestration boundaries.
+  - As of v8.64.0, `go-game-server/main_test.go` now also covers market/status/bookkeeping handler paths (`/market/bid`, `/market/bids`, `/market/accept`, `/status`, `/bankroll`, `/transactions`), expanding the Go game-server shell coverage beyond the gameplay bridge endpoints.
+  - As of v8.64.0, the Go game-server control-plane port now has executable handler coverage for both its gameplay-facing bridge shell and its bookkeeping/market shell.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -192,6 +193,100 @@ func TestFHEOracleBridgeNotConfigured(t *testing.T) {
 	service.handleFHEOracle(rec, req)
 	if rec.Code != http.StatusNotImplemented {
 		t.Fatalf("expected 501 when FHE bridge is missing, got %d", rec.Code)
+	}
+}
+
+func TestMarketBidLifecycleEndpoints(t *testing.T) {
+	service := newTestService(t)
+
+	createReq := httptest.NewRequest(http.MethodPost, "/market/bid", strings.NewReader(`{"magnet":"magnet:?xt=urn:btih:testbid","amount":42}`))
+	createRec := httptest.NewRecorder()
+	service.handleCreateBid(createRec, createReq)
+	if createRec.Code != http.StatusOK {
+		t.Fatalf("expected market bid creation success, got %d with %s", createRec.Code, createRec.Body.String())
+	}
+
+	listRec := httptest.NewRecorder()
+	service.handleMarketBids(listRec, httptest.NewRequest(http.MethodGet, "/market/bids", nil))
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected market bid listing success, got %d", listRec.Code)
+	}
+	var listBody map[string]interface{}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &listBody); err != nil {
+		t.Fatalf("failed to decode bid list: %v", err)
+	}
+	bids, ok := listBody["bids"].([]interface{})
+	if !ok || len(bids) != 1 {
+		t.Fatalf("expected one open bid, got %v", listBody["bids"])
+	}
+	bid := bids[0].(map[string]interface{})
+	bidID := int64(bid["id"].(float64))
+
+	acceptReq := httptest.NewRequest(http.MethodPost, "/market/accept", strings.NewReader(fmt.Sprintf(`{"bidId":%d,"nodeId":"go-supernode"}`, bidID)))
+	acceptRec := httptest.NewRecorder()
+	service.handleAcceptBid(acceptRec, acceptReq)
+	if acceptRec.Code != http.StatusOK {
+		t.Fatalf("expected market bid accept success, got %d with %s", acceptRec.Code, acceptRec.Body.String())
+	}
+
+	postAcceptRec := httptest.NewRecorder()
+	service.handleMarketBids(postAcceptRec, httptest.NewRequest(http.MethodGet, "/market/bids", nil))
+	var postAcceptBody map[string]interface{}
+	if err := json.Unmarshal(postAcceptRec.Body.Bytes(), &postAcceptBody); err != nil {
+		t.Fatalf("failed to decode accepted bid list: %v", err)
+	}
+	postAcceptBids := postAcceptBody["bids"].([]interface{})
+	acceptedBid := postAcceptBids[0].(map[string]interface{})
+	if acceptedBid["status"] != "ACCEPTED" {
+		t.Fatalf("expected accepted market bid status, got %v", acceptedBid["status"])
+	}
+	if acceptedBid["acceptedBy"] != "go-supernode" {
+		t.Fatalf("expected acceptedBy to be persisted, got %v", acceptedBid["acceptedBy"])
+	}
+}
+
+func TestStatusBankrollAndTransactionsEndpoints(t *testing.T) {
+	service := newTestService(t)
+	service.systemBalance = 777
+	_ = recordTransaction(service.db, Transaction{ID: "tx-demo", Date: formatDBDate(time.Now()), Amount: 12.5, Type: "MINT", Hash: "hash-demo"})
+
+	statusRec := httptest.NewRecorder()
+	service.handleStatus(statusRec, httptest.NewRequest(http.MethodGet, "/status", nil))
+	if statusRec.Code != http.StatusOK {
+		t.Fatalf("expected status success, got %d", statusRec.Code)
+	}
+	var statusBody map[string]interface{}
+	if err := json.Unmarshal(statusRec.Body.Bytes(), &statusBody); err != nil {
+		t.Fatalf("failed to decode status response: %v", err)
+	}
+	if statusBody["status"] != "online" {
+		t.Fatalf("expected online status, got %v", statusBody["status"])
+	}
+
+	bankrollRec := httptest.NewRecorder()
+	service.handleBankroll(bankrollRec, httptest.NewRequest(http.MethodGet, "/bankroll", nil))
+	if bankrollRec.Code != http.StatusOK {
+		t.Fatalf("expected bankroll success, got %d", bankrollRec.Code)
+	}
+	var bankrollBody map[string]interface{}
+	if err := json.Unmarshal(bankrollRec.Body.Bytes(), &bankrollBody); err != nil {
+		t.Fatalf("failed to decode bankroll response: %v", err)
+	}
+	if bankrollBody["balance"] != float64(777) {
+		t.Fatalf("expected bankroll balance 777, got %v", bankrollBody["balance"])
+	}
+
+	transactionsRec := httptest.NewRecorder()
+	service.handleTransactions(transactionsRec, httptest.NewRequest(http.MethodGet, "/transactions", nil))
+	if transactionsRec.Code != http.StatusOK {
+		t.Fatalf("expected transactions success, got %d", transactionsRec.Code)
+	}
+	var transactions []map[string]interface{}
+	if err := json.Unmarshal(transactionsRec.Body.Bytes(), &transactions); err != nil {
+		t.Fatalf("failed to decode transactions response: %v", err)
+	}
+	if len(transactions) != 1 || transactions[0]["id"] != "tx-demo" {
+		t.Fatalf("expected recorded transaction to be returned, got %v", transactions)
 	}
 }
 

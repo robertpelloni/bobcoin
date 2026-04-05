@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.44.0] - 2026-04-05
+
+### Added
+- Mirrored same-timestamp mixed-feature replay coverage now includes NFT ownership transitions as well as governance and HTLC behavior:
+  - Node replay semantics now cover a same-timestamp governance + vote + NFT mint + NFT transfer + HTLC lock ledger followed by HTLC claim and later lifecycle finalization
+  - Go now covers durable SQLite-backed recovery of the mirrored same-timestamp governance + HTLC + NFT ledger under hostile ordering
+- The new scenarios verify together that proposal passage, vote preservation, claimed swap state, NFT ownership transfer, and anchor reconstruction can remain coherent inside one replay-sensitive historical ledger.
+
+### Changed
+- Extended the mirrored same-timestamp parity surface beyond governance + HTLC interactions into NFT ownership semantics, increasing confidence that replay-order hardening holds across a broader state surface.
+- Strengthened the Go durable recovery suite with a same-timestamp mixed NFT/governance/swap scenario that validates recovered `data_anchor` typing as well as recovered NFT ownership.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.43.0] - 2026-04-05
 
 ### Added

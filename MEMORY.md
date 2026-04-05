@@ -49,6 +49,8 @@
   - As of v8.41.0, both Node and Go now exercise mixed governance + HTLC historical ledgers, so cross-client parity work has advanced from isolated time semantics into mirrored multi-feature replay scenarios.
   - As of v8.42.0, both Node and Go now also exercise same-timestamp mixed governance + HTLC ledgers, so timestamp-bucket replay behavior is being validated in cross-client mirrored scenarios rather than only in single-feature tests.
   - As of v8.42.0, Go durable recovery now explicitly covers same-timestamp mixed governance + HTLC reconstruction under hostile cross-account ordering, not just same-timestamp single-feature cases.
+  - As of v8.43.0, the mirrored same-timestamp cross-client scenarios now include NFT ownership transfer semantics in addition to governance and HTLC lifecycle state, expanding the replay-sensitive parity surface into asset ownership transitions.
+  - As of v8.43.0, Go durable recovery also validates recovered `data_anchor` typing and recovered NFT ownership inside the same same-timestamp mixed ledger, not just proposal and swap state.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

@@ -1,75 +1,186 @@
-# Session Handoff - 2026-04-05 (v8.43.0)
+# Session Handoff - 2026-04-05 (v8.44.0)
 
 ## Executive Summary
-This pass deepens the archive operator analytics layer from a first-pass failure leaderboard into a longer-horizon source reliability system. The work was rebased on top of newer upstream replay-determinism and mirrored parity fixes, so Bobcoin now preserves the latest replay/cold-boot correctness improvements while also gaining week-over-week source trend analysis in Vault.
+This pass preserved the newer upstream Vault analytics improvements and then rebased a deeper replay-parity test expansion on top.
+
+The merged result now includes both:
+- longer-horizon source reliability analytics in Vault
+- stronger mirrored same-timestamp replay coverage including NFT ownership transitions across Node and Go
+
+That is the right outcome for Bobcoin right now: preserve operator-facing archive intelligence while continuing to harden honest cross-client replay semantics.
+
+## Rebase / Merge Context
+A direct push was rejected because `origin/main` advanced with upstream analytics work, including:
+- long-horizon source reliability trends
+- success-aware recovery history
+- comparative source diagnostics
+- longer retained local recovery history
+
+Resolution strategy:
+- preserve all upstream analytics work
+- rebase the ownership-aware parity test expansion on top
+- promote the merged result to `v8.44.0`
 
 ## What This Pass Added
 
-### 1. Success-aware recovery history
-**File:** `frontend/src/components/StorageWasmWorkbench.jsx`
+### 1. Node now covers same-timestamp governance + HTLC + NFT history
+**File:** `bobcoin-consensus/test_replay_semantics.js`
 
-Recovery reports now persist:
-- `successfulShards`
-- existing `failedShards`
-- existing parity/recoverability metadata
+Added a new Node replay regression where:
+- proposer opens from genesis
+- proposer sends funds to voter
+- voter opens
+- proposal creation occurs at timestamp `T`
+- vote occurs at the same timestamp `T`
+- NFT mint occurs at the same timestamp `T`
+- NFT transfer occurs at the same timestamp `T`
+- HTLC lock occurs at the same timestamp `T`
+- HTLC claim occurs shortly after
+- a later ledger-time `data_anchor` block finalizes proposal lifecycle state
 
-This matters because host analytics are no longer forced to infer health from failure-only evidence.
+### Node assertions
+The scenario verifies that:
+- proposal finalizes as `Passed`
+- swap state is `CLAIMED`
+- the NFT owner becomes the voter
 
-Additional enhancement:
-- local recovery report retention increased from **50** to **200** reports, giving the trend layer a wider historical base.
+This is valuable because Node is now testing same-timestamp interactions across governance, HTLCs, and ownership transfer, not just governance and HTLCs alone.
 
-### 2. Long-horizon source reliability analytics
-**File:** `frontend/src/pages/Vault.jsx`
+### 2. Go now covers durable recovery of the mirrored same-timestamp governance + HTLC + NFT ledger
+**File:** `go-lattice/lattice_parity_test.go`
 
-Vault now derives per-host profiles including:
-- all-time failures
-- all-time successful shard fetches
-- 7-day failures/successes
-- prior-7-day failures/successes
-- reliability score
-- trend labels (`DEGRADING`, `IMPROVING`, `STABLE`, `NEW`, `QUIET`)
-- manifest participation counts
-- last-seen / first-seen timing
+Added a SQLite-backed recovery regression for the mirrored mixed ledger.
 
-### 3. Comparative source diagnostics surface
-**Files:**
-- `frontend/src/pages/Vault.jsx`
-- `frontend/src/pages/Vault.css`
+The scenario intentionally preserves hostile ordering via descending account selection so cross-account governance replay still has to resolve within the same timestamp bucket while the proposer chain also executes NFT and HTLC state transitions at that same timestamp.
 
-Added new source-intelligence UI elements:
-- recovery-report retention summary cards
-- source insight cards for:
-  - source needing attention
-  - healthiest observed source
-  - improving source
-- richer per-host cards with health badges and week-over-week comparison metadata
+### Persisted ledger shape
+The Go durable ledger now includes:
+- proposer genesis
+- send to voter
+- voter open
+- proposal at timestamp `T`
+- vote at timestamp `T`
+- NFT mint at timestamp `T`
+- NFT transfer at timestamp `T`
+- HTLC lock at timestamp `T`
+- HTLC claim shortly after
+- later `data_anchor` finalizer block
 
-## Validation
-Executed successfully:
-- `cd frontend && npm run build`
-- result: ✅ production frontend build succeeds after long-horizon source trend integration
+### Recovered-state assertions
+The test verifies that after cold-boot recovery:
+- proposer chain length is correct
+- voter chain length is correct
+- recovered proposal status is `Passed`
+- recovered vote state is preserved
+- recovered swap state is `CLAIMED`
+- recovered NFT exists and ownership was transferred to the voter
+- recovered data anchor exists
+- recovered anchor type is `data_anchor`
 
-## Rebase / Merge Context
-A direct push was rejected multiple times because `origin/main` advanced through:
-- `v8.39.0` Node replay semantics aligned to ledger time
-- `v8.40.0` Node proposal lifecycle finalization from ledger time
-- `v8.41.0` mirrored mixed governance + HTLC replay coverage
-- `v8.42.0` mirrored same-timestamp mixed-feature replay coverage
+This is a stronger recovery surface than before because it proves that replay-order hardening is preserving not just lifecycle state, but also asset ownership state inside the same historical ledger.
 
-Resolution strategy:
-- preserve all upstream replay/parity fixes
-- rebase the new Vault analytics work on top
-- promote this analytics pass to `v8.43.0`
+## Upstream Work Preserved In The Merged State
+The rebased branch also retains newer operator-facing analytics already landed upstream:
+- long-horizon source reliability trends in Vault
+- success-aware recovery history persistence
+- comparative source diagnostics and trend labels
+- increased locally retained recovery report history
 
-## Recommended Next Step
-1. Snapshot acceleration for the root replay-backed lattice persistence
-2. Deeper publisher attestation semantics
-   - stronger proof taxonomy
-   - richer proof cards / external attestations
-3. Frontend bundle health
-   - manual chunk splitting for the large Vite bundle
+So the branch advanced on both sides:
+- richer operator analytics
+- broader ownership-aware replay parity coverage
 
-## Summary
-- Bobcoin Vault now supports trend-aware source reliability analysis instead of only static host failure snapshots.
-- Recovery analytics are now success-aware, not failure-only.
-- The next strong product move is either persistence snapshot acceleration or deeper publisher attestation semantics.
+## Validation Performed
+
+### Node reference lattice
+Command run:
+- `cd C:/Users/hyper/workspace/bobcoin/bobcoin-consensus && npm test`
+
+Result:
+- Node replay semantics tests passed
+
+### Go lattice
+Commands run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd C:/Users/hyper/workspace/bobcoin/go-lattice && go test ./...`
+
+Result:
+- formatting succeeded
+- build succeeded
+- tests passed
+
+### Frontend
+Command run:
+- `cd C:/Users/hyper/workspace/bobcoin/frontend && npm run build`
+
+Result:
+- production build succeeded
+- PWA artifacts generated successfully
+- non-fatal bundle warnings remain
+
+## Why This Matters
+This pass matters because ownership transfer is one of the easiest state surfaces to get subtly wrong in replay and recovery.
+
+A system might preserve:
+- proposal status
+- vote state
+- swap state
+
+while still mishandling:
+- who owns an NFT after a same-timestamp sequence of related actions
+- whether that ownership survives restart
+- whether later finalizer blocks leave the broader recovered state coherent
+
+By including NFT transfer in the mirrored same-timestamp scenario, this pass broadens the replay-sensitive parity surface in a meaningful way.
+
+At the same time, preserving the upstream analytics work means Bobcoin also improved its operator-facing observability rather than dropping concurrent progress.
+
+## Findings / Analysis
+
+### Key finding 1: ownership semantics are a valuable next parity layer
+Governance and HTLCs stress time and lifecycle semantics.
+NFT mint/transfer stresses ownership semantics.
+
+Putting them together in one same-timestamp ledger is much more revealing than testing those areas independently.
+
+### Key finding 2: durable recovery remains the best place to catch cross-surface drift
+The Node replay suite is now a stronger reference harness than earlier in the session, but the Go durable SQLite recovery test remains especially valuable because it proves the full cold-boot reconstruction path across:
+- proposals
+- votes
+- swaps
+- NFTs
+- anchors
+
+That is exactly where subtle semantic drift tends to surface.
+
+### Key finding 3: parity work must coexist with upstream product progress
+This rebase reinforced an operational lesson from earlier in the session:
+- preserve upstream product and analytics work
+- layer semantic parity hardening on top
+- avoid zero-sum rebases that trade correctness work for UX/ops improvements or vice versa
+
+## Remaining likely high-value edge classes
+The next likely targets are:
+1. same-timestamp mixed-feature ledgers that include `publish_manifest` recovery assertions in addition to `data_anchor`
+2. larger same-timestamp multi-account webs with more than two accounts interacting across governance, HTLCs, NFTs, and anchors
+3. deeper demurrage-sensitive same-timestamp histories where elapsed-time and bucket-order interactions coexist
+4. fixture-driven mirrored scenario definitions to make Node and Go test stories even more explicitly aligned
+
+## Recommended Next Move
+The best next move remains:
+1. extend mirrored same-timestamp mixed ledgers to include richer manifest/anchor recovery assertions
+2. keep the hardest scenarios durable on the Go side via SQLite-backed recovery
+3. continue using hostile ordering deliberately for replay-sensitive histories
+
+## Files Changed In This Session
+- `VERSION.md`
+- `CHANGELOG.md`
+- `HANDOFF.md`
+- `MEMORY.md`
+- `TODO.md`
+- `bobcoin-consensus/test_replay_semantics.js`
+- `go-lattice/lattice_parity_test.go`
+
+## Operational Note
+No running processes were terminated in this session.

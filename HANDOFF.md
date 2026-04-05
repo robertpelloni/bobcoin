@@ -1,60 +1,74 @@
-# Session Handoff - 2026-04-05 (v8.44.0)
+# Session Handoff - 2026-04-05 (v8.45.0)
 
 ## Executive Summary
-This pass preserved the newer upstream Vault analytics improvements and then rebased a deeper replay-parity test expansion on top.
+This session continued the parity plan by extending the mirrored same-timestamp mixed-feature ledgers from governance + HTLC + NFT coverage into richer manifest/anchor coverage.
 
-The merged result now includes both:
-- longer-horizon source reliability analytics in Vault
-- stronger mirrored same-timestamp replay coverage including NFT ownership transitions across Node and Go
+The key outcome is that both lattice implementations now exercise same-timestamp mixed ledgers that preserve:
+- governance lifecycle
+- HTLC lifecycle
+- NFT ownership transfer
+- manifest-style anchor state
+- later data-anchor finalization
 
-That is the right outcome for Bobcoin right now: preserve operator-facing archive intelligence while continuing to harden honest cross-client replay semantics.
+That is a stronger cross-client parity surface because it tests not only lifecycle and ownership semantics, but also richer anchor reconstruction semantics inside one replay-sensitive historical ledger.
 
-## Rebase / Merge Context
-A direct push was rejected because `origin/main` advanced with upstream analytics work, including:
-- long-horizon source reliability trends
-- success-aware recovery history
-- comparative source diagnostics
-- longer retained local recovery history
+## What Changed
 
-Resolution strategy:
-- preserve all upstream analytics work
-- rebase the ownership-aware parity test expansion on top
-- promote the merged result to `v8.44.0`
+### 1. Node reference lattice now supports `publish_manifest`
+**File:** `bobcoin-consensus/Lattice.js`
 
-## What This Pass Added
+Previously, the Node reference lattice only supported `data_anchor` in its anchor-processing path.
 
-### 1. Node now covers same-timestamp governance + HTLC + NFT history
+That left an honest parity gap with the Go implementation, which already supported both:
+- `data_anchor`
+- `publish_manifest`
+
+### New behavior
+Node now supports `publish_manifest` blocks by:
+- enforcing zero balance change for manifest publication
+- validating `manifestId`, `locator`, and `manifestUrl`
+- storing the resulting anchor with explicit typed metadata:
+  - `id`
+  - `owner`
+  - `timestamp`
+  - `type: 'publish_manifest'`
+
+At the same time, the existing Node `data_anchor` branch was strengthened so it also stores anchors with an explicit `type: 'data_anchor'` field and retains payload fields directly.
+
+This is a useful parity step because the Node reference can now participate in manifest-style anchor replay instead of only simpler anchor flows.
+
+### 2. Node replay suite now covers a same-timestamp governance + HTLC + NFT + manifest ledger
 **File:** `bobcoin-consensus/test_replay_semantics.js`
 
 Added a new Node replay regression where:
 - proposer opens from genesis
 - proposer sends funds to voter
 - voter opens
-- proposal creation occurs at timestamp `T`
-- vote occurs at the same timestamp `T`
-- NFT mint occurs at the same timestamp `T`
-- NFT transfer occurs at the same timestamp `T`
-- HTLC lock occurs at the same timestamp `T`
+- proposal occurs at timestamp `T`
+- vote occurs at timestamp `T`
+- NFT mint occurs at timestamp `T`
+- NFT transfer occurs at timestamp `T`
+- HTLC lock occurs at timestamp `T`
 - HTLC claim occurs shortly after
-- a later ledger-time `data_anchor` block finalizes proposal lifecycle state
+- `publish_manifest` occurs later
+- `data_anchor` occurs later as another anchor/finalizer step
 
 ### Node assertions
-The scenario verifies that:
+The scenario verifies together that:
 - proposal finalizes as `Passed`
 - swap state is `CLAIMED`
-- the NFT owner becomes the voter
+- NFT ownership transfers to the voter
+- manifest anchor is stored with `type: 'publish_manifest'`
+- later anchor is stored with `type: 'data_anchor'`
 
-This is valuable because Node is now testing same-timestamp interactions across governance, HTLCs, and ownership transfer, not just governance and HTLCs alone.
+This is now a materially broader mixed-feature replay test than the previous same-timestamp Node scenarios.
 
-### 2. Go now covers durable recovery of the mirrored same-timestamp governance + HTLC + NFT ledger
+### 3. Go now covers durable recovery of the mirrored same-timestamp governance + HTLC + NFT + manifest ledger
 **File:** `go-lattice/lattice_parity_test.go`
 
-Added a SQLite-backed recovery regression for the mirrored mixed ledger.
+Added a SQLite-backed recovery regression for the mirrored richer mixed ledger.
 
-The scenario intentionally preserves hostile ordering via descending account selection so cross-account governance replay still has to resolve within the same timestamp bucket while the proposer chain also executes NFT and HTLC state transitions at that same timestamp.
-
-### Persisted ledger shape
-The Go durable ledger now includes:
+The persisted historical path now includes:
 - proposer genesis
 - send to voter
 - voter open
@@ -64,31 +78,21 @@ The Go durable ledger now includes:
 - NFT transfer at timestamp `T`
 - HTLC lock at timestamp `T`
 - HTLC claim shortly after
-- later `data_anchor` finalizer block
+- `publish_manifest`
+- later `data_anchor`
 
 ### Recovered-state assertions
-The test verifies that after cold-boot recovery:
+The durable recovery test verifies that after restart:
 - proposer chain length is correct
 - voter chain length is correct
-- recovered proposal status is `Passed`
-- recovered vote state is preserved
-- recovered swap state is `CLAIMED`
-- recovered NFT exists and ownership was transferred to the voter
-- recovered data anchor exists
-- recovered anchor type is `data_anchor`
+- proposal status is `Passed`
+- vote state is preserved
+- swap state is `CLAIMED`
+- NFT ownership was transferred to the voter
+- recovered manifest anchor exists and has `type: 'publish_manifest'`
+- recovered data anchor exists and has `type: 'data_anchor'`
 
-This is a stronger recovery surface than before because it proves that replay-order hardening is preserving not just lifecycle state, but also asset ownership state inside the same historical ledger.
-
-## Upstream Work Preserved In The Merged State
-The rebased branch also retains newer operator-facing analytics already landed upstream:
-- long-horizon source reliability trends in Vault
-- success-aware recovery history persistence
-- comparative source diagnostics and trend labels
-- increased locally retained recovery report history
-
-So the branch advanced on both sides:
-- richer operator analytics
-- broader ownership-aware replay parity coverage
+This is a stronger proving ground than the prior NFT-aware scenario because it validates both ownership state and multiple anchor types inside one recovered historical ledger.
 
 ## Validation Performed
 
@@ -120,58 +124,57 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because ownership transfer is one of the easiest state surfaces to get subtly wrong in replay and recovery.
+This pass matters because manifest-style anchors are part of the real historical state surface, not optional decoration.
 
-A system might preserve:
+A system could preserve:
 - proposal status
 - vote state
 - swap state
+- NFT ownership
 
-while still mishandling:
-- who owns an NFT after a same-timestamp sequence of related actions
-- whether that ownership survives restart
-- whether later finalizer blocks leave the broader recovered state coherent
+and still drift semantically if:
+- manifest anchors are missing on one client
+- anchor typing differs across clients
+- richer archive/publication history does not survive replay and recovery correctly
 
-By including NFT transfer in the mirrored same-timestamp scenario, this pass broadens the replay-sensitive parity surface in a meaningful way.
-
-At the same time, preserving the upstream analytics work means Bobcoin also improved its operator-facing observability rather than dropping concurrent progress.
+By adding `publish_manifest` support on Node and then exercising mirrored same-timestamp manifest-aware ledgers on both sides, this pass makes the parity work more honest and more complete.
 
 ## Findings / Analysis
 
-### Key finding 1: ownership semantics are a valuable next parity layer
-Governance and HTLCs stress time and lifecycle semantics.
-NFT mint/transfer stresses ownership semantics.
+### Key finding 1: anchor typing is an important part of semantic parity
+It is not enough for anchors to merely exist.
 
-Putting them together in one same-timestamp ledger is much more revealing than testing those areas independently.
+For parity-sensitive recovery and downstream features, the anchor also needs to preserve:
+- what kind of anchor it is
+- who owns it
+- when it was created
+- which payload fields belong to it
 
-### Key finding 2: durable recovery remains the best place to catch cross-surface drift
-The Node replay suite is now a stronger reference harness than earlier in the session, but the Go durable SQLite recovery test remains especially valuable because it proves the full cold-boot reconstruction path across:
-- proposals
+That is why adding typed `publish_manifest` handling on the Node side was worth doing.
+
+### Key finding 2: mixed-feature replay surfaces keep getting more valuable as they broaden
+This pass combined, inside one replay-sensitive historical ledger:
+- governance
 - votes
 - swaps
 - NFTs
-- anchors
+- manifest publication
+- anchor finalization
 
-That is exactly where subtle semantic drift tends to surface.
+That is a much better approximation of real historical state pressure than narrow, isolated feature tests.
 
-### Key finding 3: parity work must coexist with upstream product progress
-This rebase reinforced an operational lesson from earlier in the session:
-- preserve upstream product and analytics work
-- layer semantic parity hardening on top
-- avoid zero-sum rebases that trade correctness work for UX/ops improvements or vice versa
-
-## Remaining likely high-value edge classes
+### Remaining likely high-value edge classes
 The next likely targets are:
-1. same-timestamp mixed-feature ledgers that include `publish_manifest` recovery assertions in addition to `data_anchor`
-2. larger same-timestamp multi-account webs with more than two accounts interacting across governance, HTLCs, NFTs, and anchors
-3. deeper demurrage-sensitive same-timestamp histories where elapsed-time and bucket-order interactions coexist
-4. fixture-driven mirrored scenario definitions to make Node and Go test stories even more explicitly aligned
+1. larger multi-account same-timestamp webs with more than two accounts across governance, HTLCs, NFTs, manifests, and anchors
+2. deeper demurrage-sensitive same-timestamp histories where elapsed-time effects and bucket-order effects coexist in one richer ledger
+3. fixture-driven mirrored scenario definitions to make Node and Go historical ledgers even more explicitly aligned
+4. remaining service-level or API-level historical assumptions outside the lattice core
 
 ## Recommended Next Move
 The best next move remains:
-1. extend mirrored same-timestamp mixed ledgers to include richer manifest/anchor recovery assertions
+1. extend mirrored same-timestamp mixed ledgers to larger multi-account webs
 2. keep the hardest scenarios durable on the Go side via SQLite-backed recovery
-3. continue using hostile ordering deliberately for replay-sensitive histories
+3. continue deliberately combining hostile ordering with broader state surfaces
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -179,6 +182,7 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
+- `bobcoin-consensus/Lattice.js`
 - `bobcoin-consensus/test_replay_semantics.js`
 - `go-lattice/lattice_parity_test.go`
 

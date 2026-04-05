@@ -2050,6 +2050,281 @@ func TestRecoveryReplaysSameTimestampGovernanceSwapAndNftLedgerFromSQLite(t *tes
 	}
 }
 
+func TestRecoveryReplaysSameTimestampGovernanceSwapNftAndManifestLedgerFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "same-timestamp-governance-swap-nft-manifest.sqlite")
+	keys := deriveDescendingKeypairs("semantic parity same timestamp governance swap nft manifest", 2)
+	proposer := keys[0]
+	voter := keys[1]
+	if proposer["publicKey"] <= voter["publicKey"] {
+		t.Fatalf("expected proposer account ordering to sort after voter")
+	}
+	secret := "go-same-timestamp-manifest-secret"
+	secretHash := Hash(secret)
+	base := int64(300000)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	genesis := &Block{
+		Type:          "open",
+		Account:       proposer["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     base - 3000,
+	}
+	signTestBlock(t, genesis, proposer["privateKey"])
+	if err := l.ProcessBlock(genesis, false); err != nil {
+		t.Fatalf("expected proposer genesis persistence to succeed, got %v", err)
+	}
+
+	sendToVoter := &Block{
+		Type:          "send",
+		Account:       proposer["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base-2000) - 200,
+		StakedBalance: 0,
+		Height:        1,
+		Link:          voter["publicKey"],
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     base - 2000,
+	}
+	signTestBlock(t, sendToVoter, proposer["privateKey"])
+	if err := l.ProcessBlock(sendToVoter, false); err != nil {
+		t.Fatalf("expected sendToVoter persistence to succeed, got %v", err)
+	}
+
+	openVoter := &Block{
+		Type:          "open",
+		Account:       voter["publicKey"],
+		Previous:      nil,
+		Balance:       200,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          sendToVoter.Hash,
+		Spora:         validSporaForOpenAccount(voter["publicKey"]),
+		Timestamp:     base - 1000,
+	}
+	signTestBlock(t, openVoter, voter["privateKey"])
+	if err := l.ProcessBlock(openVoter, false); err != nil {
+		t.Fatalf("expected openVoter persistence to succeed, got %v", err)
+	}
+
+	proposal := &Block{
+		Type:          "proposal",
+		Account:       proposer["publicKey"],
+		Previous:      &sendToVoter.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 10,
+		StakedBalance: 0,
+		Height:        2,
+		Link:          "DAO_PROPOSAL",
+		Spora:         validSpora(sendToVoter.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Same timestamp governance, swap, NFT, and manifest ledger",
+			"endTime": time.UnixMilli(base + 1000).Format(time.RFC3339),
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, proposal, proposer["privateKey"])
+	if err := l.ProcessBlock(proposal, false); err != nil {
+		t.Fatalf("expected proposal persistence to succeed, got %v", err)
+	}
+
+	vote := &Block{
+		Type:          "vote",
+		Account:       voter["publicKey"],
+		Previous:      &openVoter.Hash,
+		Balance:       l.GetBalance(voter["publicKey"], base),
+		StakedBalance: 0,
+		Height:        1,
+		Link:          proposal.Hash,
+		Spora:         validSpora(openVoter.Hash),
+		Payload:       map[string]interface{}{"vote": "FOR"},
+		Timestamp:     base,
+	}
+	signTestBlock(t, vote, voter["privateKey"])
+	if err := l.ProcessBlock(vote, false); err != nil {
+		t.Fatalf("expected vote persistence to succeed, got %v", err)
+	}
+
+	mintNft := &Block{
+		Type:          "mint_nft",
+		Account:       proposer["publicKey"],
+		Previous:      &proposal.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 50,
+		StakedBalance: 0,
+		Height:        3,
+		Link:          "NFT_MINT",
+		Spora:         validSpora(proposal.Hash),
+		Payload: map[string]interface{}{
+			"name":        "Go Same Timestamp Manifest Artifact",
+			"magnet":      "magnet:?xt=urn:btih:go-same-timestamp-manifest-nft",
+			"description": "same timestamp mixed-feature manifest NFT",
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, mintNft, proposer["privateKey"])
+	if err := l.ProcessBlock(mintNft, false); err != nil {
+		t.Fatalf("expected mintNft persistence to succeed, got %v", err)
+	}
+
+	transferNft := &Block{
+		Type:          "transfer_nft",
+		Account:       proposer["publicKey"],
+		Previous:      &mintNft.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 1,
+		StakedBalance: 0,
+		Height:        4,
+		Link:          mintNft.Hash,
+		Spora:         validSpora(mintNft.Hash),
+		Payload: map[string]interface{}{
+			"recipient": voter["publicKey"],
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, transferNft, proposer["privateKey"])
+	if err := l.ProcessBlock(transferNft, false); err != nil {
+		t.Fatalf("expected transferNft persistence to succeed, got %v", err)
+	}
+
+	swapLock := &Block{
+		Type:          "swap_lock",
+		Account:       proposer["publicKey"],
+		Previous:      &transferNft.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 75,
+		StakedBalance: 0,
+		Height:        5,
+		Link:          "HTLC_LOCK",
+		Spora:         validSpora(transferNft.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  proposer["publicKey"],
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, swapLock, proposer["privateKey"])
+	if err := l.ProcessBlock(swapLock, false); err != nil {
+		t.Fatalf("expected swapLock persistence to succeed, got %v", err)
+	}
+
+	swapClaim := &Block{
+		Type:          "swap_claim",
+		Account:       proposer["publicKey"],
+		Previous:      &swapLock.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base+500) + l.Swaps[secretHash].Amount,
+		StakedBalance: 0,
+		Height:        6,
+		Link:          "HTLC_CLAIM",
+		Spora:         validSpora(swapLock.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: base + 500,
+	}
+	signTestBlock(t, swapClaim, proposer["privateKey"])
+	if err := l.ProcessBlock(swapClaim, false); err != nil {
+		t.Fatalf("expected swapClaim persistence to succeed, got %v", err)
+	}
+
+	manifest := &Block{
+		Type:          "publish_manifest",
+		Account:       proposer["publicKey"],
+		Previous:      &swapClaim.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base+1500),
+		StakedBalance: 0,
+		Height:        7,
+		Link:          "go-same-timestamp-nft-manifest",
+		Spora:         validSpora(swapClaim.Hash),
+		Payload: map[string]interface{}{
+			"manifestId":  "go-same-timestamp-nft-manifest",
+			"locator":     "bobtorrent://manifest/go-same-timestamp-nft-manifest",
+			"manifestUrl": "http://localhost:8000/manifests/go-same-timestamp-nft-manifest",
+			"name":        "go-same-timestamp-nft-manifest.json",
+		},
+		Timestamp: base + 1500,
+	}
+	signTestBlock(t, manifest, proposer["privateKey"])
+	if err := l.ProcessBlock(manifest, false); err != nil {
+		t.Fatalf("expected manifest persistence to succeed, got %v", err)
+	}
+
+	anchorBlock := &Block{
+		Type:          "data_anchor",
+		Account:       proposer["publicKey"],
+		Previous:      &manifest.Hash,
+		Balance:       l.GetBalance(proposer["publicKey"], base+2000) - 1,
+		StakedBalance: 0,
+		Height:        8,
+		Link:          "DATA_ANCHOR",
+		Spora:         validSpora(manifest.Hash),
+		Payload: map[string]interface{}{
+			"magnet": "magnet:?xt=urn:btih:go-same-timestamp-manifest-finalizer",
+			"name":   "go-same-timestamp-manifest-finalizer.bin",
+			"size":   1,
+		},
+		Timestamp: base + 2000,
+	}
+	signTestBlock(t, anchorBlock, proposer["privateKey"])
+	if err := l.ProcessBlock(anchorBlock, false); err != nil {
+		t.Fatalf("expected anchorBlock persistence to succeed, got %v", err)
+	}
+
+	if err := mgr.Close(); err != nil {
+		t.Fatalf("failed to close db manager before same-timestamp mixed manifest recovery test: %v", err)
+	}
+
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if len(recovered.Chains[proposer["publicKey"]]) != 9 {
+		t.Fatalf("expected recovered proposer chain length 9, got %d", len(recovered.Chains[proposer["publicKey"]]))
+	}
+	if len(recovered.Chains[voter["publicKey"]]) != 2 {
+		t.Fatalf("expected recovered voter chain length 2, got %d", len(recovered.Chains[voter["publicKey"]]))
+	}
+	proposalMap, ok := recovered.Proposals[proposal.Hash].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected recovered proposal to exist")
+	}
+	if proposalMap["status"] != "Passed" {
+		t.Fatalf("expected recovered proposal status Passed, got %v", proposalMap["status"])
+	}
+	if _, ok := recovered.Votes[proposal.Hash][voter["publicKey"]]; !ok {
+		t.Fatalf("expected recovered vote to be preserved")
+	}
+	swap := recovered.Swaps[secretHash]
+	if swap == nil || swap.Status != "CLAIMED" {
+		t.Fatalf("expected recovered swap to be CLAIMED, got %+v", swap)
+	}
+	nft, ok := recovered.Nfts[mintNft.Hash]
+	if !ok {
+		t.Fatalf("expected recovered NFT to exist")
+	}
+	nftMap := nft.(map[string]interface{})
+	if nftMap["owner"] != voter["publicKey"] {
+		t.Fatalf("expected recovered NFT owner %q, got %v", voter["publicKey"], nftMap["owner"])
+	}
+	manifestAnchor, ok := recovered.Anchors[manifest.Hash]
+	if !ok {
+		t.Fatalf("expected recovered manifest anchor to exist")
+	}
+	manifestAnchorMap := manifestAnchor.(map[string]interface{})
+	if manifestAnchorMap["type"] != "publish_manifest" {
+		t.Fatalf("expected recovered manifest anchor type publish_manifest, got %v", manifestAnchorMap["type"])
+	}
+	anchor, ok := recovered.Anchors[anchorBlock.Hash]
+	if !ok {
+		t.Fatalf("expected recovered data anchor to exist")
+	}
+	anchorMap := anchor.(map[string]interface{})
+	if anchorMap["type"] != "data_anchor" {
+		t.Fatalf("expected recovered anchor type data_anchor, got %v", anchorMap["type"])
+	}
+}
+
 func TestRecoveryHandlesCascadingSameTimestampDependenciesFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "same-timestamp-recovery.sqlite")
 	keys := deriveDescendingKeypairs("semantic parity recovery cascade", 3)

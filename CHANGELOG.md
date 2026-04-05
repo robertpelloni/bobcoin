@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.45.0] - 2026-04-05
+
+### Added
+- Mirrored same-timestamp mixed-feature replay coverage now includes manifest-style anchor semantics as well as governance, HTLCs, and NFT ownership:
+  - Node reference lattice now supports `publish_manifest` processing and records manifest anchors with explicit `type: 'publish_manifest'`
+  - Node replay semantics now cover a same-timestamp governance + vote + NFT mint + NFT transfer + HTLC lock ledger followed by HTLC claim, `publish_manifest`, and later `data_anchor` finalization
+  - Go now covers durable SQLite-backed recovery of the mirrored same-timestamp governance + HTLC + NFT + manifest ledger
+- The new scenarios verify together that proposal passage, vote preservation, claimed swap state, NFT ownership transfer, manifest-anchor reconstruction, and data-anchor reconstruction remain coherent inside one replay-sensitive historical ledger.
+
+### Changed
+- Extended the mirrored same-timestamp parity surface beyond NFT-aware mixed ledgers into richer manifest/anchor recovery assertions.
+- Strengthened Node anchor parity by storing typed `publish_manifest` anchors alongside typed `data_anchor` entries instead of only supporting data anchors.
+- Strengthened the Go durable recovery suite with a same-timestamp mixed manifest/NFT/governance/swap scenario that validates both recovered `publish_manifest` and recovered `data_anchor` typing.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.44.0] - 2026-04-05
 
 ### Added

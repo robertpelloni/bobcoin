@@ -443,12 +443,27 @@ export class Lattice {
             }
             
             this.anchors[block.hash] = {
+                ...block.payload,
                 id: block.hash,
                 owner: account,
-                name: block.payload.name,
-                magnet: block.payload.magnet,
-                size: block.payload.size || 0,
-                timestamp: block.timestamp
+                timestamp: block.timestamp,
+                type: 'data_anchor'
+            };
+
+        } else if (block.type === 'publish_manifest') {
+            if (Math.abs(block.balance - previousBalance) > epsilon) {
+                throw new Error("publish_manifest cannot change balance");
+            }
+            if (!block.payload || !block.payload.manifestId || !block.payload.locator || !block.payload.manifestUrl) {
+                throw new Error("Invalid publish_manifest payload");
+            }
+
+            this.anchors[block.hash] = {
+                ...block.payload,
+                id: block.hash,
+                owner: account,
+                timestamp: block.timestamp,
+                type: 'publish_manifest'
             };
 
         } else if (block.type === 'multisig_create') {

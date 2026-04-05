@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.52.0] - 2026-04-05
+
+### Added
+- Explicit cross-client test references inside the shared parity scenario catalog:
+  - each mirrored replay scenario now records both its Node replay test name and its Go durable recovery test name
+- Node replay semantics now validate that mirrored scenarios reference known executable Node test functions.
+- Go scenario catalog validation now verifies that mirrored scenarios reference known durable recovery test names.
+
+### Changed
+- Advanced the shared parity catalog from a structural inventory into a more directly executable alignment artifact by linking mirrored scenarios to concrete test entry points on both implementations.
+- Strengthened parity-catalog drift detection so scenarios can no longer silently drift away from known Node/Go test coverage while still remaining present in the catalog.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.51.0] - 2026-04-05
 
 ### Added

@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "description": "Shared mirrored replay scenario catalog for Node reference and Go durable recovery parity work.",
+  "version": 5,
+  "description": "Shared mirrored replay scenario catalog for Node reference and Go durable recovery parity work, including explicit test references.",
   "scenarios": [
     {
       "id": "same_timestamp_governance_swap",
@@ -9,6 +9,8 @@
       "accounts": 2,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testSameTimestampMixedGovernanceAndSwapSemantics",
+      "goTest": "TestRecoveryReplaysSameTimestampMixedGovernanceAndSwapLedgerFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",
@@ -24,6 +26,8 @@
       "accounts": 2,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testSameTimestampGovernanceSwapAndNftSemantics",
+      "goTest": "TestRecoveryReplaysSameTimestampGovernanceSwapAndNftLedgerFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",
@@ -40,6 +44,8 @@
       "accounts": 2,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testSameTimestampGovernanceSwapNftAndManifestSemantics",
+      "goTest": "TestRecoveryReplaysSameTimestampGovernanceSwapNftAndManifestLedgerFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",
@@ -57,6 +63,8 @@
       "accounts": 3,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testMultiAccountSameTimestampMixedLedgerSemantics",
+      "goTest": "TestRecoveryReplaysMultiAccountSameTimestampMixedLedgerFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",
@@ -76,6 +84,8 @@
       "accounts": 3,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics",
+      "goTest": "TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",
@@ -96,6 +106,8 @@
       "accounts": 3,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testMultiAccountSameTimestampDualCollectorActionsSemantics",
+      "goTest": "TestRecoveryReplaysMultiAccountSameTimestampDualCollectorActionsFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",
@@ -116,6 +128,8 @@
       "accounts": 3,
       "durableRecoveryInGo": true,
       "nodeReplayCovered": true,
+      "nodeTest": "testDemurrageSensitiveMultiAccountSameTimestampDualCollectorActionsSemantics",
+      "goTest": "TestRecoveryRebuildsDemurrageSensitiveDualCollectorActionLedgerFromSQLite",
       "fragments": [
         "proposer-genesis",
         "proposer-sends-to-voter",

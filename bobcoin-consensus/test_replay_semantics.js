@@ -78,7 +78,7 @@ function testScenarioCatalogTracksMirroredReplayCoverage() {
         'demurrage-balance-pressure',
     ];
 
-    assert.ok(scenarioCatalog.version >= 4, 'scenario catalog should be upgraded for demurrage-sensitive dual-action scenarios');
+    assert.ok(scenarioCatalog.version >= 5, 'scenario catalog should be upgraded for explicit test-reference validation');
     assert.ok(fixtureFragmentCatalog.version >= 2, 'fixture fragment catalog should have a version that includes vote-extension fragments');
 
     for (const fragmentId of requiredFragmentIds) {
@@ -92,6 +92,8 @@ function testScenarioCatalogTracksMirroredReplayCoverage() {
         assert.equal(scenario.nodeReplayCovered, true, `${scenarioId} should be marked as covered by Node replay tests`);
         assert.equal(scenario.category, 'mirrored-replay', `${scenarioId} should remain in mirrored replay catalog`);
         assert.ok(Array.isArray(scenario.fragments) && scenario.fragments.length > 0, `${scenarioId} should reference shared fixture fragments`);
+        assert.ok(scenario.nodeTest, `${scenarioId} should declare its Node test reference`);
+        assert.ok(mirroredScenarioTests[scenario.nodeTest], `${scenarioId} should reference a known Node mirrored scenario test`);
         for (const fragmentId of scenario.fragments) {
             assert.ok(getFragment(fragmentId), `${scenarioId} should only reference known fixture fragments`);
         }
@@ -2015,6 +2017,16 @@ function testDemurrageSensitiveMixedLedgerSemantics() {
     assert.equal(lattice.swaps[secretHash].status, 'CLAIMED', 'demurrage-sensitive mixed ledger should preserve claimed swap state');
     assert.ok(Math.abs(proposerFrontier.balance - finalizer.balance) < 0.001, 'frontier balance should match final demurrage-adjusted manifest balance');
 }
+
+const mirroredScenarioTests = {
+    testSameTimestampMixedGovernanceAndSwapSemantics,
+    testSameTimestampGovernanceSwapAndNftSemantics,
+    testSameTimestampGovernanceSwapNftAndManifestSemantics,
+    testMultiAccountSameTimestampMixedLedgerSemantics,
+    testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics,
+    testMultiAccountSameTimestampDualCollectorActionsSemantics,
+    testDemurrageSensitiveMultiAccountSameTimestampDualCollectorActionsSemantics,
+};
 
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();

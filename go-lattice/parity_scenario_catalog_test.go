@@ -24,6 +24,8 @@ type parityScenario struct {
 	Accounts            int      `json:"accounts"`
 	DurableRecoveryInGo bool     `json:"durableRecoveryInGo"`
 	NodeReplayCovered   bool     `json:"nodeReplayCovered"`
+	NodeTest            string   `json:"nodeTest"`
+	GoTest              string   `json:"goTest"`
 	Fragments           []string `json:"fragments"`
 	Expectations        []string `json:"expectations"`
 }
@@ -45,8 +47,8 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 	if err := json.Unmarshal(scenarioData, &catalog); err != nil {
 		t.Fatalf("failed to parse parity scenario catalog: %v", err)
 	}
-	if catalog.Version < 4 {
-		t.Fatalf("expected scenario catalog version >= 4 for demurrage-sensitive dual-action scenarios, got %d", catalog.Version)
+	if catalog.Version < 5 {
+		t.Fatalf("expected scenario catalog version >= 5 for explicit test-reference validation, got %d", catalog.Version)
 	}
 
 	fragmentCatalogPath := filepath.Clean(filepath.Join("..", "testing", "parity-fixture-fragments.json"))
@@ -101,6 +103,16 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		}
 	}
 
+	knownGoTests := map[string]struct{}{
+		"TestRecoveryReplaysSameTimestampMixedGovernanceAndSwapLedgerFromSQLite":          {},
+		"TestRecoveryReplaysSameTimestampGovernanceSwapAndNftLedgerFromSQLite":            {},
+		"TestRecoveryReplaysSameTimestampGovernanceSwapNftAndManifestLedgerFromSQLite":    {},
+		"TestRecoveryReplaysMultiAccountSameTimestampMixedLedgerFromSQLite":               {},
+		"TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite": {},
+		"TestRecoveryReplaysMultiAccountSameTimestampDualCollectorActionsFromSQLite":      {},
+		"TestRecoveryRebuildsDemurrageSensitiveDualCollectorActionLedgerFromSQLite":       {},
+	}
+
 	for _, scenarioID := range requiredScenarioIDs {
 		scenario, ok := scenariosByID[scenarioID]
 		if !ok {
@@ -114,6 +126,15 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		}
 		if !scenario.NodeReplayCovered {
 			t.Fatalf("expected scenario %q to be marked as covered by Node replay tests", scenarioID)
+		}
+		if scenario.NodeTest == "" {
+			t.Fatalf("expected scenario %q to document its Node test reference", scenarioID)
+		}
+		if scenario.GoTest == "" {
+			t.Fatalf("expected scenario %q to document its Go test reference", scenarioID)
+		}
+		if _, ok := knownGoTests[scenario.GoTest]; !ok {
+			t.Fatalf("expected scenario %q to reference a known Go mirrored recovery test, got %q", scenarioID, scenario.GoTest)
 		}
 		if len(scenario.Expectations) == 0 {
 			t.Fatalf("expected scenario %q to document expectations", scenarioID)

@@ -411,6 +411,131 @@ function testMixedGovernanceAndSwapLedgerSemantics() {
     assert.equal(lattice.swaps[secretHash].status, 'CLAIMED', 'mixed ledger should preserve claimed swap state');
 }
 
+function testSameTimestampMixedGovernanceAndSwapSemantics() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node semantic parity same timestamp proposer');
+    const voter = deriveKeypair('node semantic parity same timestamp voter');
+    const secret = 'node-same-timestamp-mixed-secret';
+    const secretHash = hash(secret);
+    const base = 100000;
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, base - 3000, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const sendToVoter = createSignedBlock({
+        type: 'send',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: lattice.getBalance(proposer.publicKey, base - 2000) - 200,
+        link: voter.publicKey,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+    }, base - 2000, proposer.privateKey);
+    lattice.processBlock(sendToVoter);
+
+    const openVoter = createSignedBlock({
+        type: 'open',
+        account: voter.publicKey,
+        previous: null,
+        balance: 200,
+        link: sendToVoter.hash,
+        height: 0,
+        staked_balance: 0,
+        spora: validSporaForOpenAccount(voter.publicKey),
+    }, base - 1000, voter.privateKey);
+    lattice.processBlock(openVoter);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: sendToVoter.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 10,
+        link: 'DAO_PROPOSAL',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(sendToVoter.hash),
+        payload: {
+            title: 'Same timestamp mixed governance and swap ledger',
+            endTime: new Date(base + 1000).toISOString(),
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: voter.publicKey,
+        previous: openVoter.hash,
+        balance: lattice.getBalance(voter.publicKey, base),
+        link: proposal.hash,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(openVoter.hash),
+        payload: { vote: 'FOR' },
+    }, base, voter.privateKey);
+    lattice.processBlock(vote);
+
+    const swapLock = createSignedBlock({
+        type: 'swap_lock',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: lattice.getBalance(proposer.publicKey, base) - 75,
+        link: 'HTLC_LOCK',
+        height: 3,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: {
+            secretHash,
+            recipient: proposer.publicKey,
+        },
+    }, base, proposer.privateKey);
+    lattice.processBlock(swapLock);
+
+    const swapClaim = createSignedBlock({
+        type: 'swap_claim',
+        account: proposer.publicKey,
+        previous: swapLock.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 500) + lattice.swaps[secretHash].amount,
+        link: 'HTLC_CLAIM',
+        height: 4,
+        staked_balance: 0,
+        spora: validSpora(swapLock.hash),
+        payload: {
+            secret,
+            secretHash,
+        },
+    }, base + 500, proposer.privateKey);
+    lattice.processBlock(swapClaim);
+
+    const finalizer = createSignedBlock({
+        type: 'data_anchor',
+        account: proposer.publicKey,
+        previous: swapClaim.hash,
+        balance: lattice.getBalance(proposer.publicKey, base + 2000) - 1,
+        link: 'DATA_ANCHOR',
+        height: 5,
+        staked_balance: 0,
+        spora: validSpora(swapClaim.hash),
+        payload: {
+            magnet: 'magnet:?xt=urn:btih:node-same-timestamp-mixed',
+            name: 'node-same-timestamp-mixed.bin',
+            size: 1,
+        },
+    }, base + 2000, proposer.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.proposals[proposal.hash].status, 'Passed', 'same-timestamp mixed ledger should finalize proposal as Passed');
+    assert.equal(lattice.swaps[secretHash].status, 'CLAIMED', 'same-timestamp mixed ledger should preserve claimed swap state');
+}
+
 function testDemurrageSensitiveMixedLedgerSemantics() {
     const lattice = new Lattice();
     const proposer = deriveKeypair('node semantic parity demurrage proposer');
@@ -550,6 +675,7 @@ function run() {
     testDefaultSwapExpiryUsesLedgerTime();
     testProposalFinalizesOnLaterLedgerTime();
     testMixedGovernanceAndSwapLedgerSemantics();
+    testSameTimestampMixedGovernanceAndSwapSemantics();
     testDemurrageSensitiveMixedLedgerSemantics();
     console.log('Node replay semantics tests passed.');
 }

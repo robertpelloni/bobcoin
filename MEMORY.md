@@ -47,6 +47,8 @@
   - As of v8.40.0, the Node replay suite also covers mixed governance + HTLC histories so cross-client parity work is no longer limited to isolated single-feature time semantics.
   - As of v8.41.0, Go now has durable SQLite-backed recovery coverage for a demurrage-sensitive governance + HTLC ledger, giving the mixed-feature replay work a persisted-restart dimension rather than only in-memory execution.
   - As of v8.41.0, both Node and Go now exercise mixed governance + HTLC historical ledgers, so cross-client parity work has advanced from isolated time semantics into mirrored multi-feature replay scenarios.
+  - As of v8.42.0, both Node and Go now also exercise same-timestamp mixed governance + HTLC ledgers, so timestamp-bucket replay behavior is being validated in cross-client mirrored scenarios rather than only in single-feature tests.
+  - As of v8.42.0, Go durable recovery now explicitly covers same-timestamp mixed governance + HTLC reconstruction under hostile cross-account ordering, not just same-timestamp single-feature cases.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

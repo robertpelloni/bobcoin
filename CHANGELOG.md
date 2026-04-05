@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.42.0] - 2026-04-05
+
+### Added
+- Mirrored same-timestamp mixed-feature replay coverage across both lattice implementations:
+  - Node now exercises a same-timestamp governance + HTLC historical ledger where proposal creation, voting, and swap locking share a timestamp before later lifecycle finalization
+  - Go now exercises durable SQLite-backed recovery of the same-timestamp mixed governance + HTLC ledger under hostile cross-account ordering
+- The new cross-client scenarios verify that proposal passage, vote preservation, claimed swap state, and manifest/anchor reconstruction remain coherent when replay must respect both timestamp buckets and feature interactions.
+
+### Changed
+- Extended the parity campaign from mirrored mixed-feature ledgers into mirrored same-timestamp mixed-feature ledgers, increasing pressure on replay-order correctness instead of only historical time semantics.
+- Strengthened the Go durable recovery surface with a same-timestamp mixed governance + HTLC scenario that specifically relies on timestamp-bucket replay behavior.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.41.0] - 2026-04-05
 
 ### Added

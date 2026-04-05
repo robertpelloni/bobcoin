@@ -5,14 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<<<<<<< HEAD
-## [8.53.0] - 2026-04-05
+## [8.55.0] - 2026-04-05
 
 ### Added
-- **Structured Attestation Metadata**: Publisher proof entries can now carry `kind`, `label`, `url`, and optional `issuer` metadata instead of only a raw type hint plus URL.
-- **Richer Attestation Cards**: Vault now renders publisher attestations as structured cards showing proof type, human-readable label, and issuer context rather than only compact proof badges.
-- **Searchable Attestation Context**: Vault search now indexes attestation labels and issuers in addition to URLs and proof kinds.
-=======
+- Initial `go-game-server/` Go port of the Game Server control plane, including:
+  - runtime system wallet creation/loading
+  - SQLite bid/transaction persistence
+  - `/status`
+  - `/bankroll`
+  - `/mint`
+  - `/burn`
+  - `/transactions`
+  - `/market/bids`
+  - `/market/bid`
+  - `/market/accept`
+  - lattice system-chain bootstrap
+  - system `send` block construction/signing/submission for mint flows
+- `go-game-server/README.md` documenting the current scope and honest remaining gaps of the initial Go port.
+
+### Changed
+- Continued the practical platform port by moving the reasonable game-server control plane into Go after the initial `go-supertorrent/` control-plane port.
+- Advanced the repo from “Go lattice core plus one service port” to “Go lattice core plus initial Go control-plane ports for both remaining major Node services,” while keeping honest feature-gap boundaries around matchmaking, FHE, and ZK verification.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go mod tidy`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.54.0] - 2026-04-05
 
 ### Added
@@ -44,7 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cd go-lattice && go test ./...`
 - `cd frontend && npm run build`
 - `cd . && npm run parity:matrix`
->>>>>>> 1eee9838 (feat(go): add initial supertorrent control-plane port v8.54.0)
+
+## [8.53.0] - 2026-04-05
+
+### Added
+- **Structured Attestation Metadata**: Publisher proof entries can now carry `kind`, `label`, `url`, and optional `issuer` metadata instead of only a raw type hint plus URL.
+- **Richer Attestation Cards**: Vault now renders publisher attestations as structured cards showing proof type, human-readable label, and issuer context rather than only compact proof badges.
+- **Searchable Attestation Context**: Vault search now indexes attestation labels and issuers in addition to URLs and proof kinds.
 
 ## [8.52.0] - 2026-04-05
 
@@ -203,29 +233,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [8.44.0] - 2026-04-05
 
 ### Added
-- Mirrored same-timestamp mixed-feature replay coverage now includes NFT ownership transitions as well as governance and HTLC behavior:
-  - Node replay semantics now cover a same-timestamp governance + vote + NFT mint + NFT transfer + HTLC lock ledger followed by HTLC claim and later lifecycle finalization
-  - Go now covers durable SQLite-backed recovery of the mirrored same-timestamp governance + HTLC + NFT ledger under hostile ordering
-- The new scenarios verify together that proposal passage, vote preservation, claimed swap state, NFT ownership transfer, and anchor reconstruction can remain coherent inside one replay-sensitive historical ledger.
-
-### Changed
-- Extended the mirrored same-timestamp parity surface beyond governance + HTLC interactions into NFT ownership semantics, increasing confidence that replay-order hardening holds across a broader state surface.
-- Strengthened the Go durable recovery suite with a same-timestamp mixed NFT/governance/swap scenario that validates recovered `data_anchor` typing as well as recovered NFT ownership.
-
-### Validation
-- `cd bobcoin-consensus && npm test`
-- `cd go-lattice && gofmt -w *.go`
-- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
-- `cd go-lattice && go test ./...`
-- `cd frontend && npm run build`
-=======
-## [8.44.0] - 2026-04-05
-
-### Added
 - **Structured Attestation Metadata**: Publisher proof entries can now carry `kind`, `label`, `url`, and optional `issuer` metadata instead of only a raw type hint plus URL.
 - **Richer Attestation Cards**: Vault now renders publisher attestations as structured cards showing proof type, human-readable label, and issuer context rather than only compact proof badges.
 - **Searchable Attestation Context**: Vault search now indexes attestation labels and issuers in addition to URLs and proof kinds.
->>>>>>> 5976bc5 (feat(provenance): add structured publisher attestations (v8.44.0))
 
 ## [8.43.0] - 2026-04-05
 

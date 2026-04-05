@@ -21,8 +21,8 @@
   - Go bootstrap snapshots now include proposals, votes, market bids, swaps, NFTs, anchors, and multisigs.
   - Go now rejects unknown block types explicitly and delays state-hash mutation until successful block application.
 - Remaining architectural truth:
-  - `game-server` is still Node-native.
-  - `supertorrent` now has an initial Go control-plane port in `go-supertorrent/`, but full BitTorrent/WebRTC engine parity is still incomplete.
+  - `go-supertorrent/` now ports the supernode control plane, but full BitTorrent/WebRTC engine parity is still incomplete.
+  - `go-game-server/` now ports the game-server control plane, but matchmaking, FHE oracle, and SP1/ZK verification parity are still incomplete.
   - Rust/SP1 remains the correct place for proof generation/verification.
   - Some semantics still need final reconciliation between Node and Go, especially around economic edge cases and non-lattice service behavior.
 - Audit architecture note:
@@ -70,6 +70,8 @@
   - As of v8.52.0, both Node and Go validate those explicit test references, making test-to-scenario drift executable in addition to scenario-to-fragment drift.
   - As of v8.54.0, `go-supertorrent/` ports the supernode control plane into Go: wallet/bootstrap flow, torrent registry persistence, `/stats`, `/add-torrent`, `/remove-torrent`, `/upload`, `/spora/:challenge`, and lattice market bid polling/acceptance.
   - As of v8.54.0, mirrored parity inventory is also rendered into `docs/ai/testing/parity-scenario-matrix.md` via `npm run parity:matrix`, so the shared scenario/fragment/test-reference catalogs now produce human-readable audit documentation as well as executable validation.
+  - As of v8.55.0, `go-game-server/` ports the game-server control plane into Go: system wallet/bootstrap, SQLite bid/transaction persistence, `/status`, `/bankroll`, `/mint`, `/burn`, `/transactions`, `/market/bids`, `/market/bid`, and `/market/accept`.
+  - As of v8.55.0, the platform now has initial Go control-plane ports for both remaining major Node services (`supertorrent` and `game-server`), even though full feature parity for transport, matchmaking, FHE, and ZK verification is still pending.
 - Operational convention:
   - In this repo, the in-repo Go lattice defaults to port `4001`.
   - The older Node lattice defaults to port `4000`.

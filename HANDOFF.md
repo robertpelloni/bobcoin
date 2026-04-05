@@ -1,34 +1,27 @@
-# Session Handoff - 2026-04-05 (v8.50.0)
+# Session Handoff - 2026-04-05 (v8.51.0)
 
 ## Executive Summary
-This session continued the parity campaign by introducing a richer three-account same-timestamp mirrored scenario where a secondary account performs more than one same-bucket action on its own chain.
+This session continued the parity campaign by taking the richer dual-collector-action same-timestamp mirrored ledger and making it demurrage-sensitive.
 
-That matters because previous multi-account same-timestamp ledgers already stressed cross-account replay ordering, but they still left room for a simpler per-secondary-account shape. This pass adds a stronger pattern:
-- one secondary account votes on governance
-- that same account then immediately places a market bid
-- both actions occur in the same timestamp bucket
-- both actions must still reconstruct correctly alongside the proposer's own same-timestamp governance, NFT, HTLC, and manifest actions
+That matters because it combines four important replay/economic stress dimensions in one mirrored scenario:
+- same-timestamp cross-account dependencies
+- same-account sequential actions by a secondary account
+- broader mixed-feature state across governance, market, HTLC, NFT, and anchors
+- elapsed-time economic pressure from demurrage-sensitive balances
 
-The result is a broader same-timestamp replay surface across both Node and Go, and a more realistic test of mixed same-account + cross-account ordering pressure.
+The result is that both Node and Go now exercise a demurrage-sensitive version of the dual-collector-action same-timestamp ledger, and the Go side proves that richer scenario through durable SQLite-backed recovery under hostile ordering.
 
 ## What Changed
 
-### 1. Added a new mirrored three-account same-timestamp dual-collector-action scenario
-**Files:**
-- `testing/parity-scenarios.json`
-- `testing/parity-fixture-fragments.json`
+### 1. Added a demurrage-sensitive mirrored scenario entry to the shared parity catalog
+**File:** `testing/parity-scenarios.json`
 
-Added a new mirrored replay scenario entry:
-- `multi_account_same_timestamp_dual_collector_actions`
+Added a new mirrored replay scenario:
+- `demurrage_multi_account_same_timestamp_dual_collector_actions`
 
-Added a supporting shared fixture fragment:
-- `collector-vote-extension`
+This keeps the shared parity inventory honest about the latest replay/economic surface now being tested across both implementations.
 
-This explicitly records that the scenario includes a same-timestamp collector-side governance action in addition to the collector-side market flow.
-
-This is useful because the shared catalogs are now describing not just bigger scenarios, but structurally richer ones.
-
-### 2. Node replay suite now covers the dual-collector-action ledger
+### 2. Node replay suite now covers the demurrage-sensitive dual-collector-action ledger
 **File:** `bobcoin-consensus/test_replay_semantics.js`
 
 Added a new Node replay regression with three accounts:
@@ -38,10 +31,10 @@ Added a new Node replay regression with three accounts:
 
 ### Historical ledger shape
 The scenario includes:
-- proposer genesis
-- proposer sends to voter
+- proposer genesis far enough in the past for visible demurrage effects
+- proposer sends to voter after elapsed time
 - voter opens
-- proposer sends to collector
+- proposer sends to collector after more elapsed time
 - collector opens
 - proposal at timestamp `T`
 - voter vote at timestamp `T`
@@ -66,12 +59,18 @@ The scenario verifies together that:
 - manifest anchor is typed `publish_manifest`
 - final anchor is typed `data_anchor`
 
-This is stronger than prior scenarios because the collector account now performs two same-timestamp sequential actions on its own chain that also depend on broader mixed-ledger state.
+This is stronger than the non-demurrage version because all those states now depend on balances that have materially decayed over time.
 
-### 3. Go now covers durable recovery of the mirrored dual-collector-action same-timestamp ledger
+### 3. Go now covers durable recovery of the mirrored demurrage-sensitive dual-collector-action ledger
 **File:** `go-lattice/lattice_parity_test.go`
 
 Added a new SQLite-backed recovery regression for the mirrored scenario.
+
+The account ordering remains intentionally hostile:
+- proposer sorts after voter
+- voter sorts after collector
+
+That keeps the test honest while also forcing recovery to reconstruct both state maps and final balances under elapsed-time pressure.
 
 ### Recovered-state assertions
 The durable recovery test verifies that after restart:
@@ -87,24 +86,20 @@ The durable recovery test verifies that after restart:
 - recovered accepted bid attribution points to the proposer
 - recovered manifest anchor exists and is typed `publish_manifest`
 - recovered data anchor exists and is typed `data_anchor`
+- recovered proposer frontier balance matches the expected final demurrage-sensitive balance
 
-This is a stronger proving ground because it requires recovery to preserve:
-- two different voter accounts
-- same-account same-timestamp sequential collector actions
-- proposer-side same-timestamp ownership/swap/manifest setup
-- later accepted-bid and finalizer effects
+That last balance assertion is especially valuable because it checks actual recovered economic state, not just logical state maps.
 
-### 4. Catalog validation now requires the new dual-action structure
+### 4. Catalog validation now requires the new demurrage-sensitive dual-action scenario
 **Files:**
 - `bobcoin-consensus/test_replay_semantics.js`
 - `go-lattice/parity_scenario_catalog_test.go`
 
-The shared scenario/fragment catalog validation was extended so both Node and Go now require:
-- the new `multi_account_same_timestamp_dual_collector_actions` scenario
-- the new `collector-vote-extension` fragment
-- valid scenario-to-fragment references for that richer mirrored scenario
+Both Node and Go catalog validation were extended so they now require:
+- the new `demurrage_multi_account_same_timestamp_dual_collector_actions` scenario entry
+- the upgraded scenario catalog version that includes it
 
-That keeps the new structure executable rather than just documented.
+This keeps the new richer replay/economic surface executable in the shared parity inventory.
 
 ## Validation Performed
 
@@ -115,7 +110,7 @@ Command run:
 Result:
 - Node replay semantics tests passed
 - shared catalog validation passed
-- dual-action scenario validation passed
+- demurrage-sensitive dual-action scenario validation passed
 
 ### Go lattice
 Commands run:
@@ -128,7 +123,7 @@ Result:
 - build succeeded
 - tests passed
 - shared catalog validation passed
-- durable recovery of the dual-collector-action scenario passed
+- durable recovery of the demurrage-sensitive dual-collector-action scenario passed
 
 ### Frontend
 Command run:
@@ -140,47 +135,44 @@ Result:
 - non-fatal bundle warnings remain
 
 ## Why This Matters
-This pass matters because replay correctness is not only about whether several accounts can coexist in one timestamp bucket. It is also about whether an individual non-proposer account can perform a short same-timestamp sequence on its own chain while the broader mixed ledger is also evolving.
-
-That is a subtler and more realistic failure surface than simpler one-action-per-secondary-account patterns.
+This pass matters because the parity effort is now probing a much more realistic and demanding replay/economic surface.
 
 A client could preserve:
-- the proposer's same-timestamp chain
-- a single cross-account vote dependency
-- a single collector-side market action
+- the dual-collector-action same-timestamp structure
+- the market and governance state maps
+- the anchor and NFT state
 
-and still drift once the collector has to perform two same-bucket actions in sequence.
+and still be wrong if the actual recovered balances drift once demurrage becomes significant.
 
-This pass explicitly attacked that higher-value surface.
+By making the richer dual-action mirrored ledger demurrage-sensitive and then asserting recovered frontier balance on the Go side, this pass pushes the parity campaign closer to true economic replay correctness rather than only structural replay correctness.
 
 ## Findings / Analysis
 
-### Key finding 1: same-account sequencing inside same-timestamp mixed ledgers is worth testing explicitly
-The parity campaign has already shown that same-timestamp cross-account dependencies matter.
+### Key finding 1: economic pressure should keep following the richer replay shapes
+Earlier work established that demurrage-sensitive scenarios are useful.
+This pass shows that adding demurrage to the richer dual-action same-timestamp shape is also worthwhile.
 
-This pass adds a complementary insight:
-- same-account sequential actions inside the same timestamp bucket are also worth treating as a distinct replay pressure surface
+That suggests a good ongoing pattern:
+- whenever a structurally richer mirrored scenario proves useful,
+- consider whether it also deserves a demurrage-sensitive variant.
 
-Especially when one action also depends on broader mixed-ledger state.
+### Key finding 2: scenario catalogs are now helping the campaign scale cleanly
+The new scenario entry keeps the shared parity inventory aligned with the newly expanded replay surface.
 
-### Key finding 2: fragment catalogs become more useful as scenario structure gets richer
-The new `collector-vote-extension` fragment is a good example of why the shared fragment vocabulary helps:
-- it gives the project a reusable name for this structural variation
-- it makes the scenario catalog more informative
-- it makes future richer scenarios easier to describe without burying structure only in test code
+That reinforces the value of the catalog work from the last two passes: as the semantic surface grows, it is easier to maintain when the active mirrored scenarios are explicit rather than buried only in test bodies.
 
 ## Remaining likely high-value edge classes
 The next likely targets are:
-1. even larger same-timestamp webs with more than one secondary account performing same-bucket sequential actions
-2. demurrage-sensitive variants of the new dual-collector-action structure
-3. deeper fixture-driven alignment where fragments begin informing more than catalog validation
-4. broader service/API assumptions outside the lattice core that still lag the increasingly strong replay semantics already present here
+1. even larger same-timestamp webs where more than one secondary account performs same-bucket sequential actions
+2. deeper fixture-driven alignment where fragments start informing scenario assembly rather than only validation
+3. continued expansion of durable Go recovery coverage for the hardest economic replay shapes
+4. broader service/API assumptions outside the lattice core that may still lag the increasingly strong consensus replay semantics now under test
 
 ## Recommended Next Move
 The best next move remains:
-1. add a demurrage-sensitive variant of the new dual-collector-action scenario
-2. continue scaling larger mirrored same-timestamp multi-account webs carefully
-3. keep the hardest scenarios durable on the Go side via SQLite-backed recovery
+1. continue scaling larger same-timestamp multi-account webs carefully
+2. keep the hardest scenarios durable on the Go side via SQLite-backed recovery
+3. begin thinking about whether some fragment combinations should start guiding scenario assembly more directly
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -189,7 +181,6 @@ The best next move remains:
 - `MEMORY.md`
 - `TODO.md`
 - `testing/parity-scenarios.json`
-- `testing/parity-fixture-fragments.json`
 - `bobcoin-consensus/test_replay_semantics.js`
 - `go-lattice/parity_scenario_catalog_test.go`
 - `go-lattice/lattice_parity_test.go`

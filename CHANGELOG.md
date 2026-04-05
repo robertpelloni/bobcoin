@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.51.0] - 2026-04-05
+
+### Added
+- Demurrage-sensitive mirrored coverage for the richer dual-collector-action same-timestamp ledger:
+  - Node replay semantics now cover a demurrage-sensitive three-account scenario where the collector both votes and places a market bid in the same timestamp bucket while the proposer simultaneously executes governance, NFT, HTLC, and manifest actions
+  - Go now covers durable SQLite-backed recovery of the mirrored demurrage-sensitive dual-collector-action ledger under hostile ordering
+- Shared parity catalogs now describe this richer scenario through the new `demurrage_multi_account_same_timestamp_dual_collector_actions` scenario entry.
+
+### Changed
+- Extended the parity campaign from the non-demurrage dual-collector-action ledger into a demurrage-sensitive variant, combining elapsed-time economic pressure with same-account same-bucket sequencing and broader mixed-feature replay pressure.
+- Strengthened scenario-catalog validation in both Node and Go by requiring the new demurrage-sensitive dual-action mirrored scenario.
+- Strengthened the Go durable recovery suite with frontier-balance validation for the demurrage-sensitive dual-collector-action ledger.
+
+### Validation
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && gofmt -w *.go`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.50.0] - 2026-04-05
 
 ### Added

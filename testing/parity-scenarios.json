@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "description": "Shared mirrored replay scenario catalog for Node reference and Go durable recovery parity work.",
   "scenarios": [
     {
@@ -108,6 +108,27 @@
         "manifest-anchor-core"
       ],
       "expectations": ["proposal-passed", "votes-preserved", "swap-claimed", "nft-owner-transferred", "bid-accepted", "manifest-anchor-typed", "data-anchor-typed"]
+    },
+    {
+      "id": "demurrage_multi_account_same_timestamp_dual_collector_actions",
+      "category": "mirrored-replay",
+      "features": ["demurrage", "governance", "vote", "multi-vote", "market-bid", "accept-bid", "htlc", "nft", "publish-manifest", "data-anchor", "same-timestamp"],
+      "accounts": 3,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "fragments": [
+        "proposer-genesis",
+        "proposer-sends-to-voter",
+        "proposer-sends-to-collector",
+        "same-timestamp-governance-core",
+        "collector-vote-extension",
+        "collector-market-bid-core",
+        "same-timestamp-htlc-core",
+        "same-timestamp-nft-core",
+        "manifest-anchor-core",
+        "demurrage-balance-pressure"
+      ],
+      "expectations": ["proposal-passed", "votes-preserved", "swap-claimed", "nft-owner-transferred", "bid-accepted", "manifest-anchor-typed", "data-anchor-typed", "frontier-balance-recovered"]
     }
   ]
 }

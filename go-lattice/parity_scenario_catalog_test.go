@@ -45,8 +45,8 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 	if err := json.Unmarshal(scenarioData, &catalog); err != nil {
 		t.Fatalf("failed to parse parity scenario catalog: %v", err)
 	}
-	if catalog.Version < 3 {
-		t.Fatalf("expected scenario catalog version >= 3 for richer fixture fragment references, got %d", catalog.Version)
+	if catalog.Version < 4 {
+		t.Fatalf("expected scenario catalog version >= 4 for demurrage-sensitive dual-action scenarios, got %d", catalog.Version)
 	}
 
 	fragmentCatalogPath := filepath.Clean(filepath.Join("..", "testing", "parity-fixture-fragments.json"))
@@ -79,6 +79,7 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"multi_account_same_timestamp_mixed",
 		"demurrage_multi_account_same_timestamp_mixed",
 		"multi_account_same_timestamp_dual_collector_actions",
+		"demurrage_multi_account_same_timestamp_dual_collector_actions",
 	}
 
 	requiredFragmentIDs := []string{

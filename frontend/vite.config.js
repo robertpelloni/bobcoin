@@ -66,6 +66,20 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: parseInt(env.FRONTEND_PORT) || 5173
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return
+            if (id.includes('node-seal')) return 'vendor-seal'
+            if (id.includes('@react-three') || id.includes('/three/')) return 'vendor-three'
+            if (id.includes('react-router-dom')) return 'vendor-router'
+            if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react'
+            if (id.includes('tweetnacl') || id.includes('bs58')) return 'vendor-crypto'
+          }
+        }
+      }
     }
   }
 })

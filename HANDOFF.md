@@ -1,39 +1,46 @@
-# Session Handoff - 2026-04-05 (v8.69.0)
+# Session Handoff - 2026-04-05 (v8.70.0)
 
 ## Executive Summary
-This pass deepens the new signed diagnostics package workflow from simple signature verification into an actual comparison/review tool. Vault can now tell operators not only whether an imported package is authentic, but also whether it is newer, older, narrower, richer, or materially different from the local current diagnostics view.
+This pass improves Bobcoin frontend bundle health by moving from an eager route graph to route-level lazy loading and explicit vendor chunking. The largest bundle warning has not disappeared entirely, but the problem is now much healthier: the main application bundle is dramatically smaller and the remaining heavy weight is concentrated primarily in the `three` vendor chunk.
 
 ## What This Pass Added
 
-### 1. Imported package vs local diagnostics comparison
-**Files:**
-- `frontend/src/pages/Vault.jsx`
-- `frontend/src/pages/Vault.css`
+### 1. Route-level code splitting
+**File:** `frontend/src/App.jsx`
 
-Vault now computes comparison metadata between:
-- the operator’s current local comparative diagnostics
-- the imported signed diagnostics package
+All page routes are now lazy-loaded via `React.lazy` + `Suspense`.
 
-Comparison output includes:
-- freshness label (`LOCAL_NEWER`, `IMPORTED_NEWER`, `SAME_WINDOW`)
-- shared source count
-- local-only source count
-- imported-only source count
-- changed-source count
-- most materially changed hosts with reliability and recent-failure deltas
+Effect:
+- feature pages are not pulled eagerly into the main graph
+- route code now loads on demand
+- the entry chunk is much smaller and more focused
 
-### 2. Better trust workflow
-This makes signed diagnostics packages much more useful during handoff because operators can now answer:
-- Is this package authentic?
-- Is it older or newer than my local picture?
-- Which hosts differ materially?
-- Is the sender missing sources I can see locally, or vice versa?
+### 2. Manual vendor chunking
+**File:** `frontend/vite.config.js`
+
+Added manual chunking for:
+- `node-seal`
+- `three` / React Three Fiber stack
+- React core
+- React Router
+- crypto-heavy dependencies (`tweetnacl`, `bs58`)
+
+Effect:
+- heavy libraries are now isolated into explicit vendor chunks
+- the previous giant app bundle is broken into more understandable and cache-friendly pieces
 
 ## Validation
 Executed successfully:
 - `cd frontend && npm run build`
 
+## Findings / Analysis
+The bundle profile is materially healthier now:
+- the main entry chunk is no longer the huge monolith it was before
+- route chunks exist for major pages
+- `node-seal` is isolated into its own vendor chunk
+- `three` remains large, but that weight is now concentrated in a dedicated vendor chunk instead of bloating the entire app shell
+
 ## Recommended Next Step
-1. Keep improving frontend chunk splitting around `node-seal`
-2. Continue broader operator trust/provenance workflows beyond the current diagnostics review layer
+1. Continue operator/trust workflows beyond the current diagnostics comparison layer
+2. If needed later, refine the 3D/dashboard route further so the `three` vendor chunk is deferred even more aggressively
 3. Continue replacing remaining specialized simulation layers where reasonable

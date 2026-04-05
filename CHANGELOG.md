@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.70.0] - 2026-04-05
+
+### Changed
+- **Route-Level Code Splitting**: Bobcoin now lazy-loads its page routes so heavy feature surfaces are no longer pulled eagerly into one main application chunk.
+- **Manual Vendor Chunking**: Vite now emits dedicated vendor chunks for `node-seal`, `three` / React Three Fiber, React core, router code, and crypto helpers, sharply reducing the size of the main entry bundle.
+- **Bundle Health Improvement**: The giant app bundle has been broken into route and vendor chunks; the remaining large warning is now primarily concentrated in the `three` vendor chunk rather than the core app graph.
+
+### Validation
+- `cd frontend && npm run build`
+
 ## [8.69.0] - 2026-04-05
 
 ### Added

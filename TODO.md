@@ -10,7 +10,7 @@
 
 ## Recommended Next Pass
 - [ ] **Cloaked Retrieval Flow:** Add first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI.
-- [ ] **Chunk Splitting Audit:** The frontend still emits a >500 kB main chunk. Introduce manual chunking for `node-seal`, `three.js`, and heavy dashboard routes.
+- [x] **Chunk Splitting Audit:** Route-level lazy loading and manual vendor chunking now split the Bobcoin frontend into route chunks plus dedicated `node-seal`, `three`, router, React, and crypto vendor chunks. The remaining size warning is now concentrated primarily in the `three` vendor chunk rather than the main app graph.
 - [x] **Exportable Comparative Source Diagnostics:** Vault now exports retained recovery-report comparisons, source leaderboards, trend buckets, and per-source reliability summaries as portable JSON.
 - [x] **Signed Shareable Diagnostics Packages:** Vault now exports and verifies signed comparative diagnostics packages using Bobcoin wallet signatures.
 - [x] **Diagnostics Comparison Review:** Vault now compares imported signed diagnostics packages against the current local diagnostics view, surfacing freshness, overlap, and changed-source deltas.

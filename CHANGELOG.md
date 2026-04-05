@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.66.0] - 2026-04-05
+
+### Changed
+- **Go-First Signaling Routing**: Bobcoin matchmaking now defaults its WebSocket signaling target toward the Go supernode instead of the legacy Node game-server, while preserving explicit signaling overrides.
+- **Operator Visibility**: System Status now identifies whether signaling is currently targeting Go WebSockets or a legacy WebSocket endpoint.
+
+### Validation
+- `cd frontend && npm run build`
+
 ## [8.65.0] - 2026-04-05
 
 ### Changed

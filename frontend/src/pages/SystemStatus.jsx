@@ -127,9 +127,9 @@ export function SystemStatus() {
                     reject(new Error('signaling unavailable'));
                 };
             });
-            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING ONLINE` }));
+            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING ONLINE (${SIGNALING_URL === SUPERNODE_URL ? 'GO WS' : 'LEGACY WS'})` }));
         } catch {
-            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING OFFLINE` }));
+            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING OFFLINE (${SIGNALING_URL === SUPERNODE_URL ? 'GO WS' : 'LEGACY WS'})` }));
         }
 
         try {

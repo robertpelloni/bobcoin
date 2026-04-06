@@ -445,7 +445,16 @@ func TestRootStatusEndpoint(t *testing.T) {
 }
 
 func TestStatusEndpoint(t *testing.T) {
+	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/status" {
+			t.Fatalf("expected proxied /status path, got %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"status": "online", "service": "Go Game Server orchestrator", "version": "0.2.0-go"})
+	}))
+	defer gameServer.Close()
+
 	service := newTestSuperTorrentService(t)
+	service.cfg.GameServerURL = gameServer.URL
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
 	rec := httptest.NewRecorder()
 	service.handleStatus(rec, req)
@@ -456,8 +465,8 @@ func TestStatusEndpoint(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("failed to decode status response: %v", err)
 	}
-	if body["status"] != "online" || body["service"] == nil {
-		t.Fatalf("expected online status payload, got %v", body)
+	if body["status"] != "online" || body["service"] != "Go Game Server orchestrator" {
+		t.Fatalf("expected proxied game-server status payload, got %v", body)
 	}
 }
 

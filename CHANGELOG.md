@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.85.0] - 2026-04-05
+
+### Changed
+- Redirected `go-supertorrent/`’s dedicated `/status` endpoint to behave as a compatibility proxy to the game-server status surface, while preserving the root-path local supernode status shell.
+- Tightened alignment with the frontend’s Go-first HTTP routing by making the explicit `/status` compatibility endpoint report game-server status semantics rather than local supernode shell semantics.
+- Updated `go-supertorrent` tests and documentation to reflect the distinction between root local status and proxied game-service status.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.84.0] - 2026-04-05
 
 ### Added

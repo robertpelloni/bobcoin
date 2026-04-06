@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.78.0] - 2026-04-05
+
+### Added
+- Additional negative-path and root-shell regression coverage for `go-supertorrent/` in `go-supertorrent/main_test.go`, including:
+  - root HTTP status behavior
+  - invalid base64 shard rejection
+  - missing manifest/shard 404 handling
+
+### Changed
+- Hardened the Go supertorrent shell by covering more non-happy-path browser-facing storage behavior and basic root service reporting.
+- Continued the service test-hardening pattern by adding explicit negative-path coverage once the main storage/registry/signaling shells were already ported and passing.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.77.0] - 2026-04-05
 
 ### Changed

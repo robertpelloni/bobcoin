@@ -1,39 +1,48 @@
-# Session Handoff - 2026-04-05 (v8.77.0)
+# Session Handoff - 2026-04-05 (v8.78.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by tightening `go-supertorrent/` compatibility with the browser-facing storage workbench.
+This session continued the Go-port campaign by broadening `go-supertorrent/` test coverage into more of its negative-path and root-shell behavior.
 
-The key outcome is that the Go supertorrent shell now normalizes relative manifest URLs into absolute URLs during publication, and that expectation is now protected by executable tests.
+That matters because a browser-facing storage/control service can appear stable if only its success paths are tested, while still being brittle around:
+- malformed shard payloads
+- missing stored artifacts
+- root-level service status expectations
 
-That matters because storage publication/retrieval compatibility is not only about whether the right data is stored, but also whether the resulting references are robust and transportable enough for the frontend and downstream consumers.
+This pass closes some of that gap by adding more negative-path and basic shell coverage for the Go supertorrent service.
 
 ## What Changed
 
-### 1. Improved manifest URL normalization in `go-supertorrent/`
-**File:** `go-supertorrent/main.go`
-
-Previously, if a manifest payload already contained a relative `manifestUrl`, the Go supertorrent service would preserve that value as-is.
-
-That could leave published manifests with relative URLs even when an absolute URL would be more robust and more consistent for consumers.
-
-### New behavior
-During `publish-manifest`, the Go supertorrent service now:
-- keeps explicit external absolute URLs as-is
-- generates an absolute URL when no manifest URL is provided
-- normalizes relative manifest URLs into absolute URLs using the incoming request host
-
-Similarly, shard-upload responses now expose absolute shard URLs.
-
-This is a useful compatibility improvement for the browser-facing storage workbench and any other consumer expecting portable manifest/shard references.
-
-### 2. Added regression assertions for absolute URL behavior
+### 1. Expanded `go-supertorrent/main_test.go`
 **File:** `go-supertorrent/main_test.go`
 
-The manifest/shard round-trip test now explicitly verifies:
-- uploaded shard responses expose an absolute shard URL
-- published manifest responses expose an absolute manifest URL
+Added new tests:
+- `TestRootStatusEndpoint`
+- `TestUploadShardRejectsInvalidBase64`
+- `TestManifestAndShardMissingPaths`
 
-This turns the new compatibility expectation into executable coverage instead of leaving it as an untested implementation detail.
+### Covered behaviors
+These tests validate:
+- root HTTP status behavior for the Go supertorrent shell
+- invalid base64 shard rejection on `/upload-shard`
+- 404 handling for missing manifests on `/manifests/:id`
+- 404 handling for missing shards on `/shards/:hash`
+
+This complements the previously added success-path tests for:
+- shard upload
+- manifest publication/retrieval
+- shard retrieval
+- registry loading
+- stats/reporting
+- bootstrap/open orchestration
+- open-bid processing
+- signaling flow
+
+### 2. Broader negative-path shell coverage achieved
+With these additions, `go-supertorrent/` now has executable coverage across both:
+- success-path browser-facing storage behavior
+- negative-path storage/reporting behavior
+
+That makes the shell much safer to evolve because failures around malformed input and missing persisted state are no longer untested corners.
 
 ## Validation Performed
 
@@ -78,31 +87,40 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- current frontend route/vendor chunking remains intact
+- current frontend runtime improvements remain intact
 
 ## Why This Matters
-This pass matters because URL shape is part of compatibility, not just polish.
+This pass matters because failure handling is part of the real operational surface of the Go supertorrent shell.
 
-A storage publication shell can appear correct while still causing subtle integration problems if:
-- returned shard URLs are relative in contexts that expect absolute ones
-- published manifests are less portable than they should be
-- downstream consumers have to infer or repair host information manually
+A service can pass every success-path test and still be unreliable if:
+- malformed uploads are not rejected predictably
+- missing manifests or shards fail in surprising ways
+- root service status behavior drifts from what operators or browser clients expect
 
-This session reduces that risk and makes the Go storage shell a bit more operationally robust.
+This session explicitly covered those areas.
 
 ## Findings / Analysis
 
-### Key finding 1: browser-facing compatibility details deserve tests too
-The earlier storage-shell work correctly covered publication and retrieval behavior.
+### Key finding 1: browser-facing storage shells need negative-path tests as soon as the success paths stabilize
+The success-path storage tests were the right first step.
 
-This pass shows the next refinement layer is also worth testing:
-- not just whether a manifest exists
-- but whether the references inside it are shaped in a way that improves real consumer compatibility
+This pass shows the next important hardening layer is:
+- malformed payload rejection
+- missing-state handling
+- simple root shell reporting
 
-### Key finding 2: the Go service shells are increasingly moving from feature parity toward integration robustness
-This was not a giant feature jump, but it was still valuable because it strengthens how the existing Go shell behaves in real browser-facing use.
+That is exactly the kind of careful completion work that improves real robustness.
 
-That is exactly the kind of careful refinement work that makes later migration steps safer.
+### Key finding 2: the Go supertorrent shell is now becoming more operationally trustworthy
+Between the recent passes, `go-supertorrent/` is now covered across:
+- initialization
+- reporting
+- market orchestration
+- storage publication/retrieval
+- signaling
+- negative-path storage behavior
+
+That is a much healthier base for future expansion than a shell that only proves its happy paths.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -114,7 +132,7 @@ The largest remaining honest gaps are now:
 ## Recommended Next Move
 The best next move remains:
 1. continue porting the next reasonable specialist service slices carefully
-2. keep adding tests for integration-level compatibility details as Go-facing browser/runtime shells mature
+2. keep adding negative-path and integration-path tests as newly ported Go surfaces stabilize
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -123,7 +141,6 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-supertorrent/main.go`
 - `go-supertorrent/main_test.go`
 
 ## Operational Note

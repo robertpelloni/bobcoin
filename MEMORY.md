@@ -94,6 +94,7 @@
   - As of v8.75.0, `go-supertorrent/main_test.go` now covers signaling flow (`FIND_MATCH`, `MATCH_FOUND`, `SIGNAL`, `OPPONENT_DISCONNECTED`) in addition to storage, registry, and market-control behavior.
   - As of v8.77.0, `go-supertorrent/` now normalizes relative manifest URLs into absolute URLs during manifest publication, improving compatibility with browser-facing storage restoration flows.
   - As of v8.77.0, the Go supertorrent tests now assert absolute URL behavior for both shard upload responses and manifest publication responses.
+  - As of v8.78.0, `go-supertorrent/main_test.go` now also covers root status behavior plus negative-path storage errors (invalid shard base64 and missing manifest/shard 404s).
   - As of v8.71.0, the Go supertorrent shell is now tested at both state-mutation level and state-observation/reporting level, not just request handlers that change state.
   - As of v8.63.0, `go-game-server/main_test.go` now also covers higher-value handler-level orchestration paths (`/submit-proof`, `/mint`, and `/fhe-oracle` not-configured behavior), not just lower-level helper behavior.
   - As of v8.63.0, the Go game-server shell is now tested at both helper level and endpoint level for its current proof/mint/FHE orchestration boundaries.

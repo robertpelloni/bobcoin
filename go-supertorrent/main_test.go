@@ -248,6 +248,47 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 	}
 }
 
+func TestRootStatusEndpoint(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	service.handleRoot(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected root status success, got %d", rec.Code)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode root status response: %v", err)
+	}
+	if body["status"] != "online" {
+		t.Fatalf("expected online root status, got %v", body["status"])
+	}
+}
+
+func TestUploadShardRejectsInvalidBase64(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	req := httptest.NewRequest(http.MethodPost, "/upload-shard", strings.NewReader(`{"hash":"bad-shard","data":"%%%not-base64%%%"}`))
+	rec := httptest.NewRecorder()
+	service.handleUploadShard(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected invalid base64 shard rejection, got %d with %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestManifestAndShardMissingPaths(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	manifestRec := httptest.NewRecorder()
+	service.handleGetManifest(manifestRec, httptest.NewRequest(http.MethodGet, "/manifests/missing", nil))
+	if manifestRec.Code != http.StatusNotFound {
+		t.Fatalf("expected missing manifest 404, got %d", manifestRec.Code)
+	}
+	shardRec := httptest.NewRecorder()
+	service.handleGetShard(shardRec, httptest.NewRequest(http.MethodGet, "/shards/missing", nil))
+	if shardRec.Code != http.StatusNotFound {
+		t.Fatalf("expected missing shard 404, got %d", shardRec.Code)
+	}
+}
+
 func TestHandleAddAndRemoveTorrent(t *testing.T) {
 	service := newTestSuperTorrentService(t)
 

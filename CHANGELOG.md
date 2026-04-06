@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.73.0] - 2026-04-05
+
+### Added
+- Additional Go service regression coverage for `go-game-server/` initialization behavior in `go-game-server/main_test.go`, including:
+  - first-run system-chain bootstrap through `initializeSystemChainOnce()`
+  - no-op behavior when the system frontier is already initialized
+
+### Changed
+- Refactored `go-game-server/` system-chain bootstrap into a reusable `initializeSystemChainOnce()` helper so the long-lived startup path now has a directly testable single-pass core.
+- Continued the staged service-hardening pattern of extracting directly testable helpers from initialization routines before expanding deeper specialist behavior.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go test ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.72.0] - 2026-04-05
 
 ### Added

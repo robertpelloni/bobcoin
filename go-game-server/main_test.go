@@ -34,6 +34,46 @@ func newTestService(t *testing.T) *Service {
 	return service
 }
 
+func TestInitializeSystemChainOnce(t *testing.T) {
+	var processCalls int
+	var processedBlock map[string]interface{}
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/process" {
+			t.Fatalf("unexpected lattice path during system init: %s", r.URL.Path)
+		}
+		processCalls++
+		_ = json.NewDecoder(r.Body).Decode(&processedBlock)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "system-genesis-hash"})
+	}))
+	defer lattice.Close()
+
+	service := newTestService(t)
+	service.cfg.LatticeURL = lattice.URL
+	if err := service.initializeSystemChainOnce(); err != nil {
+		t.Fatalf("expected initializeSystemChainOnce to succeed, got %v", err)
+	}
+	if processCalls != 1 {
+		t.Fatalf("expected one system-chain process call, got %d", processCalls)
+	}
+	blockPayload, ok := processedBlock["block"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected process payload to include block")
+	}
+	if blockPayload["type"] != "open" || blockPayload["link"] != "SYSTEM_GENESIS" {
+		t.Fatalf("expected system genesis open block, got %+v", blockPayload)
+	}
+	if service.systemFrontier == nil || *service.systemFrontier == "" {
+		t.Fatalf("expected system frontier to be initialized")
+	}
+
+	if err := service.initializeSystemChainOnce(); err != nil {
+		t.Fatalf("expected second initializeSystemChainOnce to no-op cleanly, got %v", err)
+	}
+	if processCalls != 1 {
+		t.Fatalf("expected second initialization to skip process call, got %d", processCalls)
+	}
+}
+
 func TestVerifyProofUsesBridgeWhenAvailable(t *testing.T) {
 	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/verify" {

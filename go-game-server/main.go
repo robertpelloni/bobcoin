@@ -246,17 +246,34 @@ func loadOrCreateWallet(path string) (Wallet, error) {
 }
 
 func (s *Service) initializeSystemChain() {
+	if err := s.initializeSystemChainOnce(); err != nil {
+		log.Printf("[go-game-server] failed to bootstrap system chain: %v", err)
+		return
+	}
+	log.Printf("[go-game-server] initialized system chain: %s...", s.systemWallet.PublicKey[:16])
+}
+
+func (s *Service) initializeSystemChainOnce() error {
+	s.mu.Lock()
+	alreadyInitialized := s.systemFrontier != nil
+	s.mu.Unlock()
+	if alreadyInitialized {
+		return nil
+	}
+
 	block := &Block{Type: "open", Account: s.systemWallet.PublicKey, Previous: nil, Balance: s.systemBalance, StakedBalance: 0, Height: 0, Link: "SYSTEM_GENESIS", Timestamp: time.Now().UnixMilli()}
 	signBlock(block, s.systemWallet.PrivateKey)
 	var resp APIResponse
-	if err := s.postJSON(s.cfg.LatticeURL+"/process", map[string]interface{}{"block": block}, &resp); err != nil || !resp.Success {
-		log.Printf("[go-game-server] failed to bootstrap system chain: %v %s", err, resp.Error)
-		return
+	if err := s.postJSON(s.cfg.LatticeURL+"/process", map[string]interface{}{"block": block}, &resp); err != nil {
+		return err
+	}
+	if !resp.Success {
+		return fmt.Errorf("%s", resp.Error)
 	}
 	s.mu.Lock()
 	s.systemFrontier = &block.Hash
 	s.mu.Unlock()
-	log.Printf("[go-game-server] initialized system chain: %s...", s.systemWallet.PublicKey[:16])
+	return nil
 }
 
 func (s *Service) handleRoot(w http.ResponseWriter, r *http.Request) {

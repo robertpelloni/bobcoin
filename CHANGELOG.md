@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.79.0] - 2026-04-05
+
+### Added
+- Manifest registry listing support in `go-supertorrent/` via `GET /manifests`, making the Go storage shell capable of enumerating stored manifests instead of only fetching by ID.
+- `go-supertorrent/main_test.go` now validates manifest listing behavior alongside manifest publication and direct manifest/shard retrieval.
+
+### Changed
+- Extended the Go supertorrent storage shell from point-lookup-only manifest retrieval into a more complete manifest registry surface.
+- Hardened the manifest/shard regression suite by verifying manifest listing as part of the browser-facing storage shell behavior.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.78.0] - 2026-04-05
 
 ### Added

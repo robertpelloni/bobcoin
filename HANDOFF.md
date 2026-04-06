@@ -1,48 +1,42 @@
-# Session Handoff - 2026-04-05 (v8.78.0)
+# Session Handoff - 2026-04-05 (v8.79.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by broadening `go-supertorrent/` test coverage into more of its negative-path and root-shell behavior.
+This session continued the Go-port campaign by extending `go-supertorrent/` from point-lookup-only manifest retrieval into a slightly richer manifest registry surface.
 
-That matters because a browser-facing storage/control service can appear stable if only its success paths are tested, while still being brittle around:
-- malformed shard payloads
-- missing stored artifacts
-- root-level service status expectations
+The key outcome is that the Go supertorrent shell can now enumerate stored manifests through `GET /manifests`, and that behavior is covered by executable tests alongside the existing shard/manifest round-trip tests.
 
-This pass closes some of that gap by adding more negative-path and basic shell coverage for the Go supertorrent service.
+That is a useful incremental porting step because it broadens the Go storage shell in a way that is operationally reasonable and directly useful for future browser-facing tooling.
 
 ## What Changed
 
-### 1. Expanded `go-supertorrent/main_test.go`
+### 1. Added manifest registry listing support to `go-supertorrent/`
+**File:** `go-supertorrent/main.go`
+
+Added:
+- `GET /manifests`
+
+### New behavior
+The Go supertorrent service can now:
+- scan its manifest registry directory
+- decode stored manifest JSON files
+- return a list of manifests via a JSON response
+
+This broadens the storage shell from:
+- upload shard
+- publish manifest
+- fetch one manifest by ID
+- fetch one shard by hash
+
+to also include:
+- manifest enumeration
+
+### 2. Added manifest listing regression coverage
 **File:** `go-supertorrent/main_test.go`
 
-Added new tests:
-- `TestRootStatusEndpoint`
-- `TestUploadShardRejectsInvalidBase64`
-- `TestManifestAndShardMissingPaths`
+The manifest/shard round-trip test now also verifies:
+- a manifest published through `/publish-manifest` appears in `GET /manifests`
 
-### Covered behaviors
-These tests validate:
-- root HTTP status behavior for the Go supertorrent shell
-- invalid base64 shard rejection on `/upload-shard`
-- 404 handling for missing manifests on `/manifests/:id`
-- 404 handling for missing shards on `/shards/:hash`
-
-This complements the previously added success-path tests for:
-- shard upload
-- manifest publication/retrieval
-- shard retrieval
-- registry loading
-- stats/reporting
-- bootstrap/open orchestration
-- open-bid processing
-- signaling flow
-
-### 2. Broader negative-path shell coverage achieved
-With these additions, `go-supertorrent/` now has executable coverage across both:
-- success-path browser-facing storage behavior
-- negative-path storage/reporting behavior
-
-That makes the shell much safer to evolve because failures around malformed input and missing persisted state are no longer untested corners.
+That means the new manifest-listing behavior is not just implemented, but covered by executable tests.
 
 ## Validation Performed
 
@@ -87,40 +81,28 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- current frontend runtime improvements remain intact
 
 ## Why This Matters
-This pass matters because failure handling is part of the real operational surface of the Go supertorrent shell.
+This pass matters because manifest publication is more useful operationally when the service can also enumerate what is already stored.
 
-A service can pass every success-path test and still be unreliable if:
-- malformed uploads are not rejected predictably
-- missing manifests or shards fail in surprising ways
-- root service status behavior drifts from what operators or browser clients expect
+A shell that only supports direct-by-ID retrieval is workable, but a shell that can also list stored manifests is more useful for future tooling, debugging, and browser-facing introspection.
 
-This session explicitly covered those areas.
+This is the kind of reasonable incremental service-surface broadening that fits the current Go migration phase well.
 
 ## Findings / Analysis
 
-### Key finding 1: browser-facing storage shells need negative-path tests as soon as the success paths stabilize
-The success-path storage tests were the right first step.
+### Key finding 1: storage registry enumeration is a useful next shell-level capability
+The port already supported publication and point retrieval.
 
-This pass shows the next important hardening layer is:
-- malformed payload rejection
-- missing-state handling
-- simple root shell reporting
+Adding enumeration is a small but practical next step that rounds out the registry surface in a way likely to be useful to future Go-native tooling and UI integration.
 
-That is exactly the kind of careful completion work that improves real robustness.
+### Key finding 2: shell expansion is healthiest when each new endpoint is immediately test-backed
+This pass again followed the right migration pattern:
+- add the new service-shell behavior
+- immediately validate it in tests
+- then document the broader shell surface
 
-### Key finding 2: the Go supertorrent shell is now becoming more operationally trustworthy
-Between the recent passes, `go-supertorrent/` is now covered across:
-- initialization
-- reporting
-- market orchestration
-- storage publication/retrieval
-- signaling
-- negative-path storage behavior
-
-That is a much healthier base for future expansion than a shell that only proves its happy paths.
+That keeps the Go service migration from accumulating unverified behavior.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -132,7 +114,7 @@ The largest remaining honest gaps are now:
 ## Recommended Next Move
 The best next move remains:
 1. continue porting the next reasonable specialist service slices carefully
-2. keep adding negative-path and integration-path tests as newly ported Go surfaces stabilize
+2. keep broadening the Go-facing shell surface where it improves real operations/tooling
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -141,6 +123,7 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
+- `go-supertorrent/main.go`
 - `go-supertorrent/main_test.go`
 
 ## Operational Note

@@ -157,6 +157,20 @@ func TestManifestAndShardEndpoints(t *testing.T) {
 		t.Fatalf("expected absolute manifest URL, got %v", publishBody["manifestUrl"])
 	}
 
+	listRec := httptest.NewRecorder()
+	service.handleListManifests(listRec, httptest.NewRequest(http.MethodGet, "/manifests", nil))
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected manifest list success, got %d", listRec.Code)
+	}
+	var listBody map[string]interface{}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &listBody); err != nil {
+		t.Fatalf("failed to decode manifest list: %v", err)
+	}
+	listedManifests, ok := listBody["manifests"].([]interface{})
+	if !ok || len(listedManifests) != 1 {
+		t.Fatalf("expected one listed manifest, got %v", listBody["manifests"])
+	}
+
 	manifestRec := httptest.NewRecorder()
 	service.handleGetManifest(manifestRec, httptest.NewRequest(http.MethodGet, "/manifests/manifest-1", nil))
 	if manifestRec.Code != http.StatusOK {

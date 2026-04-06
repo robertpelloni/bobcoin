@@ -164,6 +164,7 @@ func main() {
 	mux.HandleFunc("/upload", service.handleUpload)
 	mux.HandleFunc("/upload-shard", service.handleUploadShard)
 	mux.HandleFunc("/publish-manifest", service.handlePublishManifest)
+	mux.HandleFunc("/manifests", service.handleListManifests)
 	mux.HandleFunc("/manifests/", service.handleGetManifest)
 	mux.HandleFunc("/shards/", service.handleGetShard)
 	mux.HandleFunc("/spora/", service.handleSpora)
@@ -571,6 +572,30 @@ func (s *SuperTorrentService) handlePublishManifest(w http.ResponseWriter, r *ht
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "id": manifestID, "locator": req.Manifest["locator"], "manifestUrl": req.Manifest["manifestUrl"], "manifest": req.Manifest})
+}
+
+func (s *SuperTorrentService) handleListManifests(w http.ResponseWriter, r *http.Request) {
+	entries, err := os.ReadDir(s.cfg.ManifestsDir)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	manifests := make([]map[string]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(s.cfg.ManifestsDir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		var manifest map[string]interface{}
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			continue
+		}
+		manifests = append(manifests, manifest)
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"manifests": manifests})
 }
 
 func (s *SuperTorrentService) handleGetManifest(w http.ResponseWriter, r *http.Request) {

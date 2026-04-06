@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.81.0] - 2026-04-05
+
+### Added
+- Explicit `/status` compatibility endpoint in `go-supertorrent/`, complementing the root status response so frontend/service health checks have a direct Go-native status path.
+- Additional Go regression coverage for `go-supertorrent/` root/status behavior in `go-supertorrent/main_test.go`, ensuring both root and `/status` respond with the expected online shell metadata.
+
+### Changed
+- Improved Go supertorrent compatibility with frontend/service health probes by exposing a dedicated `/status` path rather than relying only on root-path behavior.
+- Continued the shell-hardening pattern by immediately test-backing the new compatibility endpoint.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.80.0] - 2026-04-05
 
 ### Added

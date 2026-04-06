@@ -338,6 +338,23 @@ func TestRootStatusEndpoint(t *testing.T) {
 	}
 }
 
+func TestStatusEndpoint(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	rec := httptest.NewRecorder()
+	service.handleStatus(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected /status success, got %d", rec.Code)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode status response: %v", err)
+	}
+	if body["status"] != "online" || body["service"] == nil {
+		t.Fatalf("expected online status payload, got %v", body)
+	}
+}
+
 func TestUploadShardRejectsInvalidBase64(t *testing.T) {
 	service := newTestSuperTorrentService(t)
 	req := httptest.NewRequest(http.MethodPost, "/upload-shard", strings.NewReader(`{"hash":"bad-shard","data":"%%%not-base64%%%"}`))

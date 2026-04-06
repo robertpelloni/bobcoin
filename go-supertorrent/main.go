@@ -158,6 +158,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", service.handleRoot)
+	mux.HandleFunc("/status", service.handleStatus)
 	mux.HandleFunc("/stats", service.handleStats)
 	mux.HandleFunc("/bankroll", service.handleProxyBankroll)
 	mux.HandleFunc("/mint", service.handleProxyMint)
@@ -399,7 +400,15 @@ func (s *SuperTorrentService) handleRoot(w http.ResponseWriter, r *http.Request)
 		s.handleMatchmakingWebSocket(w, r)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go SuperTorrent control plane", "version": "0.2.0-go", "wallet": s.wallet.PublicKey})
+	s.writeServiceStatus(w)
+}
+
+func (s *SuperTorrentService) handleStatus(w http.ResponseWriter, r *http.Request) {
+	s.writeServiceStatus(w)
+}
+
+func (s *SuperTorrentService) writeServiceStatus(w http.ResponseWriter) {
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go SuperTorrent control plane", "version": "0.3.0-go", "wallet": s.wallet.PublicKey})
 }
 
 func (s *SuperTorrentService) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Request) {

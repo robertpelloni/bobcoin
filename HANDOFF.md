@@ -1,63 +1,50 @@
-# Session Handoff - 2026-04-05 (v8.80.0)
+# Session Handoff - 2026-04-05 (v8.81.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by broadening `go-supertorrent/` from a supernode/storage shell into a more capable compatibility shell for the frontend’s Go-first HTTP and signaling direction.
+This session continued the Go-port campaign by tightening `go-supertorrent/` compatibility with frontend/service health checks.
 
-The key outcome is that the Go supertorrent service now exposes a compatibility proxy layer for several game/control endpoints in addition to its existing storage, market, and signaling behavior.
+The key outcome is that the Go supertorrent shell now exposes a dedicated `/status` endpoint in addition to its root status behavior, and that endpoint is covered by executable tests.
 
-That matters because the frontend’s Go-first routing story becomes more credible when the Go-facing endpoint actually has a reasonable shell for the compatibility traffic it is expected to receive.
+That is a small but useful refinement because health probes and compatibility routing often expect an explicit `/status` path rather than relying on root-path behavior alone.
 
 ## What Changed
 
-### 1. Added compatibility proxy endpoints to `go-supertorrent/`
-**File:** `go-supertorrent/main.go`
+### 1. Added dedicated `/status` support to `go-supertorrent/`
+**Files:**
+- `go-supertorrent/main.go`
+- `go-supertorrent/main_test.go`
+- `go-supertorrent/README.md`
 
-The Go supertorrent service now proxies the following paths to the configured game server URL:
-- `/bankroll`
-- `/mint`
-- `/burn`
-- `/transactions`
-- `/fhe-oracle`
-- `/submit-proof`
-- `/market/bid`
-- `/market/accept`
-- `/market/bids`
+The Go supertorrent shell now supports:
+- `GET /status`
 
-This is implemented as a compatibility shell, not as a claim that the supertorrent service now natively owns all of those responsibilities.
+Implementation detail:
+- both the root non-WebSocket path and `/status` now share the same internal status payload writer
 
-### 2. Added proxy regression coverage
+This keeps the behavior consistent while making the compatibility surface easier for clients and service checks to use directly.
+
+### 2. Added explicit `/status` regression coverage
 **File:** `go-supertorrent/main_test.go`
 
-Added tests covering:
-- proxied mint behavior
-- proxied transactions behavior
-- root-path WebSocket matchmaking/signaling flow
+Added:
+- `TestStatusEndpoint`
 
-The signaling test was also hardened so it now verifies:
-- both clients receive `MATCH_FOUND`
-- exactly one client is marked initiator
+The test verifies that:
+- `/status` returns a successful response
+- the response includes the expected online/service metadata
 
-without depending on connection-order luck.
-
-### 3. Broader shell alignment with frontend routing
-This pass improves operational alignment with the frontend’s Go-first routing direction by making `go-supertorrent/` a more useful front-door shell during migration.
-
-That does not eliminate the deeper specialist gaps, but it does reduce the mismatch between:
-- what the frontend may target by default
-- what the Go-facing service shell can actually handle today
+This complements the existing root status coverage and makes the new compatibility endpoint immediately test-backed.
 
 ## Validation Performed
 
 ### go-supertorrent
 Commands run:
 - `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go mod tidy`
 - `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
 - `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
-- dependency resolution succeeded
 - tests passed
 - build succeeded
 
@@ -91,36 +78,25 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- current route/vendor chunking remains intact
 
 ## Why This Matters
-This pass matters because migration sometimes needs a compatibility shell, not just direct feature ownership.
+This pass matters because compatibility surfaces are not only about major protocol behavior. Small, boring service endpoints like `/status` are also part of what makes a Go-facing shell operationally useful.
 
-A pure “service owns only its native domain” split can leave rough edges while frontend/runtime defaults move faster than backend decomposition.
+A frontend or operator workflow may correctly target Go-first routing but still fail or degrade if the Go-facing service does not expose the expected health-check path.
 
-By giving `go-supertorrent/` a reasonable compatibility proxy layer, the Go-facing runtime becomes more practical during the transition without pretending the underlying specialist responsibilities have all been fully reimplemented there.
+This pass closes that small but real compatibility gap.
 
 ## Findings / Analysis
 
-### Key finding 1: compatibility shells are a reasonable migration tool when used honestly
-This pass does not claim that `go-supertorrent/` now fully replaces `go-game-server/` responsibilities.
+### Key finding 1: minor compatibility endpoints are worth porting once the main shell exists
+The large protocol and orchestration work is obviously important, but small service-surface compatibility details like `/status` also matter in day-to-day operation.
 
-It does, however, make the Go-facing service boundary more useful for a frontend that is already leaning Go-first.
+This is exactly the kind of reasonable incremental porting step that makes the broader migration smoother.
 
-That is a reasonable and pragmatic migration technique as long as the distinction between:
-- native ported behavior
-- compatibility proxy behavior
+### Key finding 2: consistency through shared writers/helpers is healthy
+Using a shared internal status writer for both root and `/status` helps keep these service surfaces aligned instead of letting two near-identical endpoints drift over time.
 
-remains explicit.
-
-### Key finding 2: signaling test stability matters
-The earlier signaling shell support was functionally correct, but the test assumption about initiator ordering was too rigid.
-
-The updated test now checks the real invariant:
-- both players get matched
-- exactly one initiates
-
-That is a better and more stable assertion.
+That pattern is worth reusing for other small compatibility layers where appropriate.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -132,7 +108,7 @@ The largest remaining honest gaps are now:
 ## Recommended Next Move
 The best next move remains:
 1. continue porting the next reasonable specialist service slices carefully
-2. keep adding tests immediately for every newly broadened Go-facing shell surface
+2. keep tightening both major shells around compatibility details that make the Go-facing runtime more practical
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -141,8 +117,6 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-supertorrent/go.mod`
-- `go-supertorrent/go.sum`
 - `go-supertorrent/main.go`
 - `go-supertorrent/main_test.go`
 - `go-supertorrent/README.md`

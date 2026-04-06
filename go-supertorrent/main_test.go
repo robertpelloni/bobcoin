@@ -229,11 +229,11 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 	if err := connTwo.ReadJSON(&msgTwo); err != nil {
 		t.Fatalf("failed to read second matchmaking response: %v", err)
 	}
-	if msgOne.Type != "MATCH_FOUND" || !msgOne.Initiator {
-		t.Fatalf("expected first player to become initiator, got %+v", msgOne)
+	if msgOne.Type != "MATCH_FOUND" || msgTwo.Type != "MATCH_FOUND" {
+		t.Fatalf("expected both players to receive match notifications, got %+v and %+v", msgOne, msgTwo)
 	}
-	if msgTwo.Type != "MATCH_FOUND" || msgTwo.Initiator {
-		t.Fatalf("expected second player to become receiver, got %+v", msgTwo)
+	if msgOne.Initiator == msgTwo.Initiator {
+		t.Fatalf("expected exactly one initiator, got %+v and %+v", msgOne, msgTwo)
 	}
 
 	signalPayload := map[string]interface{}{"offer": "demo-offer"}
@@ -259,6 +259,65 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 	}
 	if disconnect.Type != "OPPONENT_DISCONNECTED" {
 		t.Fatalf("expected opponent disconnect notice, got %+v", disconnect)
+	}
+}
+
+func TestCompatibilityProxyForMint(t *testing.T) {
+	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/mint" {
+			t.Fatalf("expected proxied /mint path, got %s", r.URL.Path)
+		}
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode proxied mint payload: %v", err)
+		}
+		if payload["amount"] != float64(5) {
+			t.Fatalf("expected forwarded mint amount, got %v", payload["amount"])
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "tx": "minted"})
+	}))
+	defer gameServer.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.GameServerURL = gameServer.URL
+	req := httptest.NewRequest(http.MethodPost, "/mint", strings.NewReader(`{"amount":5,"reason":"proxy-test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	service.handleProxyMint(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected proxied mint success, got %d with %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode proxied mint response: %v", err)
+	}
+	if body["tx"] != "minted" {
+		t.Fatalf("expected proxied mint response, got %v", body)
+	}
+}
+
+func TestCompatibilityProxyForTransactions(t *testing.T) {
+	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/transactions" {
+			t.Fatalf("expected proxied /transactions path, got %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode([]map[string]interface{}{{"id": "tx-1", "type": "MINT"}})
+	}))
+	defer gameServer.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.GameServerURL = gameServer.URL
+	rec := httptest.NewRecorder()
+	service.handleProxyTransactions(rec, httptest.NewRequest(http.MethodGet, "/transactions", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected proxied transactions success, got %d", rec.Code)
+	}
+	var body []map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode proxied transactions response: %v", err)
+	}
+	if len(body) != 1 || body[0]["id"] != "tx-1" {
+		t.Fatalf("expected proxied transactions payload, got %v", body)
 	}
 }
 

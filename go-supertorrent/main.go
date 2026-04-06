@@ -159,6 +159,15 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", service.handleRoot)
 	mux.HandleFunc("/stats", service.handleStats)
+	mux.HandleFunc("/bankroll", service.handleProxyBankroll)
+	mux.HandleFunc("/mint", service.handleProxyMint)
+	mux.HandleFunc("/burn", service.handleProxyBurn)
+	mux.HandleFunc("/transactions", service.handleProxyTransactions)
+	mux.HandleFunc("/fhe-oracle", service.handleProxyFHEOracle)
+	mux.HandleFunc("/submit-proof", service.handleProxySubmitProof)
+	mux.HandleFunc("/market/bid", service.handleProxyMarketBid)
+	mux.HandleFunc("/market/accept", service.handleProxyMarketAccept)
+	mux.HandleFunc("/market/bids", service.handleProxyMarketBids)
 	mux.HandleFunc("/add-torrent", service.handleAddTorrent)
 	mux.HandleFunc("/remove-torrent", service.handleRemoveTorrent)
 	mux.HandleFunc("/upload", service.handleUpload)
@@ -464,6 +473,66 @@ func (s *SuperTorrentService) removeTorrent(infoHash string) {
 	delete(s.torrents, infoHash)
 	s.mu.Unlock()
 	_ = s.saveTorrents()
+}
+
+func (s *SuperTorrentService) proxyGameServerRequest(w http.ResponseWriter, r *http.Request, path string) {
+	targetURL := strings.TrimRight(s.cfg.GameServerURL, "/") + path
+	var body io.Reader
+	if r.Body != nil {
+		payload, err := io.ReadAll(r.Body)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		body = strings.NewReader(string(payload))
+	}
+	proxyReq, err := http.NewRequest(r.Method, targetURL, body)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	proxyReq.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+	resp, err := s.httpClient.Do(proxyReq)
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+	for key, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(key, value)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
+}
+
+func (s *SuperTorrentService) handleProxyBankroll(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/bankroll")
+}
+func (s *SuperTorrentService) handleProxyMint(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/mint")
+}
+func (s *SuperTorrentService) handleProxyBurn(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/burn")
+}
+func (s *SuperTorrentService) handleProxyTransactions(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/transactions")
+}
+func (s *SuperTorrentService) handleProxyFHEOracle(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/fhe-oracle")
+}
+func (s *SuperTorrentService) handleProxySubmitProof(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/submit-proof")
+}
+func (s *SuperTorrentService) handleProxyMarketBid(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/market/bid")
+}
+func (s *SuperTorrentService) handleProxyMarketAccept(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/market/accept")
+}
+func (s *SuperTorrentService) handleProxyMarketBids(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/market/bids")
 }
 
 func (s *SuperTorrentService) handleStats(w http.ResponseWriter, r *http.Request) {

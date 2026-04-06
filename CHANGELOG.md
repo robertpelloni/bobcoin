@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.80.0] - 2026-04-05
+
+### Added
+- Compatibility proxy shell endpoints in `go-supertorrent/` for the frontend’s Go-first HTTP routing, including:
+  - `/bankroll`
+  - `/mint`
+  - `/burn`
+  - `/transactions`
+  - `/fhe-oracle`
+  - `/submit-proof`
+  - `/market/bid`
+  - `/market/accept`
+  - `/market/bids`
+- Additional Go regression coverage for the new compatibility proxy shell in `go-supertorrent/main_test.go`, including proxied mint and proxied transactions behavior.
+- Root-path WebSocket matchmaking/signaling support in `go-supertorrent/`, with Go regression coverage for the matchmaking contract.
+
+### Changed
+- Extended the Go supertorrent shell beyond storage/market control-plane behavior into a broader compatibility layer that can front more of the frontend’s Go-first HTTP and signaling traffic.
+- Hardened supertorrent signaling tests to assert role asymmetry without depending on connection-order luck.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go mod tidy`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.79.0] - 2026-04-05
 
 ### Added

@@ -225,7 +225,9 @@ func TestBootstrapWalletOnLattice(t *testing.T) {
 	service := newTestSuperTorrentService(t)
 	service.cfg.GameServerURL = gameServer.URL
 	service.cfg.LatticeURL = lattice.URL
-	service.bootstrapWalletOnLattice()
+	if err := service.bootstrapWalletOnLatticeOnce(); err != nil {
+		t.Fatalf("expected bootstrap flow to succeed, got %v", err)
+	}
 
 	if !mintRequested {
 		t.Fatalf("expected bootstrap flow to request mint")
@@ -242,6 +244,34 @@ func TestBootstrapWalletOnLattice(t *testing.T) {
 	}
 	if blockPayload["link"] != "bootstrap-send-hash" {
 		t.Fatalf("expected bootstrap link to target mint hash, got %v", blockPayload["link"])
+	}
+}
+
+func TestProcessOpenBidsOnceSkipsTrackedMagnet(t *testing.T) {
+	var processCalls int
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/market/bids":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"bids": []map[string]interface{}{{"id": "open-bid-1", "magnet": "magnet:?xt=urn:btih:1234512345123451234512345123451234512345", "amount": 7.5, "status": "OPEN"}}})
+		case strings.HasPrefix(r.URL.Path, "/frontier/"):
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"frontier": "abcdef1234567890abcdef1234567890abcdef12", "balance": 10.0, "height": 2})
+		case r.URL.Path == "/process":
+			processCalls++
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "accepted-block-hash"})
+		default:
+			t.Fatalf("unexpected lattice path during skip test: %s", r.URL.Path)
+		}
+	}))
+	defer lattice.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.LatticeURL = lattice.URL
+	service.trackTorrent(TorrentRecord{Magnet: "magnet:?xt=urn:btih:1234512345123451234512345123451234512345", InfoHash: magnetInfoHash("magnet:?xt=urn:btih:1234512345123451234512345123451234512345"), Name: "already-tracked.bin", AddedAt: 1, Accepted: true})
+	if err := service.processOpenBidsOnce(); err != nil {
+		t.Fatalf("expected processOpenBidsOnce skip path to succeed, got %v", err)
+	}
+	if processCalls != 0 {
+		t.Fatalf("expected no process call for already tracked magnet, got %d", processCalls)
 	}
 }
 

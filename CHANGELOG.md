@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.72.0] - 2026-04-05
+
+### Added
+- Additional Go orchestration coverage for `go-supertorrent/` in `go-supertorrent/main_test.go`, including:
+  - direct single-pass bootstrap execution through `bootstrapWalletOnLatticeOnce()`
+  - explicit skip-path coverage for open-bid processing when a magnet is already tracked
+
+### Changed
+- Refactored `go-supertorrent/` bootstrap logic into a reusable `bootstrapWalletOnLatticeOnce()` helper so the long-running delayed bootstrap loop now has a directly testable core path.
+- Hardened `go-supertorrent/` open-bid processing by making the skip-if-already-tracked path executable in tests, reducing regression risk in the polling loop.
+- Continued the staged Go migration pattern of extracting testable single-pass helpers from long-running service routines before expanding behavior further.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.71.0] - 2026-04-05
 
 ### Added

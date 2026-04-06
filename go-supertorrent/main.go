@@ -236,23 +236,36 @@ func (s *SuperTorrentService) saveTorrents() error {
 
 func (s *SuperTorrentService) bootstrapWalletOnLattice() {
 	time.Sleep(5 * time.Second)
+	if err := s.bootstrapWalletOnLatticeOnce(); err != nil {
+		log.Printf("[go-supertorrent] bootstrap error: %v", err)
+	}
+}
+
+func (s *SuperTorrentService) bootstrapWalletOnLatticeOnce() error {
 	frontier, _, _, err := s.fetchFrontier(s.wallet.PublicKey)
-	if err != nil || frontier != nil {
-		return
+	if err != nil {
+		return err
+	}
+	if frontier != nil {
+		return nil
 	}
 	log.Printf("[go-supertorrent] account not open on lattice, requesting bootstrap mint")
 
 	payload := map[string]interface{}{"amount": 1, "reason": "Go SuperTorrent Bootstrapping", "address": s.wallet.PublicKey}
 	var mintResp APIResponse
-	if err := s.postJSON(s.cfg.GameServerURL+"/mint", payload, &mintResp); err != nil || !mintResp.Success {
-		log.Printf("[go-supertorrent] bootstrap mint failed: %v %s", err, mintResp.Error)
-		return
+	if err := s.postJSON(s.cfg.GameServerURL+"/mint", payload, &mintResp); err != nil {
+		return err
+	}
+	if !mintResp.Success {
+		return fmt.Errorf("%s", mintResp.Error)
 	}
 
 	pending, err := s.fetchPending(s.wallet.PublicKey)
-	if err != nil || len(pending) == 0 {
-		log.Printf("[go-supertorrent] failed to fetch pending bootstrap funds: %v", err)
-		return
+	if err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return fmt.Errorf("no pending bootstrap funds found")
 	}
 
 	baseHash := hashString(s.wallet.PublicKey)
@@ -265,11 +278,14 @@ func (s *SuperTorrentService) bootstrapWalletOnLattice() {
 	signBlock(block, s.wallet.PrivateKey)
 
 	var resp APIResponse
-	if err := s.postJSON(s.cfg.LatticeURL+"/process", map[string]interface{}{"block": block}, &resp); err != nil || !resp.Success {
-		log.Printf("[go-supertorrent] failed to open lattice account: %v %s", err, resp.Error)
-		return
+	if err := s.postJSON(s.cfg.LatticeURL+"/process", map[string]interface{}{"block": block}, &resp); err != nil {
+		return err
+	}
+	if !resp.Success {
+		return fmt.Errorf("%s", resp.Error)
 	}
 	log.Printf("[go-supertorrent] lattice wallet opened successfully")
+	return nil
 }
 
 func (s *SuperTorrentService) pollOpenBids() {

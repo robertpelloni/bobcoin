@@ -1,76 +1,52 @@
-# Session Handoff - 2026-04-05 (v8.71.0)
+# Session Handoff - 2026-04-05 (v8.72.0)
 
 ## Executive Summary
-This pass preserves the newer upstream frontend bundle-health work and rebases the broader Go supertorrent state/reporting test expansion on top.
+This session continued the Go-port campaign by refining `go-supertorrent/` for better orchestration testability and by expanding tests around edge behavior inside the market polling flow.
 
-The merged result now includes both:
-- upstream frontend route/vendor chunk splitting and bundle-health improvements
-- stronger `go-supertorrent/` regression coverage for startup-state and reporting behavior
+The key outcome is that the Go supertorrent service now exposes a directly testable single-pass bootstrap helper and has explicit regression coverage for the “already tracked magnet” skip path during bid processing.
 
-That is the right outcome for the project right now: preserve concurrent frontend/runtime usability work while continuing to harden the newly ported Go service shells.
+That matters because long-running service routines are much easier to evolve safely once their per-iteration and per-attempt logic can be exercised without the outer sleep/ticker scaffolding.
 
-## Rebase / Merge Context
-A direct push was rejected because `origin/main` advanced through newer frontend-focused work, including:
-- Go-first signaling routing
-- signed diagnostics package workflows
-- comparative diagnostics review
-- route-level code splitting and vendor chunking
+## What Changed
 
-Resolution strategy:
-- preserve all upstream frontend improvements
-- rebase the new supertorrent state/reporting test expansion on top
-- promote the merged result to `v8.71.0`
+### 1. Added `bootstrapWalletOnLatticeOnce()`
+**File:** `go-supertorrent/main.go`
 
-## What This Pass Added
+Previously, the bootstrap flow lived only inside the delayed long-running method:
+- `bootstrapWalletOnLattice()`
 
-### 1. Expanded `go-supertorrent/main_test.go`
+That made its logic less convenient to test directly because the sleep and outer wrapper were mixed with the actual bootstrap behavior.
+
+### New behavior
+The bootstrap flow is now split into:
+- `bootstrapWalletOnLattice()`
+- `bootstrapWalletOnLatticeOnce()`
+
+The delayed long-running method now simply waits and delegates to the single-pass helper.
+
+This is a cleaner structure and makes the real bootstrap logic directly testable.
+
+### 2. Added explicit skip-path coverage for already tracked market magnets
 **File:** `go-supertorrent/main_test.go`
 
-Added new tests:
-- `TestNewSuperTorrentServiceLoadsRegistryAndCoreAnchors`
-- `TestStatsEndpointReportsTrackedTorrents`
+Added:
+- `TestProcessOpenBidsOnceSkipsTrackedMagnet`
 
-### Covered behaviors
-These tests validate:
-- persisted torrent registry loading from disk at startup
-- automatic inclusion of core anchor records on service initialization
-- `/stats` output over tracked torrent state
-- storage total-size reporting
-- exposure of tracked torrent metadata in the stats response
+This test verifies that when an open bid references a magnet the service is already tracking, the polling pass:
+- does not attempt to process/accept it again
+- does not submit a duplicate `accept_bid` block
 
-These complement the previously added tests for:
-- add/remove torrent behavior
-- SPoRA endpoint behavior
-- lattice accept-bid submission
-- multipart upload tracking
-- bootstrap/open flow from minted pending funds
-- single-pass open-bid processing
+That closes a useful control-plane regression gap around duplicate market processing.
 
-### 2. Broader supertorrent shell coverage achieved
-With these additions, `go-supertorrent/` now has executable regression coverage across:
-- registry loading
-- core-anchor bootstrapping
-- stats/reporting behavior
-- add/remove tracking behavior
-- upload tracking behavior
-- SPoRA response behavior
-- bootstrap/open orchestration
-- open-bid scanning
-- accept-bid submission
+### 3. Existing bootstrap test now exercises the single-pass helper directly
+**File:** `go-supertorrent/main_test.go`
 
-This is a more mature shell-level safety net than earlier in the port.
+`TestBootstrapWalletOnLattice` now uses the new single-pass helper instead of the delayed wrapper.
 
-## Upstream Work Preserved In The Merged State
-The rebased branch also retains newer frontend/runtime improvements already landed upstream:
-- Go-first signaling routing
-- signed diagnostics package workflows
-- comparative diagnostics review
-- route-level lazy loading
-- vendor chunk splitting and bundle-health improvements
-
-So the branch advanced on both sides:
-- stronger Go service-shell regression coverage
-- better frontend operational/runtime UX
+That makes the test:
+- faster
+- more direct
+- less dependent on timer behavior
 
 ## Validation Performed
 
@@ -117,34 +93,27 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- route/vendor chunking active
-- non-fatal large vendor warning remains concentrated mostly in the `three` chunk
+- upstream route/vendor chunking remains active
 
 ## Why This Matters
-This pass matters because startup-state and reporting behavior are part of the real operational surface of a service, not just its mutation paths.
+This pass matters because it continues a healthy service-hardening pattern:
+- extract single-pass helpers from long-running service routines
+- test both success and skip paths explicitly
+- make future changes safer by reducing hidden behavior inside timers/loops
 
-A service can pass all write-path and orchestration tests and still be unreliable if:
-- it fails to restore expected persisted state at startup
-- it misreports operational state to callers
-
-This session explicitly covered those areas for `go-supertorrent/`, while preserving upstream frontend work that improves runtime usability and deployability.
+This is the kind of structural hardening that pays off as service logic broadens.
 
 ## Findings / Analysis
 
-### Key finding 1: service shells need tests for both mutation and observation
-The Go service migration has now reached the point where “write path only” coverage is not enough.
+### Key finding 1: single-pass helpers are worth introducing early
+The new `bootstrapWalletOnLatticeOnce()` helper is a good example of a small refactor with a disproportionately good testing payoff.
 
-Testing both:
-- state mutation
-- state observation/reporting
+It preserves behavior while making the important logic easier to reason about and easier to validate directly.
 
-produces a stronger and more realistic confidence level for the service shell.
+### Key finding 2: duplicate/skip paths deserve explicit coverage
+The “already tracked magnet” case is a realistic control-plane scenario in long-running market polling.
 
-### Key finding 2: zero-loss rebasing remains the right operating mode
-This rebase again reinforced the same healthy pattern:
-- preserve upstream product/frontend work
-- layer system migration and test-hardening work on top
-- avoid zero-sum rebases
+Adding explicit coverage for it helps protect against accidental duplicate claim behavior as the Go service evolves.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -155,9 +124,9 @@ The largest remaining honest gaps are now:
 
 ## Recommended Next Move
 The best next move remains:
-1. continue expanding the most reasonable specialist service slices into Go
-2. keep adding tests for both mutation and observation behavior as service shells broaden further
-3. preserve the parity/testing/documentation backbone while the service layer continues to migrate
+1. continue extracting directly testable helpers from long-running Go service routines where useful
+2. keep porting the next reasonable specialist slices carefully
+3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
 - `VERSION.md`
@@ -165,6 +134,7 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
+- `go-supertorrent/main.go`
 - `go-supertorrent/main_test.go`
 
 ## Operational Note

@@ -98,6 +98,7 @@
   - As of v8.78.0, `go-supertorrent/main_test.go` now also covers root status behavior plus negative-path storage errors (invalid shard base64 and missing manifest/shard 404s).
   - As of v8.80.0, `go-supertorrent/` now also exposes a compatibility proxy shell for Go-first HTTP/game orchestration paths (`/bankroll`, `/mint`, `/burn`, `/transactions`, `/fhe-oracle`, `/submit-proof`, `/market/bid`, `/market/accept`, `/market/bids`).
   - As of v8.80.0, `go-supertorrent/main_test.go` now covers the compatibility proxy shell as well as the root-path signaling shell.
+  - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
   - As of v8.81.0, `go-supertorrent/` also exposes a dedicated `/status` compatibility endpoint in addition to the root status path, and the Go tests now validate both.
   - As of v8.82.0, `go-supertorrent/` now defaults to port `8000`, and `go-game-server/` now targets `http://localhost:8000` as its default supernode URL, aligning the two Go service shells with the frontend’s Go-first default wiring.
   - As of v8.71.0, the Go supertorrent shell is now tested at both state-mutation level and state-observation/reporting level, not just request handlers that change state.

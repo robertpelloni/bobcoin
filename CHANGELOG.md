@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.83.0] - 2026-04-05
+
+### Added
+- Expanded Go regression coverage for the new supertorrent compatibility proxy shell in `go-supertorrent/main_test.go`, including:
+  - proxied `/submit-proof`
+  - proxied `/fhe-oracle`
+  - proxied market bid/list/accept lifecycle
+- The new tests now validate that the Go supertorrent compatibility shell can forward more of the frontend’s Go-first traffic surface, not just mint and transactions.
+
+### Changed
+- Hardened the Go supertorrent compatibility proxy shell by covering a broader slice of forwarded gameplay/control traffic.
+- Continued the staged migration pattern of making newly broadened compatibility layers executable in tests immediately rather than leaving them as unverified glue.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.82.0] - 2026-04-05
 
 ### Changed

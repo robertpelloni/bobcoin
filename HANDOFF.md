@@ -1,37 +1,39 @@
-# Session Handoff - 2026-04-05 (v8.82.0)
+# Session Handoff - 2026-04-05 (v8.83.0)
 
 ## Executive Summary
-This session continued the practical Go-port campaign by tightening the default interoperability between the two new Go service shells.
+This session continued the Go-port campaign by broadening regression coverage for the new `go-supertorrent/` compatibility proxy shell.
 
-The key outcome is that:
-- `go-supertorrent/` now defaults to port `8000`
-- `go-game-server/` now defaults its `SUPERNODE_URL` to `http://localhost:8000`
+That matters because the compatibility proxy layer is now part of the practical Go-facing runtime surface. If it is going to carry more of the frontend’s Go-first traffic, it needs explicit tests beyond just one or two representative forwarded endpoints.
 
-That aligns the two Go service shells with the frontend’s existing Go-first supernode expectation and reduces one more migration-time mismatch.
+The result is that the Go supertorrent compatibility shell now has executable coverage for a wider slice of forwarded gameplay/control traffic.
 
 ## What Changed
 
-### 1. Aligned default Go supernode port to `8000`
-**Files:**
-- `go-supertorrent/main.go`
-- `go-supertorrent/README.md`
+### 1. Expanded compatibility proxy coverage in `go-supertorrent/main_test.go`
+**File:** `go-supertorrent/main_test.go`
 
-The Go supertorrent shell now defaults to:
-- `SUPERNODE_PORT=8000`
+Added new tests for the proxy shell:
+- `TestCompatibilityProxyForSubmitProofAndFHE`
+- `TestCompatibilityProxyForMarketEndpoints`
 
-This is important because the frontend already treats `http://localhost:8000` as the default Go-first supernode target.
+### Covered behaviors
+These tests now validate:
+- proxied `/submit-proof` behavior
+- proxied `/fhe-oracle` behavior
+- proxied `/market/bid`
+- proxied `/market/bids`
+- proxied `/market/accept`
 
-### 2. Aligned `go-game-server/` default supernode target to the Go shell
-**Files:**
-- `go-game-server/main.go`
-- `go-game-server/README.md`
+This builds on the earlier proxy coverage for:
+- proxied `/mint`
+- proxied `/transactions`
 
-The Go game-server now defaults:
-- `SUPERNODE_URL=http://localhost:8000`
+### 2. Improved signaling test stability
+The supertorrent signaling test was already present, but this pass preserved the more robust invariant-based assertion style:
+- both clients receive a match notification
+- exactly one becomes initiator
 
-instead of the older `8081`-oriented assumption.
-
-This means the two Go service shells now line up out of the box more cleanly.
+That avoids brittle dependence on connection-order assumptions.
 
 ## Validation Performed
 
@@ -47,14 +49,10 @@ Result:
 - build succeeded
 
 ### go-game-server
-Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
+Command run:
 - `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
-- formatting succeeded
-- tests passed
 - build succeeded
 
 ### Node reference lattice
@@ -82,26 +80,25 @@ Result:
 - PWA artifacts generated successfully
 
 ## Why This Matters
-This pass matters because migration friction often comes from small default mismatches rather than only from missing core features.
+This pass matters because a compatibility shell is only trustworthy if its forwarding behavior is tested across the breadth of the traffic it is expected to carry.
 
-When the frontend, Go game-server, and Go supertorrent all expect different default addresses or ports, the migration path becomes noisier than it needs to be.
-
-Aligning these defaults reduces that friction and makes the Go-first runtime surface more coherent.
+Earlier passes established that the shell existed and could proxy a few representative paths.
+This pass broadens confidence that the Go-facing compatibility layer can carry more of the real frontend traffic surface safely.
 
 ## Findings / Analysis
 
-### Key finding 1: default alignment is a real part of service migration quality
-Even when features exist, the migration can still feel broken or incomplete if defaults point at the wrong service boundaries.
+### Key finding 1: compatibility layers need breadth tests, not just existence tests
+A proxy shell can be present and still be unreliable if only a couple of endpoints are ever exercised in tests.
 
-This pass improves that practical operational coherence.
+This pass improves that by broadening the exercised forwarded surface into:
+- proof traffic
+- FHE traffic
+- market traffic
 
-### Key finding 2: small default fixes can have outsized migration value
-This was not a giant feature pass, but it removed a meaningful source of default mismatch between:
-- frontend Go-first routing
-- Go supernode service
-- Go game-server service
+### Key finding 2: practical migration sometimes means testing glue very seriously
+This pass is a good example of why migration work is not only about porting “real logic.”
 
-That kind of cleanup is worth doing while the platform is still hybrid.
+Compatibility glue becomes part of the real runtime surface during transition periods, so it deserves real testing discipline too.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -113,7 +110,7 @@ The largest remaining honest gaps are now:
 ## Recommended Next Move
 The best next move remains:
 1. continue porting the next reasonable specialist service slices carefully
-2. keep tightening both major Go service shells around practical interoperability and runtime correctness details
+2. keep widening tests around any broadened compatibility shell as long as the platform remains hybrid
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -122,10 +119,7 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-supertorrent/main.go`
-- `go-supertorrent/README.md`
-- `go-game-server/main.go`
-- `go-game-server/README.md`
+- `go-supertorrent/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

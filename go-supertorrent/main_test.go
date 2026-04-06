@@ -296,6 +296,63 @@ func TestCompatibilityProxyForMint(t *testing.T) {
 	}
 }
 
+func TestCompatibilityProxyForSubmitProofAndFHE(t *testing.T) {
+	var sawSubmitProof bool
+	var sawFHE bool
+	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/submit-proof":
+			sawSubmitProof = true
+			var payload map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("failed to decode proxied submit-proof payload: %v", err)
+			}
+			proof := payload["proof"].(map[string]interface{})
+			publicValues := proof["publicValues"].(map[string]interface{})
+			if publicValues["score"] != float64(1234) {
+				t.Fatalf("expected forwarded proof score, got %v", publicValues["score"])
+			}
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "zkVerified": true})
+		case "/fhe-oracle":
+			sawFHE = true
+			var payload map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("failed to decode proxied fhe payload: %v", err)
+			}
+			if payload["cipherText"] != "cipher-demo" {
+				t.Fatalf("expected forwarded cipherText, got %v", payload["cipherText"])
+			}
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "resultCipher": "cipher-result"})
+		default:
+			t.Fatalf("unexpected proxied path: %s", r.URL.Path)
+		}
+	}))
+	defer gameServer.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.GameServerURL = gameServer.URL
+
+	submitReq := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"score":1234}}}`))
+	submitReq.Header.Set("Content-Type", "application/json")
+	submitRec := httptest.NewRecorder()
+	service.handleProxySubmitProof(submitRec, submitReq)
+	if submitRec.Code != http.StatusOK {
+		t.Fatalf("expected proxied submit-proof success, got %d with %s", submitRec.Code, submitRec.Body.String())
+	}
+
+	fheReq := httptest.NewRequest(http.MethodPost, "/fhe-oracle", strings.NewReader(`{"cipherText":"cipher-demo"}`))
+	fheReq.Header.Set("Content-Type", "application/json")
+	fheRec := httptest.NewRecorder()
+	service.handleProxyFHEOracle(fheRec, fheReq)
+	if fheRec.Code != http.StatusOK {
+		t.Fatalf("expected proxied fhe-oracle success, got %d with %s", fheRec.Code, fheRec.Body.String())
+	}
+
+	if !sawSubmitProof || !sawFHE {
+		t.Fatalf("expected both submit-proof and fhe-oracle proxy paths to be exercised")
+	}
+}
+
 func TestCompatibilityProxyForTransactions(t *testing.T) {
 	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/transactions" {
@@ -318,6 +375,55 @@ func TestCompatibilityProxyForTransactions(t *testing.T) {
 	}
 	if len(body) != 1 || body[0]["id"] != "tx-1" {
 		t.Fatalf("expected proxied transactions payload, got %v", body)
+	}
+}
+
+func TestCompatibilityProxyForMarketEndpoints(t *testing.T) {
+	var sawBid, sawBids, sawAccept bool
+	gameServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/market/bid":
+			sawBid = true
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "id": 7})
+		case "/market/bids":
+			sawBids = true
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"bids": []map[string]interface{}{{"id": 7, "status": "OPEN"}}})
+		case "/market/accept":
+			sawAccept = true
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+		default:
+			t.Fatalf("unexpected market proxy path: %s", r.URL.Path)
+		}
+	}))
+	defer gameServer.Close()
+
+	service := newTestSuperTorrentService(t)
+	service.cfg.GameServerURL = gameServer.URL
+
+	bidReq := httptest.NewRequest(http.MethodPost, "/market/bid", strings.NewReader(`{"magnet":"m","amount":1}`))
+	bidReq.Header.Set("Content-Type", "application/json")
+	bidRec := httptest.NewRecorder()
+	service.handleProxyMarketBid(bidRec, bidReq)
+	if bidRec.Code != http.StatusOK {
+		t.Fatalf("expected proxied market bid success, got %d", bidRec.Code)
+	}
+
+	bidsRec := httptest.NewRecorder()
+	service.handleProxyMarketBids(bidsRec, httptest.NewRequest(http.MethodGet, "/market/bids", nil))
+	if bidsRec.Code != http.StatusOK {
+		t.Fatalf("expected proxied market bids success, got %d", bidsRec.Code)
+	}
+
+	acceptReq := httptest.NewRequest(http.MethodPost, "/market/accept", strings.NewReader(`{"bidId":7,"nodeId":"n"}`))
+	acceptReq.Header.Set("Content-Type", "application/json")
+	acceptRec := httptest.NewRecorder()
+	service.handleProxyMarketAccept(acceptRec, acceptReq)
+	if acceptRec.Code != http.StatusOK {
+		t.Fatalf("expected proxied market accept success, got %d", acceptRec.Code)
+	}
+
+	if !sawBid || !sawBids || !sawAccept {
+		t.Fatalf("expected all market proxy paths to be exercised")
 	}
 }
 

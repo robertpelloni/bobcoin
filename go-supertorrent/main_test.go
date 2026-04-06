@@ -120,10 +120,18 @@ func TestManifestAndShardEndpoints(t *testing.T) {
 	encodedShard := base64.StdEncoding.EncodeToString(shardData)
 
 	uploadReq := httptest.NewRequest(http.MethodPost, "/upload-shard", strings.NewReader(`{"hash":"shard-hash-1","data":"`+encodedShard+`"}`))
+	uploadReq.Host = "example.com"
 	uploadRec := httptest.NewRecorder()
 	service.handleUploadShard(uploadRec, uploadReq)
 	if uploadRec.Code != http.StatusOK {
 		t.Fatalf("expected upload shard success, got %d with %s", uploadRec.Code, uploadRec.Body.String())
+	}
+	var uploadBody map[string]interface{}
+	if err := json.Unmarshal(uploadRec.Body.Bytes(), &uploadBody); err != nil {
+		t.Fatalf("failed to decode upload shard response: %v", err)
+	}
+	if uploadBody["url"] != "http://example.com/shards/shard-hash-1" {
+		t.Fatalf("expected absolute shard URL, got %v", uploadBody["url"])
 	}
 	storedShard, err := os.ReadFile(service.cfg.ShardsDir + "/shard-hash-1")
 	if err != nil {
@@ -135,10 +143,18 @@ func TestManifestAndShardEndpoints(t *testing.T) {
 
 	manifestPayload := `{"manifest":{"manifestId":"manifest-1","locator":"bobtorrent://manifest/manifest-1","manifestUrl":"/manifests/manifest-1","name":"manifest.json","erasure":{"shards":[{"index":0,"hash":"shard-hash-1","url":"/shards/shard-hash-1"}]}}}`
 	publishReq := httptest.NewRequest(http.MethodPost, "/publish-manifest", strings.NewReader(manifestPayload))
+	publishReq.Host = "example.com"
 	publishRec := httptest.NewRecorder()
 	service.handlePublishManifest(publishRec, publishReq)
 	if publishRec.Code != http.StatusOK {
 		t.Fatalf("expected publish manifest success, got %d with %s", publishRec.Code, publishRec.Body.String())
+	}
+	var publishBody map[string]interface{}
+	if err := json.Unmarshal(publishRec.Body.Bytes(), &publishBody); err != nil {
+		t.Fatalf("failed to decode publish manifest response: %v", err)
+	}
+	if publishBody["manifestUrl"] != "http://example.com/manifests/manifest-1" {
+		t.Fatalf("expected absolute manifest URL, got %v", publishBody["manifestUrl"])
 	}
 
 	manifestRec := httptest.NewRecorder()

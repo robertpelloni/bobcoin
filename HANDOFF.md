@@ -1,56 +1,56 @@
-# Session Handoff - 2026-04-05 (v8.76.0)
+# Session Handoff - 2026-04-05 (v8.77.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by widening `go-game-server/` coverage into more of its negative-path and bookkeeping shell behavior.
+This session continued the Go-port campaign by tightening `go-supertorrent/` compatibility with the browser-facing storage workbench.
 
-That matters because a newly ported service can look stable if only its happy-path bridge and signaling flows are tested, while still being brittle around:
-- invalid request handling
-- bookkeeping persistence
-- configured bridge passthrough details
+The key outcome is that the Go supertorrent shell now normalizes relative manifest URLs into absolute URLs during publication, and that expectation is now protected by executable tests.
 
-This pass closes some of that gap by adding more handler-level tests for `go-game-server/`.
+That matters because storage publication/retrieval compatibility is not only about whether the right data is stored, but also whether the resulting references are robust and transportable enough for the frontend and downstream consumers.
 
 ## What Changed
 
-### 1. Expanded `go-game-server/main_test.go`
-**File:** `go-game-server/main_test.go`
+### 1. Improved manifest URL normalization in `go-supertorrent/`
+**File:** `go-supertorrent/main.go`
 
-Added new handler-level tests:
-- `TestFHEOracleBridgeEndpointConfigured`
-- `TestBurnEndpointRecordsTransaction`
-- `TestSubmitProofRejectsInvalidPayload`
+Previously, if a manifest payload already contained a relative `manifestUrl`, the Go supertorrent service would preserve that value as-is.
 
-### Covered behaviors
-These tests validate:
-- configured `/fhe-oracle` bridge passthrough behavior
-- `/burn` transaction persistence behavior
-- invalid `/submit-proof` payload rejection behavior
+That could leave published manifests with relative URLs even when an absolute URL would be more robust and more consistent for consumers.
 
-This extends the Go game-server shell coverage beyond:
-- bridge preference
-- fallback proof logic
-- matchmaking/signaling
-- mint orchestration
-- market/status/bookkeeping retrieval
+### New behavior
+During `publish-manifest`, the Go supertorrent service now:
+- keeps explicit external absolute URLs as-is
+- generates an absolute URL when no manifest URL is provided
+- normalizes relative manifest URLs into absolute URLs using the incoming request host
 
-and into a more robust mix of positive-path, negative-path, and persistence-path behavior.
+Similarly, shard-upload responses now expose absolute shard URLs.
+
+This is a useful compatibility improvement for the browser-facing storage workbench and any other consumer expecting portable manifest/shard references.
+
+### 2. Added regression assertions for absolute URL behavior
+**File:** `go-supertorrent/main_test.go`
+
+The manifest/shard round-trip test now explicitly verifies:
+- uploaded shard responses expose an absolute shard URL
+- published manifest responses expose an absolute manifest URL
+
+This turns the new compatibility expectation into executable coverage instead of leaving it as an untested implementation detail.
 
 ## Validation Performed
 
-### go-game-server
+### go-supertorrent
 Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
 - tests passed
 - build succeeded
 
-### go-supertorrent
+### go-game-server
 Command run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
 - build succeeded
@@ -78,38 +78,31 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- current frontend runtime improvements remain intact
+- current frontend route/vendor chunking remains intact
 
 ## Why This Matters
-This pass matters because it broadens the quality posture of the Go game-server shell.
+This pass matters because URL shape is part of compatibility, not just polish.
 
-A service migration is much healthier when tests cover not just the ideal path, but also:
-- invalid inputs
-- bookkeeping side effects
-- configured bridge integration behavior
+A storage publication shell can appear correct while still causing subtle integration problems if:
+- returned shard URLs are relative in contexts that expect absolute ones
+- published manifests are less portable than they should be
+- downstream consumers have to infer or repair host information manually
 
-That is especially important here because `go-game-server/` is becoming the shell around several specialist features even if those specialist engines are not yet fully Go-native.
+This session reduces that risk and makes the Go storage shell a bit more operationally robust.
 
 ## Findings / Analysis
 
-### Key finding 1: negative-path and persistence-path tests are worth adding once basic happy-path shell behavior exists
-The earlier test passes correctly focused on establishing broad shell coverage.
+### Key finding 1: browser-facing compatibility details deserve tests too
+The earlier storage-shell work correctly covered publication and retrieval behavior.
 
-This pass shows the next useful step is to harden around:
-- explicit rejection behavior
-- local persistence side effects
-- configured bridge behavior
+This pass shows the next refinement layer is also worth testing:
+- not just whether a manifest exists
+- but whether the references inside it are shaped in a way that improves real consumer compatibility
 
-That is the natural next layer of reliability once the shell itself exists and works.
+### Key finding 2: the Go service shells are increasingly moving from feature parity toward integration robustness
+This was not a giant feature jump, but it was still valuable because it strengthens how the existing Go shell behaves in real browser-facing use.
 
-### Key finding 2: `go-game-server/` is becoming more trustworthy as a service shell even before full specialist parity exists
-The project still does not claim:
-- full SP1 backend verification parity
-- true native FHE behavior
-
-But the surrounding service shell is becoming much more robust and test-backed.
-
-That is exactly the right migration pattern for a careful platform port.
+That is exactly the kind of careful refinement work that makes later migration steps safer.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -119,9 +112,9 @@ The largest remaining honest gaps are now:
 4. platform-wide “all-Go” is still not honest yet
 
 ## Recommended Next Move
-The best next move now is:
-1. continue expanding test coverage as new Go service behavior lands
-2. keep porting only the next reasonable specialist slices while the shell remains stable
+The best next move remains:
+1. continue porting the next reasonable specialist service slices carefully
+2. keep adding tests for integration-level compatibility details as Go-facing browser/runtime shells mature
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -130,7 +123,8 @@ The best next move now is:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-game-server/main_test.go`
+- `go-supertorrent/main.go`
+- `go-supertorrent/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

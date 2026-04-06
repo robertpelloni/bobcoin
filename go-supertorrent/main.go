@@ -537,7 +537,7 @@ func (s *SuperTorrentService) handleUploadShard(w http.ResponseWriter, r *http.R
 		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "hash": req.Hash, "size": len(decoded), "url": "/shards/" + req.Hash})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "hash": req.Hash, "size": len(decoded), "url": publicURLForPath(r, "/shards/"+req.Hash)})
 }
 
 func (s *SuperTorrentService) handlePublishManifest(w http.ResponseWriter, r *http.Request) {
@@ -556,12 +556,14 @@ func (s *SuperTorrentService) handlePublishManifest(w http.ResponseWriter, r *ht
 		req.Manifest["manifestId"] = manifestID
 	}
 	manifestPath := filepath.Join(s.cfg.ManifestsDir, manifestID+".json")
-	manifestURL := "/manifests/" + manifestID
+	manifestURL := publicURLForPath(r, "/manifests/"+manifestID)
 	if _, ok := req.Manifest["locator"]; !ok {
 		req.Manifest["locator"] = "bobtorrent://manifest/" + manifestID
 	}
-	if _, ok := req.Manifest["manifestUrl"]; !ok {
+	if manifestURLRaw, ok := req.Manifest["manifestUrl"].(string); !ok || manifestURLRaw == "" {
 		req.Manifest["manifestUrl"] = manifestURL
+	} else if strings.HasPrefix(manifestURLRaw, "/") {
+		req.Manifest["manifestUrl"] = publicURLForPath(r, manifestURLRaw)
 	}
 	data, _ := json.MarshalIndent(req.Manifest, "", "  ")
 	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
@@ -748,6 +750,18 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func publicURLForPath(r *http.Request, p string) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	host := r.Host
+	if host == "" {
+		host = "localhost"
+	}
+	return scheme + "://" + host + p
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {

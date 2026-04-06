@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -25,6 +26,86 @@ func newTestSuperTorrentService(t *testing.T) *SuperTorrentService {
 		t.Fatalf("failed to create test supertorrent service: %v", err)
 	}
 	return service
+}
+
+func TestNewSuperTorrentServiceLoadsRegistryAndCoreAnchors(t *testing.T) {
+	tmp := t.TempDir()
+	torrentsPath := tmp + "/torrents.json"
+	preloaded := []map[string]interface{}{{
+		"magnet":   "magnet:?xt=urn:btih:feedfeedfeedfeedfeedfeedfeedfeedfeedfeed",
+		"infoHash": "feedfeedfeedfeedfeedfeedfeedfeedfeedfeed",
+		"name":     "preloaded.bin",
+		"addedAt":  float64(1),
+		"accepted": true,
+	}}
+	encoded, _ := json.Marshal(preloaded)
+	if err := os.WriteFile(torrentsPath, encoded, 0o644); err != nil {
+		t.Fatalf("failed to seed torrent registry: %v", err)
+	}
+
+	cfg := Config{
+		Port:          "0",
+		LatticeURL:    "http://localhost:4001",
+		GameServerURL: "http://localhost:3001",
+		UploadsDir:    tmp + "/uploads",
+		DownloadsDir:  tmp + "/downloads",
+		WalletFile:    tmp + "/wallet.json",
+		TorrentsFile:  torrentsPath,
+	}
+	service, err := NewSuperTorrentService(cfg)
+	if err != nil {
+		t.Fatalf("failed to create supertorrent service: %v", err)
+	}
+
+	service.mu.RLock()
+	defer service.mu.RUnlock()
+	if _, ok := service.torrents["feedfeedfeedfeedfeedfeedfeedfeedfeedfeed"]; !ok {
+		t.Fatalf("expected preloaded torrent registry entry to be loaded")
+	}
+	for _, anchor := range coreArcadeAnchors {
+		infoHash := magnetInfoHash(anchor.Magnet)
+		if _, ok := service.torrents[infoHash]; !ok {
+			t.Fatalf("expected core anchor %s to be tracked", infoHash)
+		}
+	}
+}
+
+func TestStatsEndpointReportsTrackedTorrents(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	service.trackTorrent(TorrentRecord{Magnet: "magnet:?xt=urn:btih:abcdefabcdefabcdefabcdefabcdefabcdefabcd", InfoHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcd", Name: "demo.bin", Size: 321, AddedAt: 1, Source: "test", Accepted: true})
+
+	req := httptest.NewRequest(http.MethodGet, "/stats", nil)
+	rec := httptest.NewRecorder()
+	service.handleStats(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected stats success, got %d", rec.Code)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode stats response: %v", err)
+	}
+	storage, ok := body["storage"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected storage stats object, got %v", body["storage"])
+	}
+	if storage["totalSize"] != float64(321) {
+		t.Fatalf("expected totalSize 321, got %v", storage["totalSize"])
+	}
+	torrents, ok := storage["torrents"].([]interface{})
+	if !ok || len(torrents) == 0 {
+		t.Fatalf("expected tracked torrents in stats response, got %v", storage["torrents"])
+	}
+	found := false
+	for _, item := range torrents {
+		entry := item.(map[string]interface{})
+		if entry["infoHash"] == "abcdefabcdefabcdefabcdefabcdefabcdefabcd" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected tracked torrent infoHash to appear in stats response, got %v", torrents)
+	}
 }
 
 func TestHandleAddAndRemoveTorrent(t *testing.T) {

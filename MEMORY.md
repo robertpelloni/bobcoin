@@ -86,6 +86,8 @@
   - As of v8.61.0, both new Go service shells (`go-game-server` and `go-supertorrent`) now have first-wave executable Go regression coverage instead of relying only on successful builds.
   - As of v8.62.0, `go-supertorrent/` now also exposes its open-bid scan as a single-pass helper (`processOpenBidsOnce()`), making bootstrap and market-accept orchestration directly testable instead of only indirectly covered through long-running polling loops.
   - As of v8.62.0, the Go supertorrent tests now cover bootstrap/open flow from minted pending funds and single-pass open-bid processing, not just lower-level endpoint behavior.
+  - As of v8.71.0, `go-supertorrent/main_test.go` now also covers startup state/reporting behavior: registry loading, core-anchor bootstrapping, and `/stats` output over tracked torrents.
+  - As of v8.71.0, the Go supertorrent shell is now tested at both state-mutation level and state-observation/reporting level, not just request handlers that change state.
   - As of v8.63.0, `go-game-server/main_test.go` now also covers higher-value handler-level orchestration paths (`/submit-proof`, `/mint`, and `/fhe-oracle` not-configured behavior), not just lower-level helper behavior.
   - As of v8.63.0, the Go game-server shell is now tested at both helper level and endpoint level for its current proof/mint/FHE orchestration boundaries.
   - As of v8.64.0, `go-game-server/main_test.go` now also covers market/status/bookkeeping handler paths (`/market/bid`, `/market/bids`, `/market/accept`, `/status`, `/bankroll`, `/transactions`), expanding the Go game-server shell coverage beyond the gameplay bridge endpoints.

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { CyberGrid3D } from '../components/CyberGrid3D';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { API_URL, LATTICE_URL, SIGNALING_URL, SUPERNODE_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { probeStorageWasmAvailability } from '../lib/storageWasm';
 import './SystemStatus.css';
+
+const CyberGrid3D = lazy(() => import('../components/CyberGrid3D').then(m => ({ default: m.CyberGrid3D })));
 
 // We import version from config (defined in vite.config.js)
 const VERSION = __APP_VERSION__;
@@ -198,7 +199,9 @@ export function SystemStatus() {
                 PROTOCOL VERSION: <span className="neon-text">{VERSION}</span>
             </div>
 
-            <CyberGrid3D />
+            <Suspense fallback={<div style={{height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ff', borderBottom: '1px solid #333', background: '#050505'}}>INITIALIZING 3D TOPOLOGY...</div>}>
+                <CyberGrid3D />
+            </Suspense>
 
             <div className="network-sync-panel" style={{background: 'rgba(0,255,255,0.05)', border: '1px solid #0ff', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>

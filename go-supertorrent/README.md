@@ -8,8 +8,8 @@ This Go service ports the reasonable control-plane behavior from `supertorrent/s
 - persisted torrent registry
 - core anchor tracking
 - root-path WebSocket matchmaking/signaling shell
-- `/status`
-- `/stats`
+- `/status` compatibility proxy to the game-server status surface
+- `/stats` for local supernode state
 - `/add-torrent`
 - `/remove-torrent`
 - `/upload`
@@ -21,7 +21,7 @@ This Go service ports the reasonable control-plane behavior from `supertorrent/s
 The original Node service still relies on `webtorrent` for a full BitTorrent/WebRTC seeding engine.
 That exact transport stack is not yet mirrored here.
 
-This Go port therefore focuses first on the supernode control plane, persistence, SPoRA service surface, and lattice integration, while leaving full torrent-engine parity as a later step.
+This Go port therefore focuses first on the supernode control plane, persistence, SPoRA service surface, compatibility proxy shell, and lattice integration, while leaving full torrent-engine parity as a later step.
 
 ## Default Port
 - `8000` by default via `SUPERNODE_PORT`

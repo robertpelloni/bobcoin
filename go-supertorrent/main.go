@@ -404,7 +404,7 @@ func (s *SuperTorrentService) handleRoot(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *SuperTorrentService) handleStatus(w http.ResponseWriter, r *http.Request) {
-	s.writeServiceStatus(w)
+	s.proxyGameServerRequest(w, r, "/status")
 }
 
 func (s *SuperTorrentService) writeServiceStatus(w http.ResponseWriter) {

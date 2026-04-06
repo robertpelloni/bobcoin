@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,8 @@ type Config struct {
 	GameServerURL string
 	UploadsDir    string
 	DownloadsDir  string
+	ShardsDir     string
+	ManifestsDir  string
 	WalletFile    string
 	TorrentsFile  string
 }
@@ -90,6 +93,15 @@ type APIResponse struct {
 	Frontier string      `json:"frontier,omitempty"`
 }
 
+type ShardUploadRequest struct {
+	Hash string `json:"hash"`
+	Data string `json:"data"`
+}
+
+type ManifestPublishRequest struct {
+	Manifest map[string]interface{} `json:"manifest"`
+}
+
 type SuperTorrentService struct {
 	cfg        Config
 	wallet     Wallet
@@ -115,6 +127,8 @@ func main() {
 		GameServerURL: envOrDefault("GAME_SERVER_URL", "http://localhost:3001"),
 		UploadsDir:    envOrDefault("SUPERTORRENT_UPLOADS_DIR", filepath.Join("go-supertorrent", "uploads")),
 		DownloadsDir:  envOrDefault("SUPERTORRENT_DOWNLOADS_DIR", filepath.Join("go-supertorrent", "downloads")),
+		ShardsDir:     envOrDefault("SUPERTORRENT_SHARDS_DIR", filepath.Join("go-supertorrent", "shards")),
+		ManifestsDir:  envOrDefault("SUPERTORRENT_MANIFESTS_DIR", filepath.Join("go-supertorrent", "manifests")),
 		WalletFile:    envOrDefault("SUPERTORRENT_WALLET_FILE", filepath.Join("go-supertorrent", "wallet.json")),
 		TorrentsFile:  envOrDefault("SUPERTORRENT_TORRENTS_FILE", filepath.Join("go-supertorrent", "torrents.json")),
 	}
@@ -132,6 +146,10 @@ func main() {
 	mux.HandleFunc("/add-torrent", service.handleAddTorrent)
 	mux.HandleFunc("/remove-torrent", service.handleRemoveTorrent)
 	mux.HandleFunc("/upload", service.handleUpload)
+	mux.HandleFunc("/upload-shard", service.handleUploadShard)
+	mux.HandleFunc("/publish-manifest", service.handlePublishManifest)
+	mux.HandleFunc("/manifests/", service.handleGetManifest)
+	mux.HandleFunc("/shards/", service.handleGetShard)
 	mux.HandleFunc("/spora/", service.handleSpora)
 
 	log.Printf("[go-supertorrent %s] listening on :%s", service.nodeID, cfg.Port)
@@ -141,7 +159,7 @@ func main() {
 }
 
 func NewSuperTorrentService(cfg Config) (*SuperTorrentService, error) {
-	for _, dir := range []string{cfg.UploadsDir, cfg.DownloadsDir, filepath.Dir(cfg.WalletFile), filepath.Dir(cfg.TorrentsFile)} {
+	for _, dir := range []string{cfg.UploadsDir, cfg.DownloadsDir, cfg.ShardsDir, cfg.ManifestsDir, filepath.Dir(cfg.WalletFile), filepath.Dir(cfg.TorrentsFile)} {
 		if dir == "." || dir == "" {
 			continue
 		}
@@ -411,6 +429,92 @@ func (s *SuperTorrentService) handleRemoveTorrent(w http.ResponseWriter, r *http
 	}
 	s.removeTorrent(req.InfoHash)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+func (s *SuperTorrentService) handleUploadShard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	var req ShardUploadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Hash == "" || req.Data == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "hash and data required"})
+		return
+	}
+	decoded, err := base64.StdEncoding.DecodeString(req.Data)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid base64 shard data"})
+		return
+	}
+	shardPath := filepath.Join(s.cfg.ShardsDir, req.Hash)
+	if err := os.WriteFile(shardPath, decoded, 0o644); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "hash": req.Hash, "size": len(decoded), "url": "/shards/" + req.Hash})
+}
+
+func (s *SuperTorrentService) handlePublishManifest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	var req ManifestPublishRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Manifest == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "manifest required"})
+		return
+	}
+	manifestID, _ := req.Manifest["manifestId"].(string)
+	if manifestID == "" {
+		manifestID = "manifest-" + shortHash(strconv.FormatInt(time.Now().UnixNano(), 10))
+		req.Manifest["manifestId"] = manifestID
+	}
+	manifestPath := filepath.Join(s.cfg.ManifestsDir, manifestID+".json")
+	manifestURL := "/manifests/" + manifestID
+	if _, ok := req.Manifest["locator"]; !ok {
+		req.Manifest["locator"] = "bobtorrent://manifest/" + manifestID
+	}
+	if _, ok := req.Manifest["manifestUrl"]; !ok {
+		req.Manifest["manifestUrl"] = manifestURL
+	}
+	data, _ := json.MarshalIndent(req.Manifest, "", "  ")
+	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "id": manifestID, "locator": req.Manifest["locator"], "manifestUrl": req.Manifest["manifestUrl"], "manifest": req.Manifest})
+}
+
+func (s *SuperTorrentService) handleGetManifest(w http.ResponseWriter, r *http.Request) {
+	manifestID := strings.TrimPrefix(r.URL.Path, "/manifests/")
+	if manifestID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "manifest id required"})
+		return
+	}
+	data, err := os.ReadFile(filepath.Join(s.cfg.ManifestsDir, manifestID+".json"))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]interface{}{"error": "manifest not found"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+func (s *SuperTorrentService) handleGetShard(w http.ResponseWriter, r *http.Request) {
+	hash := strings.TrimPrefix(r.URL.Path, "/shards/")
+	if hash == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "shard hash required"})
+		return
+	}
+	data, err := os.ReadFile(filepath.Join(s.cfg.ShardsDir, hash))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]interface{}{"error": "shard not found"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func (s *SuperTorrentService) handleUpload(w http.ResponseWriter, r *http.Request) {

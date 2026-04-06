@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.74.0] - 2026-04-05
+
+### Added
+- Storage-manifest and shard endpoint coverage for `go-supertorrent/` in `go-supertorrent/main_test.go`, including:
+  - `/upload-shard`
+  - `/publish-manifest`
+  - `/manifests/:id`
+  - `/shards/:hash`
+- The new tests now validate the Go supertorrent shell across its manifest/shard publication and retrieval surface, not just torrent registry and market-control behavior.
+
+### Changed
+- Continued the Go supertorrent hardening pass by validating the browser-facing storage publication/retrieval shell through executable tests.
+- Extended the supertorrent test surface from control-plane mutation/reporting paths into storage-manifest round-trip behavior that the frontend storage workbench depends on.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.73.0] - 2026-04-05
 
 ### Added

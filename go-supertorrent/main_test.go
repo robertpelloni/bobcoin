@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +19,8 @@ func newTestSuperTorrentService(t *testing.T) *SuperTorrentService {
 		GameServerURL: "http://localhost:3001",
 		UploadsDir:    tmp + "/uploads",
 		DownloadsDir:  tmp + "/downloads",
+		ShardsDir:     tmp + "/shards",
+		ManifestsDir:  tmp + "/manifests",
 		WalletFile:    tmp + "/wallet.json",
 		TorrentsFile:  tmp + "/torrents.json",
 	}
@@ -105,6 +108,56 @@ func TestStatsEndpointReportsTrackedTorrents(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected tracked torrent infoHash to appear in stats response, got %v", torrents)
+	}
+}
+
+func TestManifestAndShardEndpoints(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	shardData := []byte("hello shard")
+	encodedShard := base64.StdEncoding.EncodeToString(shardData)
+
+	uploadReq := httptest.NewRequest(http.MethodPost, "/upload-shard", strings.NewReader(`{"hash":"shard-hash-1","data":"`+encodedShard+`"}`))
+	uploadRec := httptest.NewRecorder()
+	service.handleUploadShard(uploadRec, uploadReq)
+	if uploadRec.Code != http.StatusOK {
+		t.Fatalf("expected upload shard success, got %d with %s", uploadRec.Code, uploadRec.Body.String())
+	}
+	storedShard, err := os.ReadFile(service.cfg.ShardsDir + "/shard-hash-1")
+	if err != nil {
+		t.Fatalf("expected shard file to be written, got %v", err)
+	}
+	if string(storedShard) != string(shardData) {
+		t.Fatalf("expected stored shard data to round-trip")
+	}
+
+	manifestPayload := `{"manifest":{"manifestId":"manifest-1","locator":"bobtorrent://manifest/manifest-1","manifestUrl":"/manifests/manifest-1","name":"manifest.json","erasure":{"shards":[{"index":0,"hash":"shard-hash-1","url":"/shards/shard-hash-1"}]}}}`
+	publishReq := httptest.NewRequest(http.MethodPost, "/publish-manifest", strings.NewReader(manifestPayload))
+	publishRec := httptest.NewRecorder()
+	service.handlePublishManifest(publishRec, publishReq)
+	if publishRec.Code != http.StatusOK {
+		t.Fatalf("expected publish manifest success, got %d with %s", publishRec.Code, publishRec.Body.String())
+	}
+
+	manifestRec := httptest.NewRecorder()
+	service.handleGetManifest(manifestRec, httptest.NewRequest(http.MethodGet, "/manifests/manifest-1", nil))
+	if manifestRec.Code != http.StatusOK {
+		t.Fatalf("expected manifest fetch success, got %d", manifestRec.Code)
+	}
+	var manifest map[string]interface{}
+	if err := json.Unmarshal(manifestRec.Body.Bytes(), &manifest); err != nil {
+		t.Fatalf("failed to decode fetched manifest: %v", err)
+	}
+	if manifest["manifestId"] != "manifest-1" {
+		t.Fatalf("expected fetched manifestId manifest-1, got %v", manifest["manifestId"])
+	}
+
+	shardRec := httptest.NewRecorder()
+	service.handleGetShard(shardRec, httptest.NewRequest(http.MethodGet, "/shards/shard-hash-1", nil))
+	if shardRec.Code != http.StatusOK {
+		t.Fatalf("expected shard fetch success, got %d", shardRec.Code)
+	}
+	if shardRec.Body.String() != string(shardData) {
+		t.Fatalf("expected shard bytes to round-trip, got %q", shardRec.Body.String())
 	}
 }
 

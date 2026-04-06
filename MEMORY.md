@@ -89,6 +89,7 @@
   - As of v8.72.0, `go-supertorrent/` now also exposes `bootstrapWalletOnLatticeOnce()` so the delayed bootstrap loop has a directly testable single-pass core path.
   - As of v8.72.0, `go-supertorrent/main_test.go` now covers the skip-if-already-tracked path in open-bid processing, reducing regression risk around duplicate-market tracking.
   - As of v8.71.0, `go-supertorrent/main_test.go` now also covers startup state/reporting behavior: registry loading, core-anchor bootstrapping, and `/stats` output over tracked torrents.
+  - As of v8.74.0, `go-supertorrent/main_test.go` now also covers the manifest/shard publication shell (`/upload-shard`, `/publish-manifest`, `/manifests/:id`, `/shards/:hash`), giving the Go supertorrent port executable coverage over the browser-facing storage workbench surface.
   - As of v8.71.0, the Go supertorrent shell is now tested at both state-mutation level and state-observation/reporting level, not just request handlers that change state.
   - As of v8.63.0, `go-game-server/main_test.go` now also covers higher-value handler-level orchestration paths (`/submit-proof`, `/mint`, and `/fhe-oracle` not-configured behavior), not just lower-level helper behavior.
   - As of v8.63.0, the Go game-server shell is now tested at both helper level and endpoint level for its current proof/mint/FHE orchestration boundaries.

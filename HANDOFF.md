@@ -1,61 +1,70 @@
-# Session Handoff - 2026-04-05 (v8.73.0)
+# Session Handoff - 2026-04-05 (v8.74.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by tightening `go-game-server/` initialization behavior into a directly testable single-pass helper and adding regression coverage around first-run bootstrap and already-initialized no-op behavior.
+This session continued the Go-port campaign by widening `go-supertorrent/` coverage into the browser-facing storage publication/retrieval shell.
 
-That matters because service initialization logic is one of the easiest places for subtle regressions to hide when a port is still evolving. A directly testable bootstrap core makes the Go game-server safer to extend.
+That matters because the Go supertorrent service is not only a market/registry control plane. It is also part of the storage-workbench path used by the frontend for shard uploads, manifest publication, manifest fetches, and shard restoration.
+
+The result is that the Go supertorrent shell now has executable coverage around that storage-manifest surface as well.
 
 ## What Changed
 
-### 1. Added `initializeSystemChainOnce()` to `go-game-server/`
-**File:** `go-game-server/main.go`
+### 1. Expanded `go-supertorrent/main_test.go`
+**File:** `go-supertorrent/main_test.go`
 
-Previously, system-chain bootstrap behavior lived only inside:
-- `initializeSystemChain()`
+Added a new manifest/shard round-trip test:
+- `TestManifestAndShardEndpoints`
 
-That made the important logic less convenient to test directly because the startup wrapper and the one-time bootstrap behavior were combined.
+### Covered behaviors
+This test validates:
+- `/upload-shard`
+- shard persistence to disk
+- `/publish-manifest`
+- `/manifests/:id`
+- `/shards/:hash`
+- manifest JSON round-trip behavior
+- shard byte round-trip behavior
 
-### New behavior
-The bootstrap flow is now split into:
-- `initializeSystemChain()`
-- `initializeSystemChainOnce()`
+This is important because it directly covers the storage publication and retrieval shell that the browser-side storage workbench depends on.
 
-The outer method now delegates to the single-pass helper.
+### 2. Broader supertorrent shell coverage achieved
+With this pass, `go-supertorrent/` now has executable coverage across:
+- registry loading
+- core-anchor bootstrapping
+- stats/reporting behavior
+- add/remove tracking behavior
+- upload tracking behavior
+- SPoRA response behavior
+- bootstrap/open orchestration
+- open-bid scanning
+- accept-bid submission
+- shard upload/persistence
+- manifest publication/retrieval
+- shard retrieval
 
-This is the same healthy refactoring pattern used earlier in `go-supertorrent/` for long-running or startup-sensitive behavior.
-
-### 2. Added direct initialization regression coverage
-**File:** `go-game-server/main_test.go`
-
-Added:
-- `TestInitializeSystemChainOnce`
-
-This test verifies:
-- the first-run system bootstrap submits the expected genesis-style `open` block to the lattice bridge
-- the service records a system frontier after successful bootstrap
-- a second call cleanly no-ops instead of re-running bootstrap again
-
-This is a useful safety check because repeated or duplicate bootstrap behavior would be a high-value regression in a system-wallet service.
+That is a significantly more mature shell-level safety net than earlier in the port.
 
 ## Validation Performed
 
-### go-game-server
+### go-supertorrent
 Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
 - tests passed
 - build succeeded
 
-### go-supertorrent
-Command run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
+### go-game-server
+Commands run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
 
 Result:
 - build succeeded
+- tests passed
 
 ### Node reference lattice
 Command run:
@@ -83,31 +92,26 @@ Result:
 - upstream route/vendor chunking remains active
 
 ## Why This Matters
-This pass matters because initialization behavior is part of the real service shell, not just a one-off implementation detail.
+This pass matters because storage publication and retrieval are a visible, user-facing part of the platform surface, not just an internal control-plane detail.
 
-A service can have strong handler-level coverage and still be brittle if:
-- its first-run initialization path regresses
-- its startup logic is not idempotent
-- repeated initialization accidentally mutates state again
+A Go supertorrent service could pass market and registry tests while still breaking the storage workbench if:
+- shard uploads fail silently
+- manifest persistence is malformed
+- retrieval endpoints drift from frontend expectations
 
-This session explicitly covered those risks for `go-game-server/`.
+This session explicitly covered those risks.
 
 ## Findings / Analysis
 
-### Key finding 1: startup/bootstrap behavior deserves the same extraction pattern as long-running loops
-The earlier supertorrent work showed the value of extracting single-pass helpers from long-running routines.
+### Key finding 1: browser-facing storage shells deserve first-class regression tests
+The frontend storage workbench depends on these endpoints directly, so testing them as part of the Go service migration is high leverage.
 
-This pass confirms the same principle applies to startup/bootstrap logic too.
+This is a good example of where “reasonable to port” also means “important to validate immediately.”
 
-That pattern is worth repeating whenever a Go service has:
-- startup shell logic
-- delayed initialization
-- one-time state bootstrap
+### Key finding 2: the Go supertorrent shell is now much more complete at the control-plane/service boundary
+The port still does not claim full WebTorrent/WebRTC engine parity.
 
-### Key finding 2: initialization-path regressions are high-value to catch early
-The system wallet and system frontier are foundational state for the Go game-server shell.
-
-Catching bootstrap and re-bootstrap issues early is worth the extra direct test coverage.
+But at the control-plane plus storage-shell layer, the Go service now covers a substantially larger and better-tested share of the real operational surface.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -117,9 +121,9 @@ The largest remaining honest gaps are now:
 4. platform-wide “all-Go” is still not honest yet
 
 ## Recommended Next Move
-The best next move remains:
-1. continue extracting directly testable single-pass helpers from service startup or loop behavior where useful
-2. keep porting the next reasonable specialist slices carefully
+The best next move now is:
+1. continue porting the next reasonable specialist service slices carefully
+2. keep expanding tests around any newly ported browser-facing Go surfaces immediately
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -128,8 +132,7 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-game-server/main.go`
-- `go-game-server/main_test.go`
+- `go-supertorrent/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

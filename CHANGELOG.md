@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.75.0] - 2026-04-05
+
+### Added
+- Root-path WebSocket matchmaking/signaling shell in `go-supertorrent/`, porting the current reasonable signaling responsibilities needed when the frontend targets the Go supernode for matchmaking.
+- Go regression coverage for the new supertorrent signaling shell in `go-supertorrent/main_test.go`, including `FIND_MATCH`, `MATCH_FOUND`, `SIGNAL`, and `OPPONENT_DISCONNECTED` flow.
+
+### Changed
+- Extended the Go supertorrent port beyond HTTP/storage/market control-plane behavior into live multiplayer signaling shell support.
+- Tightened alignment with the frontend’s Go-first signaling default by making the Go supernode capable of serving the expected WebSocket matchmaking contract.
+- Updated the Go supertorrent README to reflect that signaling is now part of the ported shell surface.
+
+### Validation
+- `cd go-supertorrent && gofmt -w *.go`
+- `cd go-supertorrent && go mod tidy`
+- `cd go-supertorrent && go test ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-game-server && go test ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.74.0] - 2026-04-05
 
 ### Added

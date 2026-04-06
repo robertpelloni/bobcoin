@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/mr-tron/base58"
 )
 
@@ -93,6 +94,17 @@ type APIResponse struct {
 	Frontier string      `json:"frontier,omitempty"`
 }
 
+type SignalMessage struct {
+	Type      string      `json:"type"`
+	Initiator bool        `json:"initiator,omitempty"`
+	Signal    interface{} `json:"signal,omitempty"`
+}
+
+type MatchConnection struct {
+	conn     *websocket.Conn
+	opponent *MatchConnection
+}
+
 type ShardUploadRequest struct {
 	Hash string `json:"hash"`
 	Data string `json:"data"`
@@ -103,13 +115,16 @@ type ManifestPublishRequest struct {
 }
 
 type SuperTorrentService struct {
-	cfg        Config
-	wallet     Wallet
-	nodeID     string
-	started    time.Time
-	mu         sync.RWMutex
-	torrents   map[string]*TorrentRecord
-	httpClient *http.Client
+	cfg           Config
+	wallet        Wallet
+	nodeID        string
+	started       time.Time
+	mu            sync.RWMutex
+	torrents      map[string]*TorrentRecord
+	httpClient    *http.Client
+	matchMu       sync.Mutex
+	waitingPlayer *MatchConnection
+	upgrader      websocket.Upgrader
 }
 
 var coreArcadeAnchors = []struct {
@@ -142,6 +157,7 @@ func main() {
 	go service.pollOpenBids()
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", service.handleRoot)
 	mux.HandleFunc("/stats", service.handleStats)
 	mux.HandleFunc("/add-torrent", service.handleAddTorrent)
 	mux.HandleFunc("/remove-torrent", service.handleRemoveTorrent)
@@ -185,6 +201,9 @@ func NewSuperTorrentService(cfg Config) (*SuperTorrentService, error) {
 		started:    time.Now(),
 		torrents:   torrents,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		},
 	}
 
 	for _, anchor := range coreArcadeAnchors {
@@ -363,6 +382,73 @@ func (s *SuperTorrentService) acceptBidOnLattice(bid Bid) error {
 		return fmt.Errorf("%s", resp.Error)
 	}
 	return nil
+}
+
+func (s *SuperTorrentService) handleRoot(w http.ResponseWriter, r *http.Request) {
+	if websocket.IsWebSocketUpgrade(r) {
+		s.handleMatchmakingWebSocket(w, r)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go SuperTorrent control plane", "version": "0.2.0-go", "wallet": s.wallet.PublicKey})
+}
+
+func (s *SuperTorrentService) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := s.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[go-supertorrent] websocket upgrade failed: %v", err)
+		return
+	}
+	player := &MatchConnection{conn: conn}
+	defer s.disconnectPlayer(player)
+
+	for {
+		var message SignalMessage
+		if err := conn.ReadJSON(&message); err != nil {
+			return
+		}
+		switch message.Type {
+		case "FIND_MATCH":
+			s.queueOrMatchPlayer(player)
+		case "SIGNAL":
+			if player.opponent != nil {
+				_ = player.opponent.conn.WriteJSON(SignalMessage{Type: "SIGNAL", Signal: message.Signal})
+			}
+		}
+	}
+}
+
+func (s *SuperTorrentService) queueOrMatchPlayer(player *MatchConnection) {
+	s.matchMu.Lock()
+	defer s.matchMu.Unlock()
+
+	if s.waitingPlayer != nil && s.waitingPlayer != player {
+		waiting := s.waitingPlayer
+		s.waitingPlayer = nil
+		waiting.opponent = player
+		player.opponent = waiting
+		_ = waiting.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: true})
+		_ = player.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: false})
+		return
+	}
+
+	s.waitingPlayer = player
+}
+
+func (s *SuperTorrentService) disconnectPlayer(player *MatchConnection) {
+	s.matchMu.Lock()
+	if s.waitingPlayer == player {
+		s.waitingPlayer = nil
+	}
+	opponent := player.opponent
+	if opponent != nil {
+		opponent.opponent = nil
+	}
+	s.matchMu.Unlock()
+
+	if opponent != nil {
+		_ = opponent.conn.WriteJSON(SignalMessage{Type: "OPPONENT_DISCONNECTED"})
+	}
+	_ = player.conn.Close()
 }
 
 func (s *SuperTorrentService) trackTorrent(record TorrentRecord) {

@@ -8,6 +8,9 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func newTestSuperTorrentService(t *testing.T) *SuperTorrentService {
@@ -158,6 +161,74 @@ func TestManifestAndShardEndpoints(t *testing.T) {
 	}
 	if shardRec.Body.String() != string(shardData) {
 		t.Fatalf("expected shard bytes to round-trip, got %q", shardRec.Body.String())
+	}
+}
+
+func TestMatchmakingSignalingFlow(t *testing.T) {
+	service := newTestSuperTorrentService(t)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", service.handleRoot)
+	server := httptest.NewServer(withCORS(mux))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/"
+	connOne, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("failed to connect first websocket client: %v", err)
+	}
+	defer connOne.Close()
+	connTwo, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("failed to connect second websocket client: %v", err)
+	}
+	defer connTwo.Close()
+
+	if err := connOne.WriteJSON(SignalMessage{Type: "FIND_MATCH"}); err != nil {
+		t.Fatalf("failed to queue first player: %v", err)
+	}
+	if err := connTwo.WriteJSON(SignalMessage{Type: "FIND_MATCH"}); err != nil {
+		t.Fatalf("failed to queue second player: %v", err)
+	}
+
+	_ = connOne.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_ = connTwo.SetReadDeadline(time.Now().Add(2 * time.Second))
+	var msgOne, msgTwo SignalMessage
+	if err := connOne.ReadJSON(&msgOne); err != nil {
+		t.Fatalf("failed to read first matchmaking response: %v", err)
+	}
+	if err := connTwo.ReadJSON(&msgTwo); err != nil {
+		t.Fatalf("failed to read second matchmaking response: %v", err)
+	}
+	if msgOne.Type != "MATCH_FOUND" || !msgOne.Initiator {
+		t.Fatalf("expected first player to become initiator, got %+v", msgOne)
+	}
+	if msgTwo.Type != "MATCH_FOUND" || msgTwo.Initiator {
+		t.Fatalf("expected second player to become receiver, got %+v", msgTwo)
+	}
+
+	signalPayload := map[string]interface{}{"offer": "demo-offer"}
+	if err := connOne.WriteJSON(SignalMessage{Type: "SIGNAL", Signal: signalPayload}); err != nil {
+		t.Fatalf("failed to send signal through matchmaking channel: %v", err)
+	}
+	_ = connTwo.SetReadDeadline(time.Now().Add(2 * time.Second))
+	var relayed SignalMessage
+	if err := connTwo.ReadJSON(&relayed); err != nil {
+		t.Fatalf("failed to read relayed signal: %v", err)
+	}
+	if relayed.Type != "SIGNAL" {
+		t.Fatalf("expected SIGNAL relay, got %+v", relayed)
+	}
+
+	if err := connOne.Close(); err != nil {
+		t.Fatalf("failed to close initiator connection: %v", err)
+	}
+	_ = connTwo.SetReadDeadline(time.Now().Add(2 * time.Second))
+	var disconnect SignalMessage
+	if err := connTwo.ReadJSON(&disconnect); err != nil {
+		t.Fatalf("failed to read disconnect notice: %v", err)
+	}
+	if disconnect.Type != "OPPONENT_DISCONNECTED" {
+		t.Fatalf("expected opponent disconnect notice, got %+v", disconnect)
 	}
 }
 

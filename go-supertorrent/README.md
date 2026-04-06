@@ -7,6 +7,7 @@ This Go service ports the reasonable control-plane behavior from `supertorrent/s
 - wallet creation/loading
 - persisted torrent registry
 - core anchor tracking
+- root-path WebSocket matchmaking/signaling shell
 - `/stats`
 - `/add-torrent`
 - `/remove-torrent`

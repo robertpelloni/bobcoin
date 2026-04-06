@@ -226,6 +226,36 @@ func TestMintEndpointSendsSystemFunds(t *testing.T) {
 	}
 }
 
+func TestFHEOracleBridgeEndpointConfigured(t *testing.T) {
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode FHE bridge payload: %v", err)
+		}
+		if payload["cipherText"] != "cipher-xyz" {
+			t.Fatalf("expected cipherText to be forwarded, got %v", payload["cipherText"])
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "resultCipher": "cipher-result"})
+	}))
+	defer bridge.Close()
+
+	service := newTestService(t)
+	service.cfg.FHEOracleBridgeURL = bridge.URL
+	req := httptest.NewRequest(http.MethodPost, "/fhe-oracle", strings.NewReader(`{"cipherText":"cipher-xyz"}`))
+	rec := httptest.NewRecorder()
+	service.handleFHEOracle(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 from configured FHE bridge, got %d with %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode FHE bridge response: %v", err)
+	}
+	if body["resultCipher"] != "cipher-result" {
+		t.Fatalf("expected bridged FHE result, got %v", body["resultCipher"])
+	}
+}
+
 func TestFHEOracleBridgeNotConfigured(t *testing.T) {
 	service := newTestService(t)
 	req := httptest.NewRequest(http.MethodPost, "/fhe-oracle", strings.NewReader(`{"cipherText":"cipher-123"}`))
@@ -327,6 +357,37 @@ func TestStatusBankrollAndTransactionsEndpoints(t *testing.T) {
 	}
 	if len(transactions) != 1 || transactions[0]["id"] != "tx-demo" {
 		t.Fatalf("expected recorded transaction to be returned, got %v", transactions)
+	}
+}
+
+func TestBurnEndpointRecordsTransaction(t *testing.T) {
+	service := newTestService(t)
+	req := httptest.NewRequest(http.MethodPost, "/burn", strings.NewReader(`{"amount":33,"reason":"sink-test"}`))
+	rec := httptest.NewRecorder()
+	service.handleBurn(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected burn success, got %d with %s", rec.Code, rec.Body.String())
+	}
+
+	txs, err := getTransactions(service.db)
+	if err != nil {
+		t.Fatalf("failed to read recorded transactions: %v", err)
+	}
+	if len(txs) != 1 {
+		t.Fatalf("expected one recorded burn transaction, got %d", len(txs))
+	}
+	if txs[0].Type != "SEND" || txs[0].Amount != 33 {
+		t.Fatalf("expected recorded burn transaction, got %+v", txs[0])
+	}
+}
+
+func TestSubmitProofRejectsInvalidPayload(t *testing.T) {
+	service := newTestService(t)
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{}}`))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected invalid proof payload rejection, got %d with %s", rec.Code, rec.Body.String())
 	}
 }
 

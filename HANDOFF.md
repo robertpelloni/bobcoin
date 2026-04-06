@@ -1,86 +1,59 @@
-# Session Handoff - 2026-04-05 (v8.75.0)
+# Session Handoff - 2026-04-05 (v8.76.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by extending `go-supertorrent/` beyond HTTP/storage/market control-plane behavior and into live multiplayer signaling shell support.
+This session continued the Go-port campaign by widening `go-game-server/` coverage into more of its negative-path and bookkeeping shell behavior.
 
-That matters because the frontend now defaults its signaling path toward the Go supernode. For that migration direction to be credible, the Go supernode needs to speak the same WebSocket matchmaking contract rather than only exposing HTTP endpoints.
+That matters because a newly ported service can look stable if only its happy-path bridge and signaling flows are tested, while still being brittle around:
+- invalid request handling
+- bookkeeping persistence
+- configured bridge passthrough details
 
-The result is that `go-supertorrent/` now supports a root-path WebSocket signaling shell and has executable regression coverage for the corresponding matchmaking flow.
+This pass closes some of that gap by adding more handler-level tests for `go-game-server/`.
 
 ## What Changed
 
-### 1. Added WebSocket matchmaking/signaling shell to `go-supertorrent/`
-**Files:**
-- `go-supertorrent/main.go`
-- `go-supertorrent/go.mod`
-- `go-supertorrent/go.sum`
-- `go-supertorrent/README.md`
+### 1. Expanded `go-game-server/main_test.go`
+**File:** `go-game-server/main_test.go`
 
-The Go supertorrent service now supports:
-- root-path WebSocket upgrade handling
-- waiting-player queueing
-- `FIND_MATCH`
-- `MATCH_FOUND`
-- `SIGNAL`
-- `OPPONENT_DISCONNECTED`
-- opponent cleanup on disconnect
+Added new handler-level tests:
+- `TestFHEOracleBridgeEndpointConfigured`
+- `TestBurnEndpointRecordsTransaction`
+- `TestSubmitProofRejectsInvalidPayload`
 
-This ports the reasonable signaling shell responsibilities needed when the frontend points its WebRTC matchmaking transport at the Go supernode.
+### Covered behaviors
+These tests validate:
+- configured `/fhe-oracle` bridge passthrough behavior
+- `/burn` transaction persistence behavior
+- invalid `/submit-proof` payload rejection behavior
 
-### 2. Added signaling regression coverage to `go-supertorrent/main_test.go`
-**File:** `go-supertorrent/main_test.go`
+This extends the Go game-server shell coverage beyond:
+- bridge preference
+- fallback proof logic
+- matchmaking/signaling
+- mint orchestration
+- market/status/bookkeeping retrieval
 
-Added a signaling regression test that validates:
-- first player enters the waiting queue
-- second player triggers a match
-- first player becomes initiator
-- second player becomes receiver
-- signaling payloads relay correctly
-- opponent disconnect notices propagate correctly
-
-This is valuable because it turns the new signaling shell from a build-only surface into an executable regression-protected surface immediately.
-
-### 3. Broader supertorrent shell coverage achieved
-At this point, `go-supertorrent/` now has executable coverage across:
-- registry loading
-- core-anchor bootstrapping
-- stats/reporting behavior
-- add/remove tracking behavior
-- upload tracking behavior
-- SPoRA response behavior
-- bootstrap/open orchestration
-- open-bid scanning
-- accept-bid submission
-- shard upload/persistence
-- manifest publication/retrieval
-- shard retrieval
-- root-path WebSocket matchmaking/signaling
-
-That is a much broader and more convincing Go service-shell foundation than earlier in the migration.
+and into a more robust mix of positive-path, negative-path, and persistence-path behavior.
 
 ## Validation Performed
 
-### go-supertorrent
+### go-game-server
 Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go mod tidy`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
-- dependency resolution succeeded
 - tests passed
 - build succeeded
 
-### go-game-server
-Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
+### go-supertorrent
+Command run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - build succeeded
-- tests passed
 
 ### Node reference lattice
 Command run:
@@ -105,31 +78,38 @@ Command run:
 Result:
 - production build succeeded
 - PWA artifacts generated successfully
-- frontend remains aligned with Go-first signaling defaults
+- current frontend runtime improvements remain intact
 
 ## Why This Matters
-This pass matters because it tightens the alignment between:
-- the frontend’s Go-first signaling direction
-- the actual capabilities of the Go supernode shell
+This pass matters because it broadens the quality posture of the Go game-server shell.
 
-Without this, the signaling migration story would remain only partially credible.
+A service migration is much healthier when tests cover not just the ideal path, but also:
+- invalid inputs
+- bookkeeping side effects
+- configured bridge integration behavior
 
-With this change, the Go supernode is no longer just a control-plane and storage shell. It also participates directly in the multiplayer signaling shell used by the frontend.
+That is especially important here because `go-game-server/` is becoming the shell around several specialist features even if those specialist engines are not yet fully Go-native.
 
 ## Findings / Analysis
 
-### Key finding 1: Go-first routing defaults should be backed by real Go runtime support
-The earlier frontend work that pointed signaling toward Go is now better justified because the Go supernode actually implements the expected WebSocket protocol shape.
+### Key finding 1: negative-path and persistence-path tests are worth adding once basic happy-path shell behavior exists
+The earlier test passes correctly focused on establishing broad shell coverage.
 
-That is a healthier migration state than having the frontend prefer Go while the runtime support still lives only in Node.
+This pass shows the next useful step is to harden around:
+- explicit rejection behavior
+- local persistence side effects
+- configured bridge behavior
 
-### Key finding 2: signaling is another good example of shell-first migration
-As with the other service-port steps, the healthy pattern remains:
-- port the reasonable protocol shell first
-- add tests immediately
-- keep honest boundaries around deeper transport/specialist gaps
+That is the natural next layer of reliability once the shell itself exists and works.
 
-This pass follows that pattern cleanly.
+### Key finding 2: `go-game-server/` is becoming more trustworthy as a service shell even before full specialist parity exists
+The project still does not claim:
+- full SP1 backend verification parity
+- true native FHE behavior
+
+But the surrounding service shell is becoming much more robust and test-backed.
+
+That is exactly the right migration pattern for a careful platform port.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -140,8 +120,8 @@ The largest remaining honest gaps are now:
 
 ## Recommended Next Move
 The best next move now is:
-1. continue porting the next reasonable specialist service slices carefully
-2. keep adding tests immediately for every newly ported Go-facing browser/runtime shell
+1. continue expanding test coverage as new Go service behavior lands
+2. keep porting only the next reasonable specialist slices while the shell remains stable
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -150,11 +130,7 @@ The best next move now is:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-supertorrent/go.mod`
-- `go-supertorrent/go.sum`
-- `go-supertorrent/main.go`
-- `go-supertorrent/main_test.go`
-- `go-supertorrent/README.md`
+- `go-game-server/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

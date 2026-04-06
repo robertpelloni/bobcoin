@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.76.0] - 2026-04-05
+
+### Added
+- Expanded Go service regression coverage for `go-game-server/` with additional handler-level shell tests in `go-game-server/main_test.go`, including:
+  - configured `/fhe-oracle` bridge passthrough behavior
+  - `/burn` transaction recording behavior
+  - invalid `/submit-proof` payload rejection behavior
+
+### Changed
+- Hardened the Go game-server shell by covering more of its failure-mode and bookkeeping behavior through executable tests, not just happy-path bridge and signaling flows.
+- Continued the staged service-hardening pattern by adding negative-path and bookkeeping assertions as newly ported Go endpoints stabilize.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go test ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.75.0] - 2026-04-05
 
 ### Added

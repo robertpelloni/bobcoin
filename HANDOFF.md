@@ -1,56 +1,51 @@
-# Session Handoff - 2026-04-05 (v8.83.0)
+# Session Handoff - 2026-04-05 (v8.84.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by broadening regression coverage for the new `go-supertorrent/` compatibility proxy shell.
+This session continued the Go-port campaign by widening `go-game-server/` test coverage around proof-verification bridge decision behavior.
 
-That matters because the compatibility proxy layer is now part of the practical Go-facing runtime surface. If it is going to carry more of the frontend’s Go-first traffic, it needs explicit tests beyond just one or two representative forwarded endpoints.
+That matters because bridge-backed specialist shells are not only about successful forwarding. They also need clear behavior when:
+- the external verifier explicitly rejects a proof
+- the external bridge fails, but the local fallback path still permits processing
 
-The result is that the Go supertorrent compatibility shell now has executable coverage for a wider slice of forwarded gameplay/control traffic.
+The result is that the Go game-server proof shell is now better covered across those decision branches, not just the happy-path bridge case.
 
 ## What Changed
 
-### 1. Expanded compatibility proxy coverage in `go-supertorrent/main_test.go`
-**File:** `go-supertorrent/main_test.go`
+### 1. Expanded `go-game-server/main_test.go`
+**File:** `go-game-server/main_test.go`
 
-Added new tests for the proxy shell:
-- `TestCompatibilityProxyForSubmitProofAndFHE`
-- `TestCompatibilityProxyForMarketEndpoints`
+Added new tests:
+- `TestSubmitProofRejectsBridgeFailure`
+- `TestSubmitProofBridgeErrorFallsBackToThreshold`
 
 ### Covered behaviors
-These tests now validate:
-- proxied `/submit-proof` behavior
-- proxied `/fhe-oracle` behavior
-- proxied `/market/bid`
-- proxied `/market/bids`
-- proxied `/market/accept`
+These tests validate:
+- explicit bridge-driven proof rejection when `/verify` returns `verified: false`
+- fallback proof success when the external verification bridge fails but the current score-threshold logic still permits minting
 
-This builds on the earlier proxy coverage for:
-- proxied `/mint`
-- proxied `/transactions`
-
-### 2. Improved signaling test stability
-The supertorrent signaling test was already present, but this pass preserved the more robust invariant-based assertion style:
-- both clients receive a match notification
-- exactly one becomes initiator
-
-That avoids brittle dependence on connection-order assumptions.
+This complements the earlier handler-level coverage for:
+- happy-path bridge-driven `/submit-proof`
+- configured/unconfigured FHE bridge behavior
+- mint/burn orchestration
+- market/status/bookkeeping behavior
+- signaling and initialization behavior
 
 ## Validation Performed
 
-### go-supertorrent
+### go-game-server
 Commands run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && gofmt -w *.go`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go test ./...`
-- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
 - formatting succeeded
 - tests passed
 - build succeeded
 
-### go-game-server
+### go-supertorrent
 Command run:
-- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
+- `cd C:/Users/hyper/workspace/bobcoin/go-supertorrent && go build -buildvcs=false ./...`
 
 Result:
 - build succeeded
@@ -80,25 +75,33 @@ Result:
 - PWA artifacts generated successfully
 
 ## Why This Matters
-This pass matters because a compatibility shell is only trustworthy if its forwarding behavior is tested across the breadth of the traffic it is expected to carry.
+This pass matters because specialist bridge-shells are only trustworthy when their decision behavior is tested across more than one branch.
 
-Earlier passes established that the shell existed and could proxy a few representative paths.
-This pass broadens confidence that the Go-facing compatibility layer can carry more of the real frontend traffic surface safely.
+A bridge-backed verification path can appear correct while still being brittle if only the successful verifier response is tested.
+
+This session improves confidence that `go-game-server/` handles both:
+- explicit bridge rejection
+- bridge failure with fallback allowed
+
+in a more predictable way.
 
 ## Findings / Analysis
 
-### Key finding 1: compatibility layers need breadth tests, not just existence tests
-A proxy shell can be present and still be unreliable if only a couple of endpoints are ever exercised in tests.
+### Key finding 1: decision-branch coverage is an important next layer after basic shell coverage
+Earlier passes established broad shell and handler coverage for `go-game-server/`.
 
-This pass improves that by broadening the exercised forwarded surface into:
-- proof traffic
-- FHE traffic
-- market traffic
+This pass strengthens the next useful layer:
+- what the service does when an external specialist bridge says “no”
+- what the service does when the bridge is unavailable
 
-### Key finding 2: practical migration sometimes means testing glue very seriously
-This pass is a good example of why migration work is not only about porting “real logic.”
+That is exactly the kind of careful hardening work that reduces migration surprises.
 
-Compatibility glue becomes part of the real runtime surface during transition periods, so it deserves real testing discipline too.
+### Key finding 2: the remaining verification gap is becoming more precisely bounded
+The Go game-server still does not claim full SP1 backend parity.
+
+But each pass like this narrows the uncertainty to the real remaining specialist backend semantics instead of the surrounding shell behavior.
+
+That is a healthier migration state than before.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -109,8 +112,8 @@ The largest remaining honest gaps are now:
 
 ## Recommended Next Move
 The best next move remains:
-1. continue porting the next reasonable specialist service slices carefully
-2. keep widening tests around any broadened compatibility shell as long as the platform remains hybrid
+1. keep porting the next reasonable specialist slices carefully
+2. continue adding branch-level tests whenever external bridge behavior controls service decisions
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -119,7 +122,7 @@ The best next move remains:
 - `HANDOFF.md`
 - `MEMORY.md`
 - `TODO.md`
-- `go-supertorrent/main_test.go`
+- `go-game-server/main_test.go`
 
 ## Operational Note
 No running processes were terminated in this session.

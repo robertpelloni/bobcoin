@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.84.0] - 2026-04-05
+
+### Added
+- Additional Go regression coverage for `go-game-server/` bridge decision behavior in `go-game-server/main_test.go`, including:
+  - explicit rejection when an external `/verify` bridge returns `verified: false`
+  - fallback success when the external verification bridge fails but the current score-threshold fallback still permits minting
+
+### Changed
+- Hardened the Go game-server proof-submission shell by covering more of its bridge-failure and bridge-rejection decision logic, not just the happy-path bridge case.
+- Continued the staged migration pattern of validating specialist bridge-shell semantics before claiming deeper backend parity.
+
+### Validation
+- `cd go-game-server && gofmt -w *.go`
+- `cd go-game-server && go test ./...`
+- `cd go-game-server && go build -buildvcs=false ./...`
+- `cd go-supertorrent && go build -buildvcs=false ./...`
+- `cd bobcoin-consensus && npm test`
+- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
+- `cd go-lattice && go test ./...`
+- `cd frontend && npm run build`
+
 ## [8.83.0] - 2026-04-05
 
 ### Added

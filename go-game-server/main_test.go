@@ -391,6 +391,61 @@ func TestSubmitProofRejectsInvalidPayload(t *testing.T) {
 	}
 }
 
+func TestSubmitProofRejectsBridgeFailure(t *testing.T) {
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "verified": false})
+	}))
+	defer bridge.Close()
+
+	service := newTestService(t)
+	service.cfg.ZKServiceURL = bridge.URL
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"address":"player-address","score":5000}}}`))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected bridge-driven proof rejection, got %d with %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSubmitProofBridgeErrorFallsBackToThreshold(t *testing.T) {
+	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"success":false,"error":"bridge down"}`))
+	}))
+	defer bridge.Close()
+
+	var processedBlock map[string]interface{}
+	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/frontier/"):
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"frontier": "abcdef1234567890abcdef1234567890abcdef12", "balance": 1000000.0, "height": 0})
+		case r.URL.Path == "/process":
+			_ = json.NewDecoder(r.Body).Decode(&processedBlock)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": "minted-hash"})
+		default:
+			t.Fatalf("unexpected lattice path: %s", r.URL.Path)
+		}
+	}))
+	defer lattice.Close()
+
+	service := newTestService(t)
+	service.cfg.ZKServiceURL = bridge.URL
+	service.cfg.LatticeURL = lattice.URL
+	frontier := "prefetched-frontier"
+	service.systemFrontier = &frontier
+
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"address":"fallback-player","score":2000}}}`))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected fallback proof success, got %d with %s", rec.Code, rec.Body.String())
+	}
+	blockPayload, ok := processedBlock["block"].(map[string]interface{})
+	if !ok || blockPayload["link"] != "fallback-player" {
+		t.Fatalf("expected fallback mint to target player address, got %+v", processedBlock)
+	}
+}
+
 func TestMatchmakingSignalingFlow(t *testing.T) {
 	service := newTestService(t)
 	mux := http.NewServeMux()

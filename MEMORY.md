@@ -107,6 +107,7 @@
   - As of v8.64.0, `go-game-server/main_test.go` now also covers market/status/bookkeeping handler paths (`/market/bid`, `/market/bids`, `/market/accept`, `/status`, `/bankroll`, `/transactions`), expanding the Go game-server shell coverage beyond the gameplay bridge endpoints.
   - As of v8.64.0, the Go game-server control-plane port now has executable handler coverage for both its gameplay-facing bridge shell and its bookkeeping/market shell.
   - As of v8.76.0, `go-game-server/main_test.go` now also covers configured `/fhe-oracle` bridge passthrough, `/burn` transaction persistence, and invalid `/submit-proof` payload rejection, broadening the shell coverage further into failure-mode and bookkeeping behavior.
+  - As of v8.84.0, `go-game-server/main_test.go` now also covers `/submit-proof` bridge decision behavior when the external verifier explicitly rejects and when the bridge fails but the fallback verification path still permits minting.
   - As of v8.73.0, `go-game-server/` now also exposes `initializeSystemChainOnce()` so system-chain bootstrap has a directly testable single-pass core instead of living only inside the startup wrapper.
   - As of v8.73.0, the Go game-server tests now cover first-run system-chain bootstrap and no-op reinitialization behavior, adding initialization-path regression coverage to the service shell.
 - Operational convention:

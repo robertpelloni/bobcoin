@@ -23,6 +23,11 @@ That exact transport stack is not yet mirrored here.
 
 This Go port therefore focuses first on the supernode control plane, persistence, SPoRA service surface, and lattice integration, while leaving full torrent-engine parity as a later step.
 
+## Default Port
+- `8000` by default via `SUPERNODE_PORT`
+
+This aligns the Go supertorrent shell with the frontend's Go-first supernode defaults.
+
 ## Build
 ```bash
 cd go-supertorrent

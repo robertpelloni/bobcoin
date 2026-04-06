@@ -28,6 +28,8 @@ The original Node service still contains additional behavior that has not yet be
 
 This Go port therefore focuses first on the core game-server control plane and lattice bridge surface, without overclaiming full feature parity yet.
 
+By default, the Go game-server now targets the Go supertorrent shell at `http://localhost:8000` through `SUPERNODE_URL`, aligning the two Go service shells out of the box.
+
 ## Build
 ```bash
 cd go-game-server

@@ -1,39 +1,37 @@
-# Session Handoff - 2026-04-05 (v8.81.0)
+# Session Handoff - 2026-04-05 (v8.82.0)
 
 ## Executive Summary
-This session continued the Go-port campaign by tightening `go-supertorrent/` compatibility with frontend/service health checks.
+This session continued the practical Go-port campaign by tightening the default interoperability between the two new Go service shells.
 
-The key outcome is that the Go supertorrent shell now exposes a dedicated `/status` endpoint in addition to its root status behavior, and that endpoint is covered by executable tests.
+The key outcome is that:
+- `go-supertorrent/` now defaults to port `8000`
+- `go-game-server/` now defaults its `SUPERNODE_URL` to `http://localhost:8000`
 
-That is a small but useful refinement because health probes and compatibility routing often expect an explicit `/status` path rather than relying on root-path behavior alone.
+That aligns the two Go service shells with the frontend’s existing Go-first supernode expectation and reduces one more migration-time mismatch.
 
 ## What Changed
 
-### 1. Added dedicated `/status` support to `go-supertorrent/`
+### 1. Aligned default Go supernode port to `8000`
 **Files:**
 - `go-supertorrent/main.go`
-- `go-supertorrent/main_test.go`
 - `go-supertorrent/README.md`
 
-The Go supertorrent shell now supports:
-- `GET /status`
+The Go supertorrent shell now defaults to:
+- `SUPERNODE_PORT=8000`
 
-Implementation detail:
-- both the root non-WebSocket path and `/status` now share the same internal status payload writer
+This is important because the frontend already treats `http://localhost:8000` as the default Go-first supernode target.
 
-This keeps the behavior consistent while making the compatibility surface easier for clients and service checks to use directly.
+### 2. Aligned `go-game-server/` default supernode target to the Go shell
+**Files:**
+- `go-game-server/main.go`
+- `go-game-server/README.md`
 
-### 2. Added explicit `/status` regression coverage
-**File:** `go-supertorrent/main_test.go`
+The Go game-server now defaults:
+- `SUPERNODE_URL=http://localhost:8000`
 
-Added:
-- `TestStatusEndpoint`
+instead of the older `8081`-oriented assumption.
 
-The test verifies that:
-- `/status` returns a successful response
-- the response includes the expected online/service metadata
-
-This complements the existing root status coverage and makes the new compatibility endpoint immediately test-backed.
+This means the two Go service shells now line up out of the box more cleanly.
 
 ## Validation Performed
 
@@ -49,10 +47,14 @@ Result:
 - build succeeded
 
 ### go-game-server
-Command run:
+Commands run:
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && gofmt -w *.go`
+- `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go test ./...`
 - `cd C:/Users/hyper/workspace/bobcoin/go-game-server && go build -buildvcs=false ./...`
 
 Result:
+- formatting succeeded
+- tests passed
 - build succeeded
 
 ### Node reference lattice
@@ -80,23 +82,26 @@ Result:
 - PWA artifacts generated successfully
 
 ## Why This Matters
-This pass matters because compatibility surfaces are not only about major protocol behavior. Small, boring service endpoints like `/status` are also part of what makes a Go-facing shell operationally useful.
+This pass matters because migration friction often comes from small default mismatches rather than only from missing core features.
 
-A frontend or operator workflow may correctly target Go-first routing but still fail or degrade if the Go-facing service does not expose the expected health-check path.
+When the frontend, Go game-server, and Go supertorrent all expect different default addresses or ports, the migration path becomes noisier than it needs to be.
 
-This pass closes that small but real compatibility gap.
+Aligning these defaults reduces that friction and makes the Go-first runtime surface more coherent.
 
 ## Findings / Analysis
 
-### Key finding 1: minor compatibility endpoints are worth porting once the main shell exists
-The large protocol and orchestration work is obviously important, but small service-surface compatibility details like `/status` also matter in day-to-day operation.
+### Key finding 1: default alignment is a real part of service migration quality
+Even when features exist, the migration can still feel broken or incomplete if defaults point at the wrong service boundaries.
 
-This is exactly the kind of reasonable incremental porting step that makes the broader migration smoother.
+This pass improves that practical operational coherence.
 
-### Key finding 2: consistency through shared writers/helpers is healthy
-Using a shared internal status writer for both root and `/status` helps keep these service surfaces aligned instead of letting two near-identical endpoints drift over time.
+### Key finding 2: small default fixes can have outsized migration value
+This was not a giant feature pass, but it removed a meaningful source of default mismatch between:
+- frontend Go-first routing
+- Go supernode service
+- Go game-server service
 
-That pattern is worth reusing for other small compatibility layers where appropriate.
+That kind of cleanup is worth doing while the platform is still hybrid.
 
 ## Remaining Honest Gaps
 The largest remaining honest gaps are now:
@@ -108,7 +113,7 @@ The largest remaining honest gaps are now:
 ## Recommended Next Move
 The best next move remains:
 1. continue porting the next reasonable specialist service slices carefully
-2. keep tightening both major shells around compatibility details that make the Go-facing runtime more practical
+2. keep tightening both major Go service shells around practical interoperability and runtime correctness details
 3. preserve the parity/testing/documentation backbone while the broader platform migration continues
 
 ## Files Changed In This Session
@@ -118,8 +123,9 @@ The best next move remains:
 - `MEMORY.md`
 - `TODO.md`
 - `go-supertorrent/main.go`
-- `go-supertorrent/main_test.go`
 - `go-supertorrent/README.md`
+- `go-game-server/main.go`
+- `go-game-server/README.md`
 
 ## Operational Note
 No running processes were terminated in this session.

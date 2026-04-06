@@ -135,7 +135,7 @@ func main() {
 	cfg := Config{
 		Port:               envOrDefault("GAME_SERVER_PORT", "3001"),
 		LatticeURL:         envOrDefault("LATTICE_URL", "http://localhost:4001"),
-		SupernodeURL:       envOrDefault("SUPERNODE_URL", "http://localhost:8081"),
+		SupernodeURL:       envOrDefault("SUPERNODE_URL", "http://localhost:8000"),
 		DBPath:             envOrDefault("GAME_SERVER_DB_PATH", filepath.Join("go-game-server", "database.sqlite")),
 		WalletFile:         envOrDefault("GAME_SERVER_WALLET_FILE", filepath.Join("go-game-server", "system-wallet.json")),
 		ZKServiceURL:       envOrDefault("ZK_SERVICE_URL", "http://localhost:8080"),

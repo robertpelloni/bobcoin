@@ -137,7 +137,7 @@ var coreArcadeAnchors = []struct {
 
 func main() {
 	cfg := Config{
-		Port:          envOrDefault("SUPERNODE_PORT", "8081"),
+		Port:          envOrDefault("SUPERNODE_PORT", "8000"),
 		LatticeURL:    envOrDefault("LATTICE_URL", "http://localhost:4001"),
 		GameServerURL: envOrDefault("GAME_SERVER_URL", "http://localhost:3001"),
 		UploadsDir:    envOrDefault("SUPERTORRENT_UPLOADS_DIR", filepath.Join("go-supertorrent", "uploads")),

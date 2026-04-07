@@ -1,9 +1,9 @@
-# Session Handoff - 2026-04-06 (v8.86.0)
+# Session Handoff - 2026-04-06 (v8.88.0)
 
 ## Executive Summary
 Achieved a major breakthrough in frontend performance by aggressively deferring the heavy `three.js` topology visualization. The main application bundle has been reduced from a monolithic 1.5MB to a highly optimized 50kB.
 
-This session also integrated version `8.85.0` updates which refined the `/status` semantics of the `go-supertorrent/` compatibility shell.
+This session also integrated version `8.87.0` updates which refined the `/status` semantics and expanded proxy coverage of the `go-supertorrent/` compatibility shell.
 
 ## What This Pass Added
 

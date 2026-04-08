@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.102.0] - 2026-04-06
+
+### Added
+- Implemented **Trust-Based Multi-Room Signaling**:
+  - Signaling servers (`go-game-server`, `go-supertorrent`, and Node `game-server`) now fetch `TrustScore` from the Lattice during matchmaking.
+  - Nodes with low trust (<50%) are automatically isolated into a `quarantine_` room namespace, preventing them from interacting with high-trust peers.
+  - Updated frontend `RhythmGame.jsx` to securely send the user's public key during the signaling handshake.
+- Hardened Matchmaking:
+  - Added support for explicit `RoomID` and `PublicKey` in the `SignalMessage` contract across all implementations.
+
+### Changed
+- Refined signaling state management to use `Map`-based room lookups, enabling concurrent matchmaking in multiple isolated namespaces.
+
+### Validation
+- Build successful across all services.
+- `go test ./...` and `npm test` passed.
+
 ## [8.101.0] - 2026-04-06
 
 ### Added

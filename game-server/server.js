@@ -272,32 +272,52 @@ const server = app.listen(PORT, () => {
 
 // --- WebRTC Matchmaking (Signaling Server) ---
 const wss = new WebSocketServer({ server });
-let waitingPlayer = null;
+let rooms = new Map(); // RoomID -> WebSocket (waiting)
+
+async function getTrustScore(account) {
+    if (!account) return 100.0;
+    try {
+        const res = await fetch(`${LATTICE_URL}/status`);
+        const data = await res.json();
+        return data.trustScores[account] ?? 100.0;
+    } catch (e) {
+        return 100.0;
+    }
+}
 
 wss.on('connection', (ws) => {
     console.log('[Matchmaker] New player connected');
+    let currentRoom = null;
     
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
             
             if (data.type === 'FIND_MATCH') {
+                const publicKey = data.publicKey;
+                const trust = await getTrustScore(publicKey);
+                let roomID = data.roomID || 'default';
+
+                // Trust-Based Isolation
+                if (trust < 50) {
+                    roomID = `quarantine_${roomID}`;
+                    console.log(`[Matchmaker] Quarantining low-trust node: ${publicKey?.substr(0, 8)}`);
+                }
+                currentRoom = roomID;
+
+                const waitingPlayer = rooms.get(roomID);
                 if (waitingPlayer && waitingPlayer !== ws && waitingPlayer.readyState === 1) {
-                    // Match found!
-                    console.log('[Matchmaker] Match found! Initiating WebRTC handshakes...');
+                    rooms.delete(roomID);
+                    console.log(`[Matchmaker] Match found in room: ${roomID}`);
                     
-                    // Tell waiting player to create an offer (Initiator)
-                    waitingPlayer.send(JSON.stringify({ type: 'MATCH_FOUND', initiator: true }));
+                    waitingPlayer.send(JSON.stringify({ type: 'MATCH_FOUND', initiator: true, roomID }));
                     waitingPlayer.opponent = ws;
                     
-                    // Tell new player to wait for offer (Receiver)
-                    ws.send(JSON.stringify({ type: 'MATCH_FOUND', initiator: false }));
+                    ws.send(JSON.stringify({ type: 'MATCH_FOUND', initiator: false, roomID }));
                     ws.opponent = waitingPlayer;
-                    
-                    waitingPlayer = null;
                 } else {
-                    console.log('[Matchmaker] Player added to waiting queue.');
-                    waitingPlayer = ws;
+                    console.log(`[Matchmaker] Player waiting in room: ${roomID}`);
+                    rooms.set(roomID, ws);
                 }
             } else if (data.type === 'SIGNAL') {
                 // Relay WebRTC signals (SDP / ICE candidates) to opponent
@@ -311,7 +331,9 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        if (waitingPlayer === ws) waitingPlayer = null;
+        if (currentRoom && rooms.get(currentRoom) === ws) {
+            rooms.delete(currentRoom);
+        }
         if (ws.opponent) {
             try { ws.opponent.send(JSON.stringify({ type: 'OPPONENT_DISCONNECTED' })); } catch(e){}
             ws.opponent.opponent = null;

@@ -508,6 +508,15 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 			if player.roomID == "" {
 				player.roomID = "default"
 			}
+			player.publicKey = message.PublicKey
+			player.trust = s.getTrustScore(player.publicKey)
+
+			// Trust-Based Isolation (Shadow Banning)
+			if player.trust < 50.0 {
+				player.roomID = "quarantine_" + player.roomID
+				log.Printf("[Signaling] Quarantining low-trust node: %s (Trust: %.2f)", player.publicKey[:8], player.trust)
+			}
+
 			s.queueOrMatchPlayer(player)
 		case "SIGNAL":
 			if player.opponent != nil {
@@ -515,6 +524,27 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 			}
 		}
 	}
+}
+
+func (s *Service) getTrustScore(account string) float64 {
+	if account == "" {
+		return 100.0
+	}
+	resp, err := http.Get(fmt.Sprintf("%s/status", s.config.LatticeURL))
+	if err != nil {
+		return 100.0
+	}
+	defer resp.Body.Close()
+	var status struct {
+		TrustScores map[string]float64 `json:"trustScores"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return 100.0
+	}
+	if score, ok := status.TrustScores[account]; ok {
+		return score
+	}
+	return 100.0
 }
 
 func (s *Service) queueOrMatchPlayer(player *MatchConnection) {

@@ -99,12 +99,16 @@ type SignalMessage struct {
 	RoomID    string      `json:"roomID,omitempty"`
 	Initiator bool        `json:"initiator,omitempty"`
 	Signal    interface{} `json:"signal,omitempty"`
+	PublicKey string      `json:"publicKey,omitempty"`
+	Trust     float64     `json:"trust,omitempty"`
 }
 
 type MatchConnection struct {
-	conn     *websocket.Conn
-	opponent *MatchConnection
-	roomID   string
+	conn      *websocket.Conn
+	opponent  *MatchConnection
+	roomID    string
+	publicKey string
+	trust     float64
 }
 
 type ShardUploadRequest struct {
@@ -436,6 +440,15 @@ func (s *SuperTorrentService) handleMatchmakingWebSocket(w http.ResponseWriter, 
 			if player.roomID == "" {
 				player.roomID = "default"
 			}
+			player.publicKey = message.PublicKey
+			player.trust = s.getTrustScore(player.publicKey)
+
+			// Trust-Based Isolation (Shadow Banning)
+			if player.trust < 50.0 {
+				player.roomID = "quarantine_" + player.roomID
+				log.Printf("[Signaling] Quarantining low-trust node: %s (Trust: %.2f)", player.publicKey[:8], player.trust)
+			}
+
 			s.queueOrMatchPlayer(player)
 		case "SIGNAL":
 			if player.opponent != nil {
@@ -443,6 +456,27 @@ func (s *SuperTorrentService) handleMatchmakingWebSocket(w http.ResponseWriter, 
 			}
 		}
 	}
+}
+
+func (s *SuperTorrentService) getTrustScore(account string) float64 {
+	if account == "" {
+		return 100.0
+	}
+	resp, err := s.httpClient.Get(s.cfg.LatticeURL + "/status")
+	if err != nil {
+		return 100.0
+	}
+	defer resp.Body.Close()
+	var status struct {
+		TrustScores map[string]float64 `json:"trustScores"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return 100.0
+	}
+	if score, ok := status.TrustScores[account]; ok {
+		return score
+	}
+	return 100.0
 }
 
 func (s *SuperTorrentService) queueOrMatchPlayer(player *MatchConnection) {

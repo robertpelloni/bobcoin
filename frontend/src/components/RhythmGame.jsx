@@ -68,9 +68,20 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => {
+        ws.onopen = async () => {
             console.log('[WebRTC] Connected to signaling server');
-            ws.send(JSON.stringify({ type: 'FIND_MATCH' }));
+            let publicKey = '';
+            try {
+                const stored = localStorage.getItem('bobcoin_wallet');
+                if (stored) {
+                    const kp = JSON.parse(stored);
+                    const { deriveKeypair } = await import('../cryptoUtils');
+                    const realKp = await deriveKeypair(kp.mnemonic, 0);
+                    publicKey = realKp.publicKey;
+                }
+            } catch (e) {}
+
+            ws.send(JSON.stringify({ type: 'FIND_MATCH', publicKey }));
         };
 
         ws.onmessage = (event) => {

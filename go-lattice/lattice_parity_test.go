@@ -127,6 +127,74 @@ func TestMarketBidExpiry(t *testing.T) {
 	}
 }
 
+func TestSlashReputation(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	target := "bad-node-pubkey"
+
+	// 1. Initial trust
+	if l.GetTrustScore(target) != 100.0 {
+		t.Fatalf("expected initial trust 100")
+	}
+
+	// 2. Slash via governance
+	l.Proposals["slash-1"] = map[string]interface{}{
+		"id":           "slash-1",
+		"status":       "Active",
+		"action":       "SLASH_REPUTATION",
+		"target":       target,
+		"amount":       25.0,
+		"endTime":      time.Now().Add(-time.Hour).Format(time.RFC3339),
+		"votesFor":     10.0,
+		"votesAgainst": 1.0,
+	}
+	l.refreshProposalStatusesAt(time.Now())
+
+	if l.GetTrustScore(target) != 75.0 {
+		t.Fatalf("expected trust 75 after slash, got %v", l.GetTrustScore(target))
+	}
+}
+
+func TestVerifyIdentity(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("identity-test", 0)
+
+	open := &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       100,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     500,
+	}
+	signTestBlock(t, open, keys["privateKey"])
+	l.ProcessBlock(open, true)
+
+	block := &Block{
+		Type:     "verify_identity",
+		Account:  keys["publicKey"],
+		Previous: &open.Hash,
+		Balance:  100,
+		Height:   1,
+		Spora:    validSpora(open.Hash),
+		Payload: map[string]interface{}{
+			"provider": "github",
+			"username": "bob-builder",
+		},
+		Timestamp: 1000,
+	}
+	signTestBlock(t, block, keys["privateKey"])
+	if err := l.ProcessBlock(block, true); err != nil {
+		t.Fatalf("failed to process identity block: %v", err)
+	}
+
+	idMap := l.Identities[keys["publicKey"]]
+	if idMap == nil || idMap["github"] != "bob-builder" {
+		t.Fatalf("expected identity mapping, got %v", idMap)
+	}
+}
+
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
 	participants := []string{"alice", "bob", "carol"}
 	addr1 := deterministicMultisigAddress(participants)

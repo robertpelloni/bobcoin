@@ -73,8 +73,10 @@ type Lattice struct {
 	Nfts            map[string]interface{}
 	Anchors         map[string]interface{}
 	Multisigs       map[string]*MultisigVault
-	Pools           map[string]*LiquidityPool // PairName -> Pool
-	Peers           map[string]*PeerInfo      // URL -> Stats
+	Pools           map[string]*LiquidityPool    // PairName -> Pool
+	TrustScores     map[string]float64           // Account -> Score (0-100)
+	Identities      map[string]map[string]string // Account -> { Provider: Info }
+	Peers           map[string]*PeerInfo         // URL -> Stats
 	StateHash       string
 	MerkleRoot      string // God-Hash of all account states
 	QuorumScore     float64
@@ -99,6 +101,8 @@ func newEphemeralLattice() *Lattice {
 		Multisigs:       make(map[string]*MultisigVault),
 		Pools:           make(map[string]*LiquidityPool),
 		Peers:           make(map[string]*PeerInfo),
+		TrustScores:     make(map[string]float64),
+		Identities:      make(map[string]map[string]string),
 		StateHash:       "0000000000000000000000000000000000000000000000000000000000000000",
 		MerkleRoot:      "0000000000000000000000000000000000000000000000000000000000000000",
 		QuorumScore:     100.0,
@@ -490,6 +494,14 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if !ok || payload["pair"] == nil || payload["amountIn"] == nil {
 			return fmt.Errorf("invalid amm swap payload")
 		}
+	} else if block.Type == "verify_identity" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("verify identity cannot change balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["provider"] == nil || payload["username"] == nil {
+			return fmt.Errorf("invalid verify_identity payload")
+		}
 	} else {
 		return fmt.Errorf("invalid block type")
 	}
@@ -624,6 +636,14 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			payloadCopy["type"] = block.Type
 		}
 		l.Anchors[block.Hash] = payloadCopy
+	} else if block.Type == "verify_identity" {
+		payload := block.Payload.(map[string]interface{})
+		provider := payload["provider"].(string)
+		username := payload["username"].(string)
+		if _, ok := l.Identities[block.Account]; !ok {
+			l.Identities[block.Account] = make(map[string]string)
+		}
+		l.Identities[block.Account][provider] = username
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
 		partsRaw := payload["participants"].([]interface{})
@@ -857,7 +877,22 @@ func (l *Lattice) executeProposalAction(proposal map[string]interface{}) {
 				fmt.Printf("[Governance] Executed POOL_REBALANCE: %s at %f/%f\n", pair, resA, resB)
 			}
 		}
+	} else if action == "SLASH_REPUTATION" {
+		target, _ := proposal["target"].(string)
+		amount, _ := proposal["amount"].(float64)
+		if target != "" && amount > 0 {
+			current := l.GetTrustScore(target)
+			l.TrustScores[target] = math.Max(0, current-amount)
+			fmt.Printf("[Governance] Executed SLASH_REPUTATION: %s reduced by %f\n", target, amount)
+		}
 	}
+}
+
+func (l *Lattice) GetTrustScore(account string) float64 {
+	if score, ok := l.TrustScores[account]; ok {
+		return score
+	}
+	return 100.0 // Default trust
 }
 
 func (l *Lattice) rollbackUnpersistedBlock(block *Block) error {

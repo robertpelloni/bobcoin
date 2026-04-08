@@ -2143,6 +2143,59 @@ function testMarketBidExpiry() {
     assert.equal(lattice.marketBids[bid.hash].status, 'EXPIRED', 'bid should be expired by later block timestamp');
 }
 
+function testReputationSlashing() {
+    const lattice = new Lattice();
+    const target = 'bad-node-pubkey';
+
+    assert.equal(lattice.getTrustScore(target), 100, 'initial trust 100');
+
+    const proposal = {
+        id: 'slash-1',
+        status: 'Active',
+        action: 'SLASH_REPUTATION',
+        target: target,
+        amount: 30,
+        endTime: new Date(Date.now() - 1000).toISOString(),
+        votesFor: 100,
+        votesAgainst: 0
+    };
+    lattice.proposals[proposal.id] = proposal;
+    lattice.refreshProposalStatusesAt(Date.now());
+
+    assert.equal(lattice.getTrustScore(target), 70, 'trust slashed to 70');
+}
+
+function testVerifyIdentity() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('node identity');
+
+    const open = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 100,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 500, keys.privateKey);
+    lattice.processBlock(open);
+
+    const block = createSignedBlock({
+        type: 'verify_identity',
+        account: keys.publicKey,
+        previous: open.hash,
+        balance: 100,
+        link: 'VERIFY',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(open.hash),
+        payload: { provider: 'x', username: 'bob_coin' }
+    }, 1000, keys.privateKey);
+    lattice.processBlock(block);
+
+    assert.equal(lattice.identities[keys.publicKey].x, 'bob_coin', 'identity should be linked');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2160,6 +2213,8 @@ function run() {
     testDemurrageSensitiveMixedLedgerSemantics();
     testGovernanceActionExecution();
     testMarketBidExpiry();
+    testReputationSlashing();
+    testVerifyIdentity();
     console.log('Node replay semantics tests passed.');
 }
 

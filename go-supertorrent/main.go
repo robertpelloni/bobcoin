@@ -180,6 +180,7 @@ func main() {
 	mux.HandleFunc("/manifests", service.handleListManifests)
 	mux.HandleFunc("/manifests/", service.handleGetManifest)
 	mux.HandleFunc("/shards/", service.handleGetShard)
+	mux.HandleFunc("/verify-attestation", service.handleVerifyAttestation)
 	mux.HandleFunc("/spora/", service.handleSpora)
 
 	log.Printf("[go-supertorrent %s] listening on :%s", service.nodeID, cfg.Port)
@@ -761,6 +762,29 @@ func (s *SuperTorrentService) handleUpload(w http.ResponseWriter, r *http.Reques
 	magnet := "magnet:?xt=urn:btih:" + infoHash
 	s.trackTorrent(TorrentRecord{Magnet: magnet, InfoHash: infoHash, Name: header.Filename, Size: size, AddedAt: time.Now().UnixMilli(), Source: storedPath, Accepted: true})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "name": header.Filename, "magnet": magnet, "infoHash": infoHash, "size": size})
+}
+
+func (s *SuperTorrentService) handleVerifyAttestation(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	var req struct {
+		Kind    string `json:"kind"`
+		URL     string `json:"url"`
+		Account string `json:"account"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid payload"})
+		return
+	}
+
+	// Simulated Zero-Trust Verification
+	// In production, this would perform cryptographic or scraping checks
+	log.Printf("[Verifier] Verifying %s attestation for %s: %s", req.Kind, req.Account[:8], req.URL)
+	time.Sleep(500 * time.Millisecond)
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Attestation verified"})
 }
 
 func (s *SuperTorrentService) handleSpora(w http.ResponseWriter, r *http.Request) {

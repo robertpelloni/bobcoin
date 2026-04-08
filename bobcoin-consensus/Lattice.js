@@ -29,6 +29,8 @@ export class Lattice {
         this.DEMURRAGE_RATE_PER_MS = 0.0001 / 60000;
         this.stateHash = '0'.repeat(64);
         this.merkleRoot = '0'.repeat(64);
+        this.trustScores = {}; // Account -> Score
+        this.identities = {};  // Account -> { provider: username }
         this.storageFeeBase = 1.0;
         this.proposalFee = 10.0;
         this.nftMintFee = 50.0;
@@ -219,7 +221,18 @@ export class Lattice {
                 pool.reserveB = reserveB;
                 console.log(`[Governance] Executed POOL_REBALANCE: ${pair}`);
             }
+        } else if (action === 'SLASH_REPUTATION') {
+            const { target, amount } = proposal;
+            if (target && amount > 0) {
+                const current = this.getTrustScore(target);
+                this.trustScores[target] = Math.max(0, current - amount);
+                console.log(`[Governance] Executed SLASH_REPUTATION: ${target}`);
+            }
         }
+    }
+
+    getTrustScore(account) {
+        return this.trustScores[account] !== undefined ? this.trustScores[account] : 100.0;
     }
 
     /**
@@ -508,14 +521,11 @@ export class Lattice {
             nft.owner = recipient;
 
         } else if (block.type === 'data_anchor') {
-            // Anchoring data costs a fee proportional to size
             const amount = previousBalance - block.balance;
             if (amount <= 0) throw new Error("Data anchor must pay storage fee");
-            
             if (!block.payload || !block.payload.magnet || !block.payload.name) {
                 throw new Error("Invalid data anchor metadata");
             }
-            
             this.anchors[block.hash] = {
                 ...block.payload,
                 id: block.hash,
@@ -523,7 +533,6 @@ export class Lattice {
                 timestamp: block.timestamp,
                 type: 'data_anchor'
             };
-
         } else if (block.type === 'publish_manifest') {
             if (Math.abs(block.balance - previousBalance) > epsilon) {
                 throw new Error("publish_manifest cannot change balance");
@@ -531,7 +540,6 @@ export class Lattice {
             if (!block.payload || !block.payload.manifestId || !block.payload.locator || !block.payload.manifestUrl) {
                 throw new Error("Invalid publish_manifest payload");
             }
-
             this.anchors[block.hash] = {
                 ...block.payload,
                 id: block.hash,
@@ -539,7 +547,10 @@ export class Lattice {
                 timestamp: block.timestamp,
                 type: 'publish_manifest'
             };
-
+        } else if (block.type === 'verify_identity') {
+            const { provider, username } = block.payload;
+            if (!this.identities[account]) this.identities[account] = {};
+            this.identities[account][provider] = username;
         } else if (block.type === 'multisig_create') {
             // Creating a multisig account costs 100 BOB
             if (Math.abs(block.balance - (previousBalance - 100)) > epsilon) {

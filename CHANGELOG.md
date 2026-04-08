@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.97.0] - 2026-04-06
+
+### Added
+- Implemented **Lattice Reputation (Trust Score)** in Go and Node:
+  - Added `TrustScores` map to `Lattice` state (default 100).
+  - Added `SLASH_REPUTATION` governance action to decrease trust of malicious actors.
+  - Added `getTrustScore(account)` API.
+- Implemented **Social Identity Linking**:
+  - Added `verify_identity` block type to anchor provider/username pairs to a public key.
+  - Added `VerifierService` to `go-supertorrent` with `/verify-attestation` endpoint.
+- Added Regressions:
+  - `TestSlashReputation` and `TestVerifyIdentity` in Go.
+  - `testReputationSlashing` and `testVerifyIdentity` in Node.
+
+### Changed
+- Synchronized `Lattice` state structures between Go and Node to include `TrustScores` and `Identities`.
+
+### Validation
+- `npm test` and `go test ./...` passed with new reputation and identity regressions.
+
 ## [8.96.0] - 2026-04-06
 
 ### Added

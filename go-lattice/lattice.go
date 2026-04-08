@@ -190,6 +190,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if block.ZKProof == "" {
 			return errors.New("missing SP1 zero-knowledge proof for minting")
 		}
+		if len(block.ZKProof) != 64 {
+			return errors.New("invalid SP1 zero-knowledge proof format (expected 64-char hash)")
+		}
 		fmt.Printf("[Lattice] Validating ZK Proof for minting block: %s...\n", block.ZKProof[:16])
 	}
 
@@ -758,8 +761,36 @@ func (l *Lattice) refreshProposalStatusesAt(at time.Time) {
 		votesAgainst, _ := proposal["votesAgainst"].(float64)
 		if votesFor > votesAgainst {
 			proposal["status"] = "Passed"
+			l.executeProposalAction(proposal)
 		} else {
 			proposal["status"] = "Rejected"
+		}
+	}
+}
+
+func (l *Lattice) executeProposalAction(proposal map[string]interface{}) {
+	if executed, _ := proposal["executed"].(bool); executed {
+		return
+	}
+	proposal["executed"] = true
+
+	action, _ := proposal["action"].(string)
+	if action == "MINT_TREASURY" {
+		target, _ := proposal["target"].(string)
+		amount, _ := proposal["amount"].(float64)
+		if target != "" && amount > 0 {
+			l.Pending[target] = append(l.Pending[target], &PendingTx{
+				Hash:   proposal["id"].(string),
+				Amount: amount,
+				Sender: "GOVERNANCE_TREASURY",
+			})
+			fmt.Printf("[Governance] Executed MINT_TREASURY: %f to %s\n", amount, target)
+		}
+	} else if action == "UPDATE_DEMURRAGE" {
+		rate, _ := proposal["rate"].(float64)
+		if rate >= 0 {
+			l.DemurrageRate = rate
+			fmt.Printf("[Governance] Executed UPDATE_DEMURRAGE: new rate %f\n", rate)
 		}
 	}
 }

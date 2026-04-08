@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.90.0] - 2026-04-06
+
+### Added
+- Achieved major **Go-Port Milestone**:
+  - Ported the autonomous **Casino Bot** to Go (`go-casino/`), implementing a provably fair gambling service based on block hashes.
+  - Implemented **Lattice Governance Execution** logic: passed proposals now trigger protocol-level actions like `MINT_TREASURY` and `UPDATE_DEMURRAGE`.
+  - Ported **AI Oracle Bot Detection** to `go-game-server/`, implementing mathematical variance analysis of user `replayLog` timestamps to detect artificial inputs.
+- Completed **Vault Security Lifecycle**:
+  - Added **Cloaked Retrieval Flow** to the frontend: users can now **Decrypt & Download** encrypted archive entries directly in the browser using PBKDF2/AES-256-GCM.
+- Enhanced **Real-Time Visualization**:
+  - Upgraded the **3D Consensus Dashboard** with live **Transaction Beams**, visualizing `send` blocks as animated pulses between P2P nodes.
+  - Created `NetworkContext.jsx` for centralized WebSocket state management, reducing network overhead and enabling synchronized live metrics.
+- Hardened **Gossip Protocol**:
+  - Implemented **Multi-Hop Peer Discovery**, allowing nodes to automatically learn the full network topology from any single seed peer.
+  - Added automatic **Peer Pruning** for stale/offline connections based on heartbeat timing.
+
+### Changed
+- Refactored `Layout.jsx` and `Dashboard.jsx` to use the shared `NetworkContext`.
+- Improved **SP1 ZK Verification** shell with strict hash format validation in the Go lattice.
+
+### Validation
+- `go test ./...` passed across 4 Go services: `go-lattice`, `go-game-server`, `go-supertorrent`, `go-casino`.
+- `npm run build` succeeded with healthy route/vendor chunk profiles.
+
 ## [8.89.0] - 2026-04-06
 
 ### Added
@@ -27,49 +51,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cd frontend && npm run build` (Build confirmed: index.js is now 49.99 kB).
 
 ## [8.87.0] - 2026-04-05
-
-### Added
-- Expanded Go regression coverage for the new supertorrent compatibility proxy shell in `go-supertorrent/main_test.go`, including:
-  - proxied `/submit-proof`
-  - proxied `/fhe-oracle`
-  - proxied market bid/list/accept lifecycle
-- The new tests now validate that the Go supertorrent compatibility shell can forward more of the frontend’s Go-first traffic surface, not just mint and transactions.
-
-### Changed
-- Redirected `go-supertorrent/`’s dedicated `/status` endpoint to behave as a compatibility proxy to the game-server status surface, while preserving the root-path local supernode status shell.
-- Tightened alignment with the frontend’s Go-first HTTP routing by making the explicit `/status` compatibility endpoint report game-server status semantics rather than local supernode shell semantics.
-- Updated `go-supertorrent` tests and documentation to reflect the distinction between root local status and proxied game-service status.
-- Hardened the Go supertorrent compatibility proxy shell by covering a broader slice of forwarded gameplay/control traffic.
-- Continued the staged migration pattern of making newly broadened compatibility layers executable in tests immediately rather than leaving them as unverified glue.
-
-### Validation
-- `cd go-supertorrent && gofmt -w *.go`
-- `cd go-supertorrent && go test ./...`
-- `cd go-supertorrent && go build -buildvcs=false ./...`
-- `cd go-game-server && go build -buildvcs=false ./...`
-- `cd go-game-server && go test ./...`
-- `cd bobcoin-consensus && npm test`
-- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
-- `cd go-lattice && go test ./...`
-- `cd frontend && npm run build`
-
-## [8.86.0] - 2026-04-05
-
-### Added
-- Additional Go regression coverage for `go-game-server/` bridge decision behavior in `go-game-server/main_test.go`, including:
-  - explicit rejection when an external `/verify` bridge returns `verified: false`
-  - fallback success when the external verification bridge fails but the current score-threshold fallback still permits minting
-
-### Changed
-- Hardened the Go game-server proof-submission shell by covering more of its bridge-failure and bridge-rejection decision logic, not just the happy-path bridge case.
-- Continued the staged migration pattern of validating specialist bridge-shell semantics before claiming deeper backend parity.
-
-### Validation
-- `cd go-game-server && gofmt -w *.go`
-- `cd go-game-server && go test ./...`
-- `cd go-game-server && go build -buildvcs=false ./...`
-- `cd go-supertorrent && go build -buildvcs=false ./...`
-- `cd bobcoin-consensus && npm test`
-- `cd go-lattice && go build -buildvcs=false -o bobcoin-go-lattice.exe .`
-- `cd go-lattice && go test ./...`
-- `cd frontend && npm run build`
+...

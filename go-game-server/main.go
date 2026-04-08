@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -408,8 +409,52 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			}
 		}
 	}
+
+	// AI Oracle (Bot Detection via variance analysis)
+	replayLog, ok := publicValues["replayLog"].([]interface{})
+	if ok && len(replayLog) > 5 {
+		var diffs []float64
+		var lastTime float64
+		for i, entryRaw := range replayLog {
+			entry, ok := entryRaw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			t, _ := entry["time"].(float64)
+			if i > 0 {
+				diffs = append(diffs, t-lastTime)
+			}
+			lastTime = t
+		}
+
+		if len(diffs) > 0 {
+			variance := calculateVariance(diffs)
+			log.Printf("[AI Oracle] Replay log variance: %f", variance)
+			if variance < 10.0 { // Artificial variance threshold
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (macro script suspected).", variance)
+				return false
+			}
+		}
+	}
+
 	score, _ := publicValues["score"].(float64)
 	return score >= 1000
+}
+
+func calculateVariance(data []float64) float64 {
+	if len(data) < 2 {
+		return 0
+	}
+	var sum float64
+	for _, v := range data {
+		sum += v
+	}
+	mean := sum / float64(len(data))
+	var sqDiffSum float64
+	for _, v := range data {
+		sqDiffSum += math.Pow(v-mean, 2)
+	}
+	return math.Sqrt(sqDiffSum / float64(len(data)))
 }
 
 func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {

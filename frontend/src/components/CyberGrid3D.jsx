@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Line, Sphere, Text } from '@react-three/drei';
 import { LATTICE_URL } from '../api';
+import { useNetwork } from '../NetworkContext';
 import * as THREE from 'three';
 
 // An individual Block Lattice Node (Sphere) that pulses
@@ -33,8 +34,24 @@ function LatticeNode({ position, color, label, isLocal }) {
 // The dynamic P2P Mesh
 function NetworkMesh() {
     const group = useRef();
+    const { lastBlock } = useNetwork();
     const [nodes, setNodes] = useState([]);
     const [lines, setLines] = useState([]);
+    const [activeBeams, setActiveBeams] = useState([]);
+
+    useEffect(() => {
+        if (lastBlock && lastBlock.type === 'send') {
+            // Find sender and receiver nodes
+            // For now, simulate beam from local to random peer or vice versa
+            const beam = {
+                id: Math.random(),
+                start: [0, 0, 0],
+                end: [ (Math.random()-0.5)*6, (Math.random()-0.5)*2, (Math.random()-0.5)*6 ],
+                timestamp: Date.now()
+            };
+            setActiveBeams(prev => [...prev.slice(-10), beam]);
+        }
+    }, [lastBlock]);
 
     useEffect(() => {
         const fetchNetwork = async () => {
@@ -89,10 +106,34 @@ function NetworkMesh() {
                     color="#00ffff" 
                     lineWidth={1} 
                     transparent 
-                    opacity={0.2} 
+                    opacity={0.1} 
                 />
             ))}
+            {activeBeams.map((beam) => (
+                <TransactionBeam key={beam.id} start={beam.start} end={beam.end} />
+            ))}
         </group>
+    );
+}
+
+function TransactionBeam({ start, end }) {
+    const lineRef = useRef();
+    const [opacity, setOpacity] = useState(1);
+
+    useFrame(() => {
+        if (opacity > 0) setOpacity(o => Math.max(0, o - 0.02));
+    });
+
+    if (opacity <= 0) return null;
+
+    return (
+        <Line 
+            points={[start, end]} 
+            color="#ff0055" 
+            lineWidth={3} 
+            transparent 
+            opacity={opacity} 
+        />
     );
 }
 

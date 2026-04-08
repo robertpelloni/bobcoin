@@ -109,6 +109,21 @@ export function Governance() {
         const title = prompt("Enter proposal title (costs 10 BOB):");
         if (!title) return;
         
+        const actionType = prompt("Action Type? (NONE, MINT_TREASURY, UPDATE_DEMURRAGE)", "NONE");
+        let actionPayload = {};
+        if (actionType === 'MINT_TREASURY') {
+            const target = prompt("Target Address:");
+            const amount = parseFloat(prompt("Amount to Mint:"));
+            if (target && amount > 0) {
+                actionPayload = { action: 'MINT_TREASURY', target, amount };
+            }
+        } else if (actionType === 'UPDATE_DEMURRAGE') {
+            const rate = parseFloat(prompt("New Demurrage Rate (e.g. 0.0001):"));
+            if (!isNaN(rate)) {
+                actionPayload = { action: 'UPDATE_DEMURRAGE', rate };
+            }
+        }
+
         if (balance < 10) {
             alert("Insufficient funds! Proposals cost exactly 10 BOB.");
             return;
@@ -135,16 +150,17 @@ export function Governance() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: balance - 10,
+                staked_balance: stakedBalance,
                 link: 'DAO_PROPOSAL',
                 spora: sporaProof,
-                payload: { title, endTime }
+                payload: { title, endTime, ...actionPayload }
             });
 
             await proposalBlock.signBlock(keypair.privateKey);
             const res = await submitLatticeBlock(proposalBlock);
 
             if (res.success) {
-                alert(`Proposal Created! TX: ${res.hash}`);
+                alert(`Proposal Created with Action: ${actionType}! TX: ${res.hash}`);
             } else {
                 alert("Proposal failed: " + res.error);
             }

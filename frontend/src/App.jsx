@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { NetworkProvider } from './NetworkContext';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
 const Wallet = lazy(() => import('./pages/Wallet').then(module => ({ default: module.Wallet })));
@@ -30,31 +31,33 @@ function RouteFallback() {
 
 function App() {
   return (
-    <Router>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="wallet" element={<Wallet />} />
-            <Route path="governance" element={<Governance />} />
-            <Route path="mobile" element={<Mobile />} />
-            <Route path="market" element={<StorageMarket />} />
-            <Route path="supernode" element={<Supernode />} />
-            <Route path="system" element={<SystemStatus />} />
-            <Route path="explorer" element={<Explorer />} />
-            <Route path="trophies" element={<Trophies />} />
-            <Route path="casino" element={<Casino />} />
-            <Route path="swap" element={<Swap />} />
-            <Route path="gallery" element={<Gallery />} />
-            <Route path="staking" element={<Staking />} />
-            <Route path="dex" element={<DEX />} />
-            <Route path="vault" element={<Vault />} />
-            <Route path="multisig" element={<MultiSig />} />
-            <Route path="manual" element={<Manual />} />
-          </Route>
-        </Routes>
-      </Suspense>
-    </Router>
+    <NetworkProvider>
+      <Router>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="wallet" element={<Wallet />} />
+              <Route path="governance" element={<Governance />} />
+              <Route path="mobile" element={<Mobile />} />
+              <Route path="market" element={<StorageMarket />} />
+              <Route path="supernode" element={<Supernode />} />
+              <Route path="system" element={<SystemStatus />} />
+              <Route path="explorer" element={<Explorer />} />
+              <Route path="trophies" element={<Trophies />} />
+              <Route path="casino" element={<Casino />} />
+              <Route path="swap" element={<Swap />} />
+              <Route path="gallery" element={<Gallery />} />
+              <Route path="staking" element={<Staking />} />
+              <Route path="dex" element={<DEX />} />
+              <Route path="vault" element={<Vault />} />
+              <Route path="multisig" element={<MultiSig />} />
+              <Route path="manual" element={<Manual />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </Router>
+    </NetworkProvider>
   );
 }
 

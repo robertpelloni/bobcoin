@@ -3238,6 +3238,42 @@ func TestRecoveryRebuildsDemurrageSensitiveDualCollectorActionLedgerFromSQLite(t
 	}
 }
 
+func TestGovernanceActionExecution(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	target := "target-pubkey"
+	l.Proposals["prop-mint"] = map[string]interface{}{
+		"id":           "prop-mint",
+		"status":       "Active",
+		"action":       "MINT_TREASURY",
+		"target":       target,
+		"amount":       123.45,
+		"endTime":      time.Now().Add(-time.Hour).Format(time.RFC3339),
+		"votesFor":     10.0,
+		"votesAgainst": 1.0,
+	}
+	l.Proposals["prop-rate"] = map[string]interface{}{
+		"id":           "prop-rate",
+		"status":       "Active",
+		"action":       "UPDATE_DEMURRAGE",
+		"rate":         0.005,
+		"endTime":      time.Now().Add(-time.Hour).Format(time.RFC3339),
+		"votesFor":     20.0,
+		"votesAgainst": 2.0,
+	}
+
+	l.refreshProposalStatusesAt(time.Now())
+
+	if l.Pending[target] == nil || len(l.Pending[target]) != 1 {
+		t.Fatalf("expected pending treasury mint, got %v", l.Pending[target])
+	}
+	if l.Pending[target][0].Amount != 123.45 {
+		t.Fatalf("expected amount 123.45, got %v", l.Pending[target][0].Amount)
+	}
+	if l.DemurrageRate != 0.005 {
+		t.Fatalf("expected demurrage rate 0.005, got %v", l.DemurrageRate)
+	}
+}
+
 func TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "demurrage-multi-account-same-timestamp.sqlite")
 	keys := deriveDescendingKeypairs("semantic parity demurrage multi account same timestamp", 3)

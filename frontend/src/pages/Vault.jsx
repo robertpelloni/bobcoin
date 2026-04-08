@@ -11,7 +11,7 @@ import {
 } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
-import { encryptFileForVault, hashData, signBlock, verifySignature } from '../cryptoUtils';
+import { decryptFileFromVault, encryptFileForVault, hashData, signBlock, verifySignature } from '../cryptoUtils';
 import { StorageWasmWorkbench } from '../components/StorageWasmWorkbench';
 import './Vault.css';
 
@@ -792,6 +792,37 @@ export function Vault() {
         alert(`Copied ${locators.length} locator(s) to clipboard.`);
     };
 
+    const handleCloakedDownload = async (anchor) => {
+        if (!keypair?.privateKey) return alert('Unlock your vault first');
+        try {
+            // Shards are keyed by hash in the Go supernode
+            const ref = anchor.ciphertextHash || anchor.id;
+            const url = anchor.magnet || `${SUPERNODE_URL}/shards/${ref}`;
+            
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Failed to download file from supernode');
+            const ciphertext = new Uint8Array(await res.arrayBuffer());
+            
+            const decrypted = await decryptFileFromVault(ciphertext, keypair.privateKey, {
+                iv: anchor.iv,
+                salt: anchor.salt
+            });
+            
+            const blob = new Blob([decrypted], { type: anchor.originalType || 'application/octet-stream' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = anchor.name || 'decrypted-file';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+        } catch (e) {
+            console.error(e);
+            alert(`Decryption failed: ${e.message}`);
+        }
+    };
+
     const refresh = async (pubkey) => {
         setLoading(true);
         setError('');
@@ -1188,8 +1219,8 @@ export function Vault() {
                             {groupMode !== 'none' && <div className="vault-group-label">{group.label} ({group.anchors.length})</div>}
                             {group.anchors.map(anchor => (
                                 anchor.sourceKind === 'legacy'
-                                    ? <LegacyAnchorCard key={anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} />
-                                    : <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} owned />
+                                    ? <LegacyAnchorCard key={anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} onCloakedDownload={handleCloakedDownload} />
+                                    : <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} owned onCloakedDownload={handleCloakedDownload} />
                             ))}
                         </div>
                     ))}
@@ -1212,7 +1243,7 @@ export function Vault() {
                         <div key={group.key} className="vault-group-block">
                             {groupMode !== 'none' && <div className="vault-group-label">{group.label} ({group.anchors.length})</div>}
                             {group.anchors.map(anchor => (
-                                <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} />
+                                <AnchorCard key={anchor.blockHash || anchor.id} anchor={anchor} ownerProfile={ownerProfilesMap.get(anchor.owner)} onCloakedDownload={handleCloakedDownload} />
                             ))}
                         </div>
                     ))}
@@ -1248,7 +1279,7 @@ function ProvenanceBadge({ anchor, ownerProfile }) {
     );
 }
 
-function AnchorCard({ anchor, ownerProfile, owned = false }) {
+function AnchorCard({ anchor, ownerProfile, owned = false, onCloakedDownload }) {
     const locator = anchor.locator || anchor.magnet || '';
     const manifestUrl = anchor.manifestUrl || '';
     const manifestId = anchor.manifestId || anchor.id || anchor.blockHash;
@@ -1291,6 +1322,11 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                 )}
             </div>
             <div className="anchor-actions">
+                {anchor.cloaked && onCloakedDownload && (
+                    <button className="cyber-button small" onClick={() => onCloakedDownload(anchor)}>
+                        DECRYPT & DOWNLOAD
+                    </button>
+                )}
                 {manifestUrl && (
                     <a href={manifestUrl} target="_blank" rel="noreferrer" className="cyber-button small">
                         MANIFEST
@@ -1354,7 +1390,7 @@ function PublisherProofEntry({ proof, account }) {
     );
 }
 
-function LegacyAnchorCard({ anchor, ownerProfile }) {
+function LegacyAnchorCard({ anchor, ownerProfile, onCloakedDownload }) {
     return (
         <div className="anchor-card legacy-owned">
             <div className="file-icon">{anchor.cloaked ? 'LOCKED' : 'FILE'}</div>
@@ -1374,6 +1410,11 @@ function LegacyAnchorCard({ anchor, ownerProfile }) {
                 <ProvenanceBadge anchor={anchor} ownerProfile={ownerProfile} />
             </div>
             <div className="anchor-actions">
+                {anchor.cloaked && onCloakedDownload && (
+                    <button className="cyber-button small" onClick={() => onCloakedDownload(anchor)}>
+                        DECRYPT & DOWNLOAD
+                    </button>
+                )}
                 {anchor.magnet && (
                     <a href={anchor.magnet} className="cyber-button small">
                         MAGNET

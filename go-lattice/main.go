@@ -25,6 +25,7 @@ var (
 
 	blocksInInterval int
 	lastTps          float64
+	latticePort      string
 )
 
 func broadcastHeartbeat() {
@@ -35,6 +36,7 @@ func broadcastHeartbeat() {
 		blocksInInterval = 0
 
 		heartbeat := map[string]interface{}{
+			"type":       "STATS",
 			"tps":        lastTps,
 			"merkleRoot": lattice.MerkleRoot,
 			"peers":      len(lattice.Peers),
@@ -94,9 +96,9 @@ var db = NewDBManager("lattice.sqlite")
 var lattice = NewLattice(db)
 
 func main() {
-	port := os.Getenv("LATTICE_PORT")
-	if port == "" {
-		port = "4001"
+	latticePort = os.Getenv("LATTICE_PORT")
+	if latticePort == "" {
+		latticePort = "4001"
 	} // Use 4001 to not conflict with Node node
 
 	http.HandleFunc("/status", handleStatus)
@@ -127,8 +129,8 @@ func main() {
 	go gossipLoop()
 	go broadcastHeartbeat()
 
-	fmt.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s", latticePort)
+	log.Fatal(http.ListenAndServe(":"+latticePort, nil))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -168,8 +170,21 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 	}
 
 	blocksInInterval++
+	broadcastBlock(payload.Block)
 	fmt.Printf("[Lattice] Processed %s block for %s...\n", payload.Block.Type, payload.Block.Account[:8])
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "hash": payload.Block.Hash})
+}
+
+func broadcastBlock(block *Block) {
+	msg, _ := json.Marshal(map[string]interface{}{
+		"type":  "NEW_BLOCK",
+		"block": block,
+	})
+	clientsMu.Lock()
+	for client := range clients {
+		_ = client.WriteMessage(websocket.TextMessage, msg)
+	}
+	clientsMu.Unlock()
 }
 
 func normalizeLegacyBlock(block *Block) {
@@ -501,6 +516,11 @@ func gossipLoop() {
 			if err != nil {
 				if peer != nil {
 					peer.Status = "offline"
+					// Prune old peers
+					if time.Now().Unix()-peer.LastSeen > 300 {
+						delete(lattice.Peers, url)
+						fmt.Printf("[GOSSIP] Pruned stale peer: %s\n", url)
+					}
 				}
 				lattice.mu.Unlock()
 				continue
@@ -517,6 +537,22 @@ func gossipLoop() {
 				peer.LastSeen = time.Now().Unix()
 				peer.MerkleRoot = remoteMerkle
 				peer.Blocks = remoteBlocks
+			}
+
+			// Peer Discovery: Request their peer list
+			peerResp, err := http.Get(url + "/peers")
+			if err == nil {
+				var remotePeers map[string]*PeerInfo
+				if err := json.NewDecoder(peerResp.Body).Decode(&remotePeers); err == nil {
+					for rUrl := range remotePeers {
+						// Don't add ourselves or already known peers
+						if rUrl != "http://localhost:"+latticePort && lattice.Peers[rUrl] == nil {
+							lattice.Peers[rUrl] = &PeerInfo{URL: rUrl, Status: "discovered"}
+							fmt.Printf("[GOSSIP] Discovered new peer through %s: %s\n", url, rUrl)
+						}
+					}
+				}
+				peerResp.Body.Close()
 			}
 
 			if remoteMerkle != lattice.MerkleRoot {

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navigation } from './Navigation';
-import { getLatticeFrontier } from '../api';
+import { getLatticeFrontier, LATTICE_URL } from '../api';
 import { deriveKeypair } from '../cryptoUtils';
+import { useNetwork } from '../NetworkContext';
 
 export function Layout() {
     const [netWorth, setNetWorth] = useState(0);
-    const [heartbeat, setHeartbeat] = useState(null);
+    const { heartbeat } = useNetwork();
 
     const calculateNetWorth = async () => {
         const stored = localStorage.getItem('bobcoin_wallet');
@@ -24,18 +25,9 @@ export function Layout() {
     useEffect(() => {
         calculateNetWorth();
         const interval = setInterval(calculateNetWorth, 30000);
-        
-        // --- Heartbeat Listener ---
-        const wsUrl = LATTICE_URL.replace('http', 'ws') + '/heartbeat';
-        const ws = new WebSocket(wsUrl);
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            setHeartbeat(data);
-        };
 
         return () => {
             clearInterval(interval);
-            ws.close();
         };
     }, []);
 

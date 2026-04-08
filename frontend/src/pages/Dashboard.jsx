@@ -7,6 +7,7 @@ import { checkAndUnlock } from '../AchievementService';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
+import { useNetwork } from '../NetworkContext';
 
 export function Dashboard() {
     const [score, setScore] = useState(0);
@@ -18,6 +19,7 @@ export function Dashboard() {
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
     const replayLog = useRef([]);
+    const { heartbeat } = useNetwork();
 
     const handleLogEvent = (evt) => {
         replayLog.current.push(evt);
@@ -117,6 +119,12 @@ export function Dashboard() {
 
     return (
         <div className="game-container">
+            <div className="network-live-bar" style={{background: '#000', borderBottom: '1px solid #ff0055', padding: '0.5rem 1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#ff0055', fontFamily: 'monospace', letterSpacing: '1px', width: '100%'}}>
+                <span>TPS: {heartbeat?.tps?.toFixed(2) || '0.00'}</span>
+                <span>PEERS: {heartbeat?.peers || '0'}</span>
+                <span>BLOCKS: {heartbeat?.blocks || '0'}</span>
+                <span>MERKLE: {heartbeat?.merkleRoot?.slice(0, 16) || 'LOADING...'}</span>
+            </div>
             <div className="ui-layer">
                 <header className="game-header">
                     <h1 className={glitch ? 'glitch' : ''} data-text="THE MINT">THE MINT</h1>

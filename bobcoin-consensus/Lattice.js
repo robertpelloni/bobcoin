@@ -29,6 +29,9 @@ export class Lattice {
         this.DEMURRAGE_RATE_PER_MS = 0.0001 / 60000;
         this.stateHash = '0'.repeat(64);
         this.merkleRoot = '0'.repeat(64);
+        this.storageFeeBase = 1.0;
+        this.proposalFee = 10.0;
+        this.nftMintFee = 50.0;
     }
 
     updateStateHash(block) {
@@ -157,7 +160,56 @@ export class Lattice {
             if (!proposal || proposal.status !== 'Active' || !proposal.endTime) continue;
             const parsedEndTime = new Date(proposal.endTime).getTime();
             if (Number.isNaN(parsedEndTime) || atMs < parsedEndTime) continue;
+            
             proposal.status = proposal.votesFor > proposal.votesAgainst ? 'Passed' : 'Rejected';
+            if (proposal.status === 'Passed') {
+                this.executeProposalAction(proposal);
+            }
+        }
+    }
+
+    executeProposalAction(proposal) {
+        if (proposal.executed) return;
+        proposal.executed = true;
+
+        const action = proposal.action;
+        if (action === 'MINT_TREASURY') {
+            const { target, amount } = proposal;
+            if (target && amount > 0) {
+                if (!this.pending[target]) this.pending[target] = [];
+                this.pending[target].push({
+                    hash: proposal.id,
+                    amount: amount,
+                    sender: 'GOVERNANCE_TREASURY'
+                });
+                console.log(`[Governance] Executed MINT_TREASURY: ${amount} to ${target}`);
+            }
+        } else if (action === 'UPDATE_DEMURRAGE') {
+            const { rate } = proposal;
+            if (rate !== undefined && rate >= 0) {
+                this.DEMURRAGE_RATE_PER_MS = rate;
+                console.log(`[Governance] Executed UPDATE_DEMURRAGE: new rate ${rate}`);
+            }
+        } else if (action === 'UPDATE_QUORUM_THRESHOLD') {
+            const { threshold } = proposal;
+            if (threshold > 0 && threshold <= 100) {
+                // Node lattice doesn't use quorum yet, but we store it for parity
+                this.quorumThreshold = threshold;
+                console.log(`[Governance] Executed UPDATE_QUORUM_THRESHOLD: ${threshold}%`);
+            }
+        } else if (action === 'ADJUST_FEES') {
+            if (proposal.proposalFee !== undefined) this.proposalFee = proposal.proposalFee;
+            if (proposal.nftMintFee !== undefined) this.nftMintFee = proposal.nftMintFee;
+            if (proposal.storageFeeBase !== undefined) this.storageFeeBase = proposal.storageFeeBase;
+            console.log(`[Governance] Executed ADJUST_FEES`);
+        } else if (action === 'POOL_REBALANCE') {
+            const { pair, reserveA, reserveB } = proposal;
+            const pool = this.pools ? this.pools[pair] : null;
+            if (pool && reserveA > 0 && reserveB > 0) {
+                pool.reserveA = reserveA;
+                pool.reserveB = reserveB;
+                console.log(`[Governance] Executed POOL_REBALANCE: ${pair}`);
+            }
         }
     }
 
@@ -271,9 +323,9 @@ export class Lattice {
             this.pending[account] = pendingList.filter(p => p.hash !== sendBlockHash);
 
         } else if (block.type === 'proposal') {
-            // A proposal costs exactly 10 BOB
-            if (Math.abs(block.balance - (previousBalance - 10)) > epsilon) {
-                throw new Error(`Proposal creation costs exactly 10 BOB. Expected ~${previousBalance - 10}, got ${block.balance}`);
+            // A proposal costs the current proposalFee
+            if (Math.abs(block.balance - (previousBalance - this.proposalFee)) > epsilon) {
+                throw new Error(`Proposal creation costs exactly ${this.proposalFee} BOB. Expected ~${previousBalance - this.proposalFee}, got ${block.balance}`);
             }
 
             if (!block.payload || !block.payload.title || !block.payload.endTime) {
@@ -288,7 +340,18 @@ export class Lattice {
                 votesFor: 0,
                 votesAgainst: 0,
                 endTime: block.payload.endTime,
-                timestamp: block.timestamp
+                timestamp: block.timestamp,
+                action: block.payload.action,
+                target: block.payload.target,
+                amount: block.payload.amount,
+                rate: block.payload.rate,
+                threshold: block.payload.threshold,
+                pair: block.payload.pair,
+                reserveA: block.payload.reserveA,
+                reserveB: block.payload.reserveB,
+                proposalFee: block.payload.proposalFee,
+                nftMintFee: block.payload.nftMintFee,
+                storageFeeBase: block.payload.storageFeeBase
             };
             this.votes[block.hash] = {}; // Initialize vote tracker
         } else if (block.type === 'vote') {
@@ -401,9 +464,9 @@ export class Lattice {
             swap.claimer = account;
 
         } else if (block.type === 'mint_nft') {
-            // Minting an NFT costs 50 BOB
-            if (Math.abs(block.balance - (previousBalance - 50)) > epsilon) {
-                throw new Error("NFT Minting costs exactly 50 BOB");
+            // Minting an NFT costs the current nftMintFee
+            if (Math.abs(block.balance - (previousBalance - this.nftMintFee)) > epsilon) {
+                throw new Error(`NFT Minting costs exactly ${this.nftMintFee} BOB`);
             }
             if (!block.payload || !block.payload.name || !block.payload.magnet) {
                 throw new Error("Invalid NFT metadata");

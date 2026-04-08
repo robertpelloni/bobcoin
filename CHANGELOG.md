@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.94.0] - 2026-04-06
+
+### Added
+- Implemented **Advanced Governance Actions** in Go and Node:
+  - Added support for `UPDATE_QUORUM_THRESHOLD` to dynamically adjust consensus requirements.
+  - Added `ADJUST_FEES` action to update protocol-wide costs (Proposal Fee, NFT Mint Fee, Storage Fee Base).
+  - Added `POOL_REBALANCE` action to adjust on-chain AMM liquidity reserves via governance.
+- Implemented **Governance Execution Parity** in the Node reference:
+  - Node `Lattice.js` now executes protocol-level actions when a proposal is finalized as `Passed`.
+  - Balanced Node/Go validation logic to use dynamic fee parameters instead of hardcoded values.
+- Added **Dynamic Fee Validation** in Go:
+  - Go Lattice now enforces proposal and NFT fees based on the current governance-adjustable state.
+
+### Changed
+- Hardened Node `test_replay_semantics.js` with a new `testGovernanceActionExecution` regression that verifies full-cycle treasury minting.
+
+### Validation
+- `npm test` and `go test ./...` passed across all services.
+
 ## [8.93.0] - 2026-04-06
 
 ### Added

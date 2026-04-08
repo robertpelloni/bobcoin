@@ -80,6 +80,9 @@ type Lattice struct {
 	QuorumScore     float64
 	QuorumThreshold float64
 	DemurrageRate   float64
+	StorageFeeBase  float64
+	ProposalFee     float64
+	NftMintFee      float64
 }
 
 func newEphemeralLattice() *Lattice {
@@ -101,6 +104,9 @@ func newEphemeralLattice() *Lattice {
 		QuorumScore:     100.0,
 		QuorumThreshold: 67.0,
 		DemurrageRate:   0.0001 / 60000,
+		StorageFeeBase:  1.0,
+		ProposalFee:     10.0,
+		NftMintFee:      50.0,
 	}
 
 	l.Pools["BOB/sSOL"] = &LiquidityPool{
@@ -323,8 +329,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			}
 		}
 	} else if block.Type == "proposal" {
-		if math.Abs(block.Balance-(prevBalance-10)) > epsilon {
-			return fmt.Errorf("proposal costs 10 BOB")
+		if math.Abs(block.Balance-(prevBalance-l.ProposalFee)) > epsilon {
+			return fmt.Errorf("proposal costs %f BOB", l.ProposalFee)
 		}
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["title"] == nil || payload["endTime"] == nil {
@@ -399,8 +405,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return fmt.Errorf("swap claim must increment balance by locked amount")
 		}
 	} else if block.Type == "mint_nft" {
-		if math.Abs(block.Balance-(prevBalance-50)) > epsilon {
-			return fmt.Errorf("NFT minting costs exactly 50 BOB")
+		if math.Abs(block.Balance-(prevBalance-l.NftMintFee)) > epsilon {
+			return fmt.Errorf("NFT minting costs exactly %f BOB", l.NftMintFee)
 		}
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["name"] == nil || payload["magnet"] == nil {
@@ -799,6 +805,29 @@ func (l *Lattice) executeProposalAction(proposal map[string]interface{}) {
 		if threshold > 0 && threshold <= 100 {
 			l.QuorumThreshold = threshold
 			fmt.Printf("[Governance] Executed UPDATE_QUORUM_THRESHOLD: %f%%\n", threshold)
+		}
+	} else if action == "ADJUST_FEES" {
+		if v, ok := proposal["proposalFee"].(float64); ok {
+			l.ProposalFee = v
+		}
+		if v, ok := proposal["nftMintFee"].(float64); ok {
+			l.NftMintFee = v
+		}
+		if v, ok := proposal["storageFeeBase"].(float64); ok {
+			l.StorageFeeBase = v
+		}
+		fmt.Printf("[Governance] Executed ADJUST_FEES: prop=%f nft=%f storage=%f\n", l.ProposalFee, l.NftMintFee, l.StorageFeeBase)
+	} else if action == "POOL_REBALANCE" {
+		pair, _ := proposal["pair"].(string)
+		pool := l.Pools[pair]
+		if pool != nil {
+			resA, _ := proposal["reserveA"].(float64)
+			resB, _ := proposal["reserveB"].(float64)
+			if resA > 0 && resB > 0 {
+				pool.ReserveA = resA
+				pool.ReserveB = resB
+				fmt.Printf("[Governance] Executed POOL_REBALANCE: %s at %f/%f\n", pair, resA, resB)
+			}
 		}
 	}
 }

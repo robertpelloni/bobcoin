@@ -2028,6 +2028,73 @@ const mirroredScenarioTests = {
     testDemurrageSensitiveMultiAccountSameTimestampDualCollectorActionsSemantics,
 };
 
+function testGovernanceActionExecution() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node gov exec proposer');
+    const target = deriveKeypair('node gov target');
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: 990,
+        link: 'DAO_PROPOSAL',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+        payload: {
+            title: 'Treasury Mint',
+            endTime: new Date(10000).toISOString(),
+            action: 'MINT_TREASURY',
+            target: target.publicKey,
+            amount: 100
+        },
+    }, 2, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    // Vote and finalize
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: 990,
+        link: proposal.hash,
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: { vote: 'FOR' },
+    }, 3, proposer.privateKey);
+    lattice.processBlock(vote);
+
+    // Later block to trigger finalization
+    const finalizer = createSignedBlock({
+        type: 'achievement_unlock',
+        account: proposer.publicKey,
+        previous: vote.hash,
+        balance: lattice.getBalance(proposer.publicKey, 20000),
+        link: 'DONE',
+        height: 3,
+        staked_balance: 0,
+        spora: validSpora(vote.hash),
+    }, 20000, proposer.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.proposals[proposal.hash].status, 'Passed', 'proposal should pass');
+    assert.ok(lattice.pending[target.publicKey], 'target should have pending funds');
+    assert.equal(lattice.pending[target.publicKey][0].amount, 100, 'amount should match');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2043,6 +2110,7 @@ function run() {
     testDemurrageSensitiveMultiAccountSameTimestampDualCollectorActionsSemantics();
     testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics();
     testDemurrageSensitiveMixedLedgerSemantics();
+    testGovernanceActionExecution();
     console.log('Node replay semantics tests passed.');
 }
 

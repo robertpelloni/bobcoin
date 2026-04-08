@@ -70,6 +70,63 @@ func deriveDescendingKeypairs(seed string, count int) []map[string]string {
 	return keys
 }
 
+func TestMarketBidExpiry(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("bid-expiry-test", 0)
+
+	// 1. Genesis
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	l.ProcessBlock(genesis, true)
+
+	// 2. Bid with short expiry
+	base := time.Now().UnixMilli()
+	bid := &Block{
+		Type:     "market_bid",
+		Account:  keys["publicKey"],
+		Previous: &genesis.Hash,
+		Balance:  l.GetBalance(keys["publicKey"], base) - 50, // Pay 50 BOB
+		Height:   1,
+		Link:     "STORAGE_MARKET",
+		Spora:    validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"magnet": "m",
+			"expiry": float64(base + 1000), // Expire in 1s
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, bid, keys["privateKey"])
+	if err := l.ProcessBlock(bid, true); err != nil {
+		t.Fatalf("failed to process bid: %v", err)
+	}
+
+	if l.MarketBids[bid.Hash] == nil {
+		t.Fatalf("expected MarketBids[%s] to be set", bid.Hash)
+	}
+	if l.MarketBids[bid.Hash].(map[string]interface{})["status"] != "OPEN" {
+		t.Fatalf("expected bid to be OPEN initially")
+	}
+
+	// 3. Process another block after expiry
+	finalTs := base + 5000
+	finalizer := &Block{
+		Type:      "achievement_unlock",
+		Account:   keys["publicKey"],
+		Previous:  &bid.Hash,
+		Balance:   l.GetBalance(keys["publicKey"], finalTs),
+		Height:    2,
+		Link:      "FINISH",
+		Spora:     validSpora(bid.Hash),
+		Timestamp: finalTs,
+	}
+	signTestBlock(t, finalizer, keys["privateKey"])
+	l.ProcessBlock(finalizer, true)
+
+	if l.MarketBids[bid.Hash].(map[string]interface{})["status"] != "EXPIRED" {
+		t.Fatalf("expected bid to be EXPIRED, got %v", l.MarketBids[bid.Hash].(map[string]interface{})["status"])
+	}
+}
+
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
 	participants := []string{"alice", "bob", "carol"}
 	addr1 := deterministicMultisigAddress(participants)

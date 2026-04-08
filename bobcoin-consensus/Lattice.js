@@ -168,6 +168,15 @@ export class Lattice {
         }
     }
 
+    refreshMarketStatusesAt(atMs) {
+        for (const bid of Object.values(this.marketBids)) {
+            if (!bid || bid.status !== 'OPEN' || !bid.expiry) continue;
+            if (atMs > bid.expiry) {
+                bid.status = 'EXPIRED';
+            }
+        }
+    }
+
     executeProposalAction(proposal) {
         if (proposal.executed) return;
         proposal.executed = true;
@@ -270,6 +279,7 @@ export class Lattice {
 
         // Verify state transitions based on type
         this.refreshProposalStatusesAt(block.timestamp);
+        this.refreshMarketStatusesAt(block.timestamp);
 
         // Apply Demurrage to the previous balance before any new operations
         let previousBalance = frontier ? frontier.balance : 0;
@@ -397,7 +407,8 @@ export class Lattice {
                 magnet: block.payload.magnet,
                 amount: amount,
                 status: 'OPEN',
-                timestamp: block.timestamp
+                timestamp: block.timestamp,
+                expiry: block.payload.expiry || (block.timestamp + 3600000)
             };
 
         } else if (block.type === 'accept_bid') {

@@ -1,7 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "parity:matrix": "node testing/render-parity-matrix.mjs"
+    "parity:matrix": "node testing/render-parity-matrix.mjs",
+    "parity:handoff": "node scripts/generate-handoff.mjs"
   },
   "dependencies": {
     "node-fetch": "^3.3.2"

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.96.0] - 2026-04-06
+
+### Added
+- Implemented **Market Bid Expiry** in Go and Node Lattices:
+  - Added `expiry` support to `market_bid` blocks.
+  - Implemented `refreshMarketStatusesAt` to automatically mark outstanding bids as `EXPIRED` when historical time advances.
+- Added **Automated Handoff Generator**:
+  - Created `scripts/generate-handoff.mjs` to automatically summarize the parity campaign and shared fixture coverage.
+  - Linked to `npm run parity:handoff` for easy developer reporting.
+
+### Changed
+- Refined `go-lattice` unit tests with `TestMarketBidExpiry` to verify temporal bid retirement.
+- Refined Node `test_replay_semantics.js` with `testMarketBidExpiry` for cross-client parity.
+
+### Validation
+- `npm test` and `go test ./...` passed all 8 mirrored scenarios plus bid expiry regressions.
+
 ## [8.95.0] - 2026-04-06
 
 ### Added

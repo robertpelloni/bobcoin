@@ -277,6 +277,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 
 	// 4. Consensus Rules (Balance, etc)
 	l.refreshProposalStatusesAt(time.UnixMilli(block.Timestamp))
+	l.refreshMarketStatusesAt(time.UnixMilli(block.Timestamp))
 	epsilon := 0.001
 	prevBalance := 0.0
 	if head != nil {
@@ -550,6 +551,10 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	} else if block.Type == "market_bid" {
 		payload := block.Payload.(map[string]interface{})
 		amount := math.Max(prevBalance-block.Balance, 0)
+		expiry := block.Timestamp + 3600000 // Default 1 hour
+		if e, ok := payload["expiry"].(float64); ok {
+			expiry = int64(e)
+		}
 		l.MarketBids[block.Hash] = map[string]interface{}{
 			"id":        block.Hash,
 			"creator":   block.Account,
@@ -557,6 +562,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			"amount":    amount,
 			"status":    "OPEN",
 			"timestamp": block.Timestamp,
+			"expiry":    expiry,
 		}
 	} else if block.Type == "accept_bid" {
 		bid := l.MarketBids[block.Link].(map[string]interface{})
@@ -776,6 +782,24 @@ func (l *Lattice) refreshProposalStatusesAt(at time.Time) {
 			l.executeProposalAction(proposal)
 		} else {
 			proposal["status"] = "Rejected"
+		}
+	}
+}
+
+func (l *Lattice) refreshMarketStatusesAt(at time.Time) {
+	ts := at.UnixMilli()
+	for _, bidRaw := range l.MarketBids {
+		bid, ok := bidRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		status, _ := bid["status"].(string)
+		if status != "OPEN" {
+			continue
+		}
+		expiry, ok := bid["expiry"].(int64)
+		if ok && ts > expiry {
+			bid["status"] = "EXPIRED"
 		}
 	}
 }

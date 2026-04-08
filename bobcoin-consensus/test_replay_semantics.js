@@ -2095,6 +2095,54 @@ function testGovernanceActionExecution() {
     assert.equal(lattice.pending[target.publicKey][0].amount, 100, 'amount should match');
 }
 
+function testMarketBidExpiry() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('node bid expiry');
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1000, keys.privateKey);
+    lattice.processBlock(genesis);
+
+    const bid = createSignedBlock({
+        type: 'market_bid',
+        account: keys.publicKey,
+        previous: genesis.hash,
+        balance: 950,
+        link: 'STORAGE_MARKET',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+        payload: {
+            magnet: 'm',
+            expiry: 2000 // Expire at 2s
+        }
+    }, 1500, keys.privateKey);
+    lattice.processBlock(bid);
+
+    assert.equal(lattice.marketBids[bid.hash].status, 'OPEN', 'should be open');
+
+    const finalizer = createSignedBlock({
+        type: 'achievement_unlock',
+        account: keys.publicKey,
+        previous: bid.hash,
+        balance: lattice.getBalance(keys.publicKey, 5000),
+        link: 'DONE',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(bid.hash),
+    }, 5000, keys.privateKey);
+    lattice.processBlock(finalizer);
+
+    assert.equal(lattice.marketBids[bid.hash].status, 'EXPIRED', 'bid should be expired by later block timestamp');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2111,6 +2159,7 @@ function run() {
     testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics();
     testDemurrageSensitiveMixedLedgerSemantics();
     testGovernanceActionExecution();
+    testMarketBidExpiry();
     console.log('Node replay semantics tests passed.');
 }
 

@@ -104,6 +104,8 @@
   - As of v8.91.0, achieved **Fixture-Driven Alignment**: Node and Go now use a shared fragment-based assembler to execute and validate the exact same set of 7 mirrored complex scenarios.
   - As of v8.92.0, Go Gossip now dynamically calculates **Quorum Score** based on Merkle Root agreement across the discovery map, and supports `UPDATE_QUORUM_THRESHOLD` via governance.
   - As of v8.92.0, `go-supertorrent` implements a **Simulated Downloader** that reports incremental progress in `/stats` for manual magnets, bringing the reporting closer to the original WebTorrent behavior.
+  - As of v8.93.0, **Multi-Room Matchmaking** is implemented across Go and Node signaling servers, allowing private game sessions via `RoomID`.
+  - As of v8.93.0, Go Lattice snapshots use **Gzip Compression** over binary GOB data, and the Node reference lattice uses standard Gzip compression for all API responses.
   - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
   - As of v8.81.0, `go-supertorrent/` also exposes a dedicated `/status` compatibility endpoint in addition to the root status path, and the Go tests now validate both.
   - As of v8.85.0, `go-supertorrent/`’s dedicated `/status` path now proxies the game-server status surface while the root path continues to expose local supernode shell metadata, aligning the endpoint semantics with Go-first frontend routing expectations.

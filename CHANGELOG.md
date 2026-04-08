@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.93.0] - 2026-04-06
+
+### Added
+- Implemented **Multi-Room Matchmaking** in Go and Node signaling servers:
+  - Added `RoomID` support to `FIND_MATCH` and `MATCH_FOUND` messages.
+  - Players can now target specific game rooms for private sessions instead of a single global queue.
+- Implemented **Gzip Snapshot Compression** in `go-lattice`:
+  - Binary `gob` snapshots are now compressed with `gzip` during export and import, sharply reducing network overhead for full state bootstrap.
+  - Added `Content-Encoding: gzip` support to the Go Lattice HTTP API.
+- Ported **Gzip Compression** to the Node Lattice reference:
+  - Integrated `compression` middleware in `bobcoin-consensus/server.js` for all API responses.
+
+### Changed
+- Refactored `Matchmaking` logic in `go-game-server` and `go-supertorrent` to use a `map[string]*MatchConnection` for per-room waiting queues.
+- Hardened `go-lattice` snapshot import with automatic Gzip detection.
+
+### Validation
+- `npm test` passed in `bobcoin-consensus` with the new `compression` dependency.
+- `go test ./...` passed across all Go services, including new `TestMultiRoomMatchmaking` regressions.
+
 ## [8.92.0] - 2026-04-06
 
 ### Added

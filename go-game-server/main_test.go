@@ -446,6 +446,42 @@ func TestSubmitProofBridgeErrorFallsBackToThreshold(t *testing.T) {
 	}
 }
 
+func TestMultiRoomMatchmaking(t *testing.T) {
+	service := newTestService(t)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", service.handleRoot)
+	server := httptest.NewServer(withCORS(mux))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/"
+	
+	// Player 1 in Room A
+	conn1, _, _ := websocket.DefaultDialer.Dial(wsURL, nil)
+	defer conn1.Close()
+	_ = conn1.WriteJSON(SignalMessage{Type: "FIND_MATCH", RoomID: "room-a"})
+
+	// Player 2 in Room B (Should not match with 1)
+	conn2, _, _ := websocket.DefaultDialer.Dial(wsURL, nil)
+	defer conn2.Close()
+	_ = conn2.WriteJSON(SignalMessage{Type: "FIND_MATCH", RoomID: "room-b"})
+
+	// Player 3 in Room A (Should match with 1)
+	conn3, _, _ := websocket.DefaultDialer.Dial(wsURL, nil)
+	defer conn3.Close()
+	_ = conn3.WriteJSON(SignalMessage{Type: "FIND_MATCH", RoomID: "room-a"})
+
+	var msg1, msg3 SignalMessage
+	_ = conn1.ReadJSON(&msg1)
+	_ = conn3.ReadJSON(&msg3)
+
+	if msg1.Type != "MATCH_FOUND" || msg1.RoomID != "room-a" {
+		t.Fatalf("expected match in room-a for player 1, got %+v", msg1)
+	}
+	if msg3.Type != "MATCH_FOUND" || msg3.RoomID != "room-a" {
+		t.Fatalf("expected match in room-a for player 3, got %+v", msg3)
+	}
+}
+
 func TestMatchmakingSignalingFlow(t *testing.T) {
 	service := newTestService(t)
 	mux := http.NewServeMux()

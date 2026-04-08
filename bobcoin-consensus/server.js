@@ -5,6 +5,7 @@ import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +15,7 @@ import { Lattice } from './Lattice.js';
 import { Block } from './Block.js';
 
 const app = express();
+app.use(compression());
 const PORT = process.env.LATTICE_PORT || 4000;
 
 app.use(cors());

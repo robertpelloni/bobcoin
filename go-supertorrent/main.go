@@ -96,6 +96,7 @@ type APIResponse struct {
 
 type SignalMessage struct {
 	Type      string      `json:"type"`
+	RoomID    string      `json:"roomID,omitempty"`
 	Initiator bool        `json:"initiator,omitempty"`
 	Signal    interface{} `json:"signal,omitempty"`
 }
@@ -103,6 +104,7 @@ type SignalMessage struct {
 type MatchConnection struct {
 	conn     *websocket.Conn
 	opponent *MatchConnection
+	roomID   string
 }
 
 type ShardUploadRequest struct {
@@ -115,16 +117,16 @@ type ManifestPublishRequest struct {
 }
 
 type SuperTorrentService struct {
-	cfg           Config
-	wallet        Wallet
-	nodeID        string
-	started       time.Time
-	mu            sync.RWMutex
-	torrents      map[string]*TorrentRecord
-	httpClient    *http.Client
-	matchMu       sync.Mutex
-	waitingPlayer *MatchConnection
-	upgrader      websocket.Upgrader
+	cfg            Config
+	wallet         Wallet
+	nodeID         string
+	started        time.Time
+	mu             sync.RWMutex
+	torrents       map[string]*TorrentRecord
+	httpClient     *http.Client
+	matchMu        sync.Mutex
+	waitingPlayers map[string]*MatchConnection
+	upgrader       websocket.Upgrader
 }
 
 var coreArcadeAnchors = []struct {
@@ -213,6 +215,7 @@ func NewSuperTorrentService(cfg Config) (*SuperTorrentService, error) {
 		started:    time.Now(),
 		torrents:   torrents,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
+		waitingPlayers: make(map[string]*MatchConnection),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -428,6 +431,10 @@ func (s *SuperTorrentService) handleMatchmakingWebSocket(w http.ResponseWriter, 
 		}
 		switch message.Type {
 		case "FIND_MATCH":
+			player.roomID = message.RoomID
+			if player.roomID == "" {
+				player.roomID = "default"
+			}
 			s.queueOrMatchPlayer(player)
 		case "SIGNAL":
 			if player.opponent != nil {
@@ -441,23 +448,23 @@ func (s *SuperTorrentService) queueOrMatchPlayer(player *MatchConnection) {
 	s.matchMu.Lock()
 	defer s.matchMu.Unlock()
 
-	if s.waitingPlayer != nil && s.waitingPlayer != player {
-		waiting := s.waitingPlayer
-		s.waitingPlayer = nil
+	waiting := s.waitingPlayers[player.roomID]
+	if waiting != nil && waiting != player {
+		delete(s.waitingPlayers, player.roomID)
 		waiting.opponent = player
 		player.opponent = waiting
-		_ = waiting.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: true})
-		_ = player.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: false})
+		_ = waiting.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: true, RoomID: player.roomID})
+		_ = player.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: false, RoomID: player.roomID})
 		return
 	}
 
-	s.waitingPlayer = player
+	s.waitingPlayers[player.roomID] = player
 }
 
 func (s *SuperTorrentService) disconnectPlayer(player *MatchConnection) {
 	s.matchMu.Lock()
-	if s.waitingPlayer == player {
-		s.waitingPlayer = nil
+	if s.waitingPlayers[player.roomID] == player {
+		delete(s.waitingPlayers, player.roomID)
 	}
 	opponent := player.opponent
 	if opponent != nil {

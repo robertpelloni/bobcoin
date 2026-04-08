@@ -108,6 +108,7 @@ type ZKVerificationBridgeResponse struct {
 
 type SignalMessage struct {
 	Type      string      `json:"type"`
+	RoomID    string      `json:"roomID,omitempty"`
 	Initiator bool        `json:"initiator,omitempty"`
 	Signal    interface{} `json:"signal,omitempty"`
 }
@@ -115,6 +116,7 @@ type SignalMessage struct {
 type MatchConnection struct {
 	conn     *websocket.Conn
 	opponent *MatchConnection
+	roomID   string
 }
 
 type Service struct {
@@ -126,7 +128,7 @@ type Service struct {
 	systemFrontier *string
 	mu             sync.Mutex
 	matchMu        sync.Mutex
-	waitingPlayer  *MatchConnection
+	waitingPlayers map[string]*MatchConnection
 	upgrader       websocket.Upgrader
 }
 
@@ -195,6 +197,7 @@ func NewService(cfg Config) (*Service, error) {
 		systemWallet:   wallet,
 		systemBalance:  1000000,
 		systemFrontier: nil,
+		waitingPlayers: make(map[string]*MatchConnection),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -501,6 +504,10 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 		}
 		switch message.Type {
 		case "FIND_MATCH":
+			player.roomID = message.RoomID
+			if player.roomID == "" {
+				player.roomID = "default"
+			}
 			s.queueOrMatchPlayer(player)
 		case "SIGNAL":
 			if player.opponent != nil {
@@ -514,23 +521,23 @@ func (s *Service) queueOrMatchPlayer(player *MatchConnection) {
 	s.matchMu.Lock()
 	defer s.matchMu.Unlock()
 
-	if s.waitingPlayer != nil && s.waitingPlayer != player {
-		waiting := s.waitingPlayer
-		s.waitingPlayer = nil
+	waiting := s.waitingPlayers[player.roomID]
+	if waiting != nil && waiting != player {
+		delete(s.waitingPlayers, player.roomID)
 		waiting.opponent = player
 		player.opponent = waiting
-		_ = waiting.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: true})
-		_ = player.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: false})
+		_ = waiting.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: true, RoomID: player.roomID})
+		_ = player.conn.WriteJSON(SignalMessage{Type: "MATCH_FOUND", Initiator: false, RoomID: player.roomID})
 		return
 	}
 
-	s.waitingPlayer = player
+	s.waitingPlayers[player.roomID] = player
 }
 
 func (s *Service) disconnectPlayer(player *MatchConnection) {
 	s.matchMu.Lock()
-	if s.waitingPlayer == player {
-		s.waitingPlayer = nil
+	if s.waitingPlayers[player.roomID] == player {
+		delete(s.waitingPlayers, player.roomID)
 	}
 	opponent := player.opponent
 	if opponent != nil {

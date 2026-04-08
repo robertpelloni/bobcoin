@@ -609,10 +609,21 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		lattice.mu.Lock()
 		defer lattice.mu.Unlock()
 
-		fmt.Println("[Snapshot] Received binary state. Commencing binary import...")
+		fmt.Println("[Snapshot] Received compressed binary state. Commencing import...")
+
+		var reader io.Reader = r.Body
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, "invalid gzip", 400)
+				return
+			}
+			defer gz.Close()
+			reader = gz
+		}
 
 		// Use GOB decoder to restore state
-		err := gob.NewDecoder(r.Body).Decode(lattice)
+		err := gob.NewDecoder(reader).Decode(lattice)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
@@ -631,9 +642,13 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 
-	// Export state in binary GOB format
+	// Export state in compressed binary GOB format
 	w.Header().Set("Content-Type", "application/octet-stream")
-	err := gob.NewEncoder(w).Encode(lattice)
+	w.Header().Set("Content-Encoding", "gzip")
+	gz := gzip.NewWriter(w)
+	defer gz.Close()
+
+	err := gob.NewEncoder(gz).Encode(lattice)
 	if err != nil {
 		fmt.Printf("[Snapshot Error] %v\n", err)
 	}

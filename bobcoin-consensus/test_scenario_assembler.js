@@ -312,6 +312,74 @@ const generators = {
         ctx.lattice.processBlock(finalizer);
     },
 
+    'governance-fee-adjustment': (ctx) => {
+        const ts = ctx.baseTime;
+        const prev1 = ctx.lattice.getFrontier(ctx.proposer.publicKey);
+        const prop = createSignedBlock({
+            type: 'proposal',
+            account: ctx.proposer.publicKey,
+            previous: prev1.hash,
+            balance: ctx.lattice.getBalance(ctx.proposer.publicKey, ts) - ctx.lattice.proposalFee,
+            link: 'DAO_PROPOSAL',
+            height: prev1.height + 1,
+            staked_balance: prev1.staked_balance,
+            spora: validSpora(prev1.hash),
+            payload: {
+                title: 'Fee and Quorum adjustment',
+                endTime: new Date(ts + 1000).toISOString(),
+                action: 'ADJUST_FEES',
+                nftMintFee: 150.0,
+            },
+        }, ts, ctx.proposer.privateKey);
+        ctx.lattice.processBlock(prop);
+
+        const prev2 = ctx.lattice.getFrontier(ctx.proposer.publicKey);
+        const vote = createSignedBlock({
+            type: 'vote',
+            account: ctx.proposer.publicKey,
+            previous: prev2.hash,
+            balance: ctx.lattice.getBalance(ctx.proposer.publicKey, ts),
+            link: prop.hash,
+            height: prev2.height + 1,
+            staked_balance: prev2.staked_balance,
+            spora: validSpora(prev2.hash),
+            payload: { vote: 'FOR' },
+        }, ts, ctx.proposer.privateKey);
+        ctx.lattice.processBlock(vote);
+
+        const finalTs = ts + 5000;
+        const prev3 = ctx.lattice.getFrontier(ctx.proposer.publicKey);
+        const finalizer = createSignedBlock({
+            type: 'achievement_unlock',
+            account: ctx.proposer.publicKey,
+            previous: prev3.hash,
+            balance: ctx.lattice.getBalance(ctx.proposer.publicKey, finalTs),
+            link: 'FINALIZED',
+            height: prev3.height + 1,
+            staked_balance: prev3.staked_balance,
+            spora: validSpora(prev3.hash),
+        }, finalTs, ctx.proposer.privateKey);
+        ctx.lattice.processBlock(finalizer);
+
+        if (ctx.lattice.nftMintFee !== 150.0) {
+            throw new Error(`expected NftMintFee 150.0 after execution, got ${ctx.lattice.nftMintFee}`);
+        }
+
+        const prev4 = ctx.lattice.getFrontier(ctx.proposer.publicKey);
+        const mint = createSignedBlock({
+            type: 'mint_nft',
+            account: ctx.proposer.publicKey,
+            previous: prev4.hash,
+            balance: ctx.lattice.getBalance(ctx.proposer.publicKey, finalTs) - 150.0,
+            link: 'NFT_MINT',
+            height: prev4.height + 1,
+            staked_balance: prev4.staked_balance,
+            spora: validSpora(prev4.hash),
+            payload: { name: 'New Fee NFT', magnet: 'm' },
+        }, finalTs, ctx.proposer.privateKey);
+        ctx.lattice.processBlock(mint);
+    },
+
     'demurrage-balance-pressure': (ctx) => {
         // Marker fragment
     }

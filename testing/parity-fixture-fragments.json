@@ -48,6 +48,11 @@
       "features": ["publish-manifest", "data-anchor"]
     },
     {
+      "id": "governance-fee-adjustment",
+      "category": "governance-extension",
+      "features": ["proposal", "adjust-fees", "dynamic-validation"]
+    },
+    {
       "id": "demurrage-balance-pressure",
       "category": "economic-pressure",
       "features": ["demurrage", "elapsed-time"]

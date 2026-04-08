@@ -61,20 +61,20 @@ type PeerInfo struct {
 }
 
 type Lattice struct {
-	mu            sync.RWMutex
-	db            *DBManager
-	Chains        map[string][]*Block
-	Blocks        map[string]*Block
-	Pending       map[string][]*PendingTx
-	Proposals     map[string]interface{}
-	Votes         map[string]map[string]map[string]interface{}
-	MarketBids    map[string]interface{}
-	Swaps         map[string]*HTLCSwap
-	Nfts          map[string]interface{}
-	Anchors       map[string]interface{}
-	Multisigs     map[string]*MultisigVault
-	Pools         map[string]*LiquidityPool // PairName -> Pool
-	Peers         map[string]*PeerInfo      // URL -> Stats
+	mu              sync.RWMutex
+	db              *DBManager
+	Chains          map[string][]*Block
+	Blocks          map[string]*Block
+	Pending         map[string][]*PendingTx
+	Proposals       map[string]interface{}
+	Votes           map[string]map[string]map[string]interface{}
+	MarketBids      map[string]interface{}
+	Swaps           map[string]*HTLCSwap
+	Nfts            map[string]interface{}
+	Anchors         map[string]interface{}
+	Multisigs       map[string]*MultisigVault
+	Pools           map[string]*LiquidityPool // PairName -> Pool
+	Peers           map[string]*PeerInfo      // URL -> Stats
 	StateHash       string
 	MerkleRoot      string // God-Hash of all account states
 	QuorumScore     float64
@@ -497,16 +497,20 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	if block.Type == "proposal" {
 		payload := block.Payload.(map[string]interface{})
 		endTime, _ := payload["endTime"].(string)
-		l.Proposals[block.Hash] = map[string]interface{}{
+		prop := map[string]interface{}{
 			"id":           block.Hash,
 			"proposer":     block.Account,
-			"title":        payload["title"],
 			"status":       "Active",
 			"votesFor":     0.0,
 			"votesAgainst": 0.0,
 			"endTime":      endTime,
 			"timestamp":    block.Timestamp,
 		}
+		// Copy remaining payload fields (action, target, amount, rate, etc)
+		for k, v := range payload {
+			prop[k] = v
+		}
+		l.Proposals[block.Hash] = prop
 		l.Votes[block.Hash] = make(map[string]map[string]interface{})
 	} else if block.Type == "vote" {
 		payload := block.Payload.(map[string]interface{})

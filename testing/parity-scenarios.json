@@ -1,7 +1,22 @@
 {
-  "version": 5,
+  "version": 6,
   "description": "Shared mirrored replay scenario catalog for Node reference and Go durable recovery parity work, including explicit test references.",
   "scenarios": [
+    {
+      "id": "governance_driven_fee_change",
+      "category": "mirrored-replay",
+      "features": ["governance", "adjust-fees", "dynamic-validation"],
+      "accounts": 1,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "nodeTest": "testScenarioCatalogTracksMirroredReplayCoverage",
+      "goTest": "TestFixtureDrivenMirroredScenarios",
+      "fragments": [
+        "proposer-genesis",
+        "governance-fee-adjustment"
+      ],
+      "expectations": ["proposal-passed", "fees-adjusted", "subsequent-mint-follows-new-fee"]
+    },
     {
       "id": "same_timestamp_governance_swap",
       "category": "mirrored-replay",

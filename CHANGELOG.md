@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.95.0] - 2026-04-06
+
+### Added
+- Implemented **Fixture-Driven Fee Hardening** in the parity campaign:
+  - Added `governance-fee-adjustment` fragment and `governance_driven_fee_change` mirrored scenario.
+  - Verified that Node and Go implementations both correctly handle protocol-wide fee changes mid-ledger.
+  - Asserted that subsequent `mint_nft` blocks must follow the new 150 BOB fee instead of the default 50 BOB after governance execution.
+- Strengthened **Lattice Proposal Persistence**:
+  - Upgraded Go Lattice to store the complete proposal payload (actions, amounts, targets) instead of only titles/end-times, enabling complex protocol logic to survive audit and recovery.
+
+### Changed
+- Refactored `ScenarioAssembler` in Node and Go to support dynamic fee adjustments and cross-fragment state sharing (proposal IDs).
+
+### Validation
+- `npm test` and `go test ./...` passed all 8 mirrored scenarios.
+
 ## [8.94.0] - 2026-04-06
 
 ### Added

@@ -136,13 +136,13 @@ func genSameTimestampGovernanceCore(ctx *scenarioContext) error {
 	// Proposal
 	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
 	prop := &Block{
-		Type:      "proposal",
-		Account:   pk["publicKey"],
-		Previous:  &prevP.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts) - 10,
-		Height:    prevP.Height + 1,
-		Link:      "DAO_PROPOSAL",
-		Spora:     validSpora(prevP.Hash),
+		Type:     "proposal",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 10,
+		Height:   prevP.Height + 1,
+		Link:     "DAO_PROPOSAL",
+		Spora:    validSpora(prevP.Hash),
 		Payload: map[string]interface{}{
 			"title":   "Fixture Driven Proposal",
 			"endTime": time.UnixMilli(ts + 2000).Format(time.RFC3339),
@@ -181,13 +181,13 @@ func genSameTimestampHtlcCore(ctx *scenarioContext) error {
 	// Lock
 	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
 	lock := &Block{
-		Type:      "swap_lock",
-		Account:   pk["publicKey"],
-		Previous:  &prevP.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts) - 50,
-		Height:    prevP.Height + 1,
-		Link:      "HTLC_LOCK",
-		Spora:     validSpora(prevP.Hash),
+		Type:     "swap_lock",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 50,
+		Height:   prevP.Height + 1,
+		Link:     "HTLC_LOCK",
+		Spora:    validSpora(prevP.Hash),
 		Payload: map[string]interface{}{
 			"secretHash": ctx.secretHash,
 			"recipient":  pk["publicKey"],
@@ -201,13 +201,13 @@ func genSameTimestampHtlcCore(ctx *scenarioContext) error {
 
 	// Claim (Same timestamp for core tests)
 	claim := &Block{
-		Type:      "swap_claim",
-		Account:   pk["publicKey"],
-		Previous:  &lock.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts) + 50,
-		Height:    lock.Height + 1,
-		Link:      "HTLC_CLAIM",
-		Spora:     validSpora(lock.Hash),
+		Type:     "swap_claim",
+		Account:  pk["publicKey"],
+		Previous: &lock.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) + 50,
+		Height:   lock.Height + 1,
+		Link:     "HTLC_CLAIM",
+		Spora:    validSpora(lock.Hash),
 		Payload: map[string]interface{}{
 			"secret":     ctx.secret,
 			"secretHash": ctx.secretHash,
@@ -226,13 +226,13 @@ func genSameTimestampNftCore(ctx *scenarioContext) error {
 	// Mint
 	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
 	mint := &Block{
-		Type:      "mint_nft",
-		Account:   pk["publicKey"],
-		Previous:  &prevP.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts) - 50,
-		Height:    prevP.Height + 1,
-		Link:      "NFT_MINT",
-		Spora:     validSpora(prevP.Hash),
+		Type:     "mint_nft",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 50,
+		Height:   prevP.Height + 1,
+		Link:     "NFT_MINT",
+		Spora:    validSpora(prevP.Hash),
 		Payload: map[string]interface{}{
 			"name":   "Fixture NFT",
 			"magnet": "magnet:?xt=urn:btih:fixture-nft",
@@ -247,13 +247,13 @@ func genSameTimestampNftCore(ctx *scenarioContext) error {
 
 	// Transfer
 	transfer := &Block{
-		Type:      "transfer_nft",
-		Account:   pk["publicKey"],
-		Previous:  &mint.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts) - 1,
-		Height:    mint.Height + 1,
-		Link:      mint.Hash,
-		Spora:     validSpora(mint.Hash),
+		Type:     "transfer_nft",
+		Account:  pk["publicKey"],
+		Previous: &mint.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 1,
+		Height:   mint.Height + 1,
+		Link:     mint.Hash,
+		Spora:    validSpora(mint.Hash),
 		Payload: map[string]interface{}{
 			"recipient": ck["publicKey"],
 		},
@@ -336,13 +336,13 @@ func genManifestAnchorCore(ctx *scenarioContext) error {
 	// Manifest
 	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
 	manifest := &Block{
-		Type:      "publish_manifest",
-		Account:   pk["publicKey"],
-		Previous:  &prevP.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts),
-		Height:    prevP.Height + 1,
-		Link:      "FIXTURE_MANIFEST",
-		Spora:     validSpora(prevP.Hash),
+		Type:     "publish_manifest",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts),
+		Height:   prevP.Height + 1,
+		Link:     "FIXTURE_MANIFEST",
+		Spora:    validSpora(prevP.Hash),
 		Payload: map[string]interface{}{
 			"manifestId":  "fixture-manifest",
 			"locator":     "bobtorrent://manifest/fixture",
@@ -358,13 +358,13 @@ func genManifestAnchorCore(ctx *scenarioContext) error {
 	// Data Anchor (Same timestamp for core tests)
 	prevP2 := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
 	anchor := &Block{
-		Type:      "data_anchor",
-		Account:   pk["publicKey"],
-		Previous:  &prevP2.Hash,
-		Balance:   ctx.l.GetBalance(pk["publicKey"], ts) - 1,
-		Height:    prevP2.Height + 1,
-		Link:      "DATA_ANCHOR",
-		Spora:     validSpora(prevP2.Hash),
+		Type:     "data_anchor",
+		Account:  pk["publicKey"],
+		Previous: &prevP2.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 1,
+		Height:   prevP2.Height + 1,
+		Link:     "DATA_ANCHOR",
+		Spora:    validSpora(prevP2.Hash),
 		Payload: map[string]interface{}{
 			"magnet": "magnet:?xt=urn:btih:fixture-finalizer",
 			"name":   "finalizer.bin",
@@ -373,6 +373,91 @@ func genManifestAnchorCore(ctx *scenarioContext) error {
 	}
 	signTestBlock(ctx.t, anchor, pk["privateKey"])
 	return ctx.l.ProcessBlock(anchor, false)
+}
+
+func genGovernanceFeeAdjustment(ctx *scenarioContext) error {
+	pk := ctx.getKeys("proposer")
+	ts := ctx.baseTime
+
+	// 1. Create Proposal to adjust NftMintFee and Quorum
+	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	prop := &Block{
+		Type:     "proposal",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - ctx.l.ProposalFee,
+		Height:   prevP.Height + 1,
+		Link:     "DAO_PROPOSAL",
+		Spora:    validSpora(prevP.Hash),
+		Payload: map[string]interface{}{
+			"title":      "Fee and Quorum adjustment",
+			"endTime":    time.UnixMilli(ts + 1000).Format(time.RFC3339),
+			"action":     "ADJUST_FEES",
+			"nftMintFee": 150.0,
+		},
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, prop, pk["privateKey"])
+	if err := ctx.l.ProcessBlock(prop, false); err != nil {
+		return err
+	}
+
+	// 2. Vote
+	prevP2 := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	vote := &Block{
+		Type:      "vote",
+		Account:   pk["publicKey"],
+		Previous:  &prevP2.Hash,
+		Balance:   ctx.l.GetBalance(pk["publicKey"], ts),
+		Height:    prevP2.Height + 1,
+		Link:      prop.Hash,
+		Spora:     validSpora(prevP2.Hash),
+		Payload:   map[string]interface{}{"vote": "FOR"},
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, vote, pk["privateKey"])
+	if err := ctx.l.ProcessBlock(vote, false); err != nil {
+		return err
+	}
+
+	// 3. Finalize with a later block
+	finalTs := ts + 5000
+	prevP3 := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	finalizer := &Block{
+		Type:      "achievement_unlock",
+		Account:   pk["publicKey"],
+		Previous:  &prevP3.Hash,
+		Balance:   ctx.l.GetBalance(pk["publicKey"], finalTs),
+		Height:    prevP3.Height + 1,
+		Link:      "FINALIZED",
+		Spora:     validSpora(prevP3.Hash),
+		Timestamp: finalTs,
+	}
+	signTestBlock(ctx.t, finalizer, pk["privateKey"])
+	if err := ctx.l.ProcessBlock(finalizer, false); err != nil {
+		return err
+	}
+
+	// 4. Verify new fee is active
+	if ctx.l.NftMintFee != 150.0 {
+		return fmt.Errorf("expected NftMintFee 150.0 after execution, got %f", ctx.l.NftMintFee)
+	}
+
+	// 5. Mint NFT with new 150 BOB fee
+	prevP4 := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	mint := &Block{
+		Type:      "mint_nft",
+		Account:   pk["publicKey"],
+		Previous:  &prevP4.Hash,
+		Balance:   ctx.l.GetBalance(pk["publicKey"], finalTs) - 150.0,
+		Height:    prevP4.Height + 1,
+		Link:      "NFT_MINT",
+		Spora:     validSpora(prevP4.Hash),
+		Payload:   map[string]interface{}{"name": "New Fee NFT", "magnet": "m"},
+		Timestamp: finalTs,
+	}
+	signTestBlock(ctx.t, mint, pk["privateKey"])
+	return ctx.l.ProcessBlock(mint, false)
 }
 
 func genDemurrageBalancePressure(ctx *scenarioContext) error {
@@ -408,6 +493,7 @@ func TestFixtureDrivenMirroredScenarios(t *testing.T) {
 		"collector-market-bid-core":      genCollectorMarketBidCore,
 		"collector-vote-extension":       genCollectorVoteExtension,
 		"manifest-anchor-core":           genManifestAnchorCore,
+		"governance-fee-adjustment":      genGovernanceFeeAdjustment,
 		"demurrage-balance-pressure":     genDemurrageBalancePressure,
 	}
 

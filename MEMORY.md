@@ -108,6 +108,8 @@
   - As of v8.93.0, Go Lattice snapshots use **Gzip Compression** over binary GOB data, and the Node reference lattice uses standard Gzip compression for all API responses.
   - As of v8.94.0, **Advanced Governance Actions** are implemented in both Go and Node: `UPDATE_QUORUM_THRESHOLD`, `ADJUST_FEES`, and `POOL_REBALANCE`.
   - As of v8.94.0, the Node reference lattice has achieved **Governance Execution Parity** with Go, and uses the same dynamic fee validation rules.
+  - As of v8.95.0, **Fixture-Driven Fee Hardening** verifies that protocol-wide fee changes triggered by governance mid-ledger are correctly enforced by both lattice implementations for all subsequent blocks.
+  - As of v8.95.0, Go Lattice proposal state is now **Payload-Complete**, preserving action-oriented metadata across audit and restart cycles.
   - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
   - As of v8.81.0, `go-supertorrent/` also exposes a dedicated `/status` compatibility endpoint in addition to the root status path, and the Go tests now validate both.
   - As of v8.85.0, `go-supertorrent/`’s dedicated `/status` path now proxies the game-server status surface while the root path continues to expose local supernode shell metadata, aligning the endpoint semantics with Go-first frontend routing expectations.

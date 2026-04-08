@@ -5,6 +5,7 @@ import {
     getLatticeFrontier,
     getLatticeChain,
     submitLatticeBlock,
+    verifyAttestation,
     LATTICE_URL,
     SUPERNODE_URL,
 } from '../api';
@@ -1284,11 +1285,7 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                 {normalizePublisherProofs(anchor).length > 0 && (
                     <div className="publisher-proofs">
                         {normalizePublisherProofs(anchor).map((proof) => (
-                            <a key={`${proof.kind}-${proof.url}`} href={proof.url} target="_blank" rel="noreferrer" className="publisher-proof-card">
-                                <span className="vault-badge neutral publisher-proof-kind">{proof.kind.toUpperCase()}</span>
-                                <span className="publisher-proof-title">{proof.label || proof.url}</span>
-                                {proof.issuer && <span className="publisher-proof-issuer">ISSUER: {proof.issuer}</span>}
-                            </a>
+                            <PublisherProofEntry key={`${proof.kind}-${proof.url}`} proof={proof} account={anchor.owner} />
                         ))}
                     </div>
                 )}
@@ -1310,6 +1307,49 @@ function AnchorCard({ anchor, ownerProfile, owned = false }) {
                     </button>
                 )}
             </div>
+        </div>
+    );
+}
+
+function PublisherProofEntry({ proof, account }) {
+    const [status, setStatus] = useState('unverified');
+    const [verifying, setVerifying] = useState(false);
+    const [message, setMessage] = useState('');
+
+    const handleVerify = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setVerifying(true);
+        setStatus('verifying');
+        try {
+            const res = await verifyAttestation(proof.kind, proof.url, account);
+            if (res.success) {
+                setStatus('verified');
+            } else {
+                setStatus('failed');
+                setMessage(res.message);
+            }
+        } catch (error) {
+            setStatus('failed');
+            setMessage(error.message);
+        }
+        setVerifying(false);
+    };
+
+    return (
+        <div className={`publisher-proof-card ${status}`} title={message}>
+            <div className="proof-link-content">
+                <span className="vault-badge neutral publisher-proof-kind">{proof.kind.toUpperCase()}</span>
+                <a href={proof.url} target="_blank" rel="noreferrer" className="publisher-proof-title">{proof.label || proof.url}</a>
+                {proof.issuer && <span className="publisher-proof-issuer">ISSUER: {proof.issuer}</span>}
+            </div>
+            <button 
+                className={`verify-action-btn ${status}`} 
+                onClick={handleVerify} 
+                disabled={verifying || status === 'verified'}
+            >
+                {status === 'verified' ? '✓ VERIFIED' : (verifying ? '...' : 'VERIFY')}
+            </button>
         </div>
     );
 }

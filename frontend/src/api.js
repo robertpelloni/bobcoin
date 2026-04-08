@@ -100,6 +100,19 @@ export const getManifestAnchors = async (account = null) => {
     }
 };
 
+export const verifyAttestation = async (kind, url, account) => {
+    try {
+        const res = await fetch(`${SUPERNODE_URL}/verify-attestation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind, url, account })
+        });
+        return await res.json();
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+};
+
 // Market Bids from Lattice
 export const getMarketBids = async () => {
     try {

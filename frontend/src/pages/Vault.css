@@ -481,12 +481,33 @@
 
 .publisher-proof-card {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
     text-decoration: none;
     border: 1px solid #173030;
     background: rgba(0, 255, 255, 0.04);
     padding: 0.65rem;
+    transition: all 0.2s ease;
+}
+
+.publisher-proof-card.verified {
+    border-color: #0f0;
+    background: rgba(0, 255, 0, 0.05);
+}
+
+.publisher-proof-card.failed {
+    border-color: #f00;
+    background: rgba(255, 0, 0, 0.05);
+}
+
+.proof-link-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+    overflow: hidden;
 }
 
 .publisher-proof-card:hover {
@@ -503,6 +524,11 @@
     font-size: 0.78rem;
     font-weight: bold;
     word-break: break-word;
+    text-decoration: none;
+}
+
+.publisher-proof-title:hover {
+    text-decoration: underline;
 }
 
 .publisher-proof-issuer {
@@ -510,6 +536,36 @@
     font-size: 0.68rem;
     letter-spacing: 1px;
     word-break: break-word;
+}
+
+.verify-action-btn {
+    background: transparent;
+    border: 1px solid #0ff;
+    color: #0ff;
+    font-size: 0.62rem;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-family: monospace;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    min-width: 80px;
+    white-space: nowrap;
+}
+
+.verify-action-btn:hover:not(:disabled) {
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.verify-action-btn.verified {
+    border-color: #0f0;
+    color: #0f0;
+    cursor: default;
+}
+
+.verify-action-btn.failed {
+    border-color: #f00;
+    color: #f00;
 }
 
 .vault-badge {

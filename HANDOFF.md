@@ -17,6 +17,19 @@ Effect:
 - Moving it to a `Suspense` boundary with a lightweight "INITIALIZING 3D TOPOLOGY..." fallback decoupled the heavy graphics stack from the page logic entirely.
 - **Result:** Main `index.js` dropped from ~1.5MB to ~50kB.
 
+### 3. Identity Verification UI
+Files:
+- `frontend/src/api.js`
+- `frontend/src/pages/Vault.jsx`
+- `frontend/src/pages/Vault.css`
+
+Upgraded the Bobcoin archive surface with live provenance checks.
+
+Behavior:
+- **Integrated API**: Added `verifyAttestation` helper to the frontend API layer.
+- **`PublisherProofEntry` Component**: Each proof on an archive card is now an actionable component.
+- **Real-Time Badging**: Users can click "VERIFY" to trigger a backend check, displaying "VERIFIED" (green) or "FAILED" (red) results based on the supernode's response.
+
 ## Validation
 Executed successfully:
 - `cd frontend && npm run build`

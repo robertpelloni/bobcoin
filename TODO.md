@@ -51,3 +51,4 @@
 - [x] **Version Display:** Injected the global version string dynamically into the footer using Vite defines.
 - [x] **Gamified Onboarding:** Built an interactive terminal requiring users to physically mash their keyboard to securely generate the 64-character entropy seed required to initialize their wallet.
 - [x] **WebRTC Multiplayer:** Built a full WebSocket signaling server + `simple-peer` WebRTC client enabling peer-to-peer competitive rhythm game matches with live score streaming.
+- [x] **Identity Verification UI (Frontend v20):** Integrated real-time "Zero-Trust" checking for publisher attestations in the Vault, backed by the Go supernode's new `VerifierService`.

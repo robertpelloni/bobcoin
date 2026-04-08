@@ -134,13 +134,17 @@ func main() {
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":     "online",
-		"engine":     "Go-Lattice v8.25.0",
-		"stateHash":  lattice.StateHash,
-		"merkleRoot": lattice.MerkleRoot,
-		"accounts":   len(lattice.Chains),
-		"blocks":     len(lattice.Blocks),
+		"status":      "online",
+		"engine":      "Go-Lattice v8.97.0",
+		"stateHash":   lattice.StateHash,
+		"merkleRoot":  lattice.MerkleRoot,
+		"accounts":    len(lattice.Chains),
+		"blocks":      len(lattice.Blocks),
+		"identities":  lattice.Identities,
+		"trustScores": lattice.TrustScores,
 	})
 }
 

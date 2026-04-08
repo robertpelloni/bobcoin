@@ -399,7 +399,7 @@ export class Lattice {
             }
 
             // Quadratic Voting power based on balance at the time of vote
-            const power = Math.sqrt(block.balance);
+            const power = Math.sqrt(block.balance) * (this.getTrustScore(account) / 100.0);
             this.votes[proposalHash][account] = { type: voteType, power };
 
             if (voteType === 'FOR') proposal.votesFor += power;

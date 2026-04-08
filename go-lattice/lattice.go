@@ -549,7 +549,7 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		}
 
 		voteType, _ := payload["vote"].(string)
-		power := math.Sqrt(math.Max(block.Balance, 0))
+		power := math.Sqrt(math.Max(block.Balance, 0)) * (l.GetTrustScore(block.Account) / 100.0)
 		l.Votes[block.Link][block.Account] = map[string]interface{}{
 			"type":  voteType,
 			"power": power,

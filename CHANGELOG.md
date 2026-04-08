@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.98.0] - 2026-04-06
+
+### Added
+- Implemented **Trust-Weighted Governance**:
+  - Voting power is now scaled by `TrustScore`. New formula: `power = sqrt(balance) * (trust / 100.0)`.
+  - Added regressions `TestTrustWeightedGovernance` in Go and `testTrustWeightedGovernance` in Node.
+- Implemented **Identity-Aware UI**:
+  - Updated `AccountSelector.jsx` to display verified GitHub/X usernames next to accounts.
+  - Updated `Leaderboard.jsx` to be dynamic, showing live network balances, trust scores, and verified identities.
+  - Enhanced `NetworkContext.jsx` to parse and provide `identities` and `trustScores` from the supernode heartbeat.
+
+### Changed
+- Updated `handleStatus` in `go-lattice/main.go` and `server.js` in Node to include identity and trust maps in the network status.
+- Finalized parity on `proposal` block validation by requiring `title` and `endTime` in both implementations.
+
+### Validation
+- All 8 fixture-driven scenarios passed.
+- New trust-weighted governance regressions passed in both Go and Node.
+
 ## [8.97.0] - 2026-04-06
 
 ### Added

@@ -2196,6 +2196,57 @@ function testVerifyIdentity() {
     assert.equal(lattice.identities[keys.publicKey].x, 'bob_coin', 'identity should be linked');
 }
 
+function testTrustWeightedGovernance() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('trust-vote');
+
+    // 1. Set 50% trust
+    lattice.trustScores[keys.publicKey] = 50;
+
+    // 2. Open
+    const open = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 100,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 500, keys.privateKey);
+    lattice.processBlock(open);
+
+    // 3. Proposal
+    const prop = createSignedBlock({
+        type: 'proposal',
+        account: keys.publicKey,
+        previous: open.hash,
+        balance: 90, // Paid 10 BOB fee
+        link: 'PROP',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(open.hash),
+        payload: { title: 'Test', action: 'UPDATE_DEMURRAGE', rate: 0.1, target: '', amount: 0, endTime: new Date(Date.now() + 3600000).toISOString() }
+    }, 1000, keys.privateKey);
+    lattice.processBlock(prop);
+
+    // 4. Vote
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: keys.publicKey,
+        previous: prop.hash,
+        balance: 90, // sqrt(90) = 9.48...
+        link: prop.hash,
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(prop.hash),
+        payload: { vote: 'FOR' }
+    }, 2000, keys.privateKey);
+    lattice.processBlock(vote);
+
+    // Expect ~9.48 * 0.5 = 4.74...
+    assert.ok(Math.abs(lattice.proposals[prop.hash].votesFor - 4.7434) < 0.01, 'trust-weighted power should be ~4.74');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2215,6 +2266,7 @@ function run() {
     testMarketBidExpiry();
     testReputationSlashing();
     testVerifyIdentity();
+    testTrustWeightedGovernance();
     console.log('Node replay semantics tests passed.');
 }
 

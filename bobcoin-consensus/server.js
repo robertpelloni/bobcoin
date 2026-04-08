@@ -64,11 +64,13 @@ gossipLoop();
 app.get('/status', (req, res) => {
     res.json({
         status: 'online',
-        engine: 'Node-Lattice v7.1.0',
+        engine: 'Node-Lattice v8.97.0',
         stateHash: lattice.stateHash,
         merkleRoot: lattice.merkleRoot,
         chains: Object.keys(lattice.chains).length,
-        blocks: Object.keys(lattice.blocks).length
+        blocks: Object.keys(lattice.blocks).length,
+        identities: lattice.identities,
+        trustScores: lattice.trustScores
     });
 });
 

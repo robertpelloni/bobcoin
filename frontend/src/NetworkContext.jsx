@@ -6,6 +6,8 @@ const NetworkContext = createContext();
 export function NetworkProvider({ children }) {
     const [heartbeat, setHeartbeat] = useState(null);
     const [lastBlock, setLastBlock] = useState(null);
+    const [identities, setIdentities] = useState({});
+    const [trustScores, setTrustScores] = useState({});
 
     useEffect(() => {
         const wsUrl = LATTICE_URL.replace('http', 'ws') + '/heartbeat';
@@ -19,6 +21,8 @@ export function NetworkProvider({ children }) {
                     setLastBlock(data.block);
                 } else if (data.type === 'STATS' || !data.type) {
                     setHeartbeat(data);
+                    if (data.identities) setIdentities(data.identities);
+                    if (data.trustScores) setTrustScores(data.trustScores);
                 }
             };
             ws.onclose = () => {
@@ -31,7 +35,7 @@ export function NetworkProvider({ children }) {
     }, []);
 
     return (
-        <NetworkContext.Provider value={{ heartbeat, lastBlock }}>
+        <NetworkContext.Provider value={{ heartbeat, lastBlock, identities, trustScores }}>
             {children}
         </NetworkContext.Provider>
     );

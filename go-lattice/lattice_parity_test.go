@@ -195,6 +195,72 @@ func TestVerifyIdentity(t *testing.T) {
 	}
 }
 
+func TestTrustWeightedGovernance(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("trust-vote-test", 0)
+
+	// 1. Slash to 50% trust
+	l.TrustScores[keys["publicKey"]] = 50.0
+
+	// 2. Open
+	open := &Block{
+		Type:          "open",
+		Account:       keys["publicKey"],
+		Previous:      nil,
+		Balance:       1000,
+		StakedBalance: 0,
+		Height:        0,
+		Link:          "SYSTEM_GENESIS",
+		Timestamp:     500,
+	}
+	signTestBlock(t, open, keys["privateKey"])
+	l.ProcessBlock(open, true)
+
+	// 3. Propose something
+	prop := &Block{
+		Type:     "proposal",
+		Account:  keys["publicKey"],
+		Previous: &open.Hash,
+		Balance:  990, // Pay 10 fee
+		Height:   1,
+		Spora:    validSpora(open.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Test",
+			"action":  "UPDATE_DEMURRAGE",
+			"rate":    0.0002,
+			"endTime": time.Now().Add(time.Hour).Format(time.RFC3339),
+		},
+		Timestamp: 1000,
+	}
+	signTestBlock(t, prop, keys["privateKey"])
+	if err := l.ProcessBlock(prop, true); err != nil {
+		t.Fatalf("failed to process prop: %v", err)
+	}
+
+	// 4. Vote FOR
+	vote := &Block{
+		Type:     "vote",
+		Account:  keys["publicKey"],
+		Previous: &prop.Hash,
+		Balance:  l.GetBalance(keys["publicKey"], 2000),
+		Link:     prop.Hash,
+		Height:   2,
+		Spora:    validSpora(prop.Hash),
+		Payload:  map[string]interface{}{"vote": "FOR"},
+		Timestamp: 2000,
+	}
+	signTestBlock(t, vote, keys["privateKey"])
+	if err := l.ProcessBlock(vote, true); err != nil {
+		t.Fatalf("failed to process vote: %v", err)
+	}
+
+	// power = sqrt(990) * 0.5 = 31.464... * 0.5 = 15.732...
+	p := l.Proposals[prop.Hash].(map[string]interface{})
+	if math.Abs(p["votesFor"].(float64)-15.732) > 0.01 {
+		t.Fatalf("expected trust-weighted vote power ~15.732, got %v", p["votesFor"])
+	}
+}
+
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
 	participants := []string{"alice", "bob", "carol"}
 	addr1 := deterministicMultisigAddress(participants)

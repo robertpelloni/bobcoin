@@ -243,6 +243,11 @@ export class Lattice {
         }
     }
 
+    getStakingRewardRate() {
+        // Base reward rate (~5% APY in ms)
+        return 0.05 / (365 * 24 * 60 * 60 * 1000);
+    }
+
     getTrustScore(account) {
         return (this.trustScores && this.trustScores[account] !== undefined) ? this.trustScores[account] : 100.0;
     }
@@ -608,14 +613,19 @@ export class Lattice {
             }
         } else if (block.type === 'stake_unlock') {
             // Unlocking funds from staking
-            const amount = block.balance - previousBalance;
-            if (amount <= 0) throw new Error("Stake unlock must increase liquid balance");
+            const amount = (frontier.staked_balance || 0) - block.staked_balance;
+            if (amount <= 0) throw new Error("Stake unlock must decrease staked balance");
             
-            const expectedStaked = (frontier.staked_balance || 0) - amount;
-            if (Math.abs(block.staked_balance - expectedStaked) > epsilon) {
-                throw new Error("Invalid staked balance after unlock");
+            // Apply Reputation-Based Staking Bonus
+            const elapsed = block.timestamp - frontier.timestamp;
+            let reward = 0;
+            if (elapsed > 0) {
+                reward = (frontier.staked_balance || 0) * this.getStakingRewardRate() * elapsed * (this.getTrustScore(account) / 100.0);
             }
-            if (expectedStaked < -epsilon) throw new Error("Insufficient staked balance");
+            const expectedBalance = previousBalance + amount + reward;
+            if (Math.abs(block.balance - expectedBalance) > epsilon) {
+                throw new Error(`Invalid balance for stake unlock. Expected ~${expectedBalance} (including reward ${reward}), got ${block.balance}`);
+            }
 
         } else {
             throw new Error("Invalid block type");

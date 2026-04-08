@@ -2388,6 +2388,60 @@ function testDynamicSlashingAndFees() {
     assert.equal(lattice.getTrustScore(keys.publicKey), 35, 'trust slashed by 15 to 35');
 }
 
+function testReputationStaking() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('stake');
+
+    // 1. Open and lock 1000
+    const open = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 2000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1000, keys.privateKey);
+    lattice.processBlock(open);
+
+    const prevBalance = lattice.getBalance(keys.publicKey, 1000); // 2000
+    const lockAmount = 1000;
+    const lock = createSignedBlock({
+        type: 'stake_lock',
+        account: keys.publicKey,
+        previous: open.hash,
+        balance: prevBalance - lockAmount,
+        link: 'STAKE',
+        height: 1,
+        staked_balance: lockAmount,
+        spora: validSpora(open.hash)
+    }, 1000, keys.privateKey); // Same timestamp to avoid decay
+    lattice.processBlock(lock);
+
+    // 2. Set 50% trust
+    lattice.trustScores[keys.publicKey] = 50;
+
+    // 3. Unlock after 1 year
+    const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+    const unlockTs = 1000 + oneYearMs;
+    const reward = lockAmount * 0.05 * 0.5; // 25 BOB
+    const expectedLiquid = lattice.getBalance(keys.publicKey, unlockTs) + lockAmount + reward;
+
+    const unlock = createSignedBlock({
+        type: 'stake_unlock',
+        account: keys.publicKey,
+        previous: lock.hash,
+        balance: expectedLiquid,
+        link: 'UNSTAKE',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(lock.hash)
+    }, unlockTs, keys.privateKey);
+    lattice.processBlock(unlock);
+
+    assert.ok(Math.abs(lattice.getBalance(keys.publicKey, unlockTs) - expectedLiquid) < 0.1, 'staking reward should be ~25 BOB');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2411,6 +2465,7 @@ function run() {
     testAutomatedSlashing();
     testTrustRecovery();
     testDynamicSlashingAndFees();
+    testReputationStaking();
     console.log('Node replay semantics tests passed.');
 }
 

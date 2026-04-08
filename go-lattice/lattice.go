@@ -184,6 +184,11 @@ func (l *Lattice) Recovery() {
 	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", recovered, l.StateHash[:16])
 }
 
+func (l *Lattice) GetStakingRewardRate() float64 {
+	// Base reward rate (~5% APY in ms)
+	return 0.05 / (365 * 24 * 60 * 60 * 1000)
+}
+
 func (l *Lattice) GetFeeMultiplier(account string) float64 {
 	trust := l.GetTrustScore(account)
 	// Trust 100 = 1.0x, Trust 50 = 2.0x, Trust 0 = 3.0x
@@ -487,15 +492,19 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return errors.New("invalid staked balance")
 		}
 	} else if block.Type == "stake_unlock" {
-		amount := block.Balance - prevBalance
+		amount := prevStaked - block.StakedBalance
 		if amount <= 0 {
-			return errors.New("stake unlock must increase liquid balance")
+			return errors.New("stake unlock must decrease staked balance")
 		}
-		if math.Abs(block.StakedBalance-(prevStaked-amount)) > epsilon {
-			return errors.New("invalid staked balance")
+		// Apply Reputation-Based Staking Bonus
+		elapsed := block.Timestamp - head.Timestamp
+		reward := 0.0
+		if elapsed > 0 {
+			reward = prevStaked * l.GetStakingRewardRate() * float64(elapsed) * (l.GetTrustScore(block.Account) / 100.0)
 		}
-		if block.StakedBalance < -epsilon {
-			return errors.New("insufficient staked balance")
+		expectedBalance := prevBalance + amount + reward
+		if math.Abs(block.Balance-expectedBalance) > epsilon {
+			return fmt.Errorf("invalid balance for stake unlock. Expected ~%f (including reward %f)", expectedBalance, reward)
 		}
 	} else if block.Type == "amm_swap" {
 		payload, ok := block.Payload.(map[string]interface{})

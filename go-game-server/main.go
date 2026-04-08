@@ -111,12 +111,16 @@ type SignalMessage struct {
 	RoomID    string      `json:"roomID,omitempty"`
 	Initiator bool        `json:"initiator,omitempty"`
 	Signal    interface{} `json:"signal,omitempty"`
+	PublicKey string      `json:"publicKey,omitempty"`
+	Trust     float64     `json:"trust,omitempty"`
 }
 
 type MatchConnection struct {
-	conn     *websocket.Conn
-	opponent *MatchConnection
-	roomID   string
+	conn      *websocket.Conn
+	opponent  *MatchConnection
+	roomID    string
+	publicKey string
+	trust     float64
 }
 
 type Service struct {
@@ -530,7 +534,7 @@ func (s *Service) getTrustScore(account string) float64 {
 	if account == "" {
 		return 100.0
 	}
-	resp, err := http.Get(fmt.Sprintf("%s/status", s.config.LatticeURL))
+	resp, err := http.Get(fmt.Sprintf("%s/status", s.cfg.LatticeURL))
 	if err != nil {
 		return 100.0
 	}

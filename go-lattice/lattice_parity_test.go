@@ -435,6 +435,63 @@ func TestDynamicPenaltyAndFees(t *testing.T) {
 	}
 }
 
+func TestReputationStaking(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("stake-test", 0)
+
+	// 1. Setup account and lock 1000 BOB
+	genesis := makeGenesisBlock(keys, 2000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	l.ProcessBlock(genesis, true)
+
+	lockAmount := 1000.0
+	lock := &Block{
+		Type:          "stake_lock",
+		Account:       keys["publicKey"],
+		Previous:      &genesis.Hash,
+		Balance:       l.GetBalance(keys["publicKey"], 1000) - lockAmount,
+		StakedBalance: lockAmount,
+		Height:        1,
+		Spora:         validSpora(genesis.Hash),
+		Timestamp:     1000,
+	}
+	signTestBlock(t, lock, keys["privateKey"])
+	l.ProcessBlock(lock, true)
+
+	// 2. Set 50% trust
+	l.TrustScores[keys["publicKey"]] = 50.0
+
+	// 3. Unlock after 1 year (roughly 31.5B ms)
+	// Base reward = 1000 * 0.05 = 50 BOB
+	// Trust weighted reward = 50 * 0.5 = 25 BOB
+	oneYearMs := int64(365 * 24 * 60 * 60 * 1000)
+	unlockTs := int64(1000) + oneYearMs
+	
+	// Balance should be prev + amount + reward
+	liquidDecay := l.GetBalance(keys["publicKey"], unlockTs)
+	reward := lockAmount * 0.05 * 0.5
+	expectedLiquid := liquidDecay + lockAmount + reward
+
+	unlock := &Block{
+		Type:          "stake_unlock",
+		Account:       keys["publicKey"],
+		Previous:      &lock.Hash,
+		Balance:       expectedLiquid,
+		StakedBalance: 0,
+		Height:        2,
+		Spora:         validSpora(lock.Hash),
+		Timestamp:     unlockTs,
+	}
+	signTestBlock(t, unlock, keys["privateKey"])
+	if err := l.ProcessBlock(unlock, true); err != nil {
+		t.Fatalf("failed to process trust-weighted unlock: %v", err)
+	}
+
+	if math.Abs(l.Chains[keys["publicKey"]][2].Balance-expectedLiquid) > 0.1 {
+		t.Fatalf("expected liquid balance %v, got %v", expectedLiquid, l.Chains[keys["publicKey"]][2].Balance)
+	}
+}
+
 func TestDeterministicMultisigAddressIsStable(t *testing.T) {
 	participants := []string{"alice", "bob", "carol"}
 	addr1 := deterministicMultisigAddress(participants)

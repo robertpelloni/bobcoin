@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.103.0] - 2026-04-06
+
+### Added
+- Implemented **Reputation-Based Staking Boost**:
+  - Staking rewards are now scaled by the node's `TrustScore`.
+  - **Base APY**: 5% (inflationary reward upon unlock).
+  - **Trust Multiplier**: `reward = baseReward * (trustScore / 100.0)`.
+  - Added regressions `TestReputationStaking` in Go and `testReputationStaking` in Node.
+- Hardened Staking Lifecycle:
+  - Refactored `stake_unlock` to determine the unlock amount based on the delta in `staked_balance` rather than the increase in liquid balance.
+  - This prevents ambiguity during reward calculations and ensures the staked principal is correctly returned.
+
+### Changed
+- Refined `RhythmGame.jsx` to securely retrieve and transmit the user's public key for trust-based matchmaking.
+- Hardened `go-game-server` and `go-supertorrent` signaling to correctly route low-trust nodes to quarantine pools.
+
+### Validation
+- All 8 mirrored scenarios passed.
+- New reputation-based staking regressions passed in both Go and Node while correctly accounting for year-long demurrage windows.
+
 ## [8.102.0] - 2026-04-06
 
 ### Added

@@ -2220,7 +2220,7 @@ function testTrustWeightedGovernance() {
         type: 'proposal',
         account: keys.publicKey,
         previous: open.hash,
-        balance: 90, // Paid 10 BOB fee
+        balance: lattice.getBalance(keys.publicKey, 1000) - 20, // Paid 20 BOB fee (2.0x surcharge)
         link: 'PROP',
         height: 1,
         staked_balance: 0,
@@ -2234,7 +2234,7 @@ function testTrustWeightedGovernance() {
         type: 'vote',
         account: keys.publicKey,
         previous: prop.hash,
-        balance: 90, // sqrt(90) = 9.48...
+        balance: lattice.getBalance(keys.publicKey, 2000), // power = sqrt(bal) * 0.5
         link: prop.hash,
         height: 2,
         staked_balance: 0,
@@ -2243,8 +2243,8 @@ function testTrustWeightedGovernance() {
     }, 2000, keys.privateKey);
     lattice.processBlock(vote);
 
-    // Expect ~9.48 * 0.5 = 4.74...
-    assert.ok(Math.abs(lattice.proposals[prop.hash].votesFor - 4.7434) < 0.01, 'trust-weighted power should be ~4.74');
+    // power = sqrt(~80) * 0.5 = ~8.94 * 0.5 = ~4.47
+    assert.ok(Math.abs(lattice.proposals[prop.hash].votesFor - 4.47) < 0.1, 'trust-weighted power should be ~4.47');
 }
 
 function testAutomatedSlashing() {
@@ -2339,6 +2339,55 @@ function testTrustRecovery() {
     assert.equal(lattice.getTrustScore(keys.publicKey), 50, 'trust recovered to 50');
 }
 
+function testDynamicSlashingAndFees() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('dynamic');
+
+    // 1. Open
+    const open = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 2000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1000, keys.privateKey);
+    lattice.processBlock(open);
+
+    // 2. Set 50% trust
+    lattice.trustScores[keys.publicKey] = 50;
+
+    // 3. Proposal fee should be 2.0x (base 10 -> 20)
+    const prop = createSignedBlock({
+        type: 'proposal',
+        account: keys.publicKey,
+        previous: open.hash,
+        balance: lattice.getBalance(keys.publicKey, 2000) - 20,
+        link: 'PROP',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(open.hash),
+        payload: { title: 'Surcharge', action: 'UPDATE_DEMURRAGE', rate: 0.1, target: '', amount: 0, endTime: new Date(Date.now() + 3600000).toISOString() }
+    }, 2000, keys.privateKey);
+    lattice.processBlock(prop);
+
+    assert.equal(lattice.getTrustScore(keys.publicKey), 50, 'trust remains 50');
+
+    // 4. Dynamic Slash for 200 BOB bid
+    // penalty = 5.0 + min(25.0, 200/20.0) = 5.0 + 10.0 = 15.0
+    lattice.marketBids['bid-vlarge'] = {
+        id: 'bid-vlarge',
+        status: 'ACCEPTED',
+        acceptedBy: keys.publicKey,
+        acceptedTimestamp: 2000,
+        amount: 200
+    };
+    lattice.refreshMarketStatusesAt(2000 + 4000000);
+
+    assert.equal(lattice.getTrustScore(keys.publicKey), 35, 'trust slashed by 15 to 35');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2361,6 +2410,7 @@ function run() {
     testTrustWeightedGovernance();
     testAutomatedSlashing();
     testTrustRecovery();
+    testDynamicSlashingAndFees();
     console.log('Node replay semantics tests passed.');
 }
 

@@ -175,15 +175,17 @@ export class Lattice {
             if (!bid) continue;
             if (bid.status === 'OPEN' && bid.expiry && atMs > bid.expiry) {
                 bid.status = 'EXPIRED';
-			} else if (bid.status === 'ACCEPTED') {
+            } else if (bid.status === 'ACCEPTED') {
                 // Automated Slashing for storage non-compliance
                 // Winner must submit 'storage_audit_pass' block for the magnet within 1 hour
                 if (bid.acceptedTimestamp && atMs > bid.acceptedTimestamp + 3600000) {
                     bid.status = 'FAILED';
                     const target = bid.acceptedBy;
+                    // Dynamic Slashing: penalty scales with bid size
+                    const penalty = 5.0 + Math.min(25.0, (bid.amount || 0) / 20.0);
                     const current = this.getTrustScore(target);
-                    this.trustScores[target] = Math.max(0, current - 10.0);
-                    console.log(`[Lattice] Automated Slashing: ${target} failed storage audit for bid ${bid.id}. Trust reduced to ${this.trustScores[target]}`);
+                    this.trustScores[target] = Math.max(0, current - penalty);
+                    console.log(`[Lattice] Dynamic Slashing: ${target} failed storage audit for bid ${bid.id}. Trust reduced by ${penalty} to ${this.trustScores[target]}`);
                 }
             }
         }
@@ -243,6 +245,12 @@ export class Lattice {
 
     getTrustScore(account) {
         return (this.trustScores && this.trustScores[account] !== undefined) ? this.trustScores[account] : 100.0;
+    }
+
+    getFeeMultiplier(account) {
+        const trust = this.getTrustScore(account);
+        // Trust 100 = 1.0x, Trust 50 = 2.0x, Trust 0 = 3.0x
+        return 1.0 + (100.0 - trust) / 50.0;
     }
 
     /**
@@ -356,9 +364,10 @@ export class Lattice {
             this.pending[account] = pendingList.filter(p => p.hash !== sendBlockHash);
 
         } else if (block.type === 'proposal') {
-            // A proposal costs the current proposalFee
-            if (Math.abs(block.balance - (previousBalance - this.proposalFee)) > epsilon) {
-                throw new Error(`Proposal creation costs exactly ${this.proposalFee} BOB. Expected ~${previousBalance - this.proposalFee}, got ${block.balance}`);
+            // A proposal costs the current proposalFee plus reputation surcharge
+            const expectedFee = this.proposalFee * this.getFeeMultiplier(account);
+            if (Math.abs(block.balance - (previousBalance - expectedFee)) > epsilon) {
+                throw new Error(`Proposal creation costs ${expectedFee} BOB (including reputation surcharge). Expected ~${previousBalance - expectedFee}, got ${block.balance}`);
             }
 
             if (!block.payload || !block.payload.title || !block.payload.endTime) {
@@ -499,9 +508,10 @@ export class Lattice {
             swap.claimer = account;
 
         } else if (block.type === 'mint_nft') {
-            // Minting an NFT costs the current nftMintFee
-            if (Math.abs(block.balance - (previousBalance - this.nftMintFee)) > epsilon) {
-                throw new Error(`NFT Minting costs exactly ${this.nftMintFee} BOB`);
+            // Minting an NFT costs the current nftMintFee plus reputation surcharge
+            const expectedFee = this.nftMintFee * this.getFeeMultiplier(account);
+            if (Math.abs(block.balance - (previousBalance - expectedFee)) > epsilon) {
+                throw new Error(`NFT Minting costs exactly ${expectedFee} BOB (including reputation surcharge)`);
             }
             if (!block.payload || !block.payload.name || !block.payload.magnet) {
                 throw new Error("Invalid NFT metadata");

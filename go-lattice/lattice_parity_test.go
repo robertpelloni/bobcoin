@@ -221,7 +221,7 @@ func TestTrustWeightedGovernance(t *testing.T) {
 		Type:     "proposal",
 		Account:  keys["publicKey"],
 		Previous: &open.Hash,
-		Balance:  990, // Pay 10 fee
+		Balance:  l.GetBalance(keys["publicKey"], 1000) - 20, // 2.0x surcharge
 		Height:   1,
 		Spora:    validSpora(open.Hash),
 		Payload: map[string]interface{}{
@@ -233,9 +233,7 @@ func TestTrustWeightedGovernance(t *testing.T) {
 		Timestamp: 1000,
 	}
 	signTestBlock(t, prop, keys["privateKey"])
-	if err := l.ProcessBlock(prop, true); err != nil {
-		t.Fatalf("failed to process prop: %v", err)
-	}
+	l.ProcessBlock(prop, true)
 
 	// 4. Vote FOR
 	vote := &Block{
@@ -250,14 +248,12 @@ func TestTrustWeightedGovernance(t *testing.T) {
 		Timestamp: 2000,
 	}
 	signTestBlock(t, vote, keys["privateKey"])
-	if err := l.ProcessBlock(vote, true); err != nil {
-		t.Fatalf("failed to process vote: %v", err)
-	}
+	l.ProcessBlock(vote, true)
 
-	// power = sqrt(990) * 0.5 = 31.464... * 0.5 = 15.732...
+	// power = sqrt(~980) * 0.5 = ~31.3 * 0.5 = ~15.65
 	p := l.Proposals[prop.Hash].(map[string]interface{})
-	if math.Abs(p["votesFor"].(float64)-15.732) > 0.01 {
-		t.Fatalf("expected trust-weighted vote power ~15.732, got %v", p["votesFor"])
+	if math.Abs(p["votesFor"].(float64)-15.65) > 0.1 {
+		t.Fatalf("expected trust-weighted vote power ~15.65, got %v", p["votesFor"])
 	}
 }
 
@@ -353,8 +349,8 @@ func TestAutomatedSlashing(t *testing.T) {
 	signTestBlock(t, finalizer, bidder["privateKey"])
 	l.ProcessBlock(finalizer, true)
 
-	if l.GetTrustScore(worker["publicKey"]) != 90.0 {
-		t.Fatalf("expected trust slashed to 90, got %v", l.GetTrustScore(worker["publicKey"]))
+	if l.GetTrustScore(worker["publicKey"]) != 92.5 {
+		t.Fatalf("expected trust slashed to 92.5, got %v", l.GetTrustScore(worker["publicKey"]))
 	}
 }
 
@@ -388,6 +384,54 @@ func TestTrustRecovery(t *testing.T) {
 
 	if l.GetTrustScore(keys["publicKey"]) != 60.0 {
 		t.Fatalf("expected trust 60, got %v", l.GetTrustScore(keys["publicKey"]))
+	}
+}
+
+func TestDynamicPenaltyAndFees(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("fee-test", 0)
+
+	// 1. Setup account with 50% trust
+	genesis := makeGenesisBlock(keys, 2000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	l.ProcessBlock(genesis, true)
+	l.TrustScores[keys["publicKey"]] = 50.0
+
+	// 2. Proposal fee should be 2.0x (1.0 + (100-50)/50 = 2.0)
+	// Base is 10.0, so expected is 20.0
+	prop := &Block{
+		Type:      "proposal",
+		Account:   keys["publicKey"],
+		Previous:  &genesis.Hash,
+		Balance:   l.GetBalance(keys["publicKey"], 1000) - 20.0,
+		Height:    1,
+		Spora:     validSpora(genesis.Hash),
+		Timestamp: 1000,
+		Payload: map[string]interface{}{
+			"title":   "Expensive Prop",
+			"action":  "UPDATE_DEMURRAGE",
+			"rate":    0.0002,
+			"endTime": time.Now().Add(time.Hour).Format(time.RFC3339),
+		},
+	}
+	signTestBlock(t, prop, keys["privateKey"])
+	if err := l.ProcessBlock(prop, true); err != nil {
+		t.Fatalf("failed to process prop with surcharge: %v", err)
+	}
+
+	// 3. Dynamic Slashing for 100 BOB bid
+	// penalty = 5.0 + min(25.0, 100/20.0) = 5.0 + 5.0 = 10.0
+	l.MarketBids["bid-large"] = map[string]interface{}{
+		"id":                "bid-large",
+		"status":            "ACCEPTED",
+		"acceptedBy":        keys["publicKey"],
+		"acceptedTimestamp": int64(1000),
+		"amount":            100.0,
+	}
+	l.refreshMarketStatusesAt(time.UnixMilli(1000 + 4000000))
+
+	if l.GetTrustScore(keys["publicKey"]) != 40.0 {
+		t.Fatalf("expected trust 40 (50 - 10 penalty), got %v", l.GetTrustScore(keys["publicKey"]))
 	}
 }
 

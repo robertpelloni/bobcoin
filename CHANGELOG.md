@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.101.0] - 2026-04-06
+
+### Added
+- Implemented **Dynamic Slashing Scales**:
+  - Storage market penalties now scale with bid value. 
+  - **Formula**: `penalty = 5% (base) + min(25%, bidAmount / 20)`.
+- Implemented **Reputation-Based Fee Tiers**:
+  - Accounts with low trust scores now pay a "Reputation Surcharge" on `proposal` and `mint_nft` blocks.
+  - **Multiplier**: `1.0 + (100 - trustScore) / 50.0`. (e.g., 50% trust results in 2.0x fees).
+- Added Regressions:
+  - `TestDynamicPenaltyAndFees` in Go and `testDynamicSlashingAndFees` in Node.
+
+### Changed
+- Refined `ProcessBlock` in both implementations to calculate and enforce trust-weighted fees.
+- Updated existing `TestAutomatedSlashing` to match the new dynamic penalty math.
+
+### Validation
+- All 8 mirrored scenarios passed.
+- New dynamic economic regressions passed in both Go and Node.
+
 ## [8.100.0] - 2026-04-06
 
 ### Added

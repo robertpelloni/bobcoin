@@ -184,6 +184,12 @@ func (l *Lattice) Recovery() {
 	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", recovered, l.StateHash[:16])
 }
 
+func (l *Lattice) GetFeeMultiplier(account string) float64 {
+	trust := l.GetTrustScore(account)
+	// Trust 100 = 1.0x, Trust 50 = 2.0x, Trust 0 = 3.0x
+	return 1.0 + (100.0-trust)/50.0
+}
+
 func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	if !isRecovery {
 		l.mu.Lock()
@@ -334,8 +340,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			}
 		}
 	} else if block.Type == "proposal" {
-		if math.Abs(block.Balance-(prevBalance-l.ProposalFee)) > epsilon {
-			return fmt.Errorf("proposal costs %f BOB", l.ProposalFee)
+		expectedFee := l.ProposalFee * l.GetFeeMultiplier(block.Account)
+		if math.Abs(block.Balance-(prevBalance-expectedFee)) > epsilon {
+			return fmt.Errorf("proposal costs %f BOB (including reputation surcharge)", expectedFee)
 		}
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["title"] == nil || payload["endTime"] == nil {
@@ -410,8 +417,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return fmt.Errorf("swap claim must increment balance by locked amount")
 		}
 	} else if block.Type == "mint_nft" {
-		if math.Abs(block.Balance-(prevBalance-l.NftMintFee)) > epsilon {
-			return fmt.Errorf("NFT minting costs exactly %f BOB", l.NftMintFee)
+		expectedFee := l.NftMintFee * l.GetFeeMultiplier(block.Account)
+		if math.Abs(block.Balance-(prevBalance-expectedFee)) > epsilon {
+			return fmt.Errorf("NFT minting costs exactly %f BOB (including reputation surcharge)", expectedFee)
 		}
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["name"] == nil || payload["magnet"] == nil {
@@ -846,7 +854,7 @@ func (l *Lattice) refreshMarketStatusesAt(at time.Time) {
 			if ok && ts > expiry {
 				bid["status"] = "EXPIRED"
 			}
-		} else if status == "ACCEPTED" {
+	} else if status == "ACCEPTED" {
 			// Automated Slashing for storage non-compliance
 			// Winner must submit 'storage_audit_pass' block for the magnet within 1 hour
 			var acceptedTs int64
@@ -859,9 +867,13 @@ func (l *Lattice) refreshMarketStatusesAt(at time.Time) {
 			if acceptedTs > 0 && ts > acceptedTs+3600000 {
 				bid["status"] = "FAILED"
 				target, _ := bid["acceptedBy"].(string)
+				amount, _ := bid["amount"].(float64)
+				// Dynamic Slashing: penalty scales with bid size
+				// min 5%, plus bidAmount / 20.0
+				penalty := 5.0 + math.Min(25.0, amount/20.0)
 				current := l.GetTrustScore(target)
-				l.TrustScores[target] = math.Max(0, current-10.0)
-				fmt.Printf("[Lattice] Automated Slashing: %s failed storage audit for bid %s. Trust reduced to %f\n", target, bid["id"], l.TrustScores[target])
+				l.TrustScores[target] = math.Max(0, current-penalty)
+				fmt.Printf("[Lattice] Dynamic Slashing: %s failed storage audit for bid %s. Trust reduced by %f to %f\n", target, bid["id"], penalty, l.TrustScores[target])
 			}
 		}
 	}

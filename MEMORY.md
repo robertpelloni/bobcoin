@@ -97,7 +97,11 @@
   - As of v8.79.0, `go-supertorrent/` now supports manifest registry listing via `GET /manifests`, and the Go supertorrent tests validate manifest listing alongside manifest publication and direct retrieval.
   - As of v8.78.0, `go-supertorrent/main_test.go` now also covers root status behavior plus negative-path storage errors (invalid shard base64 and missing manifest/shard 404s).
   - As of v8.80.0, `go-supertorrent/` now also exposes a compatibility proxy shell for Go-first HTTP/game orchestration paths (`/bankroll`, `/mint`, `/burn`, `/transactions`, `/fhe-oracle`, `/submit-proof`, `/market/bid`, `/market/accept`, `/market/bids`).
-  - As of v8.80.0, `go-supertorrent/main_test.go` now covers the compatibility proxy shell as well as the root-path signaling shell.
+  - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
+  - As of v8.90.0, achieve major **Go-Port Milestone**: autonomous Casino Bot ported to Go, active Governance Execution implemented for protocol actions, and AI Oracle bot-detection ported to `go-game-server`.
+  - As of v8.90.0, Completed **Vault Security Lifecycle**: frontend now supports browser-side **Cloaked Retrieval** (PBKDF2/AES-256-GCM decryption).
+  - As of v8.90.0, Enhanced **Real-Time Visualization**: 3D Dashboard now shows live **Transaction Beams** via a shared `NetworkContext` WebSocket manager.
+  - As of v8.91.0, achieved **Fixture-Driven Alignment**: Node and Go now use a shared fragment-based assembler to execute and validate the exact same set of 7 mirrored complex scenarios.
   - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
   - As of v8.81.0, `go-supertorrent/` also exposes a dedicated `/status` compatibility endpoint in addition to the root status path, and the Go tests now validate both.
   - As of v8.85.0, `go-supertorrent/`’s dedicated `/status` path now proxies the game-server status surface while the root path continues to expose local supernode shell metadata, aligning the endpoint semantics with Go-first frontend routing expectations.

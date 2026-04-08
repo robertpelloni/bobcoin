@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.91.0] - 2026-04-06
+
+### Added
+- Implemented **Fixture-Driven Scenario Assembly** across both lattice implementations:
+  - Created `go-lattice/scenario_assembler_test.go`: an automated test runner that assembles and validates all 7 mirrored parity scenarios from shared fixture fragments.
+  - Created `bobcoin-consensus/test_scenario_assembler.js`: a mirrored Node-side runner that executes the same scenario logic, ensuring cross-client semantic alignment.
+- Formalized the **Shared Parity Contract**:
+  - The shared scenario and fragment catalogs now drive actual test execution on both Node and Go, making parity drift an executable test failure.
+- Strengthened **Durable Recovery Invariants**:
+  - Fixture-driven recovery tests now assert chain length and Merkle root alignment across cold-boot reconstruction for all complex mixed-feature ledgers.
+
+### Changed
+- Refactored `go-lattice` recovery tests to use the new `ScenarioAssembler` infrastructure, reducing code duplication and improving maintainability.
+
+### Validation
+- `go test ./...` passed all 7 fixture-driven mirrored scenarios in Go.
+- `npm test` passed all 7 fixture-driven mirrored scenarios in Node.
+
 ## [8.90.0] - 2026-04-06
 
 ### Added

@@ -502,6 +502,10 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if !ok || payload["provider"] == nil || payload["username"] == nil {
 			return fmt.Errorf("invalid verify_identity payload")
 		}
+	} else if block.Type == "storage_audit_pass" {
+		if math.Abs(block.Balance-prevBalance) > epsilon {
+			return fmt.Errorf("audit pass cannot change balance")
+		}
 	} else {
 		return fmt.Errorf("invalid block type")
 	}
@@ -577,9 +581,14 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			"expiry":    expiry,
 		}
 	} else if block.Type == "accept_bid" {
-		bid := l.MarketBids[block.Link].(map[string]interface{})
+		bidRaw, ok := l.MarketBids[block.Link]
+		if !ok {
+			return fmt.Errorf("bid not found: %s", block.Link)
+		}
+		bid := bidRaw.(map[string]interface{})
 		bid["status"] = "ACCEPTED"
 		bid["acceptedBy"] = block.Account
+		bid["acceptedTimestamp"] = block.Timestamp
 	} else if block.Type == "swap_lock" {
 		payload := block.Payload.(map[string]interface{})
 		expiry := block.Timestamp + 3600000
@@ -644,6 +653,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			l.Identities[block.Account] = make(map[string]string)
 		}
 		l.Identities[block.Account][provider] = username
+	} else if block.Type == "storage_audit_pass" {
+		// satisfy the audit check
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
 		partsRaw := payload["participants"].([]interface{})
@@ -814,12 +825,29 @@ func (l *Lattice) refreshMarketStatusesAt(at time.Time) {
 			continue
 		}
 		status, _ := bid["status"].(string)
-		if status != "OPEN" {
-			continue
-		}
-		expiry, ok := bid["expiry"].(int64)
-		if ok && ts > expiry {
-			bid["status"] = "EXPIRED"
+
+		if status == "OPEN" {
+			expiry, ok := bid["expiry"].(int64)
+			if ok && ts > expiry {
+				bid["status"] = "EXPIRED"
+			}
+		} else if status == "ACCEPTED" {
+			// Automated Slashing for storage non-compliance
+			// Winner must submit 'storage_audit_pass' block for the magnet within 1 hour
+			var acceptedTs int64
+			switch v := bid["acceptedTimestamp"].(type) {
+			case int64:
+				acceptedTs = v
+			case float64:
+				acceptedTs = int64(v)
+			}
+			if acceptedTs > 0 && ts > acceptedTs+3600000 {
+				bid["status"] = "FAILED"
+				target, _ := bid["acceptedBy"].(string)
+				current := l.GetTrustScore(target)
+				l.TrustScores[target] = math.Max(0, current-10.0)
+				fmt.Printf("[Lattice] Automated Slashing: %s failed storage audit for bid %s. Trust reduced to %f\n", target, bid["id"], l.TrustScores[target])
+			}
 		}
 	}
 }

@@ -172,9 +172,19 @@ export class Lattice {
 
     refreshMarketStatusesAt(atMs) {
         for (const bid of Object.values(this.marketBids)) {
-            if (!bid || bid.status !== 'OPEN' || !bid.expiry) continue;
-            if (atMs > bid.expiry) {
+            if (!bid) continue;
+            if (bid.status === 'OPEN' && bid.expiry && atMs > bid.expiry) {
                 bid.status = 'EXPIRED';
+			} else if (bid.status === 'ACCEPTED') {
+                // Automated Slashing for storage non-compliance
+                // Winner must submit 'storage_audit_pass' block for the magnet within 1 hour
+                if (bid.acceptedTimestamp && atMs > bid.acceptedTimestamp + 3600000) {
+                    bid.status = 'FAILED';
+                    const target = bid.acceptedBy;
+                    const current = this.getTrustScore(target);
+                    this.trustScores[target] = Math.max(0, current - 10.0);
+                    console.log(`[Lattice] Automated Slashing: ${target} failed storage audit for bid ${bid.id}. Trust reduced to ${this.trustScores[target]}`);
+                }
             }
         }
     }
@@ -232,7 +242,7 @@ export class Lattice {
     }
 
     getTrustScore(account) {
-        return this.trustScores[account] !== undefined ? this.trustScores[account] : 100.0;
+        return (this.trustScores && this.trustScores[account] !== undefined) ? this.trustScores[account] : 100.0;
     }
 
     /**
@@ -445,6 +455,7 @@ export class Lattice {
             // Mark bid as accepted
             bid.status = 'ACCEPTED';
             bid.acceptedBy = account;
+            bid.acceptedTimestamp = block.timestamp;
 
         } else if (block.type === 'achievement_unlock') {
             // Achievement blocks are metadata only, no balance change allowed

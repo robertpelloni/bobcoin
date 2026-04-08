@@ -2247,6 +2247,63 @@ function testTrustWeightedGovernance() {
     assert.ok(Math.abs(lattice.proposals[prop.hash].votesFor - 4.7434) < 0.01, 'trust-weighted power should be ~4.74');
 }
 
+function testAutomatedSlashing() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('worker');
+
+    // 1. Genesis/Open
+    const open = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 100,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1000, keys.privateKey);
+    lattice.processBlock(open);
+
+    // 2. Bid
+    const bid = {
+        id: 'bid-1',
+        creator: 'bidder',
+        amount: 100,
+        status: 'OPEN',
+        expiry: 20000000
+    };
+    lattice.marketBids[bid.id] = bid;
+
+    // 3. Accept
+    const accept = createSignedBlock({
+        type: 'accept_bid',
+        account: keys.publicKey,
+        previous: open.hash,
+        balance: lattice.getBalance(keys.publicKey, 1000000) + bid.amount,
+        link: bid.id,
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(open.hash),
+    }, 1000000, keys.privateKey);
+    lattice.processBlock(accept);
+
+    assert.equal(lattice.getTrustScore(keys.publicKey), 100, 'initial trust 100');
+
+    // 4. Advance time 2 hours (audit failure)
+    const failBlock = createSignedBlock({
+        type: 'achievement_unlock',
+        account: keys.publicKey,
+        previous: accept.hash,
+        balance: lattice.getBalance(keys.publicKey, 5000000),
+        link: 'FAIL',
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(accept.hash),
+    }, 5000000, keys.privateKey); // 1,000,000 + 4,000,000 (> 3,600,000)
+    lattice.processBlock(failBlock);
+
+    assert.equal(lattice.getTrustScore(keys.publicKey), 90, 'trust slashed to 90');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2267,6 +2324,7 @@ function run() {
     testReputationSlashing();
     testVerifyIdentity();
     testTrustWeightedGovernance();
+    testAutomatedSlashing();
     console.log('Node replay semantics tests passed.');
 }
 

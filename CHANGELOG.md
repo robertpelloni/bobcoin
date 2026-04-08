@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.99.0] - 2026-04-06
+
+### Added
+- Implemented **Automated Storage Market Slashing**:
+  - Supernodes that accept a storage bid but fail to provide proof of compliance (`storage_audit_pass`) within 1 hour are automatically slashed by 10% trust.
+  - Added `storage_audit_pass` block type to Go and Node Lattices.
+  - Added `acceptedTimestamp` to `MarketBids` state to track audit deadlines.
+- Added Regressions:
+  - `TestAutomatedSlashing` in Go and `testAutomatedSlashing` in Node.
+  - Verified that temporal advancement triggers trust reduction for non-compliant workers.
+
+### Changed
+- Refined `refreshMarketStatusesAt` in both implementations to handle the `ACCEPTED -> FAILED` state transition and reputation penalty.
+- Hardened `Lattice.js` (Node) to properly initialize and access the `trustScores` map.
+
+### Validation
+- All 8 mirrored scenarios passed.
+- New automated slashing regressions passed in both Go and Node.
+
 ## [8.98.0] - 2026-04-06
 
 ### Added

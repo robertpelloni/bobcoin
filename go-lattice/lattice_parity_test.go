@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"fmt"
 	"math"
 	"path/filepath"
 	"sort"
@@ -258,6 +259,103 @@ func TestTrustWeightedGovernance(t *testing.T) {
 	p := l.Proposals[prop.Hash].(map[string]interface{})
 	if math.Abs(p["votesFor"].(float64)-15.732) > 0.01 {
 		t.Fatalf("expected trust-weighted vote power ~15.732, got %v", p["votesFor"])
+	}
+}
+
+func TestAutomatedSlashing(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	bidder := DeriveKeypair("bidder", 0)
+	worker := DeriveKeypair("worker", 0)
+
+	// 1. Setup bidder and worker
+	genesis := makeGenesisBlock(bidder, 1000)
+	signTestBlock(t, genesis, bidder["privateKey"])
+	l.ProcessBlock(genesis, true)
+
+	// 1. Setup bidder and worker
+	send := &Block{
+		Type:     "send",
+		Account:  bidder["publicKey"],
+		Previous: &genesis.Hash,
+		Balance:  900,
+		Height:   1,
+		Link:     worker["publicKey"],
+		Spora:    validSpora(genesis.Hash),
+		Timestamp: 200,
+	}
+	signTestBlock(t, send, bidder["privateKey"])
+	l.ProcessBlock(send, true)
+
+	receive := &Block{
+		Type:      "open",
+		Account:   worker["publicKey"],
+		Previous:  nil,
+		Balance:   100,
+		Height:    0,
+		Link:      send.Hash,
+		Spora:     validSporaForOpenAccount(worker["publicKey"]),
+		Timestamp: 300,
+	}
+	signTestBlock(t, receive, worker["privateKey"])
+	if err := l.ProcessBlock(receive, true); err != nil {
+		t.Fatalf("failed to process receive: %v", err)
+	}
+
+	// 2. Bid
+	base := int64(1000000)
+	bid := &Block{
+		Type:     "market_bid",
+		Account:  bidder["publicKey"],
+		Previous: &send.Hash,
+		Balance:  l.GetBalance(bidder["publicKey"], base) - 50,
+		Height:   2,
+		Link:     "STORAGE_MARKET",
+		Spora:    validSpora(send.Hash),
+		Payload: map[string]interface{}{
+			"magnet": "m1",
+			"expiry": float64(base + 10000000),
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, bid, bidder["privateKey"])
+	l.ProcessBlock(bid, true)
+
+	// 3. Accept Bid
+	accept := &Block{
+		Type:     "accept_bid",
+		Account:  worker["publicKey"],
+		Previous: &receive.Hash,
+		Balance:  l.GetBalance(worker["publicKey"], base+1000) + 50,
+		Height:   1,
+		Link:     bid.Hash,
+		Spora:    validSpora(receive.Hash),
+		Timestamp: base + 1000,
+	}
+	signTestBlock(t, accept, worker["privateKey"])
+	if err := l.ProcessBlock(accept, true); err != nil {
+		t.Fatalf("failed to process accept: %v", err)
+	}
+
+	if l.GetTrustScore(worker["publicKey"]) != 100.0 {
+		t.Fatalf("expected initial trust 100")
+	}
+
+	// 4. Advance time 2 hours (audit failure)
+	finalizer := &Block{
+		Type:      "achievement_unlock",
+		Account:   bidder["publicKey"],
+		Previous:  &bid.Hash,
+		Balance:   l.GetBalance(bidder["publicKey"], base+8000000),
+		Height:    3,
+		Link:      "FAIL",
+		Spora:     validSpora(bid.Hash),
+		Timestamp: base + 8000000,
+	}
+	signTestBlock(t, finalizer, bidder["privateKey"])
+	l.ProcessBlock(finalizer, true)
+
+	if l.GetTrustScore(worker["publicKey"]) != 90.0 {
+		t.Fatalf("expected trust slashed to 90, got %v", l.GetTrustScore(worker["publicKey"]))
 	}
 }
 

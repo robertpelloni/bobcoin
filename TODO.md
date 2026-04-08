@@ -9,7 +9,8 @@
 - [ ] **SP1 ZK Service Robustness:** Current `/submit-proof` path is now ported into `go-game-server/` with optional verification-bridge support, but full parity still requires wiring it to the real Rust backend verification endpoint and semantics when SP1 is running.
 
 ## Recommended Next Pass
-- [x] **Cloaked Retrieval Flow:** Added first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI using client-side AES-256-GCM decryption.
+- [x] **Cloaked Retrieval Flow**: Added first-class encrypted download/decrypt support in the Vault so cloaked files can be restored directly inside the UI using client-side AES-256-GCM decryption.
+- [x] **Remove temporary legacy block shim**: Audited all frontend pages and ensured explicit `height` and `staked_balance` fields are provided, enabling the removal of the backend compatibility shim.
 - [x] **Chunk Splitting Audit:** Route-level lazy loading and manual vendor chunking now split the Bobcoin frontend into route chunks plus dedicated `node-seal`, `three`, router, React, and crypto vendor chunks. The remaining size warning was addressed by aggressively deferring the 3D topology component, resulting in a ~50kB main bundle.
 - [x] **Exportable Comparative Source Diagnostics:** Vault now exports retained recovery-report comparisons, source leaderboards, trend buckets, and per-source reliability summaries as portable JSON.
 - [x] **Signed Shareable Diagnostics Packages:** Vault now exports and verifies signed comparative diagnostics packages using Bobcoin wallet signatures.

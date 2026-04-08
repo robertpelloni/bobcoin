@@ -53,21 +53,18 @@ export async function checkAndUnlock(achievementId, keypair, existingChain = [])
         // 2. Fetch current chain state
         const frontierData = await getLatticeFrontier(keypair.publicKey);
         const previous = frontierData.frontier || null;
-        const currentBalance = existingChain.length > 0
-            ? existingChain[existingChain.length - 1].balance
-            : (frontierData.balance || 0);
-        const currentStakedBalance = existingChain.length > 0
-            ? (existingChain[existingChain.length - 1].staked_balance || 0)
-            : (frontierData.staked_balance || 0);
+        const balance = frontierData.balance || 0;
+        const staked = frontierData.staked_balance || 0;
+        const height = previous ? (frontierData.height + 1) : 0;
 
         // 3. Create achievement_unlock block
         const block = new Block({
             type: 'achievement_unlock',
             account: keypair.publicKey,
             previous,
-            balance: currentBalance,
-            staked_balance: currentStakedBalance,
-            height: existingChain.length,
+            balance: balance,
+            staked_balance: staked,
+            height: height,
             link: 'SYSTEM_ACHIEVEMENT',
             payload: ACHIEVEMENTS[achievementId]
         });

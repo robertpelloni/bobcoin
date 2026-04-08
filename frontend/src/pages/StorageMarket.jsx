@@ -98,6 +98,8 @@ export function StorageMarket() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: balance - amount,
+                staked_balance: frontRes.staked_balance || 0,
+                height: frontRes.frontier ? (frontRes.height + 1) : 0,
                 link: 'STORAGE_MARKET',
                 spora: sporaProof,
                 payload: { magnet }

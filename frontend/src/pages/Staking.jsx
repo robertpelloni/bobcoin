@@ -46,7 +46,6 @@ export function Staking() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'stake_lock',
@@ -55,7 +54,7 @@ export function Staking() {
                 balance: balance - amount,
                 staked_balance: stakedBalance + amount,
                 link: 'STAKE_LOCK',
-                height: chain.chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);
@@ -85,7 +84,6 @@ export function Staking() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'stake_unlock',
@@ -94,7 +92,7 @@ export function Staking() {
                 balance: balance + amount,
                 staked_balance: stakedBalance - amount,
                 link: 'STAKE_UNLOCK',
-                height: chain.chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);

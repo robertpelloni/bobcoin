@@ -76,6 +76,8 @@ export function Governance() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: balance, // Voting is free
+                staked_balance: frontRes.staked_balance || 0,
+                height: frontRes.frontier ? (frontRes.height + 1) : 0,
                 link: id, // Link is the proposal hash
                 spora: sporaProof,
                 payload: { vote: voteType === 'yes' ? 'FOR' : 'AGAINST' }
@@ -150,7 +152,8 @@ export function Governance() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: balance - 10,
-                staked_balance: stakedBalance,
+                staked_balance: frontRes.staked_balance || 0,
+                height: frontRes.frontier ? (frontRes.height + 1) : 0,
                 link: 'DAO_PROPOSAL',
                 spora: sporaProof,
                 payload: { title, endTime, ...actionPayload }

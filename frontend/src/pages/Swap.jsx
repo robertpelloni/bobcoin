@@ -55,10 +55,10 @@ export function Swap() {
                 account: keypair.publicKey,
                 previous: frontier.frontier,
                 balance: balance - amount,
-                staked_balance: (await getLatticeFrontier(keypair.publicKey)).staked_balance || 0,
+                staked_balance: frontier.staked_balance || 0,
                 link: 'HTLC_LOCK',
                 payload: { secretHash, recipient, amount, expiry: Date.now() + 3600000 },
-                height: (await getLatticeChain(keypair.publicKey)).chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);
@@ -88,9 +88,10 @@ export function Swap() {
                 account: keypair.publicKey,
                 previous: frontier.frontier,
                 balance: balance + amount, // Simplified for proto
+                staked_balance: frontier.staked_balance || 0,
                 link: 'HTLC_CLAIM',
                 payload: { secret: claimSecret, secretHash: claimHash },
-                height: (await getLatticeChain(keypair.publicKey)).chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);

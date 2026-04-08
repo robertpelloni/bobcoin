@@ -163,6 +163,8 @@ export function Wallet() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
+                staked_balance: frontierData.staked_balance || 0,
+                height: frontierData.frontier ? (frontierData.height + 1) : 0,
                 link: pend.hash, // Link is the send block hash we are claiming
                 spora: sporaProof
             });
@@ -235,10 +237,11 @@ export function Wallet() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
+                staked_balance: frontRes.staked_balance || 0,
+                height: frontRes.frontier ? (frontRes.height + 1) : 0,
                 link: sendAddress,
                 spora: sporaProof,
-                payload: payload,
-                height: (await getLatticeChain(keypair.publicKey)).chain.length
+                payload: payload
             });
 
             // Trigger Guardian Review

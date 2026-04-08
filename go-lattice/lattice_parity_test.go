@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/ed25519"
-	"fmt"
 	"math"
 	"path/filepath"
 	"sort"
@@ -356,6 +355,39 @@ func TestAutomatedSlashing(t *testing.T) {
 
 	if l.GetTrustScore(worker["publicKey"]) != 90.0 {
 		t.Fatalf("expected trust slashed to 90, got %v", l.GetTrustScore(worker["publicKey"]))
+	}
+}
+
+func TestTrustRecovery(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("recovery-test", 0)
+
+	// 1. Setup account with slashed trust
+	genesis := makeGenesisBlock(keys, 1000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	if err := l.ProcessBlock(genesis, true); err != nil {
+		t.Fatalf("failed to process genesis: %v", err)
+	}
+	l.TrustScores[keys["publicKey"]] = 50.0
+
+	// 2. Restore trust by burning 100 BOB (10% recovery)
+	restore := &Block{
+		Type:      "restore_trust",
+		Account:   keys["publicKey"],
+		Previous:  &genesis.Hash,
+		Balance:   l.GetBalance(keys["publicKey"], 1000) - 100,
+		Height:    1,
+		Link:      "SYSTEM_TREASURY",
+		Spora:     validSpora(genesis.Hash),
+		Timestamp: 1000,
+	}
+	signTestBlock(t, restore, keys["privateKey"])
+	if err := l.ProcessBlock(restore, true); err != nil {
+		t.Fatalf("failed to process restore: %v", err)
+	}
+
+	if l.GetTrustScore(keys["publicKey"]) != 60.0 {
+		t.Fatalf("expected trust 60, got %v", l.GetTrustScore(keys["publicKey"]))
 	}
 }
 

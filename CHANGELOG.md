@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.100.0] - 2026-04-06
+
+### Added
+- Implemented **Trust Recovery (Burn-to-Restore)**:
+  - Added `restore_trust` block type to Go and Node Lattices.
+  - Nodes can now incrementally restore their `TrustScore` by sending BOB to `SYSTEM_TREASURY` (effectively burning it).
+  - Exchange rate: 10 BOB = 1% Trust restoration.
+- Added Regressions:
+  - `TestTrustRecovery` in Go and `testTrustRecovery` in Node.
+  - Verified that burning exactly 100 BOB restores 10% trust while accounting for temporal demurrage.
+
+### Changed
+- Refined `Lattice.js` (Node) block type validation loop for improved state update ordering.
+- Hardened `go-lattice` unit tests to ensure all test blocks are correctly signed before processing.
+
+### Milestone
+- Reached **v8.100.0** with full semantic parity across governance, marketplace, reputation, and identity layers.
+
 ## [8.99.0] - 2026-04-06
 
 ### Added

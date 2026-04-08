@@ -562,6 +562,14 @@ export class Lattice {
             const { provider, username } = block.payload;
             if (!this.identities[account]) this.identities[account] = {};
             this.identities[account][provider] = username;
+        } else if (block.type === 'storage_audit_pass') {
+            if (Math.abs(block.balance - previousBalance) > epsilon) {
+                throw new Error("storage_audit_pass cannot change balance");
+            }
+        } else if (block.type === 'restore_trust') {
+            const amount = previousBalance - block.balance;
+            if (amount <= 0) throw new Error("restore_trust must burn BOB");
+            if (block.link !== 'SYSTEM_TREASURY') throw new Error("restore_trust must send to SYSTEM_TREASURY");
         } else if (block.type === 'multisig_create') {
             // Creating a multisig account costs 100 BOB
             if (Math.abs(block.balance - (previousBalance - 100)) > epsilon) {
@@ -603,10 +611,25 @@ export class Lattice {
             throw new Error("Invalid block type");
         }
 
-        // Add to data structures
         if (!this.chains[account]) this.chains[account] = [];
         this.chains[account].push(block);
         this.blocks[block.hash] = block;
+
+        // Apply state updates after persistence
+        if (block.type === 'verify_identity') {
+            const { provider, username } = block.payload;
+            if (!this.identities[account]) this.identities[account] = {};
+            this.identities[account][provider] = username;
+        } else if (block.type === 'storage_audit_pass') {
+            // No state change, just satisfies the audit check
+        } else if (block.type === 'restore_trust') {
+            const amount = previousBalance - block.balance;
+            // 10 BOB = 1% trust restoration
+            const recovery = amount / 10.0;
+            const current = this.getTrustScore(account);
+            this.trustScores[account] = Math.min(100.0, current + recovery);
+            console.log(`[Lattice] Trust Restored: ${account.substr(0, 8)} increased by ${recovery}. New Score: ${this.trustScores[account]}`);
+        }
         this.updateStateHash(block);
 
         return true;

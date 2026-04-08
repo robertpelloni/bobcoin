@@ -506,6 +506,14 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("audit pass cannot change balance")
 		}
+	} else if block.Type == "restore_trust" {
+		amount := prevBalance - block.Balance
+		if amount <= 0 {
+			return fmt.Errorf("restore trust must burn BOB")
+		}
+		if block.Link != "SYSTEM_TREASURY" {
+			return fmt.Errorf("restore trust must send to SYSTEM_TREASURY")
+		}
 	} else {
 		return fmt.Errorf("invalid block type")
 	}
@@ -655,6 +663,13 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		l.Identities[block.Account][provider] = username
 	} else if block.Type == "storage_audit_pass" {
 		// satisfy the audit check
+	} else if block.Type == "restore_trust" {
+		amount := prevBalance - block.Balance
+		// 10 BOB = 1% trust restoration
+		recovery := amount / 10.0
+		current := l.GetTrustScore(block.Account)
+		l.TrustScores[block.Account] = math.Min(100.0, current+recovery)
+		fmt.Printf("[Lattice] Trust Restored: %s increased by %f. New Score: %f\n", block.Account[:8], recovery, l.TrustScores[block.Account])
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
 		partsRaw := payload["participants"].([]interface{})

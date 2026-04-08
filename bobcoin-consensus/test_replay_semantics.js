@@ -2304,6 +2304,41 @@ function testAutomatedSlashing() {
     assert.equal(lattice.getTrustScore(keys.publicKey), 90, 'trust slashed to 90');
 }
 
+function testTrustRecovery() {
+    const lattice = new Lattice();
+    const keys = deriveKeypair('recovery');
+
+    // 1. Open
+    const open = createSignedBlock({
+        type: 'open',
+        account: keys.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1000, keys.privateKey);
+    lattice.processBlock(open);
+
+    // 2. Slash
+    lattice.trustScores[keys.publicKey] = 40;
+
+    // 3. Restore by burning 100 BOB (10% recovery)
+    const restore = createSignedBlock({
+        type: 'restore_trust',
+        account: keys.publicKey,
+        previous: open.hash,
+        balance: lattice.getBalance(keys.publicKey, 2000) - 100,
+        link: 'SYSTEM_TREASURY',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(open.hash),
+    }, 2000, keys.privateKey);
+    lattice.processBlock(restore);
+
+    assert.equal(lattice.getTrustScore(keys.publicKey), 50, 'trust recovered to 50');
+}
+
 function run() {
     testScenarioCatalogTracksMirroredReplayCoverage();
     testHistoricalVoteUsesBlockTimestamp();
@@ -2325,6 +2360,7 @@ function run() {
     testVerifyIdentity();
     testTrustWeightedGovernance();
     testAutomatedSlashing();
+    testTrustRecovery();
     console.log('Node replay semantics tests passed.');
 }
 

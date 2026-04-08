@@ -75,30 +75,32 @@ type Lattice struct {
 	Multisigs     map[string]*MultisigVault
 	Pools         map[string]*LiquidityPool // PairName -> Pool
 	Peers         map[string]*PeerInfo      // URL -> Stats
-	StateHash     string
-	MerkleRoot    string  // God-Hash of all account states
-	QuorumScore   float64 // % of network in agreement
-	DemurrageRate float64
+	StateHash       string
+	MerkleRoot      string // God-Hash of all account states
+	QuorumScore     float64
+	QuorumThreshold float64
+	DemurrageRate   float64
 }
 
 func newEphemeralLattice() *Lattice {
 	l := &Lattice{
-		Chains:        make(map[string][]*Block),
-		Blocks:        make(map[string]*Block),
-		Pending:       make(map[string][]*PendingTx),
-		Proposals:     make(map[string]interface{}),
-		Votes:         make(map[string]map[string]map[string]interface{}),
-		MarketBids:    make(map[string]interface{}),
-		Swaps:         make(map[string]*HTLCSwap),
-		Nfts:          make(map[string]interface{}),
-		Anchors:       make(map[string]interface{}),
-		Multisigs:     make(map[string]*MultisigVault),
-		Pools:         make(map[string]*LiquidityPool),
-		Peers:         make(map[string]*PeerInfo),
-		StateHash:     "0000000000000000000000000000000000000000000000000000000000000000",
-		MerkleRoot:    "0000000000000000000000000000000000000000000000000000000000000000",
-		QuorumScore:   100.0,
-		DemurrageRate: 0.0001 / 60000,
+		Chains:          make(map[string][]*Block),
+		Blocks:          make(map[string]*Block),
+		Pending:         make(map[string][]*PendingTx),
+		Proposals:       make(map[string]interface{}),
+		Votes:           make(map[string]map[string]map[string]interface{}),
+		MarketBids:      make(map[string]interface{}),
+		Swaps:           make(map[string]*HTLCSwap),
+		Nfts:            make(map[string]interface{}),
+		Anchors:         make(map[string]interface{}),
+		Multisigs:       make(map[string]*MultisigVault),
+		Pools:           make(map[string]*LiquidityPool),
+		Peers:           make(map[string]*PeerInfo),
+		StateHash:       "0000000000000000000000000000000000000000000000000000000000000000",
+		MerkleRoot:      "0000000000000000000000000000000000000000000000000000000000000000",
+		QuorumScore:     100.0,
+		QuorumThreshold: 67.0,
+		DemurrageRate:   0.0001 / 60000,
 	}
 
 	l.Pools["BOB/sSOL"] = &LiquidityPool{
@@ -791,6 +793,12 @@ func (l *Lattice) executeProposalAction(proposal map[string]interface{}) {
 		if rate >= 0 {
 			l.DemurrageRate = rate
 			fmt.Printf("[Governance] Executed UPDATE_DEMURRAGE: new rate %f\n", rate)
+		}
+	} else if action == "UPDATE_QUORUM_THRESHOLD" {
+		threshold, _ := proposal["threshold"].(float64)
+		if threshold > 0 && threshold <= 100 {
+			l.QuorumThreshold = threshold
+			fmt.Printf("[Governance] Executed UPDATE_QUORUM_THRESHOLD: %f%%\n", threshold)
 		}
 	}
 }

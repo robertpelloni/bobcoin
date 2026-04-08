@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.92.0] - 2026-04-06
+
+### Added
+- Implemented **Automated Quorum Consensus** in `go-lattice`:
+  - Gossip loop now dynamically calculates `QuorumScore` based on the percentage of peers agreeing on the current Merkle Root.
+  - Added `UPDATE_QUORUM_THRESHOLD` governance action to dynamically adjust the required consensus majority.
+- Implemented **Simulated Torrent Progress** in `go-supertorrent`:
+  - Added a background routine that simulates realistic download progress for manually tracked magnets.
+  - `/stats` now reports incremental progress and only adds torrent size to `totalSize` upon completion (1 minute simulation).
+- Hardened **Go Gossip Peer Pruning**:
+  - Offline peers are now automatically removed from the discovery map after 5 minutes of inactivity.
+
+### Changed
+- Improved **Go Supernodeinteroperability** by making the root non-WebSocket status consistent with the proxied `/status` endpoint.
+
+### Validation
+- `go test ./...` passed across all services.
+- `npm test` passed in Node reference.
+
 ## [8.91.0] - 2026-04-06
 
 ### Added

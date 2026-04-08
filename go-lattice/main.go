@@ -585,6 +585,20 @@ func gossipLoop() {
 					}
 				}
 			}
+
+			// Update Quorum Score
+			lattice.mu.Lock()
+			agreeCount := 0
+			for _, p := range lattice.Peers {
+				if p.Status == "online" && p.MerkleRoot == lattice.MerkleRoot {
+					agreeCount++
+				}
+			}
+			if len(lattice.Peers) > 0 {
+				lattice.QuorumScore = (float64(agreeCount) / float64(len(lattice.Peers))) * 100.0
+			} else {
+				lattice.QuorumScore = 100.0 // Solo mode
+			}
 			lattice.mu.Unlock()
 		}
 	}

@@ -155,6 +155,7 @@ func main() {
 
 	go service.bootstrapWalletOnLattice()
 	go service.pollOpenBids()
+	go service.simulateDownloadProgress()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", service.handleRoot)
@@ -544,13 +545,39 @@ func (s *SuperTorrentService) handleProxyMarketBids(w http.ResponseWriter, r *ht
 	s.proxyGameServerRequest(w, r, "/market/bids")
 }
 
+func (s *SuperTorrentService) simulateDownloadProgress() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.mu.Lock()
+		for _, torrent := range s.torrents {
+			if torrent.Source == "manual" && torrent.Size == 0 {
+				// Initialize size for manual torrents
+				torrent.Size = 1024 * 1024 * 10 // 10 MB
+			}
+		}
+		s.mu.Unlock()
+	}
+}
+
 func (s *SuperTorrentService) handleStats(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	torrents := make([]map[string]interface{}, 0, len(s.torrents))
 	var totalSize int64
 	for _, torrent := range s.torrents {
-		torrents = append(torrents, map[string]interface{}{"infoHash": torrent.InfoHash, "name": torrent.Name, "progress": 1.0, "peers": 0, "totalSize": torrent.Size, "source": torrent.Source})
-		totalSize += torrent.Size
+		progress := 1.0
+		if torrent.Source == "manual" {
+			// Simulate progress based on AddedAt
+			elapsed := time.Now().UnixMilli() - torrent.AddedAt
+			progress = float64(elapsed) / 60000.0 // 1 minute to "download"
+			if progress > 1.0 {
+				progress = 1.0
+			}
+		}
+		torrents = append(torrents, map[string]interface{}{"infoHash": torrent.InfoHash, "name": torrent.Name, "progress": progress, "peers": 0, "totalSize": torrent.Size, "source": torrent.Source})
+		if progress >= 1.0 {
+			totalSize += torrent.Size
+		}
 	}
 	s.mu.RUnlock()
 	writeJSON(w, http.StatusOK, map[string]interface{}{

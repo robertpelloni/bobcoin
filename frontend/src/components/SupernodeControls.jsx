@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Tooltip } from './Tooltip';
 
 export function SupernodeControls({ onAdd }) {
     const [magnet, setMagnet] = useState('');
@@ -18,7 +19,9 @@ export function SupernodeControls({ onAdd }) {
 
             <form onSubmit={handleAdd} className="control-form">
                 <div className="input-group">
-                    <label style={{display: 'block', color: '#888', marginBottom: '0.5rem', fontSize: '0.8rem'}}>ADD MAGNET LINK</label>
+                    <Tooltip text="Paste a Magnet URI (magnet:?xt=urn:btih:...) to start seeding content.">
+                        <label style={{display: 'block', color: '#888', marginBottom: '0.5rem', fontSize: '0.8rem', cursor: 'help'}}>ADD MAGNET LINK ⓘ</label>
+                    </Tooltip>
                     <div className="input-row" style={{display: 'flex', gap: '0.5rem'}}>
                         <input
                             type="text"
@@ -35,7 +38,9 @@ export function SupernodeControls({ onAdd }) {
 
             <div className="control-group" style={{marginTop: '1.5rem'}}>
                 <div className="label-row" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
-                    <label style={{color: '#888', fontSize: '0.8rem'}}>BANDWIDTH LIMIT (GLOBAL)</label>
+                    <Tooltip text="Higher bandwidth increases your probability of being selected as a Validator.">
+                        <label style={{color: '#888', fontSize: '0.8rem', cursor: 'help'}}>BANDWIDTH LIMIT (GLOBAL) ⓘ</label>
+                    </Tooltip>
                     <span className="value" style={{color: '#0ff'}}>{bandwidth === 100 ? 'UNLIMITED' : `${bandwidth} MB/s`}</span>
                 </div>
                 <input
@@ -47,7 +52,7 @@ export function SupernodeControls({ onAdd }) {
                     className="cyber-range"
                     style={{width: '100%'}}
                 />
-                <div className="tooltip" style={{fontSize: '0.8rem', color: '#555', marginTop: '0.5rem'}}>
+                <div className="info-text" style={{fontSize: '0.8rem', color: '#555', marginTop: '0.5rem'}}>
                     Restricts the maximum upload speed for the node.
                     Uncapped bandwidth increases Validator Probability.
                 </div>

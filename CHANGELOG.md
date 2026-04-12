@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.107.1] - 2026-04-12
+### Added
+- Explicit Enactment Delays for Governance proposals in both JS (`Lattice.js`) and Go (`lattice.go`). Proposals now transition to `Passed` but wait for `enactmentDelay` before execution.
+- Deep Parity Tests verifying `enactmentDelay` in multi-account block replays.
+- Native execution of FHE logic (`node-seal`) inside `go-game-server` via `exec.Command` without relying on HTTP proxy bridges.
+- Native simulation of SP1 Zero-Knowledge verification delays inside `go-game-server`.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

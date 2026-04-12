@@ -352,7 +352,7 @@ func (s *Service) handleFHEOracle(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("node", "-e", `
 		import('./fheUtils.js').then(async (m) => {
 			try {
-				const cipher = process.argv[1];
+				const cipher = process.argv[1] === '[eval]' ? process.argv[2] : process.argv[1];
 				const mult = await m.homomorphicMultiplyPlain(cipher, 2);
 				const add = await m.homomorphicAddPlain(mult, 500);
 				console.log(add);

@@ -1,6 +1,14 @@
-# Session Handoff - 2026-04-07 (v8.107.0)
+# Session Handoff - 2026-04-12 (v8.107.1)
 
 ## Executive Summary
+Completed the native Go porting for ZK/FHE logic within `go-game-server` and finalized the 1:1 Governance Enactment Delays parity between JS and Go consensus engines.
+
+### Recent Governance & Porting Progress
+- **Governance Enactment Delays:** Implemented explicit enactment delays in `Lattice.js` and `lattice.go`. Proposals now feature an `enactmentDelay` parameter, deferring the `executeProposalAction` logic until `block.timestamp >= endTime + enactmentDelay`.
+- **Service Porting (ZK/FHE):** Removed the HTTP bridge proxy logic from `go-game-server` for ZK and FHE. FHE computation now executes natively by calling `node-seal` via `exec.Command` to a local JS script. ZK verification implements an internal simulated delay for SP1 rather than relying on the proxy.
+
+## Prior Session Summary (v8.107.0)
+
 Completed a major protocol hardening pass by achieving 100% explicit field coverage for all block constructions in the Bobcoin frontend. This allowed for the removal of the legacy "block shim" in the Go consensus engine.
 
 This session also integrated versions `8.106.0` through `8.92.0` from upstream, including Peer-to-Peer Sync Hardening, Benchmarks, and Fixture-Driven tests.

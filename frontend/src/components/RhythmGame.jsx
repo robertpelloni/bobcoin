@@ -1,19 +1,29 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from 'react';
 import SimplePeer from 'simple-peer';
 import { SIGNALING_URL } from '../api';
 import { playHitSound, playMatchSound, startAmbientDrone, getAnalyzer } from '../audio/AudioEngine';
 import { checkAndUnlock } from '../AchievementService';
+=======
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { Scene } from './game/Scene';
+import { ErrorBoundary } from 'react-error-boundary';
+import { synth } from '../utils/synth'; // Import Audio Engine
+>>>>>>> feature/comprehensive-ui-spec
 import './RhythmGame.css';
 
 const LANES = ['D', 'F', 'J', 'K'];
-const SPEED = 5; // pixels per frame
-const SPAWN_INTERVAL = 1000; // ms
-const HIT_ZONE_Y = 400; // Top of hit zone
-const HIT_ZONE_HEIGHT = 40; // Height of hit zone
+const SPEED = 0.15; // 3D units per frame (Z-axis)
+const SPAWN_INTERVAL = 800; // ms
+const SPAWN_Z = -20; // Start far away
+const HIT_ZONE_Z = 0; // Target line at Z=0
+const HIT_TOLERANCE = 1.5; // +/- units (Perspective makes this tricky, need lenient zone)
 
 export function RhythmGame({ onScoreUpdate, onLogEvent }) {
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isAutoPlay, setIsAutoPlay] = useState(false);
     const [notes, setNotes] = useState([]);
+<<<<<<< HEAD
     const [feedback, setFeedback] = useState(null); // 'PERFECT', 'GOOD', 'MISS'
     
     // WebRTC Matchmaking State
@@ -22,18 +32,26 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
     const peerRef = useRef(null);
     const wsRef = useRef(null);
     const canvasRef = useRef(null);
+=======
+    const [feedback, setFeedback] = useState(null);
+>>>>>>> feature/comprehensive-ui-spec
 
-    // Use refs for values needed inside the animation loop to avoid stale closures
+    // Game Loop Refs
     const requestRef = useRef();
     const lastSpawnTime = useRef(0);
+<<<<<<< HEAD
     const notesRef = useRef([]); // Mirror state for the loop
     const scoreRef = useRef(0); // To broadcast live score
+=======
+    const notesRef = useRef([]);
+>>>>>>> feature/comprehensive-ui-spec
 
     // Keep ref in sync
     useEffect(() => {
         notesRef.current = notes;
     }, [notes]);
 
+<<<<<<< HEAD
     const drawVisualizer = () => {
         const analyzer = getAnalyzer();
         if (!analyzer || !canvasRef.current) return;
@@ -155,6 +173,18 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
         if (peerRef.current && peerRef.current.connected) {
             peerRef.current.send(JSON.stringify({ type: 'SCORE_UPDATE', score: newScore }));
         }
+=======
+    const startGame = () => {
+        setIsPlaying(true);
+        setIsAutoPlay(false);
+        synth.init(); // Initialize Audio Context
+    };
+
+    const startAutoPlay = () => {
+        setIsPlaying(true);
+        setIsAutoPlay(true);
+        synth.init();
+>>>>>>> feature/comprehensive-ui-spec
     };
 
     const spawnNote = (time) => {
@@ -163,14 +193,12 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
             const newNote = {
                 id: Date.now() + Math.random(),
                 lane,
-                y: -50,
+                z: SPAWN_Z, // Start deep in screen
                 hit: false
             };
-            // Update both state and ref
-            const updatedNotes = [...notesRef.current, newNote];
-            setNotes(updatedNotes);
-            notesRef.current = updatedNotes;
-
+            const updated = [...notesRef.current, newNote];
+            setNotes(updated);
+            notesRef.current = updated;
             lastSpawnTime.current = time;
         }
     };
@@ -181,21 +209,37 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
         spawnNote(time);
         drawVisualizer();
 
-        // Move notes
         const currentNotes = notesRef.current;
         const nextNotes = [];
         let stateChanged = false;
 
         currentNotes.forEach(note => {
-            const nextY = note.y + SPEED;
+            // Move note forward (Positive Z)
+            const nextZ = note.z + SPEED;
 
-            // Miss logic: if past screen (500px)
-            if (nextY > 550) {
+            // Auto Play Logic
+            if (isAutoPlay && !note.hit && Math.abs(nextZ - HIT_ZONE_Z) < 0.2) {
+                // Perfect hit
+                synth.playHit();
+                // setFeedback('AUTO'); // Optional
+                // setTimeout(() => setFeedback(null), 100);
+                note.hit = true;
+                // Don't add to nextNotes (remove it)
                 stateChanged = true;
-                // Missed note, remove it
+                return;
+            }
+
+            // Miss logic (past camera > 2)
+            if (nextZ > 2) {
+                if (!note.hit && !isAutoPlay) {
+                    onScoreUpdate(-10); // Penalty for miss
+                    synth.playMiss();
+                }
+                stateChanged = true;
+                // Remove note
             } else {
-                if (nextY !== note.y) stateChanged = true;
-                nextNotes.push({ ...note, y: nextY });
+                if (nextZ !== note.z) stateChanged = true;
+                nextNotes.push({ ...note, z: nextZ });
             }
         });
 
@@ -207,8 +251,11 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
         requestRef.current = requestAnimationFrame(updateGame);
     };
 
+<<<<<<< HEAD
     // Start/Stop Loop
     const droneStopRef = useRef(null);
+=======
+>>>>>>> feature/comprehensive-ui-spec
     useEffect(() => {
         if (isPlaying) {
             requestRef.current = requestAnimationFrame(updateGame);
@@ -223,40 +270,36 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
         };
     }, [isPlaying]);
 
-    // Input Handling
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (!isPlaying) return;
+            if (!isPlaying || isAutoPlay) return; // Disable input in AutoPlay
             const key = e.key.toUpperCase();
             const laneIndex = LANES.indexOf(key);
             if (laneIndex === -1) return;
 
-            // Check for hit in current notes
             const currentNotes = notesRef.current;
-            const TARGET_Y = HIT_ZONE_Y + (HIT_ZONE_HEIGHT / 2); // 420
 
-            // Find first note in lane near target
+            // Find note in lane near hit zone (Z=0)
             const hitIndex = currentNotes.findIndex(n =>
                 n.lane === laneIndex &&
-                n.y > HIT_ZONE_Y - 20 && n.y < HIT_ZONE_Y + HIT_ZONE_HEIGHT + 20
+                Math.abs(n.z - HIT_ZONE_Z) < HIT_TOLERANCE
             );
 
             if (hitIndex !== -1) {
                 const note = currentNotes[hitIndex];
-                const diff = Math.abs(note.y - TARGET_Y);
+                const diff = Math.abs(note.z - HIT_ZONE_Z);
 
                 let score = 0;
                 let text = '';
 
-                if (diff < 15) {
+                if (diff < 0.5) {
                     score = 100;
                     text = 'PERFECT';
-                } else if (diff < 35) {
+                    synth.playHit(); // Clear synth sound
+                } else {
                     score = 50;
                     text = 'GOOD';
-                } else {
-                    score = 10;
-                    text = 'OK';
+                    synth.playHit(); // Standard hit
                 }
 
                 setFeedback(text);
@@ -269,12 +312,14 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
                 
                 if (onLogEvent) onLogEvent({ time: Date.now(), key, diff, result: text });
 
-                // Remove note
+                // Mark visually as hit or remove immediately?
+                // Let's remove for cleaner gameplay
                 const newNotes = [...currentNotes];
                 newNotes.splice(hitIndex, 1);
                 setNotes(newNotes);
                 notesRef.current = newNotes;
             } else {
+<<<<<<< HEAD
                 setFeedback('MISS');
                 setTimeout(() => setFeedback(null), 300);
                 playHitSound(0, 'MISS');
@@ -284,15 +329,32 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
                 broadcastScore(scoreRef.current);
                 
                 if (onLogEvent) onLogEvent({ time: Date.now(), key, diff: null, result: 'MISS' });
+=======
+                // Misfire (optional penalty)
+                // onScoreUpdate(-5);
+>>>>>>> feature/comprehensive-ui-spec
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPlaying, onScoreUpdate]);
+    }, [isPlaying, onScoreUpdate, isAutoPlay]);
+
+    function ErrorFallback({error}) {
+        console.error(error);
+        return (
+            <div className="error-fallback" style={{color: 'red', textAlign: 'center', paddingTop: '2rem'}}>
+                <p>WebGL Error. Switching to 2D Mode.</p>
+                <div className="2d-lanes" style={{display: 'flex', height: '100%', position: 'absolute', top:0, left:0, width:'100%'}}>
+                    {LANES.map(k => <div key={k} style={{flex: 1, borderRight: '1px solid #333'}}></div>)}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="rhythm-game-container">
+<<<<<<< HEAD
             <canvas 
                 ref={canvasRef} 
                 width="400" 
@@ -319,35 +381,46 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
 
             <div className="key-labels">
                 {LANES.map(k => <div key={k} className="key-label">{k}</div>)}
+=======
+            {/* 3D Scene */}
+            <div className="canvas-wrapper">
+                <ErrorBoundary FallbackComponent={ErrorFallback}>
+                    <Suspense fallback={<div style={{color:'#0ff'}}>LOADING 3D...</div>}>
+                        <Scene notes={notes} />
+                    </Suspense>
+                </ErrorBoundary>
+>>>>>>> feature/comprehensive-ui-spec
             </div>
 
-            {notes.map(note => (
-                <div
-                    key={note.id}
-                    className="note"
-                    style={{
-                        left: `${note.lane * 25}%`,
-                        top: `${note.y}px`,
-                        width: '25%'
-                    }}
-                />
-            ))}
-
-            {feedback && (
-                <div className={`feedback-text feedback-${feedback.toLowerCase()}`}>
-                    {feedback}
+            {/* UI Overlay */}
+            <div className="ui-overlay">
+                <div className="key-labels">
+                    {LANES.map(k => <div key={k} className="key-label">{k}</div>)}
                 </div>
-            )}
 
-            {!isPlaying && (
-                <div className="game-overlay">
-                    <h2>PROOF OF PLAY</h2>
-                    <p>Press D, F, J, K to match notes.</p>
-                    <button className="cyber-button" onClick={() => setIsPlaying(true)}>
-                        START MINING
-                    </button>
-                </div>
-            )}
+                {feedback && (
+                    <div className={`feedback-text feedback-${feedback.toLowerCase()}`}>
+                        {feedback}
+                    </div>
+                )}
+
+                {isAutoPlay && <div className="autoplay-indicator">VISUALIZER MODE</div>}
+
+                {!isPlaying && (
+                    <div className="game-overlay">
+                        <h2>PROOF OF PLAY v2.1</h2>
+                        <p>Press D, F, J, K to match notes.</p>
+                        <div className="button-group">
+                            <button className="cyber-button" onClick={startGame}>
+                                START MINING
+                            </button>
+                            <button className="cyber-button secondary" onClick={startAutoPlay}>
+                                AUTO / VISUALIZER
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

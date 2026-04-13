@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
 import { SignConfirmModal } from '../components/SignConfirmModal';
@@ -6,10 +7,16 @@ import { submitProof, getBankroll, submitFHEOracle } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
+<<<<<<< HEAD
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 import { useNetwork } from '../NetworkContext';
+=======
+import { Trollbox } from '../components/Trollbox';
+import { DailyQuests } from '../components/DailyQuests';
+>>>>>>> feature/comprehensive-ui-spec
 
 export function Dashboard() {
+    const wallet = useWallet();
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [mintStatus, setMintStatus] = useState(null);
@@ -58,7 +65,11 @@ export function Dashboard() {
 
         setMintStatus('minting');
         try {
+<<<<<<< HEAD
             const result = await submitProof(score, 50, 10, replayLog.current);
+=======
+            const result = await submitProof(score, 50, 10, wallet);
+>>>>>>> feature/comprehensive-ui-spec
             if (result.success) {
                 setMintStatus('success');
                 setTxSignature(result.tx);
@@ -168,7 +179,16 @@ export function Dashboard() {
                     </div>
                 )}
 
-                <Leaderboard mintStatus={mintStatus} />
+                <div className="dashboard-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div className="left-col">
+                        <Leaderboard mintStatus={mintStatus} />
+                        <DailyQuests />
+                    </div>
+                    <div className="right-col">
+                        <Trollbox />
+                    </div>
+                </div>
+
                 <Marketplace />
                 <LiveFeed />
             </div>

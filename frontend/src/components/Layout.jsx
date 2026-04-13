@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navigation } from './Navigation';
+<<<<<<< HEAD
 import { getLatticeFrontier, LATTICE_URL } from '../api';
 import { deriveKeypair } from '../cryptoUtils';
 import { useNetwork } from '../NetworkContext';
+=======
+import { NewsTicker } from './NewsTicker';
+>>>>>>> feature/comprehensive-ui-spec
 
 export function Layout() {
     const [netWorth, setNetWorth] = useState(0);
@@ -33,6 +37,7 @@ export function Layout() {
 
     return (
         <div className="app-layout">
+<<<<<<< HEAD
             <header className="sovereign-header" style={{display: 'flex', justifyContent: 'space-between', padding: '1rem 2rem', background: '#000', borderBottom: '1px solid #333'}}>
                 <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem'}}>
                     <span style={{color: '#ff0055', fontSize: '0.7rem', letterSpacing: '2px', fontWeight: 'bold'}}>NETWORK: MAINNET_V7</span>
@@ -49,6 +54,9 @@ export function Layout() {
                     <span className="neon-text" style={{fontWeight: 'bold', fontSize: '1.1rem'}}>{netWorth.toFixed(2)} BOB</span>
                 </div>
             </header>
+=======
+            <NewsTicker />
+>>>>>>> feature/comprehensive-ui-spec
             <Navigation />
             <main className="content-container">
                 <Outlet />

@@ -3696,6 +3696,59 @@ func TestGovernanceActionExecution(t *testing.T) {
 	}
 }
 
+func TestGovernanceEnactmentDelay(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	target := "target-delayed-pubkey"
+
+	now := time.Now()
+	oneHourAgo := now.Add(-time.Hour)
+
+	l.Proposals["prop-delayed-mint"] = map[string]interface{}{
+		"id":             "prop-delayed-mint",
+		"status":         "Active",
+		"action":         "MINT_TREASURY",
+		"target":         target,
+		"amount":         500.0,
+		"endTime":        oneHourAgo.Format(time.RFC3339),
+		"enactmentDelay": 2.0 * 3600.0 * 1000.0, // 2 hours in ms
+		"votesFor":       10.0,
+		"votesAgainst":   1.0,
+		"executed":       false,
+	}
+
+	// Should transition to Passed, but not execute because delay hasn't passed
+	l.refreshProposalStatusesAt(now)
+
+	if prop, ok := l.Proposals["prop-delayed-mint"].(map[string]interface{}); ok {
+		if prop["status"] != "Passed" {
+			t.Fatalf("expected status Passed, got %v", prop["status"])
+		}
+		if executed, _ := prop["executed"].(bool); executed {
+			t.Fatalf("expected not executed")
+		}
+	}
+	if len(l.Pending[target]) != 0 {
+		t.Fatalf("expected no pending transactions yet")
+	}
+
+	// Move time past enactment delay
+	twoHoursLater := now.Add(2 * time.Hour)
+	l.refreshProposalStatusesAt(twoHoursLater)
+
+	if prop, ok := l.Proposals["prop-delayed-mint"].(map[string]interface{}); ok {
+		if executed, _ := prop["executed"].(bool); !executed {
+			t.Fatalf("expected executed")
+		}
+	}
+	if len(l.Pending[target]) != 1 {
+		t.Fatalf("expected pending treasury mint")
+	}
+	if l.Pending[target][0].Amount != 500.0 {
+		t.Fatalf("expected amount 500.0, got %v", l.Pending[target][0].Amount)
+	}
+}
+
+
 func TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "demurrage-multi-account-same-timestamp.sqlite")
 	keys := deriveDescendingKeypairs("semantic parity demurrage multi account same timestamp", 3)

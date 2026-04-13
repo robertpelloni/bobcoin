@@ -159,13 +159,21 @@ export class Lattice {
 
     refreshProposalStatusesAt(atMs) {
         for (const proposal of Object.values(this.proposals)) {
-            if (!proposal || proposal.status !== 'Active' || !proposal.endTime) continue;
-            const parsedEndTime = new Date(proposal.endTime).getTime();
-            if (Number.isNaN(parsedEndTime) || atMs < parsedEndTime) continue;
+            if (!proposal) continue;
             
-            proposal.status = proposal.votesFor > proposal.votesAgainst ? 'Passed' : 'Rejected';
-            if (proposal.status === 'Passed') {
-                this.executeProposalAction(proposal);
+            if (proposal.status === 'Active' && proposal.endTime) {
+                const parsedEndTime = new Date(proposal.endTime).getTime();
+                if (!Number.isNaN(parsedEndTime) && atMs >= parsedEndTime) {
+                    proposal.status = proposal.votesFor > proposal.votesAgainst ? 'Passed' : 'Rejected';
+                }
+            }
+
+            if (proposal.status === 'Passed' && !proposal.executed) {
+                const parsedEndTime = new Date(proposal.endTime).getTime();
+                const enactmentDelay = proposal.enactmentDelay || 0;
+                if (atMs >= parsedEndTime + enactmentDelay) {
+                    this.executeProposalAction(proposal);
+                }
             }
         }
     }
@@ -388,6 +396,7 @@ export class Lattice {
                 votesAgainst: 0,
                 endTime: block.payload.endTime,
                 timestamp: block.timestamp,
+                enactmentDelay: block.payload.enactmentDelay || 0,
                 action: block.payload.action,
                 target: block.payload.target,
                 amount: block.payload.amount,

@@ -539,14 +539,19 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	if block.Type == "proposal" {
 		payload := block.Payload.(map[string]interface{})
 		endTime, _ := payload["endTime"].(string)
+		enactmentDelay := 0.0
+		if d, ok := payload["enactmentDelay"].(float64); ok {
+			enactmentDelay = d
+		}
 		prop := map[string]interface{}{
-			"id":           block.Hash,
-			"proposer":     block.Account,
-			"status":       "Active",
-			"votesFor":     0.0,
-			"votesAgainst": 0.0,
-			"endTime":      endTime,
-			"timestamp":    block.Timestamp,
+			"id":             block.Hash,
+			"proposer":       block.Account,
+			"status":         "Active",
+			"votesFor":       0.0,
+			"votesAgainst":   0.0,
+			"endTime":        endTime,
+			"timestamp":      block.Timestamp,
+			"enactmentDelay": enactmentDelay,
 		}
 		// Copy remaining payload fields (action, target, amount, rate, etc)
 		for k, v := range payload {
@@ -827,24 +832,33 @@ func (l *Lattice) refreshProposalStatusesAt(at time.Time) {
 			continue
 		}
 		status, _ := proposal["status"].(string)
-		if status != "Active" {
-			continue
+
+		if status == "Active" {
+			endTime, _ := proposal["endTime"].(string)
+			if endTime != "" {
+				if parsed, err := time.Parse(time.RFC3339, endTime); err == nil && !at.Before(parsed) {
+					votesFor, _ := proposal["votesFor"].(float64)
+					votesAgainst, _ := proposal["votesAgainst"].(float64)
+					if votesFor > votesAgainst {
+						proposal["status"] = "Passed"
+					} else {
+						proposal["status"] = "Rejected"
+					}
+				}
+			}
 		}
-		endTime, _ := proposal["endTime"].(string)
-		if endTime == "" {
-			continue
-		}
-		parsed, err := time.Parse(time.RFC3339, endTime)
-		if err != nil || at.Before(parsed) {
-			continue
-		}
-		votesFor, _ := proposal["votesFor"].(float64)
-		votesAgainst, _ := proposal["votesAgainst"].(float64)
-		if votesFor > votesAgainst {
-			proposal["status"] = "Passed"
-			l.executeProposalAction(proposal)
-		} else {
-			proposal["status"] = "Rejected"
+
+		if proposal["status"] == "Passed" {
+			if executed, _ := proposal["executed"].(bool); !executed {
+				endTime, _ := proposal["endTime"].(string)
+				enactmentDelay, _ := proposal["enactmentDelay"].(float64)
+				if parsed, err := time.Parse(time.RFC3339, endTime); err == nil {
+					enactmentTime := parsed.Add(time.Duration(enactmentDelay) * time.Millisecond)
+					if !at.Before(enactmentTime) {
+						l.executeProposalAction(proposal)
+					}
+				}
+			}
 		}
 	}
 }

@@ -907,7 +907,7 @@ export function Vault() {
                     magnet: upRes.magnet,
                     size: upRes.size,
                 },
-                height: chain.chain.length,
+                height: frontier.frontier ? (frontier.height + 1) : 0,
             });
 
             await block.signBlock(keypair.privateKey);

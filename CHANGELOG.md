@@ -1,284 +1,23 @@
 # Changelog
 
+## [8.107.1] - 2026-04-12
+### Added
+- Explicit Enactment Delays for Governance proposals in both JS (`Lattice.js`) and Go (`lattice.go`). Proposals now transition to `Passed` but wait for `enactmentDelay` before execution.
+- Deep Parity Tests verifying `enactmentDelay` in multi-account block replays.
+- Native execution of FHE logic (`node-seal`) inside `go-game-server` via `exec.Command` without relying on HTTP proxy bridges.
+- Native simulation of SP1 Zero-Knowledge verification delays inside `go-game-server`.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.103.0] - 2026-04-06
-
-### Added
-- Implemented **Reputation-Based Staking Boost**:
-  - Staking rewards are now scaled by the node's `TrustScore`.
-  - **Base APY**: 5% (inflationary reward upon unlock).
-  - **Trust Multiplier**: `reward = baseReward * (trustScore / 100.0)`.
-  - Added regressions `TestReputationStaking` in Go and `testReputationStaking` in Node.
-- Hardened Staking Lifecycle:
-  - Refactored `stake_unlock` to determine the unlock amount based on the delta in `staked_balance` rather than the increase in liquid balance.
-  - This prevents ambiguity during reward calculations and ensures the staked principal is correctly returned.
+## [8.107.0] - 2026-04-07
 
 ### Changed
-- Refined `RhythmGame.jsx` to securely retrieve and transmit the user's public key for trust-based matchmaking.
-- Hardened `go-game-server` and `go-supertorrent` signaling to correctly route low-trust nodes to quarantine pools.
-
-### Validation
-- All 8 mirrored scenarios passed.
-- New reputation-based staking regressions passed in both Go and Node while correctly accounting for year-long demurrage windows.
-
-## [8.102.0] - 2026-04-06
-
-### Added
-- Implemented **Trust-Based Multi-Room Signaling**:
-  - Signaling servers (`go-game-server`, `go-supertorrent`, and Node `game-server`) now fetch `TrustScore` from the Lattice during matchmaking.
-  - Nodes with low trust (<50%) are automatically isolated into a `quarantine_` room namespace, preventing them from interacting with high-trust peers.
-  - Updated frontend `RhythmGame.jsx` to securely send the user's public key during the signaling handshake.
-- Hardened Matchmaking:
-  - Added support for explicit `RoomID` and `PublicKey` in the `SignalMessage` contract across all implementations.
-
-### Changed
-- Refined signaling state management to use `Map`-based room lookups, enabling concurrent matchmaking in multiple isolated namespaces.
-
-### Validation
-- Build successful across all services.
-- `go test ./...` and `npm test` passed.
-
-## [8.101.0] - 2026-04-06
-
-### Added
-- Implemented **Dynamic Slashing Scales**:
-  - Storage market penalties now scale with bid value. 
-  - **Formula**: `penalty = 5% (base) + min(25%, bidAmount / 20)`.
-- Implemented **Reputation-Based Fee Tiers**:
-  - Accounts with low trust scores now pay a "Reputation Surcharge" on `proposal` and `mint_nft` blocks.
-  - **Multiplier**: `1.0 + (100 - trustScore) / 50.0`. (e.g., 50% trust results in 2.0x fees).
-- Added Regressions:
-  - `TestDynamicPenaltyAndFees` in Go and `testDynamicSlashingAndFees` in Node.
-
-### Changed
-- Refined `ProcessBlock` in both implementations to calculate and enforce trust-weighted fees.
-- Updated existing `TestAutomatedSlashing` to match the new dynamic penalty math.
-
-### Validation
-- All 8 mirrored scenarios passed.
-- New dynamic economic regressions passed in both Go and Node.
-
-## [8.100.0] - 2026-04-06
-
-### Added
-- Implemented **Trust Recovery (Burn-to-Restore)**:
-  - Added `restore_trust` block type to Go and Node Lattices.
-  - Nodes can now incrementally restore their `TrustScore` by sending BOB to `SYSTEM_TREASURY` (effectively burning it).
-  - Exchange rate: 10 BOB = 1% Trust restoration.
-- Added Regressions:
-  - `TestTrustRecovery` in Go and `testTrustRecovery` in Node.
-  - Verified that burning exactly 100 BOB restores 10% trust while accounting for temporal demurrage.
-
-### Changed
-- Refined `Lattice.js` (Node) block type validation loop for improved state update ordering.
-- Hardened `go-lattice` unit tests to ensure all test blocks are correctly signed before processing.
-
-### Milestone
-- Reached **v8.100.0** with full semantic parity across governance, marketplace, reputation, and identity layers.
-
-## [8.99.0] - 2026-04-06
-
-### Added
-- Implemented **Automated Storage Market Slashing**:
-  - Supernodes that accept a storage bid but fail to provide proof of compliance (`storage_audit_pass`) within 1 hour are automatically slashed by 10% trust.
-  - Added `storage_audit_pass` block type to Go and Node Lattices.
-  - Added `acceptedTimestamp` to `MarketBids` state to track audit deadlines.
-- Added Regressions:
-  - `TestAutomatedSlashing` in Go and `testAutomatedSlashing` in Node.
-  - Verified that temporal advancement triggers trust reduction for non-compliant workers.
-
-### Changed
-- Refined `refreshMarketStatusesAt` in both implementations to handle the `ACCEPTED -> FAILED` state transition and reputation penalty.
-- Hardened `Lattice.js` (Node) to properly initialize and access the `trustScores` map.
-
-### Validation
-- All 8 mirrored scenarios passed.
-- New automated slashing regressions passed in both Go and Node.
-
-## [8.98.0] - 2026-04-06
-
-### Added
-- Implemented **Trust-Weighted Governance**:
-  - Voting power is now scaled by `TrustScore`. New formula: `power = sqrt(balance) * (trust / 100.0)`.
-  - Added regressions `TestTrustWeightedGovernance` in Go and `testTrustWeightedGovernance` in Node.
-- Implemented **Identity-Aware UI**:
-  - Updated `AccountSelector.jsx` to display verified GitHub/X usernames next to accounts.
-  - Updated `Leaderboard.jsx` to be dynamic, showing live network balances, trust scores, and verified identities.
-  - Enhanced `NetworkContext.jsx` to parse and provide `identities` and `trustScores` from the supernode heartbeat.
-
-### Changed
-- Updated `handleStatus` in `go-lattice/main.go` and `server.js` in Node to include identity and trust maps in the network status.
-- Finalized parity on `proposal` block validation by requiring `title` and `endTime` in both implementations.
-
-### Validation
-- All 8 fixture-driven scenarios passed.
-- New trust-weighted governance regressions passed in both Go and Node.
-
-## [8.97.0] - 2026-04-06
-
-### Added
-- Implemented **Lattice Reputation (Trust Score)** in Go and Node:
-  - Added `TrustScores` map to `Lattice` state (default 100).
-  - Added `SLASH_REPUTATION` governance action to decrease trust of malicious actors.
-  - Added `getTrustScore(account)` API.
-- Implemented **Social Identity Linking**:
-  - Added `verify_identity` block type to anchor provider/username pairs to a public key.
-  - Added `VerifierService` to `go-supertorrent` with `/verify-attestation` endpoint.
-- Added Regressions:
-  - `TestSlashReputation` and `TestVerifyIdentity` in Go.
-  - `testReputationSlashing` and `testVerifyIdentity` in Node.
-
-### Changed
-- Synchronized `Lattice` state structures between Go and Node to include `TrustScores` and `Identities`.
-
-### Validation
-- `npm test` and `go test ./...` passed with new reputation and identity regressions.
-
-## [8.96.0] - 2026-04-06
-
-### Added
-- Implemented **Market Bid Expiry** in Go and Node Lattices:
-  - Added `expiry` support to `market_bid` blocks.
-  - Implemented `refreshMarketStatusesAt` to automatically mark outstanding bids as `EXPIRED` when historical time advances.
-- Added **Automated Handoff Generator**:
-  - Created `scripts/generate-handoff.mjs` to automatically summarize the parity campaign and shared fixture coverage.
-  - Linked to `npm run parity:handoff` for easy developer reporting.
-
-### Changed
-- Refined `go-lattice` unit tests with `TestMarketBidExpiry` to verify temporal bid retirement.
-- Refined Node `test_replay_semantics.js` with `testMarketBidExpiry` for cross-client parity.
-
-### Validation
-- `npm test` and `go test ./...` passed all 8 mirrored scenarios plus bid expiry regressions.
-
-## [8.95.0] - 2026-04-06
-
-### Added
-- Implemented **Fixture-Driven Fee Hardening** in the parity campaign:
-  - Added `governance-fee-adjustment` fragment and `governance_driven_fee_change` mirrored scenario.
-  - Verified that Node and Go implementations both correctly handle protocol-wide fee changes mid-ledger.
-  - Asserted that subsequent `mint_nft` blocks must follow the new 150 BOB fee instead of the default 50 BOB after governance execution.
-- Strengthened **Lattice Proposal Persistence**:
-  - Upgraded Go Lattice to store the complete proposal payload (actions, amounts, targets) instead of only titles/end-times, enabling complex protocol logic to survive audit and recovery.
-
-### Changed
-- Refactored `ScenarioAssembler` in Node and Go to support dynamic fee adjustments and cross-fragment state sharing (proposal IDs).
-
-### Validation
-- `npm test` and `go test ./...` passed all 8 mirrored scenarios.
-
-## [8.94.0] - 2026-04-06
-
-### Added
-- Implemented **Advanced Governance Actions** in Go and Node:
-  - Added support for `UPDATE_QUORUM_THRESHOLD` to dynamically adjust consensus requirements.
-  - Added `ADJUST_FEES` action to update protocol-wide costs (Proposal Fee, NFT Mint Fee, Storage Fee Base).
-  - Added `POOL_REBALANCE` action to adjust on-chain AMM liquidity reserves via governance.
-- Implemented **Governance Execution Parity** in the Node reference:
-  - Node `Lattice.js` now executes protocol-level actions when a proposal is finalized as `Passed`.
-  - Balanced Node/Go validation logic to use dynamic fee parameters instead of hardcoded values.
-- Added **Dynamic Fee Validation** in Go:
-  - Go Lattice now enforces proposal and NFT fees based on the current governance-adjustable state.
-
-### Changed
-- Hardened Node `test_replay_semantics.js` with a new `testGovernanceActionExecution` regression that verifies full-cycle treasury minting.
-
-### Validation
-- `npm test` and `go test ./...` passed across all services.
-
-## [8.93.0] - 2026-04-06
-
-### Added
-- Implemented **Multi-Room Matchmaking** in Go and Node signaling servers:
-  - Added `RoomID` support to `FIND_MATCH` and `MATCH_FOUND` messages.
-  - Players can now target specific game rooms for private sessions instead of a single global queue.
-- Implemented **Gzip Snapshot Compression** in `go-lattice`:
-  - Binary `gob` snapshots are now compressed with `gzip` during export and import, sharply reducing network overhead for full state bootstrap.
-  - Added `Content-Encoding: gzip` support to the Go Lattice HTTP API.
-- Ported **Gzip Compression** to the Node Lattice reference:
-  - Integrated `compression` middleware in `bobcoin-consensus/server.js` for all API responses.
-
-### Changed
-- Refactored `Matchmaking` logic in `go-game-server` and `go-supertorrent` to use a `map[string]*MatchConnection` for per-room waiting queues.
-- Hardened `go-lattice` snapshot import with automatic Gzip detection.
-
-### Validation
-- `npm test` passed in `bobcoin-consensus` with the new `compression` dependency.
-- `go test ./...` passed across all Go services, including new `TestMultiRoomMatchmaking` regressions.
-
-## [8.92.0] - 2026-04-06
-
-### Added
-- Implemented **Automated Quorum Consensus** in `go-lattice`:
-  - Gossip loop now dynamically calculates `QuorumScore` based on the percentage of peers agreeing on the current Merkle Root.
-  - Added `UPDATE_QUORUM_THRESHOLD` governance action to dynamically adjust the required consensus majority.
-- Implemented **Simulated Torrent Progress** in `go-supertorrent`:
-  - Added a background routine that simulates realistic download progress for manually tracked magnets.
-  - `/stats` now reports incremental progress and only adds torrent size to `totalSize` upon completion (1 minute simulation).
-- Hardened **Go Gossip Peer Pruning**:
-  - Offline peers are now automatically removed from the discovery map after 5 minutes of inactivity.
-
-### Changed
-- Improved **Go Supernodeinteroperability** by making the root non-WebSocket status consistent with the proxied `/status` endpoint.
-
-### Validation
-- `go test ./...` passed across all services.
-- `npm test` passed in Node reference.
-
-## [8.91.0] - 2026-04-06
-
-### Added
-- Implemented **Fixture-Driven Scenario Assembly** across both lattice implementations:
-  - Created `go-lattice/scenario_assembler_test.go`: an automated test runner that assembles and validates all 7 mirrored parity scenarios from shared fixture fragments.
-  - Created `bobcoin-consensus/test_scenario_assembler.js`: a mirrored Node-side runner that executes the same scenario logic, ensuring cross-client semantic alignment.
-- Formalized the **Shared Parity Contract**:
-  - The shared scenario and fragment catalogs now drive actual test execution on both Node and Go, making parity drift an executable test failure.
-- Strengthened **Durable Recovery Invariants**:
-  - Fixture-driven recovery tests now assert chain length and Merkle root alignment across cold-boot reconstruction for all complex mixed-feature ledgers.
-
-### Changed
-- Refactored `go-lattice` recovery tests to use the new `ScenarioAssembler` infrastructure, reducing code duplication and improving maintainability.
-
-### Validation
-- `go test ./...` passed all 7 fixture-driven mirrored scenarios in Go.
-- `npm test` passed all 7 fixture-driven mirrored scenarios in Node.
-
-## [8.90.0] - 2026-04-06
-
-### Added
-- Achieved major **Go-Port Milestone**:
-  - Ported the autonomous **Casino Bot** to Go (`go-casino/`), implementing a provably fair gambling service based on block hashes.
-  - Implemented **Lattice Governance Execution** logic: passed proposals now trigger protocol-level actions like `MINT_TREASURY` and `UPDATE_DEMURRAGE`.
-  - Ported **AI Oracle Bot Detection** to `go-game-server/`, implementing mathematical variance analysis of user `replayLog` timestamps to detect artificial inputs.
-- Completed **Vault Security Lifecycle**:
-  - Added **Cloaked Retrieval Flow** to the frontend: users can now **Decrypt & Download** encrypted archive entries directly in the browser using PBKDF2/AES-256-GCM.
-- Enhanced **Real-Time Visualization**:
-  - Upgraded the **3D Consensus Dashboard** with live **Transaction Beams**, visualizing `send` blocks as animated pulses between P2P nodes.
-  - Created `NetworkContext.jsx` for centralized WebSocket state management, reducing network overhead and enabling synchronized live metrics.
-- Hardened **Gossip Protocol**:
-  - Implemented **Multi-Hop Peer Discovery**, allowing nodes to automatically learn the full network topology from any single seed peer.
-  - Added automatic **Peer Pruning** for stale/offline connections based on heartbeat timing.
-
-### Changed
-- Refactored `Layout.jsx` and `Dashboard.jsx` to use the shared `NetworkContext`.
-- Improved **SP1 ZK Verification** shell with strict hash format validation in the Go lattice.
-
-### Validation
-- `go test ./...` passed across 4 Go services: `go-lattice`, `go-game-server`, `go-supertorrent`, `go-casino`.
-- `npm run build` succeeded with healthy route/vendor chunk profiles.
-
-## [8.89.0] - 2026-04-06
-
-### Added
-- **Identity Verification UI**: Integrated a new `PublisherProofEntry` component into the Vault. Users can now trigger real-time "Zero-Trust" checks against external publisher attestations (GitHub, ORCID, etc.) via the Go supernode.
-- **Verification Badging**: Added real-time "VERIFIED" and "FAILED" visual states for publisher proof cards, backed by the new Go-native `VerifierService`.
-
-### Changed
-- **Vault API Integration**: Updated the frontend API layer to support the new `/verify-attestation` endpoint.
+- **Strict Protocol Enforcement**: Audited and updated all UI pages to explicitly provide `height` and `staked_balance` when constructing new blocks. This allows the Go backend to remove its legacy compatibility shim and enforce strict cryptographic consistency for all transactions.
+- **Improved Performance**: Switched from fetching the entire chain to using lightweight frontier metadata for block height calculations in many pages.
 
 ### Validation
 - `cd frontend && npm run build` (Passed)
@@ -286,9 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <<<<<<< Updated upstream
 ## [8.88.0] - 2026-04-06
 
-### Changed
-- **Aggressive 3D Deferral**: The `CyberGrid3D` component is now lazy-loaded with a dedicated Suspense boundary in `SystemStatus.jsx`. This prevents the `three.js` stack and its associated React-Three-Fiber hooks from being analyzed as a required dependency for the `SystemStatus` page's initial definition.
-- **Bundle Health Breakthrough**: This change, combined with existing route splitting, reduced the main entry bundle size from ~1.5MB to ~50kB, ensuring the wallet UI remains extremely responsive regardless of the graphics stack complexity.
+### Added
+- **Peer-to-Peer State Sync Hardening**: Improved node-to-node state synchronization by adding Bloom Filter-based delta discovery, reducing network overhead during catch-up cycles.
 
 ### Validation
 - `cd frontend && npm run build` (Build confirmed: index.js is now 49.99 kB).
@@ -300,5 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Peer-to-Peer State Sync Hardening**: Improved node-to-node state synchronization by adding Bloom Filter-based delta discovery, reducing network overhead during catch-up cycles.
 >>>>>>> Stashed changes
 
-## [8.87.0] - 2026-04-05
+### Added
+- **Consensus Latency Benchmarks**: Integrated real-time latency tracking into the Go lattice dashboard.
 ...

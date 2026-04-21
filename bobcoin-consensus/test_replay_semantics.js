@@ -2028,6 +2028,70 @@ const mirroredScenarioTests = {
     testDemurrageSensitiveMultiAccountSameTimestampDualCollectorActionsSemantics,
 };
 
+function testGovernanceEnactmentDelay() {
+    const lattice = new Lattice();
+    const proposer = deriveKeypair('node gov delay proposer');
+    const target = deriveKeypair('node gov delay target');
+
+    const genesis = createSignedBlock({
+        type: 'open',
+        account: proposer.publicKey,
+        previous: null,
+        balance: 1000,
+        link: 'SYSTEM_GENESIS',
+        height: 0,
+        staked_balance: 0,
+    }, 1, proposer.privateKey);
+    lattice.processBlock(genesis);
+
+    const proposal = createSignedBlock({
+        type: 'proposal',
+        account: proposer.publicKey,
+        previous: genesis.hash,
+        balance: 990,
+        link: 'DAO_PROPOSAL',
+        height: 1,
+        staked_balance: 0,
+        spora: validSpora(genesis.hash),
+        payload: {
+            title: 'Treasury Mint Delayed',
+            endTime: new Date(10000).toISOString(),
+            enactmentDelay: 5000, // 5 seconds
+            action: 'MINT_TREASURY',
+            target: target.publicKey,
+            amount: 100
+        },
+    }, 2, proposer.privateKey);
+    lattice.processBlock(proposal);
+
+    const vote = createSignedBlock({
+        type: 'vote',
+        account: proposer.publicKey,
+        previous: proposal.hash,
+        balance: 990,
+        link: proposal.hash,
+        height: 2,
+        staked_balance: 0,
+        spora: validSpora(proposal.hash),
+        payload: { vote: 'FOR' }
+    }, 3, proposer.privateKey);
+    lattice.processBlock(vote);
+
+    // Refresh immediately after endTime - should pass, but not execute
+    lattice.refreshProposalStatusesAt(11000);
+    let propState = lattice.proposals[proposal.hash];
+    if (propState.status !== 'Passed') throw new Error(`Expected Passed, got ${propState.status}`);
+    if (propState.executed) throw new Error("Expected not executed");
+    if (lattice.pending[target.publicKey]) throw new Error("Expected no pending transaction");
+
+    // Refresh after delay - should execute
+    lattice.refreshProposalStatusesAt(16000);
+    if (!propState.executed) throw new Error("Expected executed");
+    if (!lattice.pending[target.publicKey] || lattice.pending[target.publicKey][0].amount !== 100) {
+        throw new Error("Expected treasury mint transaction to be pending");
+    }
+}
+
 function testGovernanceActionExecution() {
     const lattice = new Lattice();
     const proposer = deriveKeypair('node gov exec proposer');
@@ -2458,6 +2522,7 @@ function run() {
     testDemurrageSensitiveMultiAccountSameTimestampMixedLedgerSemantics();
     testDemurrageSensitiveMixedLedgerSemantics();
     testGovernanceActionExecution();
+    testGovernanceEnactmentDelay();
     testMarketBidExpiry();
     testReputationSlashing();
     testVerifyIdentity();

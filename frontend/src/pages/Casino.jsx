@@ -50,6 +50,8 @@ export function Casino() {
                 account: keypair.publicKey,
                 previous: frontierData.frontier,
                 balance: balance - betAmount,
+                staked_balance: frontierData.staked_balance || 0,
+                height: frontierData.frontier ? (frontierData.height + 1) : 0,
                 link: CASINO_PUBKEY,
                 payload: { action: 'casino_bet', roll: Math.random() }
             });

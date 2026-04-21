@@ -60,16 +60,16 @@ export function Gallery() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'mint_nft',
                 account: keypair.publicKey,
                 previous: frontier.frontier,
                 balance: balance - 50,
+                staked_balance: frontier.staked_balance || 0,
+                height: frontier.frontier ? (frontier.height + 1) : 0,
                 link: 'NFT_MINT',
-                payload: { name: nftName, magnet: nftMagnet, description: nftDesc },
-                height: chain.chain.length
+                payload: { name: nftName, magnet: nftMagnet, description: nftDesc }
             });
 
             await block.signBlock(keypair.privateKey);
@@ -95,16 +95,16 @@ export function Gallery() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'transfer_nft',
                 account: keypair.publicKey,
                 previous: frontier.frontier,
                 balance: balance - 1, // Transfer fee
+                staked_balance: frontier.staked_balance || 0,
+                height: frontier.frontier ? (frontier.height + 1) : 0,
                 link: nftId,
-                payload: { recipient },
-                height: chain.chain.length
+                payload: { recipient }
             });
 
             await block.signBlock(keypair.privateKey);

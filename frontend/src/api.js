@@ -51,18 +51,30 @@ export const getLatticeChain = async (publicKey) => {
 export const getLatticeFrontier = async (publicKey) => {
     try {
         const res = await fetch(`${LATTICE_URL}/frontier/${publicKey}`);
-        return await res.json();
+        const data = await res.json();
+        return {
+            frontier: data.frontier || null,
+            balance: data.balance || 0,
+            staked_balance: data.staked_balance || 0,
+            height: data.height || 0
+        };
     } catch (e) {
-        return { frontier: null };
+        return { frontier: null, balance: 0, staked_balance: 0, height: 0 };
     }
 };
 
 export const getGoLatticeFrontier = async (publicKey) => {
     try {
         const res = await fetch(`${GO_LATTICE_URL}/frontier/${publicKey}`);
-        return await res.json();
+        const data = await res.json();
+        return {
+            frontier: data.frontier || null,
+            balance: data.balance || 0,
+            staked_balance: data.staked_balance || 0,
+            height: data.height || 0
+        };
     } catch (e) {
-        return { frontier: null };
+        return { frontier: null, balance: 0, staked_balance: 0, height: 0 };
     }
 };
 

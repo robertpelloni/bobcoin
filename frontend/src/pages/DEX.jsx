@@ -72,7 +72,7 @@ export function DEX() {
                     amountIn: amount,
                     expectedOut: ret
                 },
-                height: chain.chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);

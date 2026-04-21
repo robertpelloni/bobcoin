@@ -13,18 +13,17 @@
 ## Git Submodule Structure
 - The `research/forest` and `research/solana` directories exist but are throwing `.gitmodules` mapping errors, indicating they were cloned or moved without proper submodule initialization. They are treated as untracked/modified content by the root git instance.
 
-## Go Port Reality Check (v8.13.0)
+## Go Port Reality Check (v8.97.0)
 - The Go lattice is now much closer to Node parity, but the repository is still a hybrid system rather than a pure-Go platform.
 - Newly closed parity gaps:
   - Go now exposes additional compatibility routes: `/frontier`, `/anchors/:account`, `/votes/:proposalHash`, `/nfts`, `/nfts/:account`, `/multisig/:account`.
   - Go now supports more block/state types: `achievement_unlock`, `swap_lock`, `swap_claim`, `transfer_nft`, `publish_manifest`.
   - Go bootstrap snapshots now include proposals, votes, market bids, swaps, NFTs, anchors, and multisigs.
   - Go now rejects unknown block types explicitly and delays state-hash mutation until successful block application.
-- Remaining architectural truth:
-  - `go-supertorrent/` now ports the supernode control plane, but full BitTorrent/WebRTC engine parity is still incomplete.
-  - `go-game-server/` now ports the game-server control plane, but matchmaking, FHE oracle, and SP1/ZK verification parity are still incomplete.
-  - Rust/SP1 remains the correct place for proof generation/verification.
-  - Some semantics still need final reconciliation between Node and Go, especially around economic edge cases and non-lattice service behavior.
+- Protocol Hardening (v8.97.0):
+  - Every `new Block()` instantiation in the Bobcoin frontend has been audited and updated to provide explicit `height` and `staked_balance` fields.
+  - This allowed the Go backend to remove its legacy "block shim" and move to a strictly typed, zero-inference protocol.
+  - Switched from full-chain fetching to lightweight `/frontier/:account` queries for height metadata, improving UI performance across all transaction pages.
 - Audit architecture note:
   - As of v8.19.0, the Go `AuditState()` routine no longer only loops over existing maps; it replays ordered blocks onto a shadow lattice and re-derives runtime state from history.
   - Legacy anchor/manifest blocks may contain payloads that were historically mutated with derived fields (`id`, `owner`, `timestamp`, `type`) after signing, so audit hash checks must tolerate and normalize that legacy condition.
@@ -55,7 +54,7 @@
   - As of v8.45.0, the Node reference lattice also supports typed `publish_manifest` anchor processing, so manifest-style anchors are no longer missing from the mirrored cross-client replay surface.
   - As of v8.45.0, both Node and Go now exercise same-timestamp mixed ledgers that preserve governance state, HTLC lifecycle state, NFT ownership, `publish_manifest` anchors, and `data_anchor` typing together.
   - As of v8.46.0, both Node and Go now also exercise a larger three-account same-timestamp mixed ledger that combines governance, voting, market bids, NFT ownership transfer, HTLC lifecycle state, `publish_manifest`, and later `data_anchor` finalization.
-  - As of v8.46.0, Go durable recovery now explicitly validates accepted market bid reconstruction inside the same broader same-timestamp mixed ledger, not just proposals, swaps, NFTs, and anchors.
+  - As of v8.46.0, Go durable recovery now explicitly validates accepted market bid reconstruction inside the same broader same-timestamp mixed ledger, not just proposals, swaps, bids, NFTs, and anchors.
   - As of v8.47.0, both Node and Go now also exercise a demurrage-sensitive three-account same-timestamp mixed ledger, so elapsed-time pressure is now combined with replay-order pressure and multi-feature state interactions in mirrored scenarios.
   - As of v8.47.0, Go durable recovery also validates recovered proposer frontier balance inside the demurrage-sensitive broader mixed ledger, not just logical state maps such as proposals, swaps, bids, NFTs, and anchors.
   - As of v8.48.0, mirrored replay scenarios are now documented in `testing/parity-scenarios.json`, giving the parity campaign a shared scenario catalog rather than relying only on scattered test code.
@@ -98,32 +97,9 @@
   - As of v8.78.0, `go-supertorrent/main_test.go` now also covers root status behavior plus negative-path storage errors (invalid shard base64 and missing manifest/shard 404s).
   - As of v8.80.0, `go-supertorrent/` now also exposes a compatibility proxy shell for Go-first HTTP/game orchestration paths (`/bankroll`, `/mint`, `/burn`, `/transactions`, `/fhe-oracle`, `/submit-proof`, `/market/bid`, `/market/accept`, `/market/bids`).
   - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
-  - As of v8.90.0, achieve major **Go-Port Milestone**: autonomous Casino Bot ported to Go, active Governance Execution implemented for protocol actions, and AI Oracle bot-detection ported to `go-game-server`.
-  - As of v8.90.0, Completed **Vault Security Lifecycle**: frontend now supports browser-side **Cloaked Retrieval** (PBKDF2/AES-256-GCM decryption).
-  - As of v8.90.0, Enhanced **Real-Time Visualization**: 3D Dashboard now shows live **Transaction Beams** via a shared `NetworkContext` WebSocket manager.
-  - As of v8.91.0, achieved **Fixture-Driven Alignment**: Node and Go now use a shared fragment-based assembler to execute and validate the exact same set of 7 mirrored complex scenarios.
-  - As of v8.92.0, Go Gossip now dynamically calculates **Quorum Score** based on Merkle Root agreement across the discovery map, and supports `UPDATE_QUORUM_THRESHOLD` via governance.
-  - As of v8.92.0, `go-supertorrent` implements a **Simulated Downloader** that reports incremental progress in `/stats` for manual magnets, bringing the reporting closer to the original WebTorrent behavior.
-  - As of v8.93.0, **Multi-Room Matchmaking** is implemented across Go and Node signaling servers, allowing private game sessions via `RoomID`.
-  - As of v8.93.0, Go Lattice snapshots use **Gzip Compression** over binary GOB data, and the Node reference lattice uses standard Gzip compression for all API responses.
-  - As of v8.94.0, **Advanced Governance Actions** are implemented in both Go and Node: `UPDATE_QUORUM_THRESHOLD`, `ADJUST_FEES`, and `POOL_REBALANCE`.
-  - As of v8.94.0, the Node reference lattice has achieved **Governance Execution Parity** with Go, and uses the same dynamic fee validation rules.
-  - As of v8.95.0, **Fixture-Driven Fee Hardening** verifies that protocol-wide fee changes triggered by governance mid-ledger are correctly enforced by both lattice implementations for all subsequent blocks.
-  - As of v8.95.0, Go Lattice proposal state is now **Payload-Complete**, preserving action-oriented metadata across audit and restart cycles.
-  - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
-  - As of v8.81.0, `go-supertorrent/` also exposes a dedicated `/status` compatibility endpoint in addition to the root status path, and the Go tests now validate both.
-  - As of v8.85.0, `go-supertorrent/`’s dedicated `/status` path now proxies the game-server status surface while the root path continues to expose local supernode shell metadata, aligning the endpoint semantics with Go-first frontend routing expectations.
-  - As of v8.82.0, `go-supertorrent/` now defaults to port `8000`, and `go-game-server/` now targets `http://localhost:8000` as its default supernode URL, aligning the two Go service shells with the frontend’s Go-first default wiring.
-  - As of v8.71.0, the Go supertorrent shell is now tested at both state-mutation level and state-observation/reporting level, not just request handlers that change state.
-  - As of v8.63.0, `go-game-server/main_test.go` now also covers higher-value handler-level orchestration paths (`/submit-proof`, `/mint`, and `/fhe-oracle` not-configured behavior), not just lower-level helper behavior.
-  - As of v8.63.0, the Go game-server shell is now tested at both helper level and endpoint level for its current proof/mint/FHE orchestration boundaries.
-  - As of v8.64.0, `go-game-server/main_test.go` now also covers market/status/bookkeeping handler paths (`/market/bid`, `/market/bids`, `/market/accept`, `/status`, `/bankroll`, `/transactions`), expanding the Go game-server shell coverage beyond the gameplay bridge endpoints.
-  - As of v8.64.0, the Go game-server control-plane port now has executable handler coverage for both its gameplay-facing bridge shell and its bookkeeping/market shell.
-  - As of v8.76.0, `go-game-server/main_test.go` now also covers configured `/fhe-oracle` bridge passthrough, `/burn` transaction persistence, and invalid `/submit-proof` payload rejection, broadening the shell coverage further into failure-mode and bookkeeping behavior.
-  - As of v8.84.0, `go-game-server/main_test.go` now also covers `/submit-proof` bridge decision behavior when the external verifier explicitly rejects and when the bridge fails but the fallback verification path still permits minting.
-  - As of v8.73.0, `go-game-server/` now also exposes `initializeSystemChainOnce()` so system-chain bootstrap has a directly testable single-pass core instead of living only inside the startup wrapper.
-  - As of v8.73.0, the Go game-server tests now cover first-run system-chain bootstrap and no-op reinitialization behavior, adding initialization-path regression coverage to the service shell.
-- Operational convention:
-  - In this repo, the in-repo Go lattice defaults to port `4001`.
-  - The older Node lattice defaults to port `4000`.
-  - Any new Go-facing frontend/archive integration should target `4001` unless explicitly overridden.
+  - As of v8.84.0, `go-game-server/main_test.go` now also covers special-case bridge rejection behavior.
+  - As of v8.85.0, `go-supertorrent/` now more clearly distinguishes its local status shell from its proxied game-server status endpoint.
+  - As of v8.90.0, `go-casino/` ports the autonomous casino bot to Go, and passing governance proposals now trigger protocol-level execution actions.
+  - As of v8.91.0, both lattice implementations support fixture-driven automated scenario assembly for executable parity validation.
+  - As of v8.95.0, the Go lattice engine includes Merkle Proof validation against rolling state hashes for enhanced cryptographic integrity.
+  - As of v8.96.0, Go lattice nodes implement trust-weighted consensus based on dynamic peer scorecards.

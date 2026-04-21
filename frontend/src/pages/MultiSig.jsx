@@ -46,7 +46,6 @@ export function MultiSig() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'multisig_create',
@@ -56,7 +55,7 @@ export function MultiSig() {
                 staked_balance: frontier.staked_balance || 0,
                 link: 'MULTISIG_GENESIS',
                 payload: { participants: partList, threshold: Number(threshold) },
-                height: chain.chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);
@@ -82,7 +81,6 @@ export function MultiSig() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'multisig_propose',
@@ -92,7 +90,7 @@ export function MultiSig() {
                 staked_balance: frontier.staked_balance || 0,
                 link: vaultAddr,
                 payload: { vault: vaultAddr, recipient, amount },
-                height: chain.chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);
@@ -109,7 +107,6 @@ export function MultiSig() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
             
             const block = new Block({
                 type: 'multisig_approve',
@@ -119,7 +116,7 @@ export function MultiSig() {
                 staked_balance: frontier.staked_balance || 0,
                 link: vaultAddr,
                 payload: { vault: vaultAddr, proposalID },
-                height: chain.chain.length
+                height: frontier.frontier ? (frontier.height + 1) : 0
             });
 
             await block.signBlock(keypair.privateKey);

@@ -1,0 +1,95 @@
+.theme-toggle {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #0ff;
+    color: #0ff;
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 9999;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+/* Light Mode Overrides */
+body.light-mode {
+    background: #f0f0f0;
+    color: #333;
+}
+
+body.light-mode .game-container,
+body.light-mode .manual-container,
+body.light-mode .supernode-container {
+    background: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3 {
+    color: #222;
+    text-shadow: none;
+}
+
+body.light-mode .cyber-button {
+    background: #eee;
+    color: #333;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 0 #999;
+}
+
+body.light-mode .cyber-button:hover {
+    background: #ddd;
+    box-shadow: 1px 1px 0 #999;
+}
+
+body.light-mode .nav-link {
+    color: #555;
+    border-color: transparent;
+}
+
+body.light-mode .nav-link.active {
+    color: #000;
+    border-bottom-color: #000;
+    text-shadow: none;
+}
+
+body.light-mode .stat-box,
+body.light-mode .card,
+body.light-mode .manual-sidebar,
+body.light-mode .manual-content {
+    background: #fafafa;
+    border-color: #ddd;
+    color: #333;
+}
+
+body.light-mode .glitch,
+body.light-mode .glitch::before,
+body.light-mode .glitch::after {
+    color: #000;
+    text-shadow: none;
+    animation: none; /* Disable glitch in light mode for cleaner look */
+}
+
+body.light-mode .neon-text {
+    color: #d00000;
+    text-shadow: none;
+}
+
+body.light-mode .neon-text-blue {
+    color: #0000d0;
+    text-shadow: none;
+}

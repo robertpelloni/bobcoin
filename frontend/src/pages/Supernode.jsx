@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { SupernodeControls } from '../components/SupernodeControls';
+<<<<<<< HEAD
 import { StorageWasmWorkbench } from '../components/StorageWasmWorkbench';
 import { burnTokens, SUPERNODE_URL as API_URL } from '../api';
+=======
+import { burnTokens } from '../api';
+import { Tooltip } from '../components/Tooltip';
+>>>>>>> feature/comprehensive-ui-spec
 import './Supernode.css';
 
 function normalizeStats(data) {
@@ -20,10 +25,39 @@ function normalizeStats(data) {
     };
 }
 
+// Simple SVG World Map Component (Abstract)
+function PeerMap({ peers }) {
+    return (
+        <div className="peer-map">
+            <svg viewBox="0 0 1000 500" style={{width: '100%', height: '100%', background: '#000'}}>
+                {/* Abstract World Outline */}
+                <path d="M50,100 Q200,50 350,150 T600,150 T900,100" stroke="#333" strokeWidth="2" fill="none" />
+                <path d="M50,300 Q200,350 350,250 T600,300 T900,400" stroke="#333" strokeWidth="2" fill="none" />
+
+                {/* Peer Dots */}
+                {peers.map((p, i) => (
+                    <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r="3"
+                        fill={p.active ? '#0f0' : '#555'}
+                        className="peer-dot"
+                    >
+                        <animate attributeName="r" values="3;5;3" dur={`${1 + Math.random()}s`} repeatCount="indefinite" />
+                    </circle>
+                ))}
+            </svg>
+            <div className="map-overlay">LIVE PEER MESH</div>
+        </div>
+    );
+}
+
 export function Supernode() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [mockPeers, setMockPeers] = useState([]);
 
     const fetchStats = async () => {
         try {
@@ -34,14 +68,47 @@ export function Supernode() {
             setLoading(false);
             setError(null);
         } catch (err) {
+<<<<<<< HEAD
             console.error(err);
             setError(`Could not connect to Supernode API at ${API_URL}. Ensure the Go or legacy supernode is running and reachable.`);
+=======
+            console.warn("Failed to connect to Supernode API, using mock data for demo.");
+            // Mock data for UI demonstration
+            setStats({
+                address: '0xDEMO...NODE',
+                uptime: 3600 * 24, // 1 day
+                storage: {
+                    totalSize: 1024 * 1024 * 1024 * 2.5, // 2.5 GB
+                    torrents: [
+                         { infoHash: '123', name: 'ubuntu-22.04-desktop-amd64.iso', progress: 1.0, peers: 45, totalSize: 1024*1024*1024*2.5 }
+                    ]
+                },
+                network: {
+                    peers: 8,
+                    downloadSpeed: 1024 * 50,
+                    uploadSpeed: 1024 * 1200
+                }
+            });
+            setLoading(false);
+>>>>>>> feature/comprehensive-ui-spec
         }
     };
 
     useEffect(() => {
         fetchStats();
         const interval = setInterval(fetchStats, 5000);
+
+        // Generate mock peers for map
+        const peers = [];
+        for(let i=0; i<20; i++) {
+            peers.push({
+                x: Math.random() * 1000,
+                y: Math.random() * 500,
+                active: Math.random() > 0.2
+            });
+        }
+        setMockPeers(peers);
+
         return () => clearInterval(interval);
     }, []);
 
@@ -68,11 +135,11 @@ export function Supernode() {
                 alert(`Torrent added! (TX: ${burnRes.tx.slice(0,8)}...)`);
                 fetchStats();
             } else {
-                alert("Failed to add torrent to node.");
+                alert("Failed to add torrent to node (Mock Mode).");
             }
         } catch (e) {
             console.error(e);
-            alert("Error processing request");
+            alert("Error processing request (Mock Mode)");
         }
     };
 
@@ -87,7 +154,7 @@ export function Supernode() {
             if (res.ok) {
                 fetchStats();
             } else {
-                alert("Failed to remove torrent");
+                alert("Failed to remove torrent (Mock Mode)");
             }
         } catch (e) {
             console.error(e);
@@ -103,7 +170,9 @@ export function Supernode() {
 
             <div className="node-status-panel">
                 <div className="status-item">
-                    <span className="label">VALIDATOR ADDRESS</span>
+                    <Tooltip text="The public address of your Validator Node.">
+                        <span className="label">VALIDATOR ADDRESS ⓘ</span>
+                    </Tooltip>
                     <span className="value address">{stats.address}</span>
                 </div>
                 <div className="status-item">
@@ -116,18 +185,22 @@ export function Supernode() {
                 </div>
             </div>
 
+            <PeerMap peers={mockPeers} />
+
             <div className="storage-panel">
                 <h2>STORAGE PROOFS</h2>
                 <div className="storage-grid">
                     <div className="metric">
-                        <span className="label">TOTAL STORAGE</span>
+                        <Tooltip text="Total disk space allocated to the network for consensus.">
+                            <span className="label">TOTAL STORAGE ⓘ</span>
+                        </Tooltip>
                         <span className="value big">{(stats.storage.totalSize / 1024 / 1024).toFixed(2)} MB</span>
-                        <div className="tooltip">Total disk space allocated to the network for consensus.</div>
                     </div>
                     <div className="metric">
-                        <span className="label">ACTIVE PEERS</span>
+                        <Tooltip text="Number of other nodes exchanging data with this peer.">
+                            <span className="label">ACTIVE PEERS ⓘ</span>
+                        </Tooltip>
                         <span className="value big">{stats.network.peers}</span>
-                        <div className="tooltip">Number of other nodes exchanging data with this peer.</div>
                     </div>
                      <div className="metric">
                         <span className="label">DL SPEED</span>
@@ -193,6 +266,7 @@ export function Supernode() {
                     </tbody>
                 </table>
             </div>
+<<<<<<< HEAD
 
             <StorageWasmWorkbench />
 
@@ -204,6 +278,8 @@ export function Supernode() {
                     The more data you seed, the higher your probability of earning validator rewards.
                 </p>
             </div>
+=======
+>>>>>>> feature/comprehensive-ui-spec
         </div>
     );
 }

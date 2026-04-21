@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNetwork } from '../NetworkContext';
 
+<<<<<<< HEAD
 export function Leaderboard({ mintStatus }) {
     const { heartbeat, identities, trustScores } = useNetwork();
     
@@ -44,6 +45,7 @@ export function Leaderboard({ mintStatus }) {
                     </tr>
                 </thead>
                 <tbody>
+<<<<<<< HEAD
                     {players.map(p => (
                         <tr key={p.rank}>
                             <td>{p.rank}</td>
@@ -52,6 +54,22 @@ export function Leaderboard({ mintStatus }) {
                             <td>{p.trust}%</td>
                         </tr>
                     ))}
+=======
+                    {scores.length === 0 ? (
+                        <tr><td colSpan="4" className="loading">SCANNING_CHAIN...</td></tr>
+                    ) : (
+                        scores.map((s, i) => (
+                            <tr key={s.signature} className={i < 3 ? 'top-rank' : ''}>
+                                <td>{getBadge(i, s.score)} {i + 1}</td>
+                                <td className="player-id" title={s.player}>
+                                    {s.player.substring(0, 4)}...{s.player.substring(s.player.length - 4)}
+                                </td>
+                                <td className="neon-text">{s.score}</td>
+                                <td className="timestamp">{s.date.split(' ')[1]}</td>
+                            </tr>
+                        ))
+                    )}
+>>>>>>> feature/comprehensive-ui-spec
                 </tbody>
             </table>
         </div>

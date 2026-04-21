@@ -33,6 +33,7 @@ export function initDatabase() {
                 )
             `);
 
+<<<<<<< HEAD
             // Votes Table (to prevent double voting and track voter power)
             db.run(`
                 CREATE TABLE IF NOT EXISTS votes (
@@ -52,9 +53,41 @@ export function initDatabase() {
                     amount REAL NOT NULL,
                     type TEXT NOT NULL,
                     hash TEXT NOT NULL
+=======
+            // Quests Table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS quests (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    target INTEGER NOT NULL,
+                    reward INTEGER NOT NULL,
+                    type TEXT NOT NULL
+                )
+            `);
+
+            // Chat Messages Table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user TEXT NOT NULL,
+                    text TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+>>>>>>> feature/comprehensive-ui-spec
                 )
             `, async (err) => {
                 if (err) return reject(err);
+
+                // Seed Default Quests if empty
+                db.get("SELECT count(*) as count FROM quests", async (err, row) => {
+                    if (row && row.count === 0) {
+                        console.log('[DB] Seeding daily quests...');
+                        const stmt = db.prepare("INSERT INTO quests (title, target, reward, type) VALUES (?, ?, ?, ?)");
+                        stmt.run("Score 10,000 Points", 10000, 50, "SCORE");
+                        stmt.run("Mint 1 Token", 1, 100, "MINT");
+                        stmt.run("Seed 1 File", 1, 200, "SEED");
+                        stmt.finalize();
+                    }
+                });
 
                 // Migration Logic for Proposals
                 db.get("SELECT count(*) as count FROM proposals", async (err, row) => {
@@ -189,6 +222,7 @@ export function acceptBid(id, nodeId) {
     });
 }
 
+<<<<<<< HEAD
 // Transactions
 export function recordTransaction(id, type, amount, hash) {
     return new Promise((resolve, reject) => {
@@ -207,8 +241,41 @@ export function recordTransaction(id, type, amount, hash) {
 export function getTransactions() {
     return new Promise((resolve, reject) => {
         db.all("SELECT * FROM transactions ORDER BY date DESC", (err, rows) => {
+=======
+// Quests
+export function getQuests() {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM quests", (err, rows) => {
+>>>>>>> feature/comprehensive-ui-spec
             if (err) reject(err);
             else resolve(rows);
         });
     });
 }
+<<<<<<< HEAD
+=======
+
+// Chat
+export function getChatMessages(limit = 50) {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM messages ORDER BY id DESC LIMIT ?", [limit], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows.reverse()); // Return oldest first
+        });
+    });
+}
+
+export function addChatMessage(user, text) {
+    return new Promise((resolve, reject) => {
+        const timestamp = new Date().toLocaleTimeString();
+        db.run(
+            "INSERT INTO messages (user, text, timestamp) VALUES (?, ?, ?)",
+            [user, text, timestamp],
+            function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID, user, text, timestamp });
+            }
+        );
+    });
+}
+>>>>>>> feature/comprehensive-ui-spec

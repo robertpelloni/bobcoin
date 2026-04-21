@@ -25,6 +25,10 @@ export function SystemStatus() {
     const [buildInfo, setBuildInfo] = useState(null);
     const [syncing, setSyncing] = useState(false);
 
+<<<<<<< Updated upstream
+=======
+    // Mock TPS and Block generation
+>>>>>>> Stashed changes
     useEffect(() => {
         fetch('/build-info.json')
             .then(res => res.json())

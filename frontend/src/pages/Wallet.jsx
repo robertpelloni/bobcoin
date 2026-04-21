@@ -477,6 +477,59 @@ export function Wallet() {
                 </div>
             </div>
 
+<<<<<<< Updated upstream
+=======
+            {publicKey && (
+                <>
+                    <div className="action-panel">
+                        <div className="tabs">
+                            <button className={transferMode === 'SEND' ? 'active' : ''} onClick={() => setTransferMode('SEND')}>SEND</button>
+                            <button className={transferMode === 'RECEIVE' ? 'active' : ''} onClick={() => setTransferMode('RECEIVE')}>RECEIVE</button>
+                        </div>
+
+                        {transferMode === 'SEND' ? (
+                            <form onSubmit={handleTransfer} className="transfer-form">
+                                <div className="input-group">
+                                    <label>RECIPIENT (STEALTH ADDRESS)</label>
+                                    <input type="text" placeholder="bob1q..." value={recipient} onChange={e => setRecipient(e.target.value)} />
+                                </div>
+                                <div className="input-group">
+                                    <label>AMOUNT</label>
+                                    <input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
+                                </div>
+                                <button type="submit" className="cyber-button full-width">SIGN & TRANSFER (RING CT)</button>
+                            </form>
+                        ) : (
+                            <div className="receive-box">
+                                <div className="qr-placeholder">[ QR CODE GENERATOR ]</div>
+                                <p>Share this one-time stealth address to receive funds privately.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="settings-grid">
+                        <div className="setting-card">
+                            <h3>KEY MANAGEMENT</h3>
+                            <div className="control">
+                                <button className="cyber-button" onClick={() => setShowKeys(!showKeys)} style={{fontSize: '0.8rem', padding: '0.5rem'}}>
+                                    {showKeys ? 'HIDE KEYS' : 'REVEAL KEYS'}
+                                </button>
+                            </div>
+                            {showKeys && (
+                                <div className="keys-box" style={{marginTop: '1rem', background: '#000', padding: '0.5rem', border: '1px solid #ff0055'}}>
+                                    <div style={{color: '#ff0055', fontSize: '0.7rem', marginBottom: '0.5rem'}}>DO NOT SHARE THESE KEYS</div>
+                                    <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE VIEW KEY:</div>
+                                    <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', marginBottom: '0.5rem'}}>vk_secret_12345...</code>
+                                    <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE SPEND KEY:</div>
+                                    <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>sk_secret_67890...</code>
+                                </div>
+                            )}
+                            <p className="description">
+                                View keys allow read-only access. Spend keys allow spending. Keep them safe.
+                            </p>
+                        </div>
+
+>>>>>>> Stashed changes
             {pending.length > 0 && (
                 <div className="pending-funds-section" style={{marginTop: '2rem', padding: '1.5rem', background: 'rgba(255, 0, 85, 0.1)', border: '1px solid var(--secondary-color)'}}>
                     <h2 style={{color: 'var(--secondary-color)', marginBottom: '1rem'}}>PENDING FUNDS</h2>

@@ -21,6 +21,15 @@ export function Leaderboard({ mintStatus }) {
         { rank: 2, name: 'player_9z2...', score: 12200, trust: 100 },
         { rank: 3, name: 'player_1a9...', score: 9800, trust: 100 }
     ];
+<<<<<<< Updated upstream
+=======
+
+    const getBadge = (index, score) => {
+        if (index < 3) return BADGES[index];
+        if (score > 10000) return '⚡';
+        return '';
+    };
+>>>>>>> Stashed changes
 
     return (
         <div className="leaderboard-container" style={{ marginTop: '2rem' }}>

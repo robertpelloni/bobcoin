@@ -283,6 +283,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Validation
 - `cd frontend && npm run build` (Passed)
 
+<<<<<<< Updated upstream
 ## [8.88.0] - 2026-04-06
 
 ### Changed
@@ -291,6 +292,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Validation
 - `cd frontend && npm run build` (Build confirmed: index.js is now 49.99 kB).
+=======
+## [8.106.0] - 2026-04-06
+
+## [2.0.0] - 2025-02-11
+### Added
+- **Peer-to-Peer State Sync Hardening**: Improved node-to-node state synchronization by adding Bloom Filter-based delta discovery, reducing network overhead during catch-up cycles.
+>>>>>>> Stashed changes
 
 ## [8.87.0] - 2026-04-05
 ...

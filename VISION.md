@@ -26,4 +26,8 @@ The core philosophy is encapsulated in the manifesto:
 *   **Frontend (React/Vite):** The user-facing portal, wallet interface, dashboard, and web-based gaming clients.
 *   **Game Server (Node.js/Rust):** The decentralized orchestrator.
 *   **Supernode (Node.js/WebTorrent/Bobtorrent):** The physical infrastructure client that downloads, seeds, and generates SPoRA Merkle proofs of data.
+<<<<<<< Updated upstream
 *   **ZK Service (Rust/SP1):** The cryptographic engine responsible for executing and proving game traces.
+=======
+*   **ZK Service (Rust/SP1):** The cryptographic engine responsible for executing and proving game traces.
+>>>>>>> Stashed changes

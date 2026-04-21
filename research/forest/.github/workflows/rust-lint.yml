@@ -1,0 +1,70 @@
+name: Rust code linters
+permissions:
+  contents: read
+
+# Cancel workflow if there is a new change to the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+on:
+  workflow_dispatch:
+  merge_group:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/docs-*.yml"
+      - "**/*.md"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/docs-*.yml"
+      - "**/*.md"
+
+env:
+  CI: 1
+  CACHE_TIMEOUT_MINUTES: 5
+  AWS_ACCESS_KEY_ID: "${{ secrets.AWS_ACCESS_KEY_ID }}"
+  AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+  RUSTC_WRAPPER: "sccache"
+  CC: "sccache clang"
+  CXX: "sccache clang++"
+
+jobs:
+  lint-all:
+    name: All lint checks
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Configure SCCache variables
+        run: |
+          # External PRs do not have access to 'vars' or 'secrets'.
+          if [[ "$AWS_ACCESS_KEY_ID" != "" ]]; then
+            echo "SCCACHE_ENDPOINT=${{ vars.SCCACHE_ENDPOINT}}" >> $GITHUB_ENV
+            echo "SCCACHE_BUCKET=${{ vars.SCCACHE_BUCKET}}" >> $GITHUB_ENV
+            echo "SCCACHE_REGION=${{ vars.SCCACHE_REGION}}" >> $GITHUB_ENV
+          fi
+      - name: Checkout Sources
+        uses: actions/checkout@v6
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+        timeout-minutes: ${{ fromJSON(env.CACHE_TIMEOUT_MINUTES) }}
+        continue-on-error: true
+      - uses: jdx/mise-action@v4
+      - name: Apt Dependencies
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            sudo apt-get install -y libclang-dev # required dep for cargo-spellcheck
+      - name: Lint
+        env:
+          RUSTFLAGS: "-Cstrip=symbols"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mise install-lint-tools
+          mise lint:all-rust

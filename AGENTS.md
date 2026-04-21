@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AI Agent Instructions (Bobcoin)
 
 > **CRITICAL: THIS MODULE IS PART OF THE OMNI-WORKSPACE.**
@@ -14,7 +13,6 @@ Active Tasks:
 - Implement/Verify NFT protocol.
 - Verify Atomic Swaps.
 - Enhance 3D WebGL Dashboard.
-=======
 See `docs/UNIVERSAL_INSTRUCTIONS.md` for the master instructions for this project.
 
 ## Agent-Specific Notes
@@ -38,4 +36,3 @@ See `docs/UNIVERSAL_INSTRUCTIONS.md` for the master instructions for this projec
 1.  **Frontend** -> **Game Server**: Fetches global stats, posts chat/votes/proofs.
 2.  **Mobile** -> **Game Server**: Fetches bankroll/leaderboard stats.
 3.  **Supernode** -> **Solana (Mock)**: Submits storage proofs.
->>>>>>> feature/comprehensive-ui-spec

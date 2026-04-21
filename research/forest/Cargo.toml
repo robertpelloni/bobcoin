@@ -1,0 +1,387 @@
+[package]
+name = "forest-filecoin"
+version = "0.32.4"
+authors = ["ChainSafe Systems <info@chainsafe.io>"]
+repository = "https://github.com/ChainSafe/forest"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Rust Filecoin implementation."
+exclude = [".config", ".github", ".maintain", "documentation", "scripts", "interop-tests", "go.work*"]
+
+[lints]
+workspace = true
+
+[lib]
+name = "forest"
+
+[workspace.dependencies]
+ahash = "0.8"
+anyhow = "1"
+cid = { version = "0.11", default-features = false, features = ["std"] }
+flume = "0.12"
+futures = "0.3"
+get-size2 = { version = "0.7", features = ["derive", "hashbrown"] }
+hashlink = "0.11"
+libp2p = { version = "0.56", default-features = false }
+libp2p-swarm-test = { version = "0.6", default-features = false, features = ["tokio"] }
+multihash-codetable = { version = "0.1", features = ["blake2b", "blake2s", "blake3", "sha2", "sha3", "strobe"] }
+rust2go = "0.4"
+serde = { version = "1", default-features = false, features = ["derive", "rc"] }
+serde_yaml = "0.9"
+tokio = "1"
+
+[dependencies]
+ahash = { workspace = true }
+ambassador = "0.5"
+anes = "0.2"
+anyhow = { workspace = true }
+argon2 = "0.5"
+async-compression = { version = "0.4", features = ["tokio", "zstd"] }
+async-fs = "2"
+async-trait = "0.1"
+asynchronous-codec = "0.7"
+auto_impl = "1"
+axum = "0.8"
+backon = "1"
+base64 = "0.22"
+bigdecimal = "0.4"
+blake2b_simd = "1"
+bls-signatures = { version = "0.15", default-features = false, features = [
+  "multicore",
+  "blst-portable",
+] } # prevent SIGINT on CI runners by using portable assembly
+blstrs = { version = "0.7", features = ["portable"] }
+byteorder = "1"
+bytes = "1"
+cbor4ii = { version = "0.2", default-features = false, features = ["use_alloc", "use_std", "serde1"] }
+cfg-if = "1"
+cfg-vis = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+cid = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+colored = "3"
+criterion = { version = "0.8", default-features = false, features = ["async_tokio"], optional = true }
+crossbeam-utils = "0.8"
+crypto_secretbox = "0.1"
+data-encoding = "2"
+data-encoding-macro = "0.1"
+derive_builder = "0.20"
+derive_more = { version = "2", features = ["from", "into"] }
+dialoguer = "0.12"
+directories = "6"
+educe = { version = "0.6", features = ["Debug"], default-features = false }
+enumflags2 = "0.7"
+ethereum-types = { version = "0.16", features = ["ethbloom"] }
+ez-jsonrpc-types = "0.5"
+fil_actor_account_state = { version = "24.1.3" }
+fil_actor_cron_state = { version = "24.1.3" }
+fil_actor_datacap_state = { version = "24.1.3" }
+fil_actor_eam_state = { version = "24.1.3" }
+fil_actor_ethaccount_state = { version = "24.1.3" }
+fil_actor_evm_state = { version = "24.1.3" }
+fil_actor_init_state = { version = "24.1.3" }
+fil_actor_market_state = { version = "24.1.3" }
+fil_actor_miner_state = { version = "24.1.3" }
+fil_actor_multisig_state = { version = "24.1.3" }
+fil_actor_paych_state = { version = "24.1.3" }
+fil_actor_power_state = { version = "24.1.3" }
+fil_actor_reward_state = { version = "24.1.3" }
+fil_actor_system_state = { version = "24.1.3" }
+fil_actor_verifreg_state = { version = "24.1.3" }
+fil_actors_shared = { version = "24.1.3", features = ["json"] }
+flate2 = "1"
+flume = { workspace = true }
+fs_extra = "1"
+futures = { workspace = true }
+fvm2 = { package = "fvm", version = "~2.11", default-features = false }
+fvm3 = { package = "fvm", version = "~3.13", default-features = false }
+fvm4 = { package = "fvm", version = "~4.7", default-features = false, features = ["verify-signature", "nv28-dev"] }
+fvm_actor_utils = "14"
+fvm_ipld_blockstore = "0.3.1"
+fvm_ipld_encoding = "0.5.3"
+fvm_ipld_kamt = "0.4.5"
+fvm_shared2 = { package = "fvm_shared", version = "~2.11" }
+fvm_shared3 = { package = "fvm_shared", version = "~3.13", features = ["proofs"] }
+fvm_shared4 = { package = "fvm_shared", version = "~4.7", features = ["proofs"] }
+get-size2 = { workspace = true }
+gethostname = "1"
+git-version = "0.3"
+group = "0.13"
+hashbrown = "0.16"
+hashlink = { workspace = true }
+hex = { version = "0.4", features = ["serde"] }
+hickory-resolver = { version = "0.25", default-features = false, features = ["system-config", "tokio"] }
+http = "1"
+human-repr = { version = "1", features = ["iec", "space"] }
+humantime = "2"
+indexmap = { version = "2", features = ["serde"] }
+indicatif = { version = "0.18", features = ["tokio"] }
+integer-encoding = { version = "4.0", features = ["tokio_async"] }
+ipld-core = { version = "0.4", features = ["serde", "arb"] }
+is-terminal = "0.4"
+itertools = "0.14"
+jsonrpsee = { version = "0.26", features = ["server", "ws-client", "http-client", "macros"] }
+jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
+keccak-hash = "0.12"
+kubert-prometheus-process = "0.2"
+lazy-regex = "3"
+libm = "0.2"
+libp2p = { workspace = true, features = [
+  'autonat',
+  'gossipsub',
+  'kad',
+  'identify',
+  'ping',
+  'mdns',
+  'noise',
+  'yamux',
+  'tcp',
+  'quic',
+  'dns',
+  'request-response',
+  'metrics',
+  'tokio',
+  'macros',
+  'serde',
+  'upnp',
+  'rsa',
+  'ecdsa',
+  'ed25519',
+  'secp256k1',
+] }
+libsecp256k1 = "0.7"
+md5 = { package = "md-5", version = "0.10" }
+memmap2 = "0.9"
+multiaddr = "0.18"
+multihash-codetable = { workspace = true }
+multihash-derive = "0.9"
+multimap = "0.10"
+nom = "8"
+nonzero_ext = "0.3"
+num = "0.4"
+num-bigint = "0.4"
+num-derive = "0.4"
+num-rational = "0.4"
+num-traits = "0.2"
+num_cpus = "1"
+nunny = { version = "0.2", features = ["serde", "quickcheck", "schemars1"] }
+openrpc-types = "0.5"
+parity-db = { version = "0.5" }
+parking_lot = { version = "0.12", features = ["deadlock_detection"] }
+pastey = "0.2"
+pathfinding = "4"
+pin-project-lite = "0.2"
+positioned-io = "0.3"
+pretty_assertions = "1"
+prometheus-client = "0.23"
+puruspe = "0.4"
+quick-protobuf = "0.8"
+quick-protobuf-codec = "0.3"
+rand = "0.8"
+rand_chacha = "0.3"
+rand_distr = "0.4"
+rayon = "1"
+regex = "1"
+reqwest = { version = "0.13", default-features = false, features = [
+  "stream",
+  "rustls",
+  "json",
+] } # use rustls instead of native (openSSL) tls to drop the number of build dependencies
+rlimit = "0.11"
+rlp = "0.6"
+rs-car-ipfs = "0.4"
+rust2go = { workspace = true }
+schemars = { version = "1", features = ["chrono04", "uuid1"] }
+scopeguard = "1"
+semver = "1"
+serde = { workspace = true }
+serde_ipld_dagcbor = "0.6"
+serde_json = { version = "1", features = ["raw_value"] }
+serde_with = { version = "3", features = ["chrono_0_4"] }
+serde_yaml = { workspace = true }
+sha2 = { version = "0.10", default-features = false }
+similar = "2"
+slotmap = "1"
+smallvec = "1"
+smart-default = "0.7"
+sonic-rs = "0.5"
+spire_enum = "1"
+stacker = "0.1"
+static_assertions = "1"
+statrs = "0.18"
+strum = { version = "0.28", features = ["derive", "strum_macros"] }
+tabled = { version = "0.20", default-features = false, features = ["std"] }
+tap = "1"
+tar = "0.4"
+tempfile = "3"
+tera = { version = "1", default-features = false }
+thiserror = "2"
+tokio = { version = "1", features = ['full'] }
+tokio-stream = { version = "0.1", features = ["fs", "io-util"] }
+tokio-tungstenite = "0.29"
+tokio-util = { version = "0.7", features = ["compat", "io-util"] }
+toml = "1"
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["compression-full", "sensitive-headers"] }
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+unsigned-varint = { version = "0.8", features = ["codec"] }
+url = { version = "2", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+zerocopy = "0.8"
+zstd = "0.13"
+
+# optional dependencies
+console-subscriber = { version = "0.5", features = ["parking_lot"], optional = true }
+sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "macros"], optional = true }
+tikv-jemallocator = { version = "0.6", optional = true }
+tracing-loki = { version = "0.2", default-features = false, features = ["compat-0-2-1", "rustls"], optional = true }
+
+[target.'cfg(unix)'.dependencies]
+termios = "0.3"
+
+[dev-dependencies]
+all_asserts = "2"
+ariadne = "0.6"
+assert_cmd = "2"
+bimap = "0.6"
+cargo_metadata = "0.23"
+cbor4ii = { version = "0.2", default-features = false, features = ["serde1"] }
+criterion = { version = "0.8", features = ["async_tokio", "csv_output"] }
+cs_serde_bytes = "0.12"
+derive-quickcheck-arbitrary = "0.1"
+fickle = "0.3"
+fvm_shared3 = { package = "fvm_shared", version = "~3.13", features = ["arb", "proofs", "testing"] }
+fvm_shared4 = { package = "fvm_shared", version = "~4.7", features = ["arb", "proofs", "testing"] }
+glob = "0.3"
+http-range-header = "0.4"
+insta = { version = "1", features = ["yaml"] }
+libp2p-swarm-test = { workspace = true }
+num-bigint = { version = "0.4", features = ['quickcheck'] }
+petgraph = "0.8"
+predicates = "3"
+proc-macro2 = { version = "1", default-features = false, features = ["span-locations"] }
+quickcheck = "1"
+quickcheck_macros = "1"
+ra_ap_syntax = "0.0.326"
+regex-automata = "0.4"
+rstest = "0.26"
+serial_test = "3"
+syn = { version = "2", default-features = false, features = ["full", "parsing", "visit", "printing", "extra-traits"] }
+tokio-test = "0.4"
+
+[build-dependencies]
+ahash = { workspace = true }
+rust2go = { workspace = true, features = ["build"] }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+
+# https://doc.rust-lang.org/stable/cargo/guide/build-performance.html#reduce-amount-of-generated-debug-information
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+# Avoid generating any debug information for dependencies
+debug = false
+# Speed up debug tests and codecov tests
+opt-level = 1
+
+[profile.codecov]
+inherits = "dev"
+opt-level = 1
+
+[profile.codecov.package."*"]
+# Avoid generating any debug information for dependencies
+debug = false
+# Speed up debug tests and codecov tests
+opt-level = 1
+
+# Profile for interactive debugging sessions, e.g., with LLDB.
+# Doesn't work with Go FFI - disable it with `FOREST_F3_SIDECAR_FFI_BUILD_OPT_OUT=1`.
+[profile.debugging]
+inherits = "dev"
+debug = "full"
+# This works on Linux. On other platforms, refer to https://doc.rust-lang.org/rustc/codegen-options/index.html#split-debuginfo
+split-debuginfo = "off"
+
+[profile.quick]
+inherits = "release"
+opt-level = 1
+lto = "off"
+incremental = true
+codegen-units = 256
+
+[profile.quick-test]
+inherits = "quick"
+panic = "unwind"
+
+[profile.profiling]
+inherits = "dev"
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+panic = "abort"
+
+[profile.release]
+# https://doc.rust-lang.org/cargo/reference/profiles.html#strip
+strip = true
+panic = "abort"
+overflow-checks = true
+lto = "thin"
+
+[profile.release-lto-fat]
+inherits = "release"
+lto = "fat"
+
+# These should be refactored (probably removed) in #2984
+[features]
+default = ["jemalloc", "tracing-loki", "sqlite"]
+test = []                                        # default feature set for unit tests
+slim = ["rustalloc"]
+cargo-test = []                                  # group of tests that is recommended to run with `cargo test` instead of `nextest`
+doctest-private = []                             # see lib.rs::doctest_private
+benchmark-private = ["dep:criterion"]            # see lib.rs::benchmark_private
+interop-tests-private = []                       # see lib.rs::interop_tests_private
+sqlite = ["dep:sqlx"]
+
+# Allocator. Use at most one of these.
+rustalloc = []
+jemalloc = ["dep:tikv-jemallocator"]
+system-alloc = []                    # Use the platform allocator (for memory profiling).
+
+tokio-console = ["dep:console-subscriber"]
+tracing-loki = ["dep:tracing-loki"]
+
+no-f3-sidecar = []
+
+[[bench]]
+name = "example-benchmark"
+harness = false
+required-features = ["benchmark-private"]
+
+[[bench]]
+name = "car-index"
+harness = false
+required-features = ["benchmark-private"]
+
+[[bench]]
+name = "tipset-validation"
+harness = false
+required-features = ["benchmark-private"]
+
+[package.metadata.docs.rs]
+# See https://docs.rs/about/metadata
+rustdoc-args = ["--document-private-items"]
+
+[workspace.lints.clippy]
+ref_option = "deny"
+ref_option_ref = "deny"
+cast_lossless = "deny"
+
+[workspace]
+members = ["interop-tests"]
+resolver = "3"

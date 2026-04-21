@@ -1,0 +1,33 @@
+name: Snapshot parity test
+permissions:
+  contents: read
+  issues: write
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0" # Runs at 00:00, only on Sunday
+jobs:
+  snapshot-parity:
+    name: Snapshot parity test
+    runs-on: warp-ubuntu-2404-x64-8x
+    steps:
+      - name: Checkout Sources
+        uses: actions/checkout@v6
+      - name: Run snapshot parity test
+        run: ./scripts/tests/snapshot_parity/setup.sh
+        timeout-minutes: 60
+      - name: Dump docker logs
+        if: always()
+        uses: jwalton/gh-docker-logs@v2
+      - name: Set WORKFLOW_URL
+        if: always()
+        run: |
+          export WORKFLOW_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo ${WORKFLOW_URL}
+          echo "WORKFLOW_URL=${WORKFLOW_URL}" >> $GITHUB_ENV
+      - uses: JasonEtco/create-an-issue@v2
+        if: github.ref == 'refs/heads/main' && failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/SNAPSHOT_PARITY_ISSUE_TEMPLATE.md

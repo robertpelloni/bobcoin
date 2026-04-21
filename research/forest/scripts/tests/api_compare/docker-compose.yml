@@ -1,0 +1,437 @@
+# Docker compose file to run Forest and Lotus API tests.
+
+services:
+  init:
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+      - filecoin-proofs:${FIL_PROOFS_PARAMETER_CACHE}
+    networks:
+      - api-tests
+    environment:
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -euxo pipefail
+        forest --version
+        # fetch parameter files
+        forest-tool fetch-params --keys
+        # if there are some files in the data directory, then we don't need to fetch the snapshot
+        if [ "$$(ls -A /data/*.car.zst)" ]; then
+          echo "Snapshot already fetched"
+        else
+          forest-tool snapshot fetch --chain calibnet -d /data
+        fi
+  forest:
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+      - filecoin-proofs:${FIL_PROOFS_PARAMETER_CACHE}
+    networks:
+      - api-tests
+    environment:
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+      - FULLNODE_API_INFO=/dns/forest/tcp/${FOREST_RPC_PORT}/http
+      - FOREST_CHAIN_INDEXER_ENABLED=1
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -euxo pipefail
+        # Perform basic initialization, including generating the JWT token
+        forest --chain ${CHAIN} --encrypt-keystore false --no-gc \
+          --exit-after-init --save-token /data/forest-token
+
+        forest --chain ${CHAIN} --encrypt-keystore false --no-gc \
+          --height=-50 \
+          --import-snapshot $(ls /data/*.car.zst | tail -n 1) \
+          --import-mode=symlink \
+          --halt-after-import
+
+        SNAPSHOT_EPOCH="$(ls /data/*.car.zst | tail -n 1 | grep -Eo '[0-9]+' | tail -n 1)"
+        # backfill the index db
+        forest-tool index backfill --from $$SNAPSHOT_EPOCH --n-tipsets 200 --chain ${CHAIN}
+
+        forest --chain ${CHAIN} --encrypt-keystore false --no-gc \
+          --rpc-address 0.0.0.0:${FOREST_RPC_PORT} \
+          --healthcheck-address 0.0.0.0:${FOREST_HEALTHZ_RPC_PORT}
+    healthcheck:
+      test: ["CMD", "forest-cli", "sync", "wait"]
+      interval: 15s
+      timeout: 10m
+      retries: 3
+      start_period: 10m
+  forest-rpc-ready:
+    depends_on:
+      forest:
+        condition: service_healthy
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+    networks:
+      - api-tests
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -euo pipefail
+
+        export FULLNODE_API_INFO="$(cat /data/forest-token):/dns/forest/tcp/${FOREST_RPC_PORT}/http"
+        echo "Waiting till Forest is ready"
+        forest-cli healthcheck ready --healthcheck-port ${FOREST_HEALTHZ_RPC_PORT} --wait
+  forest-wallet-import:
+    depends_on:
+      forest:
+        condition: service_healthy
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+    networks:
+      - api-tests
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -euxo pipefail
+        export FULLNODE_API_INFO="$(cat /data/forest-token):/dns/forest/tcp/${FOREST_RPC_PORT}/http"
+        echo $MINER_WORKER_KEY | forest-wallet --remote-wallet import
+  api-serve:
+    profiles:
+      - include-offline-rpc
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+      - filecoin-proofs:${FIL_PROOFS_PARAMETER_CACHE}
+    networks:
+      - api-tests
+    environment:
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+      - FULLNODE_API_INFO=/dns/api-serve/tcp/${FOREST_OFFLINE_RPC_PORT}/http
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        forest-tool api serve $(ls /data/*.car.zst | tail -n 1) \
+          --height=-50 --index-backfill-epochs 50 --port ${FOREST_OFFLINE_RPC_PORT} --save-token /data/forest-token-offline
+    healthcheck:
+      test: ["CMD", "forest-cli", "chain", "head"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10m
+  forest-via-gateway:
+    depends_on:
+      forest-rpc-ready:
+        condition: service_completed_successfully
+    image: ${LOTUS_IMAGE}
+    volumes:
+      - node-data:/data
+    networks:
+      - api-tests
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        export FULLNODE_API_INFO="$(cat /data/forest-token):/dns/forest/tcp/${FOREST_RPC_PORT}/http"
+        lotus-gateway --version
+        lotus-gateway run --api-max-lookback 72000h --api-wait-lookback-limit 20000 --listen 0.0.0.0:${FOREST_VIA_GATEWAY_RPC_PORT}
+    healthcheck:
+      test: |
+        export FULLNODE_API_INFO="/dns/forest-via-gateway/tcp/${FOREST_VIA_GATEWAY_RPC_PORT}/http"
+        lotus chain head || exit 1
+      interval: 10s
+      retries: 10
+      start_period: 30s
+      timeout: 5s
+  lotus-via-gateway:
+    depends_on:
+      lotus-sync-wait:
+        condition: service_completed_successfully
+    image: ${LOTUS_IMAGE}
+    volumes:
+      - node-data:/data
+    networks:
+      - api-tests
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        export FULLNODE_API_INFO="$(cat /data/lotus-token):/dns/lotus/tcp/${LOTUS_RPC_PORT}/http"
+        lotus-gateway --version
+        lotus-gateway run --api-max-lookback 72000h --api-wait-lookback-limit 20000 --listen 0.0.0.0:${LOTUS_VIA_GATEWAY_RPC_PORT}
+    healthcheck:
+      test: |
+        export FULLNODE_API_INFO="/dns/lotus-via-gateway/tcp/${LOTUS_VIA_GATEWAY_RPC_PORT}/http"
+        lotus chain head || exit 1
+      interval: 10s
+      retries: 10
+      start_period: 30s
+      timeout: 5s
+  lotus:
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    image: ${LOTUS_IMAGE}
+    volumes:
+      - node-data:/data
+      - lotus-data:/var/lib/lotus
+      - filecoin-proofs:${FIL_PROOFS_PARAMETER_CACHE}
+    networks:
+      - api-tests
+    environment:
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+      - LOTUS_API_LISTENADDRESS=/ip4/0.0.0.0/tcp/${LOTUS_RPC_PORT}/http
+      - LOTUS_EVENTS_ENABLEACTOREVENTSAPI=1
+      - LOTUS_FEVM_ENABLEETHRPC=1
+      - LOTUS_CHAININDEXER_ENABLEINDEXER=1
+      - LOTUS_CHAINSTORE_ENABLESPLITSTORE=false
+      - LOTUS_SYNC_BOOTSTRAP_PEERS=1
+      - FULLNODE_API_INFO=/dns/lotus/tcp/${LOTUS_RPC_PORT}/http
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        lotus --version
+        lotus daemon --remove-existing-chain --import-snapshot $(ls /data/*.car.zst | tail -n 1)
+  lotus-sync-wait:
+    depends_on:
+      lotus:
+        condition: service_started
+    image: ${LOTUS_IMAGE}
+    volumes:
+      - node-data:/data
+      - lotus-data:/var/lib/lotus
+      - filecoin-proofs:${FIL_PROOFS_PARAMETER_CACHE}
+    networks:
+      - api-tests
+    environment:
+      - FULLNODE_API_INFO=/dns/lotus/tcp/${LOTUS_RPC_PORT}/http
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        lotus wait-api --timeout 10m
+        # copy Lotus token to shared volume
+        cp /var/lib/lotus/token /data/lotus-token
+        lotus sync wait
+        FULLNODE_API_INFO="$(cat /var/lib/lotus/token):/dns/lotus/tcp/${LOTUS_RPC_PORT}/http"
+        SNAPSHOT_EPOCH="$(ls /data/*.car.zst | tail -n 1 | grep -Eo '[0-9]+' | tail -n 1)"
+        # backfill the index db first
+        lotus index validate-backfill --from $$SNAPSHOT_EPOCH --to $(($$SNAPSHOT_EPOCH - 200))
+        sleep 2
+        # `sethead` right after `sync wait` to ensure the head is not set in middle of a sync
+        lotus chain sethead --epoch $(($$SNAPSHOT_EPOCH - 50))
+        # wait for 30s to make sure the re-validation starts
+        sleep 30
+        lotus sync wait
+        # After the sync is done, import the wallet for signing blocks. It might be already there, which will return an error. We ignore it.
+        echo $MINER_WORKER_KEY | lotus wallet import || true
+  api-compare:
+    depends_on:
+      lotus-sync-wait:
+        condition: service_completed_successfully
+      forest:
+        condition: service_healthy
+      forest-wallet-import:
+        condition: service_completed_successfully
+      forest-rpc-ready:
+        condition: service_completed_successfully
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+      - ./filter-list:/data/filter-list
+    networks:
+      - api-tests
+    environment:
+      - RUST_LOG=info,forest::tool::subcommands=debug
+      - FOREST_RPC_DEFAULT_TIMEOUT=120
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -uxo pipefail
+        # Test against websocket endpoint for online server
+        LOTUS_API_INFO="$(cat /data/lotus-token):/dns/lotus/tcp/${LOTUS_RPC_PORT}/ws"
+        FOREST_API_INFO="$(cat /data/forest-token):/dns/forest/tcp/${FOREST_RPC_PORT}/ws"
+        forest-tool api compare $(ls /data/*.car.zst | tail -n 1) \
+          --forest $$FOREST_API_INFO \
+          --lotus $$LOTUS_API_INFO \
+          --n-tipsets 5 \
+          --test-criteria-overrides=valid-and-timeout,timeout-and-timeout \
+          --filter-file /data/filter-list \
+          --miner-address ${MINER_ADDRESS} \
+          --worker-address ${MINER_WORKER_ADDRESS} \
+          --report-mode=failure-only \
+          --report-dir=/data/api-compare-report
+
+        status=$$?
+        echo "==== API Compare Report ===="
+        cat /data/api-compare-report/*.json || echo "(Report file not accessible)"
+        exit $$status
+
+  api-compare-gateway:
+    depends_on:
+      lotus-via-gateway:
+        condition: service_healthy
+      forest-via-gateway:
+        condition: service_healthy
+      forest-wallet-import:
+        condition: service_completed_successfully
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+      - ./filter-list-gateway:/data/filter-list-gateway
+    networks:
+      - api-tests
+    environment:
+      - RUST_LOG=info,forest::tool::subcommands=debug
+      - FOREST_RPC_DEFAULT_TIMEOUT=120
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -uxo pipefail
+        # Test against websocket endpoint for online server
+        LOTUS_API_INFO="$(cat /data/lotus-token):/dns/lotus-via-gateway/tcp/${LOTUS_VIA_GATEWAY_RPC_PORT}/ws"
+        FOREST_API_INFO="$(cat /data/forest-token):/dns/forest-via-gateway/tcp/${FOREST_VIA_GATEWAY_RPC_PORT}/ws"
+        forest-tool api compare $(ls /data/*.car.zst | tail -n 1) \
+          --forest $$FOREST_API_INFO \
+          --lotus $$LOTUS_API_INFO \
+          --n-tipsets 5 \
+          --test-criteria-overrides=valid-and-timeout,timeout-and-timeout \
+          --filter-file /data/filter-list-gateway \
+          --miner-address ${MINER_ADDRESS} \
+          --worker-address ${MINER_WORKER_ADDRESS} \
+          --report-mode=failure-only \
+          --report-dir=/data/api-compare-gateway-report
+
+        status=$$?
+        echo "==== Gateway API Compare Report ===="
+        cat /data/api-compare-gateway-report/*.json || echo "(Report file not accessible)"
+        exit $$status
+
+  forest-shutdown:
+    depends_on:
+      api-compare:
+        condition: service_completed_successfully
+      api-compare-gateway:
+        condition: service_completed_successfully
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+    networks:
+      - api-tests
+    environment:
+      - RUST_LOG=info,forest::tool::subcommands=debug
+      - FOREST_RPC_DEFAULT_TIMEOUT=120
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -uxo pipefail
+        export FULLNODE_API_INFO="$(cat /data/forest-token):/dns/forest/tcp/${FOREST_RPC_PORT}/http"
+        forest-cli shutdown --force
+
+  api-compare-offline:
+    profiles:
+      - include-offline-rpc
+    depends_on:
+      lotus-sync-wait:
+        condition: service_completed_successfully
+      api-serve:
+        condition: service_healthy
+    build:
+      context: ../../../.
+      dockerfile: ${FOREST_DOCKERFILE_OVERRIDE:-Dockerfile}
+    volumes:
+      - node-data:/data
+      - ./filter-list-offline:/data/filter-list-offline
+    networks:
+      - api-tests
+    environment:
+      - RUST_LOG=info,forest::tool::subcommands=debug
+      - FOREST_RPC_DEFAULT_TIMEOUT=120
+      - FIL_PROOFS_PARAMETER_CACHE=${FIL_PROOFS_PARAMETER_CACHE}
+    entrypoint: ["/bin/bash", "-c"]
+    user: 0:0
+    command:
+      - |
+        set -uxo pipefail
+        # Test against http endpoint for offline server
+        LOTUS_API_INFO="$(cat /data/lotus-token):/dns/lotus/tcp/${LOTUS_RPC_PORT}/http"
+        FOREST_API_INFO="$(cat /data/forest-token-offline):/dns/api-serve/tcp/${FOREST_OFFLINE_RPC_PORT}/http"
+        forest-tool api compare $(ls /data/*.car.zst | tail -n 1) \
+          --forest $$FOREST_API_INFO \
+          --lotus $$LOTUS_API_INFO \
+          --offline \
+          --n-tipsets 5 \
+          --filter-file /data/filter-list-offline \
+          --report-mode=failure-only \
+          --report-dir=/data/api-compare-report-offline
+        status=$$?
+        echo "==== Offline API Compare Report ===="
+        cat /data/api-compare-report-offline/*.json || echo "(Report file not accessible)"
+        FULLNODE_API_INFO=$$FOREST_API_INFO forest-cli shutdown --force
+        exit $$status
+  post-setup:
+    depends_on:
+      api-compare:
+        condition: service_completed_successfully
+    image: busybox
+    networks:
+      - api-tests
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        echo "Success"
+  post-setup-offline:
+    profiles:
+      - include-offline-rpc
+    depends_on:
+      api-compare-offline:
+        condition: service_completed_successfully
+    image: busybox
+    networks:
+      - api-tests
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -euxo pipefail
+        echo "Success"
+
+volumes:
+  filecoin-proofs:
+  node-data:
+  # mount this to /var/lib/lotus to avoid creating random volumes
+  lotus-data:
+
+networks:
+  api-tests:

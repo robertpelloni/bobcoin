@@ -1,0 +1,61 @@
+# Banned in #2454, trading security/being idiomatic for speed
+[[disallowed-types]]
+path = "std::collections::HashMap"
+reason = """the standard library hasher is secure by default, but not very fast.
+use ahash::HashMap instead."""
+
+[[disallowed-types]]
+path = "std::collections::HashSet"
+reason = """the standard library hasher is secure by default, but not very fast.
+use ahash::HashSet instead."""
+
+# Banned in #2600, presumably so that poisoning won't need to be user-handled
+[[disallowed-types]]
+path = "std::sync::RwLock"
+reason = """the standard library synchronization primitives are poisoned when aquiring threads panic.
+use parking_lot::RwLock instead to silently ignore panics."""
+
+[[disallowed-types]]
+path = "std::sync::Mutex"
+reason = """the standard library synchronization primitives are poisoned when aquiring threads panic.
+use parking_lot::Mutex instead to silently ignore panics."""
+
+[[disallowed-types]]
+path = "multihash_codetable::Code"
+reason = """use `crate::utils::multihash::MultihashCode` instead which has `Identity` code back-filled."""
+
+[[disallowed-types]]
+path = "rand::rngs::ThreadRng"
+reason = """use `crate::utils::forest_rng` instead."""
+
+[[disallowed-types]]
+path = "rand::rngs::OsRng"
+reason = """use `crate::utils::forest_os_rng` instead."""
+
+[[disallowed-methods]]
+path = "rand::thread_rng"
+reason = """use `crate::utils::forest_rng` instead."""
+
+[[disallowed-methods]]
+path = "uuid::Uuid::new_v4"
+reason = """use `crate::utils::new_uuid_v4` instead."""
+
+[[disallowed-methods]]
+path = "tempfile::NamedTempFile::new"
+reason = """The temporary files created by this method are not persistable if the temporary directory lives on a different filesystem than the target directory. While it is valid in other contexts (if not persisting files), it was misused many times and so we are banning it. Consider using `tempfile::NamedTempFile::new_in` or `tempfile::NamedTempFile::Builder"""
+
+[[disallowed-methods]]
+path = "hashlink::LruCache::new"
+reason = """Use SizeTrackingLruCache instead."""
+
+[[disallowed-methods]]
+path = "hashlink::LruCache::with_hasher"
+reason = """Use SizeTrackingLruCache instead."""
+
+[[disallowed-methods]]
+path = "hashlink::LruCache::new_unbounded"
+reason = """Avoid unbounded lru cache for potential memory leak, use SizeTrackingLruCache instead."""
+
+[[disallowed-methods]]
+path = "prometheus_client::registry::Registry::register_collector"
+reason = """use crate::metrics::register_collector instead."""

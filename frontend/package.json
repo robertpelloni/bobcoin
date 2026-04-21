@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "bobcoin-frontend",
   "private": true,
   "version": "2.6.1",
@@ -28,9 +27,7 @@
     "@vitejs/plugin-react": "^4.2.1",
 <<<<<<< Updated upstream
     "vite": "^8.0.3",
-=======
     "vite": "^8.0.7",
->>>>>>> Stashed changes
     "vite-plugin-pwa": "^1.2.0",
     "workbox-core": "^7.4.0",
     "workbox-precaching": "^7.4.0",

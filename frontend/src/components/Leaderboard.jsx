@@ -32,6 +32,12 @@ export function Leaderboard({ mintStatus }) {
     };
 >>>>>>> Stashed changes
 
+    const getBadge = (index, score) => {
+        if (index < 3) return BADGES[index];
+        if (score > 10000) return '⚡';
+        return '';
+    };
+
     return (
         <div className="leaderboard-container" style={{ marginTop: '2rem' }}>
             <h2>GLOBAL LEADERBOARD</h2>

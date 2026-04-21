@@ -77,6 +77,7 @@ const ZK_SERVICE_URL = process.env.ZK_SERVICE_URL || 'http://localhost:8080';
 
 app.use(cors());
 app.use(express.json());
+app.use('/market', marketRouter);
 
 // Initialize SQLite DB for Governance and Market
 initDatabase().catch(err => {
@@ -217,17 +218,13 @@ app.post('/burn', async (req, res) => {
 });
 
 app.get('/leaderboard', async (req, res) => {
-    if (!bridgeReady) {
-        return res.status(503).json({ error: 'Bridge not ready' });
-    }
+    if (!bridgeReady) return res.status(503).json({ error: 'Bridge not ready' });
     const leaderboard = await bridge.getLeaderboard(10);
     res.json({ leaderboard });
 });
 
 app.get('/content', async (req, res) => {
-    if (!bridgeReady) {
-        return res.status(503).json({ error: 'Bridge not ready' });
-    }
+    if (!bridgeReady) return res.status(503).json({ error: 'Bridge not ready' });
     const content = await bridge.getRegisteredContent(10);
     res.json({ content });
 });
@@ -419,7 +416,6 @@ app.post('/submit-proof', verifySignature, async (req, res) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(proof)
             });
-
             if (zkResponse.ok) {
                 const zkResult = await zkResponse.json();
                 if (zkResult.success) {
@@ -477,7 +473,6 @@ app.post('/submit-proof', verifySignature, async (req, res) => {
         }
 
     } catch (error) {
-        console.error('[GameServer] Error processing proof:', error);
         res.status(500).json({ error: error.message });
 >>>>>>> feature/comprehensive-ui-spec
     }

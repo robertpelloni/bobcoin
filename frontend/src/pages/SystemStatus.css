@@ -1,174 +1,85 @@
-.system-status-container {
+.system-container {
+    width: 100%;
+    max-width: 1000px;
     padding: 2rem;
-    color: #fff;
-    max-width: 1200px;
-    margin: 0 auto;
+    color: #e0e0e0;
+}
+
+.version-display {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid #0ff;
+    padding-bottom: 1rem;
+    display: inline-block;
 }
 
 .status-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 2rem;
     margin-bottom: 3rem;
 }
 
 .status-card {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid #333;
-    padding: 2rem;
-    border-radius: 4px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+    padding: 1.5rem;
+    text-align: left;
+    transition: all 0.3s;
 }
 
 .status-card h3 {
     margin-top: 0;
-    color: #888;
-    font-size: 0.9rem;
-    letter-spacing: 2px;
-}
-
-.big-number {
-    font-size: 3rem;
-    font-weight: bold;
-    font-family: 'Courier New', monospace;
-    margin: 1rem 0;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-}
-
-.unit {
     font-size: 1rem;
     color: #888;
 }
 
-.progress-bar-thin {
-    width: 100%;
-    height: 4px;
-    background: #222;
-    margin-bottom: 0.5rem;
+.status-card p {
+    font-weight: bold;
+    font-size: 1.2rem;
 }
 
-.progress-bar-thin .fill {
-    height: 100%;
-    transition: width 0.2s linear;
-}
-
-.subtext {
+.status-card .detail {
+    font-weight: normal;
     font-size: 0.8rem;
-    color: #555;
+    color: #aaa;
+    margin-top: 0.5rem;
 }
 
-.status-indicator.active {
+.status-card.online {
+    border-color: #0f0;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.status-card.online p {
     color: #0f0;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin: 1rem 0;
 }
 
-.dot {
-    width: 10px;
-    height: 10px;
-    background: #0f0;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #0f0;
-    animation: pulse 2s infinite;
+.status-card.offline {
+    border-color: #f00;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
 }
 
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.2); opacity: 0.5; }
-    100% { transform: scale(1); opacity: 1; }
+.status-card.offline p {
+    color: #f00;
 }
 
-.visualizer {
-    margin-bottom: 3rem;
-    border: 1px solid #333;
-    padding: 1rem;
-    background: rgba(0,0,0,0.8);
+.architecture-view {
+    text-align: left;
+    background: rgba(10, 10, 20, 0.9);
+    padding: 2rem;
+    border: 1px dashed #0ff;
 }
 
-.lattice-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: center;
+.architecture-view h2 {
+    color: #0ff;
+    margin-top: 0;
 }
 
-.block-node {
-    width: 60px;
-    height: 60px;
-    background: #111;
-    border: 1px solid #333;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.7rem;
-    animation: fadeIn 0.5s ease-out;
-}
-
-.block-node.play {
-    border-color: #0ff;
-    box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
-}
-
-.block-node.store {
-    border-color: #ff00ff;
-    box-shadow: 0 0 5px rgba(255, 0, 255, 0.2);
-}
-
-.block-node.placeholder {
-    opacity: 0.1;
-    border-style: dashed;
-}
-
-.block-type {
-    font-weight: bold;
-}
-
-.block-miner {
-    color: #888;
-    font-size: 0.6rem;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Light Mode Overrides */
-body.light-mode .status-card,
-body.light-mode .visualizer {
-    background: #fff;
-    border-color: #ccc;
-    color: #333;
-}
-
-body.light-mode .big-number {
-    text-shadow: none;
-    color: #222 !important; /* Force dark text in light mode */
-}
-
-body.light-mode .progress-bar-thin {
-    background: #eee;
-}
-
-body.light-mode .block-node {
-    background: #f5f5f5;
-    border-color: #ddd;
-    color: #333;
-}
-
-body.light-mode .block-node.play {
-    background: #e0ffff;
-    border-color: #00cccc;
-}
-
-body.light-mode .block-node.store {
-    background: #ffe0ff;
-    border-color: #cc00cc;
+.tree-view code {
+    display: block;
+    font-family: 'Courier New', Courier, monospace;
+    white-space: pre;
+    color: #fff;
+    line-height: 1.5;
 }

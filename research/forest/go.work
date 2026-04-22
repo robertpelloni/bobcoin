@@ -1,7 +1,0 @@
-go 1.26.0
-
-use (
-	./f3-sidecar
-	./interop-tests/src/tests/go_app
-	./tools/prometheus_metrics_validator
-)

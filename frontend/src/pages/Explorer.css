@@ -1,6 +1,5 @@
 .explorer-container {
     padding: 2rem;
-<<<<<<< HEAD
     max-width: 1400px;
     margin: 0 auto;
 }
@@ -8,42 +7,11 @@
 .explorer-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-=======
-    color: #fff;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.search-bar {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.search-bar input {
-    flex: 1;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid #333;
-    padding: 1rem;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    font-size: 1rem;
-}
-
-.search-bar input:focus {
-    border-color: #0ff;
-    outline: none;
-}
-
-.stats-row {
-    display: flex;
->>>>>>> feature/comprehensive-ui-spec
     gap: 1rem;
     margin-bottom: 2rem;
 }
 
 .stat-card {
-<<<<<<< HEAD
     background: rgba(0, 255, 255, 0.05);
     border: 1px solid #0ff;
     padding: 1.5rem;
@@ -251,98 +219,4 @@
     .account-row {
         font-size: 0.75rem;
     }
-=======
-    flex: 1;
-    background: #111;
-    border: 1px solid #333;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.stat-card .label {
-    color: #888;
-    font-size: 0.8rem;
-    margin-bottom: 0.5rem;
-}
-
-.stat-card .value {
-    color: #0ff;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-.blocks-table-container {
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid #333;
-    padding: 1rem;
-}
-
-.cyber-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.cyber-table th, .cyber-table td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #222;
-}
-
-.cyber-table th {
-    color: #888;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-}
-
-.cyber-table .highlight {
-    color: #ff00ff;
-    font-weight: bold;
-}
-
-.cyber-table .hash, .cyber-table .address {
-    font-family: 'Courier New', monospace;
-    color: #0ff;
-    cursor: pointer;
-}
-
-.cyber-table tr:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-/* Light Mode */
-body.light-mode .search-bar input {
-    background: #fff;
-    color: #333;
-    border-color: #ccc;
-}
-
-body.light-mode .stat-card {
-    background: #f5f5f5;
-    border-color: #ddd;
-}
-
-body.light-mode .blocks-table-container {
-    background: #fff;
-    border-color: #ccc;
-}
-
-body.light-mode .cyber-table th {
-    color: #555;
-}
-
-body.light-mode .cyber-table td {
-    color: #333;
-    border-bottom-color: #eee;
-}
-
-body.light-mode .cyber-table .highlight {
-    color: #cc00cc;
-}
-
-body.light-mode .cyber-table .hash,
-body.light-mode .cyber-table .address {
-    color: #00cccc;
->>>>>>> feature/comprehensive-ui-spec
 }

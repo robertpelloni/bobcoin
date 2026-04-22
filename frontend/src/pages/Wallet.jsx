@@ -1,20 +1,12 @@
-<<<<<<< HEAD
 import { useState, useEffect, useRef } from 'react';
 import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL, getLatticeChain } from '../api';
 import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
 import { SignConfirmModal } from '../components/SignConfirmModal';
-=======
-import { useState, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { getBankroll } from '../api'; // Use for real balance
->>>>>>> feature/comprehensive-ui-spec
 import './Wallet.css';
 
 export function Wallet() {
-<<<<<<< HEAD
     const [privacyMode, setPrivacyMode] = useState(true);
     const [ringSize, setRingSize] = useState(16);
     const [balance, setBalance] = useState(0.00);
@@ -275,23 +267,6 @@ export function Wallet() {
         }
         setIsSending(false);
     };
-=======
-    const { publicKey } = useWallet();
-    const [history, setHistory] = useState(MOCK_HISTORY);
-    const [showKeys, setShowKeys] = useState(false);
-    const [realBalance, setRealBalance] = useState(0);
-    const [transferMode, setTransferMode] = useState('SEND'); // SEND or RECEIVE
-    const [recipient, setRecipient] = useState('');
-    const [amount, setAmount] = useState('');
-
-    // Fetch real balance if connected
-    useEffect(() => {
-        if (publicKey) {
-            getBankroll().then(b => setRealBalance(b)); // Currently fetches server bankroll as proxy for "network"
-            // In a real app, we'd fetch specific user balance via RPC
-        }
-    }, [publicKey]);
->>>>>>> feature/comprehensive-ui-spec
 
     const toggleDecode = (id) => {
         setHistory(history.map(tx => {
@@ -302,7 +277,6 @@ export function Wallet() {
         }));
     };
 
-<<<<<<< HEAD
     useEffect(() => {
         if (!isGenerating) return;
 
@@ -402,22 +376,12 @@ export function Wallet() {
         );
     }
 
-=======
-    const handleTransfer = (e) => {
-        e.preventDefault();
-        alert(`Initiating Privacy Transfer: ${amount} BOB to ${recipient} (Mocked)`);
-        setRecipient('');
-        setAmount('');
-    };
-
->>>>>>> feature/comprehensive-ui-spec
     return (
         <div className="wallet-container">
             <h1 className="glitch" data-text="PRIVACY VAULT">PRIVACY VAULT</h1>
 
             <div className="wallet-card">
                 <div className="card-header">
-<<<<<<< HEAD
                     <h2>TOTAL BALANCE</h2>
                     <div className="privacy-toggle">
                         <span>STEALTH MODE</span>
@@ -429,16 +393,12 @@ export function Wallet() {
                             {privacyMode ? 'ON' : 'OFF'}
                         </button>
                     </div>
-=======
-                    <h2>CONNECTION STATUS</h2>
-                    <WalletMultiButton />
->>>>>>> feature/comprehensive-ui-spec
                 </div>
 
                 <div className="balance-display">
                     <span className="currency">BOB</span>
                     <span className="amount">
-                        {publicKey ? (realBalance > 0 ? realBalance.toFixed(4) : '1,250.50') : '---.--'}
+                        {privacyMode ? '****.**' : balance.toFixed(2)}
                     </span>
                 </div>
 
@@ -503,72 +463,23 @@ export function Wallet() {
                 <div className="address-section">
                     <label>PUBLIC ADDRESS</label>
                     <div className="address-box">
-<<<<<<< HEAD
                         <code>{keypair ? `${keypair.publicKey.slice(0, 16)}...` : 'GENERATING...'}</code>
                         <button className="copy-btn" title="Copy public address to clipboard." onClick={() => keypair && navigator.clipboard.writeText(keypair.publicKey)}>COPY</button>
-=======
-                        <code>{publicKey ? publicKey.toBase58() : 'NOT CONNECTED'}</code>
-                        <button className="copy-btn" onClick={() => {
-                            if (publicKey) navigator.clipboard.writeText(publicKey.toBase58());
-                        }}>COPY</button>
->>>>>>> feature/comprehensive-ui-spec
                     </div>
+
+                    {privacyMode && (
+                        <div className="stealth-address-box">
+                            <label>ONE-TIME STEALTH ADDRESS (GENERATED)</label>
+                            <code className="stealth">stealth:9z8y7x6w...1c4d</code>
+                            <div className="description" style={{fontSize: '0.8rem', color: '#ff00ff'}}>
+                                Generated via Diffie-Hellman Key Exchange using the sender's ephemeral key and your view key.
+                                Only you can link this address to your wallet.
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-<<<<<<< Updated upstream
-=======
-            {publicKey && (
-                <>
-                    <div className="action-panel">
-                        <div className="tabs">
-                            <button className={transferMode === 'SEND' ? 'active' : ''} onClick={() => setTransferMode('SEND')}>SEND</button>
-                            <button className={transferMode === 'RECEIVE' ? 'active' : ''} onClick={() => setTransferMode('RECEIVE')}>RECEIVE</button>
-                        </div>
-
-                        {transferMode === 'SEND' ? (
-                            <form onSubmit={handleTransfer} className="transfer-form">
-                                <div className="input-group">
-                                    <label>RECIPIENT (STEALTH ADDRESS)</label>
-                                    <input type="text" placeholder="bob1q..." value={recipient} onChange={e => setRecipient(e.target.value)} />
-                                </div>
-                                <div className="input-group">
-                                    <label>AMOUNT</label>
-                                    <input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
-                                </div>
-                                <button type="submit" className="cyber-button full-width">SIGN & TRANSFER (RING CT)</button>
-                            </form>
-                        ) : (
-                            <div className="receive-box">
-                                <div className="qr-placeholder">[ QR CODE GENERATOR ]</div>
-                                <p>Share this one-time stealth address to receive funds privately.</p>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="settings-grid">
-                        <div className="setting-card">
-                            <h3>KEY MANAGEMENT</h3>
-                            <div className="control">
-                                <button className="cyber-button" onClick={() => setShowKeys(!showKeys)} style={{fontSize: '0.8rem', padding: '0.5rem'}}>
-                                    {showKeys ? 'HIDE KEYS' : 'REVEAL KEYS'}
-                                </button>
-                            </div>
-                            {showKeys && (
-                                <div className="keys-box" style={{marginTop: '1rem', background: '#000', padding: '0.5rem', border: '1px solid #ff0055'}}>
-                                    <div style={{color: '#ff0055', fontSize: '0.7rem', marginBottom: '0.5rem'}}>DO NOT SHARE THESE KEYS</div>
-                                    <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE VIEW KEY:</div>
-                                    <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem', marginBottom: '0.5rem'}}>vk_secret_12345...</code>
-                                    <div style={{fontSize: '0.7rem', color: '#888'}}>PRIVATE SPEND KEY:</div>
-                                    <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>sk_secret_67890...</code>
-                                </div>
-                            )}
-                            <p className="description">
-                                View keys allow read-only access. Spend keys allow spending. Keep them safe.
-                            </p>
-                        </div>
-
->>>>>>> Stashed changes
             {pending.length > 0 && (
                 <div className="pending-funds-section" style={{marginTop: '2rem', padding: '1.5rem', background: 'rgba(255, 0, 85, 0.1)', border: '1px solid var(--secondary-color)'}}>
                     <h2 style={{color: 'var(--secondary-color)', marginBottom: '1rem'}}>PENDING FUNDS</h2>
@@ -758,21 +669,25 @@ export function Wallet() {
                             
                             <div style={{fontSize: '0.7rem', color: '#888', marginTop: '0.5rem'}}>PRIVATE MESSAGING KEY:</div>
                             <code style={{display: 'block', wordBreak: 'break-all', fontSize: '0.8rem'}}>{keypair ? keypair.boxPrivateKey : '...'}</code>
-=======
-                        <div className="setting-card">
-                            <h3>ZERO-KNOWLEDGE PROOFS</h3>
-                            <div className="status-indicator active">
-                                <span className="dot"></span> HALO 2 ACTIVE
-                            </div>
-                            <p className="description">
-                                Transactions are verified using recursive zk-SNARKs (Halo 2), ensuring
-                                no trusted setup is required and amounts are perfectly hidden (Bulletproofs+).
-                            </p>
->>>>>>> feature/comprehensive-ui-spec
                         </div>
-                    </div>
+                    )}
+                    <p className="description">
+                        View keys allow read-only access. Spend keys allow spending. Keep them safe.
+                    </p>
+                </div>
 
-<<<<<<< HEAD
+                <div className="setting-card">
+                    <h3>ZERO-KNOWLEDGE PROOFS</h3>
+                    <div className="status-indicator active">
+                        <span className="dot"></span> HALO 2 ACTIVE
+                    </div>
+                    <p className="description">
+                        Transactions are verified using recursive zk-SNARKs (Halo 2), ensuring
+                        no trusted setup is required and amounts are perfectly hidden (Bulletproofs+).
+                    </p>
+                </div>
+            </div>
+
             <div className="transaction-history" style={{marginTop: '3rem'}}>
                 <h2 style={{borderBottom: '1px solid #333', paddingBottom: '0.5rem'}}>TRANSACTION HISTORY (ENCRYPTED)</h2>
                 <table style={{width: '100%', textAlign: 'left', borderCollapse: 'collapse', background: 'rgba(0,0,0,0.5)'}}>
@@ -826,57 +741,6 @@ export function Wallet() {
                 onConfirm={onGuardianConfirm} 
                 onCancel={() => setPendingBlock(null)} 
             />
-=======
-                    <div className="transaction-history" style={{marginTop: '3rem'}}>
-                        <h2 style={{borderBottom: '1px solid #333', paddingBottom: '0.5rem'}}>TRANSACTION HISTORY (ENCRYPTED)</h2>
-                        <table style={{width: '100%', textAlign: 'left', borderCollapse: 'collapse', background: 'rgba(0,0,0,0.5)'}}>
-                            <thead>
-                                <tr>
-                                    <th style={{padding: '1rem', color: '#888'}}>DATE</th>
-                                    <th style={{padding: '1rem', color: '#888'}}>TYPE</th>
-                                    <th style={{padding: '1rem', color: '#888'}}>AMOUNT (BULLETPROOFS+)</th>
-                                    <th style={{padding: '1rem', color: '#888'}}>HASH</th>
-                                    <th style={{padding: '1rem', color: '#888'}}>ACTION</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.map(tx => (
-                                    <tr key={tx.id} style={{borderBottom: '1px solid #333'}}>
-                                        <td style={{padding: '1rem'}}>{tx.date}</td>
-                                        <td style={{padding: '1rem'}}>
-                                            <span style={{
-                                                color: tx.type === 'RECEIVE' || tx.type === 'MINT' ? '#0f0' : '#ff0055',
-                                                fontWeight: 'bold'
-                                            }}>{tx.type}</span>
-                                        </td>
-                                        <td style={{padding: '1rem', fontFamily: 'monospace', fontSize: '1.1rem'}}>
-                                            {tx.decoded ? (
-                                                <span style={{color: '#fff'}}>
-                                                    {tx.type === 'SEND' || tx.type === 'TIP' ? '-' : '+'}
-                                                    {tx.amount.toFixed(2)} BOB
-                                                </span>
-                                            ) : (
-                                                <span style={{color: '#555', filter: 'blur(3px)'}}>XX.XX</span>
-                                            )}
-                                        </td>
-                                        <td style={{padding: '1rem', fontFamily: 'monospace', color: '#0ff'}}>{tx.hash}</td>
-                                        <td style={{padding: '1rem'}}>
-                                            <button
-                                                className="cyber-button"
-                                                style={{fontSize: '0.7rem', padding: '0.2rem 0.5rem'}}
-                                                onClick={() => toggleDecode(tx.id)}
-                                            >
-                                                {tx.decoded ? 'HIDE' : 'DECODE'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
-            )}
->>>>>>> feature/comprehensive-ui-spec
         </div>
     );
 }

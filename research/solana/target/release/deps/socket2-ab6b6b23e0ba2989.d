@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\release\deps\socket2-ab6b6b23e0ba2989.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockaddr.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\socket.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockref.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sys\windows.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\release\deps\libsocket2-ab6b6b23e0ba2989.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockaddr.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\socket.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockref.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sys\windows.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\release\deps\libsocket2-ab6b6b23e0ba2989.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockaddr.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\socket.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockref.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sys\windows.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockaddr.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\socket.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sockref.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\socket2-0.4.9\src\sys\windows.rs:

@@ -1,0 +1,1 @@
+cargo:warning=(not a warning) Generating ../../../sdk/sbf/syscalls.txt from ../src/syscalls/mod.rs

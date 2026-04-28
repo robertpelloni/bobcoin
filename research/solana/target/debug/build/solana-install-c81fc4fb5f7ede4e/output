@@ -1,0 +1,2 @@
+cargo:rustc-env=TARGET=x86_64-pc-windows-msvc
+cargo:rustc-env=BUILD_SECONDS_SINCE_UNIX_EPOCH=1767128086

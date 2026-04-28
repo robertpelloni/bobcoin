@@ -1,0 +1,1 @@
+{"rustc":8323788817864214825,"features":"[]","declared_features":"[]","target":7662402252088841525,"profile":16564125528072128486,"path":3077491435607891584,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"release\\.fingerprint\\fake-simd-93d35874123df6bf\\dep-lib-fake_simd","checksum":false}}],"rustflags":["--cfg=tokio_unstable"],"config":2069994364910194474,"compile_kind":0}

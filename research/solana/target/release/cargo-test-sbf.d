@@ -1,0 +1,1 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\release\cargo-test-sbf.exe: C:\Users\hyper\workspace\bobcoin\research\solana\logger\src\lib.rs C:\Users\hyper\workspace\bobcoin\research\solana\sdk\cargo-test-sbf\src\main.rs

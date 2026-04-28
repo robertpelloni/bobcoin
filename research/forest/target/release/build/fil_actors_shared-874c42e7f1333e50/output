@@ -1,0 +1,1 @@
+cargo:rerun-if-env-changed=FIL_ENABLE_ACTOR_VERSION_CHECK

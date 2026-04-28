@@ -1,0 +1,1 @@
+{"rustc":8323788817864214825,"features":"[]","declared_features":"[]","target":5351356232453560864,"profile":8282617333448345646,"path":12113747156257025281,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"release\\.fingerprint\\hex_fmt-fdf7822886501f6b\\dep-lib-hex_fmt","checksum":false}}],"rustflags":["--cfg=tokio_unstable"],"config":2069994364910194474,"compile_kind":0}

@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\multiaddr-886d06c4bd28ce88.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\onion_addr.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\protocol.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\from_url.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libmultiaddr-886d06c4bd28ce88.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\onion_addr.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\protocol.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\from_url.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libmultiaddr-886d06c4bd28ce88.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\onion_addr.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\protocol.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\from_url.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\errors.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\onion_addr.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\protocol.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\multiaddr-0.18.2\src\from_url.rs:

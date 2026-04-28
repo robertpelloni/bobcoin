@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\dotenvy-92e7a52cbebd4bd1.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\find.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\iter.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\parse.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libdotenvy-92e7a52cbebd4bd1.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\find.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\iter.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\parse.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libdotenvy-92e7a52cbebd4bd1.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\find.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\iter.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\parse.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\errors.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\find.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\iter.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dotenvy-0.15.7\src\parse.rs:

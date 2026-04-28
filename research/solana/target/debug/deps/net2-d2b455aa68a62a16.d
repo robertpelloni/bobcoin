@@ -1,0 +1,12 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\net2-d2b455aa68a62a16.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\tcp.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\udp.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\socket.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\ext.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\utils.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\sys\windows\mod.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\sys\windows\impls.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\libnet2-d2b455aa68a62a16.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\tcp.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\udp.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\socket.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\ext.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\utils.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\sys\windows\mod.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\sys\windows\impls.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\tcp.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\udp.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\socket.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\ext.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\utils.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\sys\windows\mod.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\net2-0.2.37\src\sys\windows\impls.rs:

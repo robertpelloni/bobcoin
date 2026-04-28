@@ -1,0 +1,13 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\url-46a8c1248ed328b6.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\encoding.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\host.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\origin.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\path_segments.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\parser.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\slicing.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\form_urlencoded.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\quirks.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\liburl-46a8c1248ed328b6.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\encoding.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\host.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\origin.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\path_segments.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\parser.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\slicing.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\form_urlencoded.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\quirks.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\encoding.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\host.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\origin.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\path_segments.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\parser.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\slicing.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\form_urlencoded.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\url-1.7.2\src\quirks.rs:

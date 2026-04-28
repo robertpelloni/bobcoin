@@ -1,0 +1,7 @@
+cargo:rerun-if-changed=proto\confirmed_block.proto
+cargo:rerun-if-changed=proto\entries.proto
+cargo:rerun-if-changed=proto\transaction_by_addr.proto
+cargo:rerun-if-changed=proto\confirmed_block.proto
+cargo:rerun-if-changed=proto\entries.proto
+cargo:rerun-if-changed=proto\transaction_by_addr.proto
+cargo:rerun-if-changed=proto

@@ -1,0 +1,14 @@
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\thiserror-d936b9860746d3ca.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\thiserror-b306bfc890414a36\out/private.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libthiserror-d936b9860746d3ca.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\thiserror-b306bfc890414a36\out/private.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libthiserror-d936b9860746d3ca.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\thiserror-b306bfc890414a36\out/private.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs:
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\thiserror-b306bfc890414a36\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\hyper\\workspace\\bobcoin\\research\\forest\\target\\release\\build\\thiserror-b306bfc890414a36\\out

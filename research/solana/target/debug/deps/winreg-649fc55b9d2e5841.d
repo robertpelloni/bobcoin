@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\winreg-649fc55b9d2e5841.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\common.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\enums.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_key.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_key_metadata.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_value.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\types.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\libwinreg-649fc55b9d2e5841.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\common.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\enums.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_key.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_key_metadata.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_value.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\types.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\common.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\enums.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_key.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_key_metadata.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\reg_value.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winreg-0.50.0\src\types.rs:

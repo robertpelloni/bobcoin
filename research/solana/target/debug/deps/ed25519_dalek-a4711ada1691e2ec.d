@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\ed25519_dalek-a4711ada1691e2ec.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\constants.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\keypair.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\public.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\secret.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\signature.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\libed25519_dalek-a4711ada1691e2ec.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\constants.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\keypair.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\errors.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\public.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\secret.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\signature.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\constants.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\keypair.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\errors.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\public.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\secret.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ed25519-dalek-1.0.1\src\signature.rs:

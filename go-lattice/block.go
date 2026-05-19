@@ -29,8 +29,17 @@ type Block struct {
 
 // CalculateHash generates the block hash matching Node.js logic
 func (b *Block) CalculateHash() string {
-	sporaJSON, _ := json.Marshal(b.Spora)
-	payloadJSON, _ := json.Marshal(b.Payload)
+	sporaStr := ""
+	if b.Spora != nil {
+		sporaJSON, _ := json.Marshal(b.Spora)
+		sporaStr = string(sporaJSON)
+	}
+
+	payloadStr := ""
+	if b.Payload != nil {
+		payloadJSON, _ := json.Marshal(b.Payload)
+		payloadStr = string(payloadJSON)
+	}
 
 	prev := ""
 	if b.Previous != nil {
@@ -44,8 +53,8 @@ func (b *Block) CalculateHash() string {
 		strconv.FormatFloat(b.StakedBalance, 'f', -1, 64) +
 		strconv.Itoa(b.Height) +
 		b.Link +
-		string(sporaJSON) +
-		string(payloadJSON)
+		sporaStr +
+		payloadStr
 
 	return Hash(data)
 }

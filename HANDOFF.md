@@ -1,9 +1,10 @@
-# Session Handoff - 2026-04-12 (v8.107.1)
+# Session Handoff - 2026-05-19 (v8.107.2)
 
 ## Executive Summary
 Completed the native Go porting for ZK/FHE logic within `go-game-server` and finalized the 1:1 Governance Enactment Delays parity between JS and Go consensus engines.
 
 ### Recent Governance & Porting Progress
+- **Unified Block Hashing:** Ensured the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format, preventing diverging hashes on null/undefined fields.
 - **Governance Enactment Delays:** Implemented explicit enactment delays in `Lattice.js` and `lattice.go`. Proposals now feature an `enactmentDelay` parameter, deferring the `executeProposalAction` logic until `block.timestamp >= endTime + enactmentDelay`.
 - **Service Porting (ZK/FHE):** Removed the HTTP bridge proxy logic from `go-game-server` for ZK and FHE. FHE computation now executes natively by calling `node-seal` via `exec.Command` to a local JS script. ZK verification implements an internal simulated delay for SP1 rather than relying on the proxy.
 
@@ -39,5 +40,4 @@ Executed successfully:
 - `cd frontend && npm run build`
 
 ## Recommended Next Step
-1. **Unify Block Hashing Rules**: Ensure the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format.
-2. **Multi-Node Sync Hardening**: Push the new reconciliation flow further into automated gossip scenarios.
+1. **Multi-Node Sync Hardening**: Push the new reconciliation flow further into automated gossip scenarios.

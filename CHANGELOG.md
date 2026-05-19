@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.107.2] - 2026-05-19
+### Fixed
+- **Unified Block Hashing:** Fixed Go `CalculateHash` to explicitly match Node.js `JSON.stringify` logic for Spora and Payload, resulting in correct empty strings for `null` rather than `"null"`.
+
 ## [8.107.1] - 2026-04-12
 ### Added
 - Explicit Enactment Delays for Governance proposals in both JS (`Lattice.js`) and Go (`lattice.go`). Proposals now transition to `Passed` but wait for `enactmentDelay` before execution.

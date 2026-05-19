@@ -53,3 +53,5 @@
 - [x] **Gamified Onboarding:** Built an interactive terminal requiring users to physically mash their keyboard to securely generate the 64-character entropy seed required to initialize their wallet.
 - [x] **WebRTC Multiplayer:** Built a full WebSocket signaling server + `simple-peer` WebRTC client enabling peer-to-peer competitive rhythm game matches with live score streaming.
 - [x] **Identity Verification UI (Frontend v20):** Integrated real-time "Zero-Trust" checking for publisher attestations in the Vault, backed by the Go supernode's new `VerifierService`.
+
+- [x] **Multi-Node Sync Hardening**: Gossip loops now ban peers submitting cryptographically invalid block batches.

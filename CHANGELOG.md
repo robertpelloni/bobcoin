@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.107.3] - 2026-05-19
+### Added
+- **Multi-Node Sync Hardening:** Implemented dynamic peer banning in the `bobcoin-consensus` gossip loop. Peers that send batches containing cryptographically invalid blocks will now be skipped and removed from future synchronization rounds to prevent spam.
+
 ## [8.107.2] - 2026-05-19
 ### Fixed
 - **Unified Block Hashing:** Fixed Go `CalculateHash` to explicitly match Node.js `JSON.stringify` logic for Spora and Payload, resulting in correct empty strings for `null` rather than `"null"`.

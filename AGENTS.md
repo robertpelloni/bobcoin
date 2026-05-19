@@ -13,3 +13,7 @@ Active Tasks:
 - Implement/Verify NFT protocol.
 - Verify Atomic Swaps.
 - Enhance 3D WebGL Dashboard.
+
+
+### Dual-Stack Parity Operations
+Bobcoin uses parallel ledger engines (`bobcoin-consensus` in JS, `go-lattice` in Go). All state transitions, hashing, serialization, and consensus mechanics must maintain explicit 1:1 mathematical parity. If you modify a block rule in JS, you must immediately implement the corresponding patch in Go.

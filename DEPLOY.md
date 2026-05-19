@@ -40,3 +40,8 @@ Due to conflicts between specific Solana web3.js versions and the LightProtocol 
 ```bash
 npm install --legacy-peer-deps
 ```
+### Standalone Go Services
+- `go-casino`: Standalone high-performance casino logic daemon. Requires standard `go build` / `go run` workflow.
+
+### Dependency Warnings
+- **Supernode**: Always install `supertorrent` dependencies using `npm install --legacy-peer-deps` due to LightProtocol SDK web3.js conflicts.

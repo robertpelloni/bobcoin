@@ -27,3 +27,6 @@ The core philosophy is encapsulated in the manifesto:
 *   **Game Server (Node.js/Rust):** The decentralized orchestrator.
 *   **Supernode (Node.js/WebTorrent/Bobtorrent):** The physical infrastructure client that downloads, seeds, and generates SPoRA Merkle proofs of data.
 *   **ZK Service (Rust/SP1):** The cryptographic engine responsible for executing and proving game traces.
+
+### Dual-Consensus Engine & Parity
+The Bobcoin project actively maintains 1:1 mathematical parity between the legacy JavaScript `bobcoin-consensus` engine and the high-performance Go `go-lattice` engine. Full ZK Proving via SP1 remains the final functional milestone.

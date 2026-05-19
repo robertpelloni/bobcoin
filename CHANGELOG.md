@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.107.4] - 2026-05-19
+### Added
+- **Go Multi-Node Sync Hardening:** Ported the dynamic peer banning logic to `go-lattice`. The Go consensus engine now actively tracks and bans peers who submit invalid blocks during batch synchronization.
+
 ## [8.107.3] - 2026-05-19
 ### Added
 - **Multi-Node Sync Hardening:** Implemented dynamic peer banning in the `bobcoin-consensus` gossip loop. Peers that send batches containing cryptographically invalid blocks will now be skipped and removed from future synchronization rounds to prevent spam.

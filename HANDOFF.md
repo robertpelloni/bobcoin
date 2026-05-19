@@ -1,10 +1,10 @@
-# Session Handoff - 2026-05-19 (v8.107.3)
+# Session Handoff - 2026-05-19 (v8.107.4)
 
 ## Executive Summary
 Completed the native Go porting for ZK/FHE logic within `go-game-server` and finalized the 1:1 Governance Enactment Delays parity between JS and Go consensus engines.
 
 ### Recent Governance & Porting Progress
-- **Multi-Node Sync Hardening:** P2P Gossip batches now actively track and ban peers submitting cryptographically invalid blocks (e.g. signature failures) inside `bobcoin-consensus/server.js`, improving automatic spam defense.
+- **Go Sync Parity:** Ported the `bobcoin-consensus` dynamic peer banning rules directly into `go-lattice/main.go`. Go nodes now properly filter out and ignore banned peers who exceed invalid-block thresholds during gossip synchronization.
 - **Unified Block Hashing:** Ensured the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format, preventing diverging hashes on null/undefined fields.
 - **Governance Enactment Delays:** Implemented explicit enactment delays in `Lattice.js` and `lattice.go`. Proposals now feature an `enactmentDelay` parameter, deferring the `executeProposalAction` logic until `block.timestamp >= endTime + enactmentDelay`.
 - **Service Porting (ZK/FHE):** Removed the HTTP bridge proxy logic from `go-game-server` for ZK and FHE. FHE computation now executes natively by calling `node-seal` via `exec.Command` to a local JS script. ZK verification implements an internal simulated delay for SP1 rather than relying on the proxy.
@@ -41,4 +41,4 @@ Executed successfully:
 - `cd frontend && npm run build`
 
 ## Recommended Next Step
-1. **Service Porting Plan**: Port `bobcoin-consensus/server.js` gossip banning logic over to `go-lattice/lattice.go` network interfaces to maintain 1:1 behavioral parity.
+1. **Service Porting Plan**: Decide explicitly which Node services remain canonical (`game-server`, `supertorrent`) and which will be fully moved into Go. Full WebTorrent/WebRTC transport parity plus true native ZK/FHE service parity are still pending.

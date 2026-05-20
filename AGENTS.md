@@ -17,3 +17,8 @@ Active Tasks:
 
 ### Dual-Stack Parity Operations
 Bobcoin uses parallel ledger engines (`bobcoin-consensus` in JS, `go-lattice` in Go). All state transitions, hashing, serialization, and consensus mechanics must maintain explicit 1:1 mathematical parity. If you modify a block rule in JS, you must immediately implement the corresponding patch in Go.
+
+### Project Rules
+- All version bumps must be referenced in the git commit message.
+- Ensure 1:1 mathematical parity between JS and Go consensus logic.
+- The single source of truth for versioning is VERSION.md and CHANGELOG.md.

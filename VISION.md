@@ -30,3 +30,6 @@ The core philosophy is encapsulated in the manifesto:
 
 ### Dual-Consensus Engine & Parity
 The Bobcoin project actively maintains 1:1 mathematical parity between the legacy JavaScript `bobcoin-consensus` engine and the high-performance Go `go-lattice` engine. Full ZK Proving via SP1 remains the final functional milestone.
+
+### Go Service Canonicalization
+The `go-game-server` and `go-supertorrent` services are now the official canonical microservices. The Node.js equivalents are officially marked for deprecation to consolidate performance under the Go stack.

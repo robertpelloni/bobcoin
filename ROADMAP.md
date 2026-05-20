@@ -71,3 +71,7 @@
 ## Phase IV Hardening
 - Deep Multi-Node Sync Hardening: Implemented reputation penalties and gossip spam prevention during automated P2P reconciliation.
 - ZK Proving Integration: Requires local Rust compiler toolchain updates.
+
+
+## Architecture Decision: Service Canonicalization
+The `go-game-server` and `go-supertorrent` services are now the official canonical microservices. The Node.js equivalents are officially marked for deprecation.

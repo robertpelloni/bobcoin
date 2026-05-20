@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.107.6] - 2026-05-20
+### Changed
+- **Architectural Deprecation:** Deprecated the legacy Node.js backend services (`game-server`, `supertorrent`) in favor of the canonical high-performance Go microservices (`go-game-server`, `go-supertorrent`).
+- **Agent Instructions:** Overhauled AI/LLM instruction files (`CLAUDE.md`, `GEMINI.md`, etc.) to universally reference strict parity protocols from `AGENTS.md`.
+- **Dependency Inventory:** Explicitly documented `.gitmodules` avoidance and dependency location layouts in a new `SUBMODULE_INVENTORY.md` map.
+
 ## [8.107.5] - 2026-05-20
 ### Added
 - **Deep Parity Tests:** Added a new test specifically verifying 1:1 byte-for-byte serialization format matching between Node.js output strings and the Go `CalculateHash` rules for null/undefined fields.

@@ -1,9 +1,14 @@
-# Submodule & Library Inventory
+# Project Structure & Library Inventory
 
-*Note: The project currently does not utilize actual git submodules (`.gitmodules` is empty or non-existent).*
+## Directory Structure
+- `/bobcoin-consensus`: JavaScript legacy ledger.
+- `/go-lattice`: Go high-performance sovereign ledger.
+- `/frontend`: React/Vite UI application.
+- `/go-game-server` & `/go-supertorrent`: Go microservices.
 
-## Core External Dependencies
-- **`node-seal`**: Fully Homomorphic Encryption (FHE) library, used extensively in `frontend/` and `game-server/` (via JS scripts invoked from Go).
-- **`simple-peer`**: WebRTC wrapper used for frontend P2P multi-player matchmaking.
-- **`SP1`**: RISC-V Zero Knowledge proof generator tooling (referenced in `install_sp1.sh` and intended for Rust verification paths).
-- **`solana/web3.js` & `LightProtocol SDK`**: Used inside the `supertorrent` package for state compression and metadata anchoring. *(Requires `--legacy-peer-deps`)*.
+## Core Libraries & Submodules
+*(Note: This project purposefully avoids `.gitmodules` submodules)*
+- **`node-seal`**: FHE computation (Location: `frontend/` & `game-server/`).
+- **`simple-peer`**: WebRTC P2P matchmaking (Location: `frontend/package.json`).
+- **`SP1`**: RISC-V ZK proof generation (Location: External Rust compiler requirement).
+- **`solana/web3.js` & `LightProtocol SDK`**: Data anchoring (Mentioned in `DEPLOY.md` causing `npm install --legacy-peer-deps` requirements).

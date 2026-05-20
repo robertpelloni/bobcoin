@@ -1,2 +1,1 @@
-# Claude Instructions (Bobcoin)
-Refer to AGENTS.md for current instructions.
+Please refer to AGENTS.md for universal project instructions. Model-specific constraints: None.

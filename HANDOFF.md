@@ -1,10 +1,10 @@
-# Session Handoff - 2026-05-19 (v8.107.4)
+# Session Handoff - 2026-05-19 (v8.107.5)
 
 ## Executive Summary
 Completed the native Go porting for ZK/FHE logic within `go-game-server` and finalized the 1:1 Governance Enactment Delays parity between JS and Go consensus engines.
 
 ### Recent Governance & Porting Progress
-- **Go Sync Parity:** Ported the `bobcoin-consensus` dynamic peer banning rules directly into `go-lattice/main.go`. Go nodes now properly filter out and ignore banned peers who exceed invalid-block thresholds during gossip synchronization.
+- **Deep Parity Tests:** Explicit tests added verifying `CalculateHash` handles absent properties dynamically across runtimes to guarantee block state reconciliation consistency.
 - **Unified Block Hashing:** Ensured the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format, preventing diverging hashes on null/undefined fields.
 - **Governance Enactment Delays:** Implemented explicit enactment delays in `Lattice.js` and `lattice.go`. Proposals now feature an `enactmentDelay` parameter, deferring the `executeProposalAction` logic until `block.timestamp >= endTime + enactmentDelay`.
 - **Service Porting (ZK/FHE):** Removed the HTTP bridge proxy logic from `go-game-server` for ZK and FHE. FHE computation now executes natively by calling `node-seal` via `exec.Command` to a local JS script. ZK verification implements an internal simulated delay for SP1 rather than relying on the proxy.

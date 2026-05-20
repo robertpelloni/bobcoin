@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.107.5] - 2026-05-20
+### Added
+- **Deep Parity Tests:** Added a new test specifically verifying 1:1 byte-for-byte serialization format matching between Node.js output strings and the Go `CalculateHash` rules for null/undefined fields.
+
 ## [8.107.4] - 2026-05-19
 ### Added
 - **Go Multi-Node Sync Hardening:** Ported the dynamic peer banning logic to `go-lattice`. The Go consensus engine now actively tracks and bans peers who submit invalid blocks during batch synchronization.

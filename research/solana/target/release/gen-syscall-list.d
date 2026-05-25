@@ -1,0 +1,1 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\release\gen-syscall-list.exe: C:\Users\hyper\workspace\bobcoin\research\solana\programs\bpf_loader\gen-syscall-list\build.rs C:\Users\hyper\workspace\bobcoin\research\solana\programs\bpf_loader\gen-syscall-list\src\main.rs

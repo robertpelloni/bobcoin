@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\programs\sbf\target\release\deps\getrandom-e65dd4f90cc1dcbf.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\util.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error_impls.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\windows.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\programs\sbf\target\release\deps\libgetrandom-e65dd4f90cc1dcbf.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\util.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error_impls.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\windows.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\programs\sbf\target\release\deps\libgetrandom-e65dd4f90cc1dcbf.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\util.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error_impls.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\windows.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\util.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\error_impls.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.1.14\src\windows.rs:

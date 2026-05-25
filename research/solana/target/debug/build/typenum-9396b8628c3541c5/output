@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\build\typenum-9396b8628c3541c5\out\consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\build\typenum-9396b8628c3541c5\out\op.rs

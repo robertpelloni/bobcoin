@@ -1,0 +1,1 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\release\libsolana_memory_management.rlib: C:\Users\hyper\workspace\bobcoin\research\solana\memory-management\src\aligned_memory.rs C:\Users\hyper\workspace\bobcoin\research\solana\memory-management\src\lib.rs

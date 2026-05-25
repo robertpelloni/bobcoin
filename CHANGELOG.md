@@ -1,6 +1,30 @@
-<<<<<<< HEAD
 # Changelog
 
+<<<<<<< HEAD
+=======
+## [8.107.6] - 2026-05-20
+### Changed
+- **Architectural Deprecation:** Deprecated the legacy Node.js backend services (`game-server`, `supertorrent`) in favor of the canonical high-performance Go microservices (`go-game-server`, `go-supertorrent`).
+- **Agent Instructions:** Overhauled AI/LLM instruction files (`CLAUDE.md`, `GEMINI.md`, etc.) to universally reference strict parity protocols from `AGENTS.md`.
+- **Dependency Inventory:** Explicitly documented `.gitmodules` avoidance and dependency location layouts in a new `SUBMODULE_INVENTORY.md` map.
+
+## [8.107.5] - 2026-05-20
+### Added
+- **Deep Parity Tests:** Added a new test specifically verifying 1:1 byte-for-byte serialization format matching between Node.js output strings and the Go `CalculateHash` rules for null/undefined fields.
+
+## [8.107.4] - 2026-05-19
+### Added
+- **Go Multi-Node Sync Hardening:** Ported the dynamic peer banning logic to `go-lattice`. The Go consensus engine now actively tracks and bans peers who submit invalid blocks during batch synchronization.
+
+## [8.107.3] - 2026-05-19
+### Added
+- **Multi-Node Sync Hardening:** Implemented dynamic peer banning in the `bobcoin-consensus` gossip loop. Peers that send batches containing cryptographically invalid blocks will now be skipped and removed from future synchronization rounds to prevent spam.
+
+## [8.107.2] - 2026-05-19
+### Fixed
+- **Unified Block Hashing:** Fixed Go `CalculateHash` to explicitly match Node.js `JSON.stringify` logic for Spora and Payload, resulting in correct empty strings for `null` rather than `"null"`.
+
+>>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974
 ## [8.107.1] - 2026-04-12
 ### Added
 - Explicit Enactment Delays for Governance proposals in both JS (`Lattice.js`) and Go (`lattice.go`). Proposals now transition to `Passed` but wait for `enactmentDelay` before execution.
@@ -24,21 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cd frontend && npm run build` (Passed)
 
 ## [8.106.0] - 2026-04-06
-=======
-# Bobcoin Changelog
 
-## [2.1.0] - 2025-02-12
 ### Added
-- **Universal Documentation:** Created `docs/UNIVERSAL_INSTRUCTIONS.md` as the single source of truth for all AI agents.
-- **Documentation Overhaul:** Updated `AGENTS.md`, `CLAUDE.md`, `GPT.md`, etc., to reference the universal file.
-- **System Dashboard:** (Planned) New `Architecture.jsx` page.
-- **Community Features:** Trollbox, News Ticker, UI Sounds.
-- **Easter Eggs:** Konami Code "God Mode", Leaderboard Badges.
->>>>>>> feature/comprehensive-ui-spec
-
-## [2.0.0] - 2025-02-11
-### Added
-<<<<<<< HEAD
 - **Peer-to-Peer State Sync Hardening**: Improved node-to-node state synchronization by adding Bloom Filter-based delta discovery, reducing network overhead during catch-up cycles.
 
 ## [8.105.0] - 2026-04-06
@@ -46,20 +57,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Consensus Latency Benchmarks**: Integrated real-time latency tracking into the Go lattice dashboard.
 ...
-=======
-- **WebGL Rhythm Game:** Complete rewrite using `react-three-fiber` with 3D note highway, particle effects, and neon grid.
-- **Supernode UI:** Real-time dashboard for managing `webtorrent` seeds and viewing peer stats.
-- **Governance:** Voting UI backed by `sqlite3` database.
-- **Manual:** Comprehensive in-app documentation.
-- **System Status:** Real-time visualizer for TPS and Block Lattice.
-- **Mobile App:** React Native shell with simulated mining graph.
-
-### Fixed
-- **React 19 Conflicts:** Downgraded frontend dependencies to React 18 to fix WebGL crashes.
-- **Wallet Adapter:** Added Polyfills for `Buffer` to fix Solana wallet connection.
-
-## [1.0.0] - Initial Prototype
-- Basic Express Server.
-- CLI-based Supernode.
-- 2D DOM-based Rhythm Game.
->>>>>>> feature/comprehensive-ui-spec

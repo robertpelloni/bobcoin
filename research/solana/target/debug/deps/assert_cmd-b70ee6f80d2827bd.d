@@ -1,0 +1,11 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\assert_cmd-b70ee6f80d2827bd.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\assert.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\cargo.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\cmd.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\output.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\color.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\../README.md
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\libassert_cmd-b70ee6f80d2827bd.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\assert.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\cargo.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\cmd.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\output.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\color.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\../README.md
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\assert.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\cargo.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\cmd.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\output.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\color.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\assert_cmd-2.0.8\src\../README.md:

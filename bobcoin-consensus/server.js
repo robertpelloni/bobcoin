@@ -26,7 +26,8 @@ const peers = new Map();
 
 // Background Gossip Loop
 async function gossipLoop() {
-    for (const [url] of peers.entries()) {
+    for (const [url, peerData] of peers.entries()) {
+        if (peerData?.status === 'banned') continue;
         try {
             const start = Date.now();
             const res = await fetch(`${url}/status`);
@@ -37,18 +38,31 @@ async function gossipLoop() {
 
             if (stats.stateHash && stats.stateHash !== lattice.stateHash) {
                 console.log(`[GOSSIP] Divergence with ${url}. Initiating Batch Sync...`);
+                let failures = 0;
                 while (true) {
                     const syncRes = await fetch(`${url}/blocks?after=${lattice.stateHash}&limit=100`);
                     const newBlocks = await syncRes.json();
                     if (!newBlocks || newBlocks.length === 0) break;
                     
                     for (const bData of newBlocks) {
-                        const block = new Block(bData);
-                        block.hash = bData.hash;
-                        block.signature = bData.signature;
-                        block.timestamp = bData.timestamp;
-                        lattice.processBlock(block);
+                        try {
+                            const block = new Block(bData);
+                            block.hash = bData.hash;
+                            block.signature = bData.signature;
+                            block.timestamp = bData.timestamp;
+                            lattice.processBlock(block);
+                        } catch (err) {
+                            failures++;
+                            console.warn(`[GOSSIP] Invalid block from ${url}:`, err.message);
+                            if (failures > 3) {
+                                console.error(`[GOSSIP] Banning ${url} for exceeding invalid block threshold.`);
+                                peers.set(url, { status: 'banned', latency: 0 });
+                                break;
+                            }
+                        }
                     }
+                    if (peers.get(url)?.status === 'banned') break;
+
                     console.log(`[SYNC] Integrated batch of ${newBlocks.length} blocks`);
                     if (newBlocks.length < 100) break;
                 }

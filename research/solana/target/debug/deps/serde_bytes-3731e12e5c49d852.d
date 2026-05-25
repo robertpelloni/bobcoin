@@ -1,0 +1,10 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\serde_bytes-3731e12e5c49d852.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytearray.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytes.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\de.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\ser.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytebuf.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\libserde_bytes-3731e12e5c49d852.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytearray.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytes.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\de.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\ser.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytebuf.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytearray.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytes.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\de.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\ser.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_bytes-0.11.14\src\bytebuf.rs:

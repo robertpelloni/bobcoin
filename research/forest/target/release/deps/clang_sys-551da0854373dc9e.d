@@ -1,0 +1,14 @@
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\clang_sys-551da0854373dc9e.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\support.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\link.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/macros.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/common.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/dynamic.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libclang_sys-551da0854373dc9e.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\support.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\link.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/macros.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/common.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/dynamic.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libclang_sys-551da0854373dc9e.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\support.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\link.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/macros.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/common.rs C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/dynamic.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\support.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\clang-sys-1.8.1\src\link.rs:
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/macros.rs:
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/common.rs:
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\clang-sys-380d1b5af71e8189\out/dynamic.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\hyper\\workspace\\bobcoin\\research\\forest\\target\\release\\build\\clang-sys-380d1b5af71e8189\\out

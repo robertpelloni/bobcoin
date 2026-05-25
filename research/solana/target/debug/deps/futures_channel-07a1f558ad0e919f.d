@@ -1,0 +1,10 @@
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\futures_channel-07a1f558ad0e919f.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\lock.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\mod.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\queue.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\sink_impl.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\oneshot.rs
+
+C:\Users\hyper\workspace\bobcoin\research\solana\target\debug\deps\libfutures_channel-07a1f558ad0e919f.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\lock.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\mod.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\queue.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\sink_impl.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\oneshot.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\lock.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\mod.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\queue.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\mpsc\sink_impl.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-channel-0.3.30\src\oneshot.rs:

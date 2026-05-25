@@ -1,0 +1,66 @@
+cargo:rustc-check-cfg=cfg(switchable_stack,asm,link_asm)
+OPT_LEVEL = Some(3)
+OUT_DIR = Some(C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\psm-9bcee21a93d80493\out)
+TARGET = Some(x86_64-pc-windows-msvc)
+CARGO_ENCODED_RUSTFLAGS = Some(--cfg=tokio_unstable)
+cargo:rerun-if-env-changed=VCINSTALLDIR
+VCINSTALLDIR = None
+cargo:rerun-if-env-changed=VSTEL_MSBuildProjectFullPath
+VSTEL_MSBuildProjectFullPath = None
+cargo:rerun-if-env-changed=VCToolsVersion
+VCToolsVersion = None
+cargo:rerun-if-env-changed=VSCMD_ARG_VCVARS_SPECTRE
+VSCMD_ARG_VCVARS_SPECTRE = None
+cargo:rerun-if-env-changed=WindowsSdkDir
+WindowsSdkDir = None
+cargo:rerun-if-env-changed=WindowsSDKVersion
+WindowsSDKVersion = None
+cargo:rerun-if-env-changed=LIB
+LIB = None
+PATH = Some(C:\Users\hyper\workspace\bobcoin\research\forest\target\release;C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps;C:\Program Files\Rust stable MSVC 1.93\lib\rustlib\x86_64-pc-windows-msvc\lib;C:\Program Files\PowerShell\7-preview;C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Python314\Scripts\;C:\Python314\;C:\Python313\Scripts\;C:\Python313\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Users\hyper\AppData\Local\UniGetUI\Chocolatey\bin;C:\Program Files\OpenSSH-Win64;C:\Program Files\OpenSSL-Win64\bin;C:\Program Files\Git LFS;C:\tools\php84;C:\ProgramData\ComposerSetup\bin;C:\Program Files\dotnet\;C:\Users\hyper\.cargo\bin;C:\Program Files\PuTTY\;C:\Program Files\nodejs\;C:\Program Files\FirefoxPWA\;C:\Program Files\MCPProxy;C:\tools\php85;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\PowerShell\7-preview\preview;C:\Program Files (x86)\Tess;C:\Program Files (x86)\dotnet-core-uninstall\;C:\Program Files\starship\bin\;C:\Program Files\CMake\bin;C:\Program Files\Git\cmd;C:\Program Files\Go\bin;C:\Program Files\Docker\Docker\resources\bin;C:\Program Files\Rust stable MSVC 1.93\bin;C:\Program Files\GitHub CLI\;C:\Users\hyper\scoop\shims;C:\Users\hyper\AppData\Local\pnpm;C:\Users\hyper\scoop\shims;C:\Users\hyper\AppData\Roaming\npm;C:\Users\hyper\.local\bin;C:\Users\hyper\AppData\Local\pnpm;C:\Program Files\nodejs;C:\Users\hyper\AppData\Local\UniGetUI\Chocolatey\bin;C:\Users\hyper\AppData\Local\Microsoft\WindowsApps;C:\Users\hyper\.lmstudio\bin;C:\Users\hyper\AppData\Local\witsy;C:\Users\hyper\AppData\Local\Microsoft\WindowsApps;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\RUFUSR~1.SOU;C:\Users\hyper\AppData\Local\Microsoft\WinGet\Links;C:\Users\hyper\AppData\Local\GitHubDesktop\bin;C:\Users\hyper\AppData\Local\Programs\Microsoft VS Code Insiders\bin;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\MICROS~3.SOU\.;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\ASTRAL~1.SOU;C:\Users\hyper\AppData\Roaming\Python\Python314\Scripts;C:\Users\hyper\AppData\Local\Programs\Hyper\RESOUR~1\bin;C:\Users\hyper\bin;C:\Users\hyper\.ccs;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\NINJA-~1.SOU;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\BOSTRO~1.SOU;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\OPENAI~1.SOU;C:\Users\hyper\AppData\Local\Programs\Qoder\bin;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\SPEAKE~1.SOU;C:\Users\hyper\AppData\Local\Microsoft\WinGet\Packages\JulienCagniart.anyquery_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\Users\hyper\AppData\Local\Programs\Ollama;C:\Users\hyper\.bun\bin;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\BURNTS~2.SOU\RIPGRE~1.0-X;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\AST-GR~1.SOU;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\OVEN-S~1.SOU\./BUN-WI~1;C:\Users\hyper\AppData\Local\psmux;C:\Users\hyper\AppData\Local\MICROS~1\WinGet\Packages\PNPMPN~1.SOU;C:\Users\hyper\AppData\Local\Microsoft\WinGet\Packages\Speakeasy.speakeasy_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\Users\hyper\AppData\Local\Programs\Ollama;C:\Users\hyper\AppData\Local\Programs\Antigravity\bin;C:\tools\mysql\current\bin;C:\Users\hyper\AppData\Local\Microsoft\WinGet\Packages\Postman.Postman.CLI_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\Program Files (x86)\MongoDB CLI\;C:\Users\hyper\AppData\Local\Programs\mongosh\;C:\Users\hyper\go\bin;C:\Users\hyper\AppData\Local\Programs\Microsoft VS Code Insiders\bin;C:\Users\hyper\AppData\Local\GitHubDesktop\bin;C:\Users\hyper\AppData\Local\Microsoft\WinGet\Packages\charmbracelet.crush_Microsoft.Winget.Source_8wekyb3d8bbwe\crush_0.45.0_Windows_x86_64;)
+cargo:rerun-if-env-changed=INCLUDE
+INCLUDE = None
+HOST = Some(x86_64-pc-windows-msvc)
+cargo:rerun-if-env-changed=CC_x86_64-pc-windows-msvc
+CC_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=CC_x86_64_pc_windows_msvc
+CC_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_CC
+HOST_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+CARGO_CFG_TARGET_FEATURE = Some(cmpxchg16b,fxsr,sse,sse2,sse3)
+DEBUG = Some(false)
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=HOST_CFLAGS
+HOST_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_pc_windows_msvc
+CFLAGS_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64-pc-windows-msvc
+CFLAGS_x86_64-pc-windows-msvc = None
+cargo:rustc-cfg=asm
+cargo:rustc-cfg=link_asm
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+ Assembling: src/arch/x86_64_msvc.asm
+cargo:rerun-if-env-changed=AR_x86_64-pc-windows-msvc
+AR_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=AR_x86_64_pc_windows_msvc
+AR_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_AR
+HOST_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=HOST_ARFLAGS
+HOST_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64_pc_windows_msvc
+ARFLAGS_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64-pc-windows-msvc
+ARFLAGS_x86_64-pc-windows-msvc = None
+cargo:rustc-link-search=native=C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.50.35717\atlmfc\lib\x64
+cargo:rustc-link-lib=static=psm_s
+cargo:rustc-link-search=native=C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\psm-9bcee21a93d80493\out

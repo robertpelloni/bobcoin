@@ -1,0 +1,10 @@
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\compression_core-de7f1c788194bb0c.d: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\level.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\unshared.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\util.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libcompression_core-de7f1c788194bb0c.rlib: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\level.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\unshared.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\util.rs
+
+C:\Users\hyper\workspace\bobcoin\research\forest\target\release\deps\libcompression_core-de7f1c788194bb0c.rmeta: C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\lib.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\level.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\unshared.rs C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\util.rs
+
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\lib.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\level.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\unshared.rs:
+C:\Users\hyper\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\compression-core-0.4.31\src\util.rs:

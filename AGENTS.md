@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AI Agent Instructions (Bobcoin)
 
 > **CRITICAL: THIS MODULE IS PART OF THE OMNI-WORKSPACE.**
@@ -14,28 +13,12 @@ Active Tasks:
 - Implement/Verify NFT protocol.
 - Verify Atomic Swaps.
 - Enhance 3D WebGL Dashboard.
-=======
-See `docs/UNIVERSAL_INSTRUCTIONS.md` for the master instructions for this project.
 
-## Agent-Specific Notes
-- Always check `AGENTS.md` in the root for the latest technical constraints.
-- Prioritize "working code" over "perfect theory".
 
-## System Map (v2.1.0)
+### Dual-Stack Parity Operations
+Bobcoin uses parallel ledger engines (`bobcoin-consensus` in JS, `go-lattice` in Go). All state transitions, hashing, serialization, and consensus mechanics must maintain explicit 1:1 mathematical parity. If you modify a block rule in JS, you must immediately implement the corresponding patch in Go.
 
-### Frontend Modules
-- **Explorer:** `/frontend/src/pages/Explorer.jsx` - Visualizes block lattice mock data.
-- **Trollbox:** `/frontend/src/components/Trollbox.jsx` - Real-time chat (polled) via `/chat`.
-- **Quests:** `/frontend/src/components/DailyQuests.jsx` - Daily challenges widget.
-- **Rhythm Game:** `/frontend/src/components/RhythmGame.jsx` - WebGL game + Visualizer mode.
-
-### Backend Services
-- **Game Server:** Express API on port 3000. Handles `/chat`, `/quests`, `/vote`.
-- **Supernode:** WebTorrent client on port 8080. Handles storage proofs.
-- **Mobile:** React Native app on local dev port.
-
-### Data Flow
-1.  **Frontend** -> **Game Server**: Fetches global stats, posts chat/votes/proofs.
-2.  **Mobile** -> **Game Server**: Fetches bankroll/leaderboard stats.
-3.  **Supernode** -> **Solana (Mock)**: Submits storage proofs.
->>>>>>> feature/comprehensive-ui-spec
+### Project Rules
+- All version bumps must be referenced in the git commit message.
+- Ensure 1:1 mathematical parity between JS and Go consensus logic.
+- The single source of truth for versioning is VERSION.md and CHANGELOG.md.

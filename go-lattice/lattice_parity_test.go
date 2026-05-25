@@ -4557,3 +4557,44 @@ func TestAuditStateRebuildsDerivedAnchorState(t *testing.T) {
 		t.Fatalf("expected audit to restore state hashes")
 	}
 }
+
+func TestCalculateHashParity(t *testing.T) {
+	prev := "prev-hash-1"
+	b1 := &Block{
+		Type:          "send",
+		Account:       "test-account-1",
+		Previous:      &prev,
+		Balance:       100,
+		StakedBalance: 50,
+		Height:        1,
+		Link:          "link-1",
+	}
+
+	expectedEmpty := "fdeb197ea07a8f537d2b3576a59747daeacc117b401a04d5492e3ad5e9f05511"
+	if hash := b1.CalculateHash(); hash != expectedEmpty {
+		t.Errorf("Empty Hash Mismatch.\nExpected: %s\nGot:      %s", expectedEmpty, hash)
+	}
+
+	b2 := &Block{
+		Type:          "send",
+		Account:       "test-account-1",
+		Previous:      &prev,
+		Balance:       100,
+		StakedBalance: 50,
+		Height:        1,
+		Link:          "link-1",
+		Spora: &SporaProof{
+			InfoHash:  "info1",
+			Challenge: 1,
+			ChunkHash: "chunk1",
+		},
+		Payload: map[string]interface{}{
+			"some": "data",
+		},
+	}
+
+	expectedPopulated := "589a29210bdd972ecab1c7bcabd851f0d1baf446ae404b26c5b5e6c0807a39d4"
+	if hash := b2.CalculateHash(); hash != expectedPopulated {
+		t.Errorf("Populated Hash Mismatch.\nExpected: %s\nGot:      %s", expectedPopulated, hash)
+	}
+}

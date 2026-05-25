@@ -1,9 +1,18 @@
+<<<<<<< HEAD
 # Session Handoff - 2026-04-12 (v8.107.1)
+=======
+# Session Handoff - 2026-05-19 (v8.107.6)
+>>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974
 
 ## Executive Summary
 Completed the native Go porting for ZK/FHE logic within `go-game-server` and finalized the 1:1 Governance Enactment Delays parity between JS and Go consensus engines.
 
 ### Recent Governance & Porting Progress
+<<<<<<< HEAD
+=======
+- **Service Porting Finalization**: Officially deprecated Node.js microservices in the ROADMAP and VISION, marking the Go ports (`go-game-server`, `go-supertorrent`) as canonical going forward.
+- **Unified Block Hashing:** Ensured the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format, preventing diverging hashes on null/undefined fields.
+>>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974
 - **Governance Enactment Delays:** Implemented explicit enactment delays in `Lattice.js` and `lattice.go`. Proposals now feature an `enactmentDelay` parameter, deferring the `executeProposalAction` logic until `block.timestamp >= endTime + enactmentDelay`.
 - **Service Porting (ZK/FHE):** Removed the HTTP bridge proxy logic from `go-game-server` for ZK and FHE. FHE computation now executes natively by calling `node-seal` via `exec.Command` to a local JS script. ZK verification implements an internal simulated delay for SP1 rather than relying on the proxy.
 
@@ -39,6 +48,7 @@ Executed successfully:
 - `cd frontend && npm run build`
 
 ## Recommended Next Step
+<<<<<<< HEAD
 1. **Unify Block Hashing Rules**: Ensure the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format.
 2. **Multi-Node Sync Hardening**: Push the new reconciliation flow further into automated gossip scenarios.
 
@@ -93,3 +103,6 @@ node scripts/integration_test.js
 python verification/verify_frontend.py
 ```
 
+=======
+1. **SP1 ZK Service Robustness**: Full parity still requires wiring `go-game-server` to the real Rust backend verification endpoint and semantics when the SP1 compiler environment is available.
+>>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { API_URL, LATTICE_URL, SIGNALING_URL, SUPERNODE_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
@@ -25,20 +24,8 @@ export function SystemStatus() {
     const [networkHeight, setNetworkHeight] = useState(0);
     const [buildInfo, setBuildInfo] = useState(null);
     const [syncing, setSyncing] = useState(false);
-=======
-import { useState, useEffect } from 'react';
-import { getBankroll } from '../api'; // Use centralized API
-import './SystemStatus.css';
 
-export function SystemStatus() {
-    const [tps, setTps] = useState(0);
-    const [blocks, setBlocks] = useState([]);
-    const [bankroll, setBankroll] = useState(0);
->>>>>>> feature/comprehensive-ui-spec
-
-    // Mock TPS and Block generation
     useEffect(() => {
-<<<<<<< HEAD
         fetch('/build-info.json')
             .then(res => res.json())
             .then(data => setBuildInfo(data))
@@ -185,40 +172,9 @@ export function SystemStatus() {
 
     };
 
-=======
-        const interval = setInterval(() => {
-            // Update TPS (Mocked ~10k)
-            const currentTps = Math.floor(Math.random() * 500) + 9500;
-            setTps(currentTps);
-
-            // Add new mock blocks for visualizer
-            const newBlock = {
-                id: Math.floor(Math.random() * 1000000),
-                type: Math.random() > 0.5 ? 'PLAY' : 'STORE',
-                miner: '0x' + Math.random().toString(16).substring(2, 6),
-                timestamp: new Date().toLocaleTimeString()
-            };
-
-            setBlocks(prev => [newBlock, ...prev].slice(0, 8));
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, []);
-
-    // Fetch real bankroll via API
->>>>>>> feature/comprehensive-ui-spec
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const bal = await getBankroll();
-                setBankroll(bal);
-            } catch (e) {
-                console.error(e);
-            }
-        };
-        fetchStats();
-        // Refresh periodically
-        const interval = setInterval(fetchStats, 10000);
+        checkHealth();
+        const interval = setInterval(checkHealth, 10000);
         return () => clearInterval(interval);
     }, []);
 
@@ -233,7 +189,6 @@ export function SystemStatus() {
     };
 
     return (
-<<<<<<< HEAD
         <div className="system-container">
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h1 className="glitch" data-text="SYSTEM STATUS">SYSTEM STATUS</h1>
@@ -243,10 +198,6 @@ export function SystemStatus() {
             <div className="version-display">
                 PROTOCOL VERSION: <span className="neon-text">{VERSION}</span>
             </div>
-=======
-        <div className="system-status-container">
-            <h1 className="glitch" data-text="BLOCK LATTICE STATUS">BLOCK LATTICE STATUS</h1>
->>>>>>> feature/comprehensive-ui-spec
 
             <Suspense fallback={<div style={{height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ff', borderBottom: '1px solid #333', background: '#050505'}}>INITIALIZING 3D TOPOLOGY...</div>}>
                 <CyberGrid3D />
@@ -303,21 +254,16 @@ export function SystemStatus() {
             </div>
 
             <div className="status-grid">
-                <div className="status-card tps-card">
-                    <h3>NETWORK TPS</h3>
-                    <div className="big-number" style={{color: '#0ff'}}>{tps.toLocaleString()}</div>
-                    <div className="progress-bar-thin">
-                        <div className="fill" style={{width: `${(tps / 12000) * 100}%`, background: '#0ff'}}></div>
-                    </div>
-                    <span className="subtext">Target: 10,000+</span>
+                <div className={`status-card ${services.gameServer === 'ONLINE' ? 'online' : 'offline'}`}>
+                    <h3>GAME SERVER (THE MINT)</h3>
+                    <p>STATUS: {services.gameServer}</p>
+                    <p className="detail">Orchestrates Gameplay, Governance, and ZK Verification.</p>
                 </div>
-
-                <div className="status-card bankroll-card">
-                    <h3>TREASURY</h3>
-                    <div className="big-number" style={{color: '#ff00ff'}}>{bankroll ? bankroll.toFixed(4) : '---'} <span className="unit">BOB</span></div>
-                    <span className="subtext">Circulating Supply</span>
+                <div className={`status-card ${services.supernode === 'ONLINE' ? 'online' : 'offline'}`}>
+                    <h3>SUPERNODE (STORAGE)</h3>
+                    <p>STATUS: {services.supernode}</p>
+                    <p className="detail">P2P Storage Layer (WebTorrent) + Validator Logic.</p>
                 </div>
-<<<<<<< HEAD
                 <div className="status-card online">
                     <h3>ZK SERVICE (PROOF OF PLAY)</h3>
                     <p>STATUS: {services.zkService}</p>
@@ -332,60 +278,22 @@ export function SystemStatus() {
                     <h3>GO STORAGE WASM KERNEL</h3>
                     <p>STATUS: {services.storageWasm}</p>
                     <p className="detail">Browser-side encryption and erasure coding runtime for zero-trust upload preprocessing.</p>
-=======
-
-                <div className="status-card consensus-card">
-                    <h3>CONSENSUS</h3>
-                    <div className="status-indicator active">
-                        <span className="dot"></span> ACTIVE (SNOWBALL)
-                    </div>
-                    <div className="details">
-                        <p>Validators: <span className="highlight">128</span></p>
-                        <p>Finality: <span className="highlight">~400ms</span></p>
-                    </div>
->>>>>>> feature/comprehensive-ui-spec
                 </div>
             </div>
 
-            <div className="visualizer">
-                <h3>LIVE LATTICE VISUALIZER</h3>
-                <div className="lattice-grid">
-                    {/* Visual representation of async blocks */}
-                    {blocks.map(b => (
-                        <div key={b.id} className={`block-node ${b.type.toLowerCase()}`}>
-                            <span className="block-type">{b.type}</span>
-                            <span className="block-miner">{b.miner}</span>
-                        </div>
-                    ))}
-                    {/* Filler nodes */}
-                    {new Array(12).fill(0).map((_, i) => (
-                        <div key={`fill-${i}`} className="block-node placeholder"></div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="recent-blocks">
-                <h3>RECENT BLOCKS</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>BLOCK ID</th>
-                            <th>TYPE</th>
-                            <th>MINER</th>
-                            <th>TIME</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {blocks.map(b => (
-                            <tr key={b.id} className="fade-in">
-                                <td>#{b.id}</td>
-                                <td style={{color: b.type === 'PLAY' ? '#0ff' : '#ff00ff'}}>{b.type}</td>
-                                <td>{b.miner}...</td>
-                                <td>{b.timestamp}</td>
-                            </tr>
+            <div className="architecture-view">
+                <h2>ARCHITECTURE OVERVIEW</h2>
+                <div className="tree-view">
+                    <code>
+                        root/ [{buildInfo?.git.branch} @ {buildInfo?.git.hash}]<br/>
+                        {buildInfo?.modules.map(m => (
+                            <span key={m.name}>
+                                ├── 📁 {m.name}/ ({m.type} v{m.version})<br/>
+                            </span>
                         ))}
-                    </tbody>
-                </table>
+                    </code>
+                </div>
+                {buildInfo && <p className="last-build">Last Build: {buildInfo.git.date}</p>}
             </div>
         </div>
     );

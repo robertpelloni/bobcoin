@@ -1,0 +1,26 @@
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\settings.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\types.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\opcodes.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\inst_builder.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\settings-pulley.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\settings-pulley.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\settings-x86.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\numerics.isle
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_numerics.rs
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\clif_opt.isle
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\clif_lower.isle
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\assembler.isle
+Writing generated file: C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\assembler-isle-macro.rs
+Rebuilding C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_opt.rs
+Writing ISLE-generated Rust code to C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_opt.rs
+Rebuilding C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_x64.rs
+Writing ISLE-generated Rust code to C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_x64.rs
+Rebuilding C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_aarch64.rs
+Writing ISLE-generated Rust code to C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_aarch64.rs
+Rebuilding C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_s390x.rs
+Writing ISLE-generated Rust code to C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_s390x.rs
+Rebuilding C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_riscv64.rs
+Writing ISLE-generated Rust code to C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_riscv64.rs
+Rebuilding C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_pulley_shared.rs
+Writing ISLE-generated Rust code to C:\Users\hyper\workspace\bobcoin\research\forest\target\release\build\cranelift-codegen-537d9a9a187fe7f7\out\isle_pulley_shared.rs
+fatal: not a git repository (or any of the parent directories): .git

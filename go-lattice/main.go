@@ -505,8 +505,10 @@ func gossipLoop() {
 	for range ticker.C {
 		lattice.mu.RLock()
 		peerURLs := make([]string, 0, len(lattice.Peers))
-		for url := range lattice.Peers {
-			peerURLs = append(peerURLs, url)
+		for url, peer := range lattice.Peers {
+			if peer.Status != "banned" {
+				peerURLs = append(peerURLs, url)
+			}
 		}
 		lattice.mu.RUnlock()
 
@@ -562,6 +564,9 @@ func gossipLoop() {
 			if remoteMerkle != lattice.MerkleRoot {
 				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Batch Sync...\n", url)
 
+				failures := 0
+				banned := false
+
 				for {
 					// Use 100 block batches for better throughput
 					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=100", url, lattice.StateHash))
@@ -580,8 +585,24 @@ func gossipLoop() {
 						_, exists := lattice.Blocks[b.Hash]
 						lattice.mu.RUnlock()
 						if !exists {
-							lattice.ProcessBlock(b, false)
+							if err := lattice.ProcessBlock(b, false); err != nil {
+								failures++
+								fmt.Printf("[GOSSIP] Invalid block from %s: %v\n", url, err)
+								if failures > 3 {
+									fmt.Printf("[GOSSIP] Banning %s for exceeding invalid block threshold.\n", url)
+									lattice.mu.Lock()
+									if lattice.Peers[url] != nil {
+										lattice.Peers[url].Status = "banned"
+									}
+									lattice.mu.Unlock()
+									banned = true
+									break
+								}
+							}
 						}
+					}
+					if banned {
+						break
 					}
 					fmt.Printf("[SYNC] Integrated compressed batch of %d blocks from %s\n", len(newBlocks), url)
 					if len(newBlocks) < 100 {

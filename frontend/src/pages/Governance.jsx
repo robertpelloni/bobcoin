@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-<<<<<<< HEAD
 import { getProposals, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api'; 
 import { generateKeypair } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
@@ -10,16 +9,6 @@ export function Governance() {
     const [balance, setBalance] = useState(0);
     const [stakedBalance, setStakedBalance] = useState(0);
     const [votingPower, setVotingPower] = useState(0);
-=======
-import { useWallet } from '@solana/wallet-adapter-react';
-import { getProposals, castVote } from '../api'; // This must point to the api.js file we just updated
-import './Governance.css';
-
-export function Governance() {
-    const wallet = useWallet();
-    const [balance] = useState(1250); // Mock balance
-    const votingPower = Math.floor(Math.sqrt(balance)); // Quadratic Voting
->>>>>>> feature/comprehensive-ui-spec
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(true);
     const [keypair, setKeypair] = useState(null);
@@ -68,7 +57,6 @@ export function Governance() {
     const handleVote = async (id, voteType) => {
         if (!confirm(`Cast vote ${voteType.toUpperCase()} on proposal ${id.slice(0, 8)}... with power ${votingPower.toFixed(2)}?`)) return;
 
-<<<<<<< HEAD
         try {
             const frontRes = await getLatticeFrontier(keypair.publicKey);
             const previousHash = frontRes.frontier;
@@ -182,14 +170,6 @@ export function Governance() {
         } catch (err) {
             console.error(err);
             alert("Error creating proposal: " + err.message);
-=======
-        const result = await castVote(id, voteType, votingPower, wallet);
-        if (result && result.success) {
-            console.log("Vote confirmed!");
-            loadProposals();
-        } else {
-            alert("Vote failed or server unreachable");
->>>>>>> feature/comprehensive-ui-spec
         }
     };
 

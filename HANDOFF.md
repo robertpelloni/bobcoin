@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 # Session Handoff - 2026-04-12 (v8.107.1)
-=======
-# Session Handoff - 2026-05-19 (v8.107.6)
->>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974
 
 ## Executive Summary
 Completed the native Go porting for ZK/FHE logic within `go-game-server` and finalized the 1:1 Governance Enactment Delays parity between JS and Go consensus engines.
 
 ### Recent Governance & Porting Progress
-<<<<<<< HEAD
 =======
 - **Service Porting Finalization**: Officially deprecated Node.js microservices in the ROADMAP and VISION, marking the Go ports (`go-game-server`, `go-supertorrent`) as canonical going forward.
 - **Unified Block Hashing:** Ensured the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format, preventing diverging hashes on null/undefined fields.
@@ -103,6 +98,3 @@ node scripts/integration_test.js
 python verification/verify_frontend.py
 ```
 
-=======
-1. **SP1 ZK Service Robustness**: Full parity still requires wiring `go-game-server` to the real Rust backend verification endpoint and semantics when the SP1 compiler environment is available.
->>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974

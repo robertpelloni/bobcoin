@@ -25,15 +25,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "vite": "^8.0.7",
-=======
-    "vite": "^8.0.3",
->>>>>>> origin/dependabot/npm_and_yarn/frontend/npm_and_yarn-8adcd346c8
-=======
-    "vite": "^8.0.10",
->>>>>>> 6b18069d78096e88717bc8bceb0fe58a44bc2974
     "vite-plugin-pwa": "^1.2.0",
     "workbox-core": "^7.4.0",
     "workbox-precaching": "^7.4.0",

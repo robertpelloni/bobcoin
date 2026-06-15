@@ -97,6 +97,9 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"collector-vote-extension",
 		"manifest-anchor-core",
 		"demurrage-balance-pressure",
+		"stake-lock-core",
+		"multisig-lifecycle-core",
+		"amm-swap-core",
 	}
 
 	for _, fragmentID := range requiredFragmentIDs {

@@ -564,3 +564,33 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 		t.Fatalf("expected opponent disconnect notice, got %+v", disconnect)
 	}
 }
+
+func TestAuditProposalEndpoint(t *testing.T) {
+	service := newTestService(t)
+
+	// Test Low Risk
+	payload := `{"title":"Improve documentation","action":"NONE"}`
+	req := httptest.NewRequest(http.MethodPost, "/audit-proposal", strings.NewReader(payload))
+	rec := httptest.NewRecorder()
+	service.handleAuditProposal(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if resp["riskLevel"] != "Low" || resp["securityScore"].(float64) != 100.0 {
+		t.Fatalf("expected Low risk score 100, got %v", resp)
+	}
+
+	// Test High Risk (Mint + Slash)
+	payload = `{"title":"Mint treasury and slash nodes","action":"MINT_TREASURY"}`
+	req = httptest.NewRequest(http.MethodPost, "/audit-proposal", strings.NewReader(payload))
+	rec = httptest.NewRecorder()
+	service.handleAuditProposal(rec, req)
+
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+	if resp["riskLevel"] != "High" || resp["securityScore"].(float64) >= 60.0 {
+		t.Fatalf("expected High risk score < 60, got %v", resp)
+	}
+}

@@ -169,6 +169,7 @@ func main() {
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
 	mux.HandleFunc("/market/accept", service.handleAcceptBid)
+	mux.HandleFunc("/audit-proposal", service.handleAuditProposal)
 
 	log.Printf("[go-game-server] listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, withCORS(mux)); err != nil {
@@ -746,6 +747,50 @@ func (s *Service) fetchFrontier(account string) (*string, float64, int, error) {
 	balance, _ := body["balance"].(float64)
 	heightFloat, _ := body["height"].(float64)
 	return &frontierRaw, balance, int(heightFloat), nil
+}
+
+func (s *Service) handleAuditProposal(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	var req struct {
+		Title  string `json:"title"`
+		Action string `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid payload"})
+		return
+	}
+
+	// Neural Governance Auditor (Mock)
+	score := 100.0
+	risk := "Low"
+
+	lowerTitle := strings.ToLower(req.Title)
+	lowerAction := strings.ToLower(req.Action)
+
+	if strings.Contains(lowerTitle, "mint") || strings.Contains(lowerAction, "mint") {
+		score -= 30.0
+		risk = "Moderate"
+	}
+	if strings.Contains(lowerTitle, "demurrage") || strings.Contains(lowerAction, "demurrage") {
+		score -= 20.0
+	}
+	if strings.Contains(lowerTitle, "slash") || strings.Contains(lowerAction, "slash") {
+		score -= 15.0
+	}
+
+	if score < 60 {
+		risk = "High"
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"securityScore": score,
+		"riskLevel": risk,
+		"auditor": "Neural Governance v1 (Mock)",
+	})
 }
 
 func createBid(db *sql.DB, magnet string, amount float64) (int64, error) {

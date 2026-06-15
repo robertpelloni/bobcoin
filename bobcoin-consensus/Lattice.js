@@ -34,6 +34,7 @@ export class Lattice {
         this.storageFeeBase = 1.0;
         this.proposalFee = 10.0;
         this.nftMintFee = 50.0;
+        this.totalSupply = 0;
 
         this.pools = {
             'BOB/sSOL': {
@@ -107,6 +108,7 @@ export class Lattice {
             anchors: this.anchors,
             multisigs: this.multisigs,
             stateHash: this.stateHash,
+            totalSupply: this.totalSupply,
             timestamp: Date.now()
         };
     }
@@ -126,6 +128,7 @@ export class Lattice {
         this.anchors = snapshot.anchors || {};
         this.multisigs = snapshot.multisigs || {};
         this.stateHash = snapshot.stateHash || '0'.repeat(64);
+        this.totalSupply = snapshot.totalSupply || 0;
     }
 
     /**
@@ -338,7 +341,10 @@ export class Lattice {
         // Apply Demurrage to the previous balance before any new operations
         let previousBalance = frontier ? frontier.balance : 0;
         if (frontier && frontier.timestamp) {
-            previousBalance = this.applyDemurrage(previousBalance, frontier.timestamp, block.timestamp);
+            const decayedBalance = this.applyDemurrage(previousBalance, frontier.timestamp, block.timestamp);
+            const decay = previousBalance - decayedBalance;
+            this.totalSupply -= decay;
+            previousBalance = decayedBalance;
         }
         
         // We must allow a tiny floating point epsilon difference in balance calculations due to decay
@@ -648,22 +654,27 @@ export class Lattice {
         } else if (block.type === 'amm_swap') {
             const { pair, amountIn } = block.payload;
             if (!pair || amountIn === undefined) throw new Error("Invalid amm_swap payload");
-            // Validation of balance change handled implicitly by the state update logic below if needed,
-            // but for now we just check if pool exists.
+            if (Math.abs(block.balance - (previousBalance - amountIn)) > epsilon) {
+                throw new Error(`AMM Swap must exactly deduct ${amountIn} BOB from balance`);
+            }
             if (!this.pools[pair]) throw new Error("Pool not found");
         } else if (block.type === 'multisig_propose') {
             if (Math.abs(block.balance - previousBalance) > epsilon) {
                 throw new Error("multisig_propose cannot change balance");
             }
-            const { vault, recipient, amount } = block.payload;
-            if (!this.multisigs[vault]) throw new Error("Vault not found");
+            const { vault: vaultAddr, recipient, amount } = block.payload;
+            const vault = this.multisigs[vaultAddr];
+            if (!vault) throw new Error("Vault not found");
+            if (!vault.participants.includes(account)) throw new Error("Sender is not a participant of this multisig");
         } else if (block.type === 'multisig_approve') {
             if (Math.abs(block.balance - previousBalance) > epsilon) {
                 throw new Error("multisig_approve cannot change balance");
             }
-            const { vault, proposalID } = block.payload;
-            if (!this.multisigs[vault]) throw new Error("Vault not found");
-            if (!this.multisigs[vault].pendingProposals[proposalID]) throw new Error("Proposal not found");
+            const { vault: vaultAddr, proposalID } = block.payload;
+            const vault = this.multisigs[vaultAddr];
+            if (!vault) throw new Error("Vault not found");
+            if (!vault.participants.includes(account)) throw new Error("Sender is not a participant of this multisig");
+            if (!vault.pendingProposals[proposalID]) throw new Error("Proposal not found");
         } else {
             throw new Error("Invalid block type");
         }
@@ -726,6 +737,19 @@ export class Lattice {
                 }
             }
         }
+
+        // Track Supply Changes from Fees, Mints, and Demurrage
+        if (block.type === 'open' && block.link === 'SYSTEM_GENESIS') {
+            this.totalSupply += block.balance;
+        } else if (block.type === 'stake_unlock') {
+            const unstakedAmount = (frontier.staked_balance || 0) - block.staked_balance;
+            const reward = block.balance - (previousBalance + unstakedAmount);
+            if (reward > 0) this.totalSupply += reward;
+        } else if (['proposal', 'mint_nft', 'transfer_nft', 'data_anchor', 'multisig_create', 'restore_trust'].includes(block.type)) {
+            const fee = previousBalance - block.balance;
+            if (fee > 0) this.totalSupply -= fee;
+        }
+
         this.updateStateHash(block);
 
         return true;

@@ -36,13 +36,14 @@ func broadcastHeartbeat() {
 		blocksInInterval = 0
 
 		heartbeat := map[string]interface{}{
-			"type":       "STATS",
-			"tps":        lastTps,
-			"merkleRoot": lattice.MerkleRoot,
-			"peers":      len(lattice.Peers),
-			"blocks":     len(lattice.Blocks),
-			"stateHash":  lattice.StateHash,
-			"timestamp":  time.Now().Unix(),
+			"type":        "STATS",
+			"tps":         lastTps,
+			"merkleRoot":  lattice.MerkleRoot,
+			"peers":       len(lattice.Peers),
+			"blocks":      len(lattice.Blocks),
+			"stateHash":   lattice.StateHash,
+			"totalSupply": lattice.TotalSupply,
+			"timestamp":   time.Now().Unix(),
 		}
 		lattice.mu.RUnlock()
 
@@ -138,9 +139,10 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":      "online",
-		"engine":      "Go-Lattice v8.97.0",
+		"engine":      "Go-Lattice v8.107.2",
 		"stateHash":   lattice.StateHash,
 		"merkleRoot":  lattice.MerkleRoot,
+		"totalSupply": lattice.TotalSupply,
 		"accounts":    len(lattice.Chains),
 		"blocks":      len(lattice.Blocks),
 		"identities":  lattice.Identities,

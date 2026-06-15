@@ -4,6 +4,9 @@
 ### Added
 - "Cross-Feature Pressure" Parity Scenario: A complex same-timestamp multi-account scenario involving governance, HTLCs, and NFTs to stress-test consensus replay determinism.
 - Enhanced AI Oracle in `go-game-server`: Improved variance analysis for bot detection and stricter proof metadata validation.
+- Neural Governance Auditor: New mock auditor in `go-game-server` to perform risk analysis on governance proposals.
+- Multisig Security: Hardened Shared Vaults with participant-only authorization for propose/approve operations.
+- Total Supply Tracking: Implemented deterministic system-wide supply tracking in both JS and Go engines.
 - Updated project roadmap and task lists to reflect current Phase IV hardening priorities.
 
 ## [8.107.1] - 2026-04-12

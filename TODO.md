@@ -24,9 +24,10 @@
 - [x] **Deep Parity Tests:** Added deterministic hash matching between the Node.js fixture generation and the Go block properties.
 - [x] **Cross-Feature Pressure Scenario:** Implement a complex same-timestamp scenario involving governance, HTLCs, and NFTs to stress-test replay determinism.
 - [x] **Go Game Server Hardening:** Enhance AI Oracle variance analysis and metadata validation for proof submissions.
-- [x] **Multisig Participant Check:** Ensure only vault members can propose or approve transactions.
+- [x] **Multisig Participant Check:** Ensure only vault members can propose or approve transactions. (v8.107.3)
 - [x] **Neural Governance Mock:** Add endpoint for proposal risk auditing.
-- [x] **Supply Rebuild Logic:** Ensure total supply is accurately recalculated during chain audit and recovery.
+- [x] **Supply Rebuild Logic:** Ensure total supply is accurately recalculated during chain audit and recovery. (v8.107.3)
+- [x] **AMM Liquidity Parity:** Implement `amm_add_liquidity` and `amm_remove_liquidity` with 1:1 parity. (v8.107.3)
 
 ## System Ready
 - All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem.

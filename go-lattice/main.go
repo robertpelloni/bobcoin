@@ -138,7 +138,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":      "online",
-		"engine":      "Go-Lattice v8.97.0",
+		"engine":      "Go-Lattice v8.107.3",
 		"stateHash":   lattice.StateHash,
 		"merkleRoot":  lattice.MerkleRoot,
 		"accounts":    len(lattice.Chains),

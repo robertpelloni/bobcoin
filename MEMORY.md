@@ -1,105 +1,19 @@
-# AI Memory & Architectural Observations
+# Internal Project Memory (Bobcoin)
 
-## Codebase Anomalies & Quirks
-- **Restored Entry Points:** In v2.6.1, `game-server/server.js` and `database.js` have been fully restored and hardened to handle live frontend UI interactions, replacing the mock JSON/frontend API.
-- **Port Mapping Clarification:** `game-server` now defaults to `3001` out-of-the-box in `server.js` (`process.env.PORT || 3001`) to match the Docker host mapping and simplify local development. `frontend` directly targets `http://localhost:3001`.
+### Architectural Observations
+*   **Dual-Consensus Parity**: The system relies on absolute 1:1 mathematical parity between `bobcoin-consensus` (JS) and `go-lattice` (Go). Any divergence in float precision or logic order results in a network fork.
+*   **Block-Lattice Structure**: Each account maintains its own sequential chain. Cross-chain state (like AMM pools or Multisigs) is updated by consensus blocks targeting specific system-links (`AMM_LIQUIDITY`, `DAO_PROPOSAL`).
+*   **Systemic Demurrage**: A continuous decay rate is applied to liquid balances. This ensures BOB remains a transactional currency and finances the oracle layer.
+*   **SPoRA Mining**: Proof-of-Access is enforced by requiring miners to answer challenges linked to specific data chunks in the "Bobtorrent" dataset.
+*   **Total Supply Tracking**: (v8.107.3) The protocol now deterministically tracks total supply by calculating deltas for every block type that creates (rewards), burns (fees), or locks (AMM) BOB.
 
-## Design Preferences & Conventions
-- **Strict Completeness:** A feature is not considered "done" unless it is fully represented in the UI, has error handling, and is documented in the Manual. No hidden backend-only features.
-- **Robustness over Hacks:** Prefer SQLite/PostgreSQL over raw JSON files for data persistence.
-- **Styling:** The project strictly utilizes Vanilla CSS with a "Cyberpunk" aesthetic. Do not introduce TailwindCSS or other utility frameworks unless instructed.
-- **Version Control:** The global version is tightly controlled. All AI agents must update `CHANGELOG.md` and reference the version bump in their commit messages.
+### Design Preferences
+*   **Go Migration**: The project is aggressively moving towards Go for all performance-critical backend services (`go-lattice`, `go-game-server`, `go-supertorrent`).
+*   **Strict Typing**: (v8.107.0+) The protocol now enforces explicit `height` and `staked_balance` fields in every block to remove backend compatibility shims.
+*   **Multisig Security**: (v8.107.3) Proposing or approving multisig transactions requires the signer to be an explicit member of the vault's participant set.
+*   **AI-Enhanced Oracles**: The game server uses statistical analysis (variance, MAD) on input logs to detect and reject robotic macro-usage.
 
-## Git Submodule Structure
-- The `research/forest` and `research/solana` directories exist but are throwing `.gitmodules` mapping errors, indicating they were cloned or moved without proper submodule initialization. They are treated as untracked/modified content by the root git instance.
-
-## Go Port Reality Check (v8.97.0)
-- The Go lattice is now much closer to Node parity, but the repository is still a hybrid system rather than a pure-Go platform.
-- Newly closed parity gaps:
-  - Go now exposes additional compatibility routes: `/frontier`, `/anchors/:account`, `/votes/:proposalHash`, `/nfts`, `/nfts/:account`, `/multisig/:account`.
-  - Go now supports more block/state types: `achievement_unlock`, `swap_lock`, `swap_claim`, `transfer_nft`, `publish_manifest`.
-  - Go bootstrap snapshots now include proposals, votes, market bids, swaps, NFTs, anchors, and multisigs.
-  - Go now rejects unknown block types explicitly and delays state-hash mutation until successful block application.
-- Protocol Hardening (v8.97.0):
-  - Every `new Block()` instantiation in the Bobcoin frontend has been audited and updated to provide explicit `height` and `staked_balance` fields.
-  - This allowed the Go backend to remove its legacy "block shim" and move to a strictly typed, zero-inference protocol.
-  - Switched from full-chain fetching to lightweight `/frontier/:account` queries for height metadata, improving UI performance across all transaction pages.
-- Audit architecture note:
-  - As of v8.19.0, the Go `AuditState()` routine no longer only loops over existing maps; it replays ordered blocks onto a shadow lattice and re-derives runtime state from history.
-  - Legacy anchor/manifest blocks may contain payloads that were historically mutated with derived fields (`id`, `owner`, `timestamp`, `type`) after signing, so audit hash checks must tolerate and normalize that legacy condition.
-  - A latent merkle deadlock was identified in normal-mode block processing when a locked write path attempted to call a merkle helper that re-acquired a read lock. Internal lock-free merkle derivation should be used from locked callers.
-  - As of v8.21.0, failed Go persistence writes are expected to roll back in-memory state and trigger audit-based reconstruction rather than leaving partially-applied consensus mutations resident in memory.
-  - As of v8.22.0, `SYSTEM_GENESIS` bypass semantics are intentionally single-use only; once any chain exists, later `SYSTEM_GENESIS` opens should be rejected rather than treated as valid bootstrap events.
-  - As of v8.22.0, proposal status is refreshed in Go both during block processing and proposal/vote reads so expired governance records do not remain indefinitely `Active`.
-  - As of v8.24.0, the Go test suite explicitly covers the economic parity path for `accept_bid` and `data_anchor`, so these behaviors are now guarded by regression tests rather than only manual reasoning.
-  - As of v8.26.0, the Go regression suite also covers swap lifecycle behavior, NFT transfer ownership semantics, and publish-manifest anchor replay through audit reconstruction.
-  - As of v8.28.0, the Go regression suite also covers mixed-history multi-account replay across `send`, `open`, `data_anchor`, `market_bid`, and `accept_bid`, with audit reconstruction expected to rebuild corrupted derived maps deterministically.
-  - As of v8.30.0, the Go parity suite also covers durable SQLite-backed recovery of mixed historical ledgers, not just in-memory replay, so restart semantics are now part of the regression surface.
-  - As of v8.31.0, the durable recovery suite also covers restart-time reconstruction of NFT ownership changes, claimed swap state, and expired-governance terminal status inside larger multi-account historical ledgers.
-  - As of v8.33.0, Go audit replay no longer assumes a single global timestamp sort is sufficient; replay proceeds in dependency-resolving passes so same-timestamp cross-account dependencies can still reconstruct correctly.
-  - As of v8.34.0, cold-boot SQLite recovery follows the same dependency-resolving replay model, and persisted block reads are deterministically ordered by timestamp/account/height/hash so restart behavior is both stable and robust against same-timestamp cascading dependencies.
-  - As of v8.37.0, Go replay resolves dependencies within each timestamp bucket before advancing to later timestamps, preventing later governance-expiry transitions from invalidating deferred same-timestamp proposal/vote history during replay.
-  - As of v8.37.0, vote validity in Go is determined by the block timestamp, not wall-clock time, so historical replay and recovery remain deterministic even long after the original proposal expired in real time.
-  - As of v8.38.0, Go HTLC claim validity is also determined by the claim block timestamp rather than wall-clock time, and the default `swap_lock` expiry is derived from the block timestamp rather than machine time, removing another replay-time nondeterminism source.
-  - As of v8.39.0, the Node reference lattice has been aligned on the same replay-critical time semantics: proposal votes and HTLC claims are validated against block timestamps, and default HTLC expiry derives from block timestamp rather than `Date.now()`.
-  - As of v8.39.0, `bobcoin-consensus/npm test` now provides executable replay-semantics regression coverage for the Node reference implementation instead of having no real test command.
-  - As of v8.40.0, the Node reference lattice now refreshes/finalizes proposal status from ledger time during block processing, bringing normal proposal lifecycle advancement closer to the Go implementation.
-  - As of v8.40.0, the Node replay suite also covers mixed governance + HTLC histories so cross-client parity work is no longer limited to isolated single-feature time semantics.
-  - As of v8.41.0, Go now has durable SQLite-backed recovery coverage for a demurrage-sensitive governance + HTLC ledger, giving the mixed-feature replay work a persisted-restart dimension rather than only in-memory execution.
-  - As of v8.41.0, both Node and Go now exercise mixed governance + HTLC historical ledgers, so cross-client parity work has advanced from isolated time semantics into mirrored multi-feature replay scenarios.
-  - As of v8.42.0, both Node and Go now also exercise same-timestamp mixed governance + HTLC ledgers, so timestamp-bucket replay behavior is being validated in cross-client mirrored scenarios rather than only in single-feature tests.
-  - As of v8.42.0, Go durable recovery now explicitly covers same-timestamp mixed governance + HTLC reconstruction under hostile cross-account ordering, not just same-timestamp single-feature cases.
-  - As of v8.43.0, the mirrored same-timestamp cross-client scenarios now include NFT ownership transfer semantics in addition to governance and HTLC lifecycle state, expanding the replay-sensitive parity surface into asset ownership transitions.
-  - As of v8.43.0, Go durable recovery also validates recovered `data_anchor` typing and recovered NFT ownership inside the same same-timestamp mixed ledger, not just proposal and swap state.
-  - As of v8.45.0, the Node reference lattice also supports typed `publish_manifest` anchor processing, so manifest-style anchors are no longer missing from the mirrored cross-client replay surface.
-  - As of v8.45.0, both Node and Go now exercise same-timestamp mixed ledgers that preserve governance state, HTLC lifecycle state, NFT ownership, `publish_manifest` anchors, and `data_anchor` typing together.
-  - As of v8.46.0, both Node and Go now also exercise a larger three-account same-timestamp mixed ledger that combines governance, voting, market bids, NFT ownership transfer, HTLC lifecycle state, `publish_manifest`, and later `data_anchor` finalization.
-  - As of v8.46.0, Go durable recovery now explicitly validates accepted market bid reconstruction inside the same broader same-timestamp mixed ledger, not just proposals, swaps, bids, NFTs, and anchors.
-  - As of v8.47.0, both Node and Go now also exercise a demurrage-sensitive three-account same-timestamp mixed ledger, so elapsed-time pressure is now combined with replay-order pressure and multi-feature state interactions in mirrored scenarios.
-  - As of v8.47.0, Go durable recovery also validates recovered proposer frontier balance inside the demurrage-sensitive broader mixed ledger, not just logical state maps such as proposals, swaps, bids, NFTs, and anchors.
-  - As of v8.48.0, mirrored replay scenarios are now documented in `testing/parity-scenarios.json`, giving the parity campaign a shared scenario catalog rather than relying only on scattered test code.
-  - As of v8.48.0, both Node and Go test suites validate the shared replay scenario catalog, so scenario-catalog drift is now executable rather than purely documentary.
-  - As of v8.49.0, shared replay fixture fragments are now documented in `testing/parity-fixture-fragments.json`, so the parity campaign has started to inventory reusable building blocks, not just whole mirrored scenarios.
-  - As of v8.49.0, both Node and Go test suites validate scenario-to-fragment references, making fixture-fragment drift executable as the mirrored parity surface grows.
-  - As of v8.50.0, both Node and Go now also exercise a three-account same-timestamp mirrored scenario where the collector performs dual same-bucket actions (`vote` then `market_bid`) on its own chain, increasing replay pressure beyond one-action-per-secondary-account patterns.
-  - As of v8.50.0, the shared parity catalogs now model this richer structure explicitly via the `collector-vote-extension` fixture fragment and the `multi_account_same_timestamp_dual_collector_actions` scenario entry.
-  - As of v8.51.0, both Node and Go now also exercise a demurrage-sensitive version of the dual-collector-action same-timestamp ledger, combining elapsed-time balance pressure with the richer same-account and cross-account replay surface.
-  - As of v8.51.0, the shared scenario catalog now explicitly tracks the demurrage-sensitive dual-collector-action mirrored scenario, keeping the newer economic replay surface visible in the shared parity inventory.
-  - As of v8.52.0, the shared parity scenario catalog also records explicit `nodeTest` and `goTest` references for each mirrored scenario, so the catalog now points at concrete executable coverage instead of only describing scenario shape.
-  - As of v8.52.0, both Node and Go validate those explicit test references, making test-to-scenario drift executable in addition to scenario-to-fragment drift.
-  - As of v8.54.0, `go-supertorrent/` ports the supernode control plane into Go: wallet/bootstrap flow, torrent registry persistence, `/stats`, `/add-torrent`, `/remove-torrent`, `/upload`, `/spora/:challenge`, and lattice market bid polling/acceptance.
-  - As of v8.54.0, mirrored parity inventory is also rendered into `docs/ai/testing/parity-scenario-matrix.md` via `npm run parity:matrix`, so the shared scenario/fragment/test-reference catalogs now produce human-readable audit documentation as well as executable validation.
-  - As of v8.55.0, `go-game-server/` ports the game-server control plane into Go: system wallet/bootstrap, SQLite bid/transaction persistence, `/status`, `/bankroll`, `/mint`, `/burn`, `/transactions`, `/market/bids`, `/market/bid`, and `/market/accept`.
-  - As of v8.55.0, the platform now has initial Go control-plane ports for both remaining major Node services (`supertorrent` and `game-server`), even though full feature parity for transport, matchmaking, FHE, and ZK verification is still pending.
-  - As of v8.56.0, `go-game-server/` also ports the WebSocket matchmaking/signaling server used by the rhythm-game multiplayer flow, so one of the previously outstanding game-server real-time responsibilities is now covered in Go.
-  - As of v8.56.0, the most significant remaining game-server-specific Go gaps are now the FHE oracle and the SP1/ZK `/submit-proof` flow, rather than the basic HTTP control plane or multiplayer signaling shell.
-  - As of v8.57.0, `go-game-server/` also ports the current `/submit-proof` orchestration shell into Go: proof payload validation, current score-threshold verification behavior, verification hash derivation, lattice mint/send flow, and local mint transaction recording.
-  - As of v8.57.0, the most meaningful remaining game-server-specific Go gap is now true SP1 backend verification parity plus FHE oracle behavior, rather than basic proof-submission orchestration.
-  - As of v8.58.0, `go-game-server/` also ports the current `/fhe-oracle` orchestration boundary into Go as a bridge shell: encrypted payload validation, configurable upstream forwarding, and passthrough response handling.
-  - As of v8.58.0, the most significant remaining game-server-specific Go gap is now true native FHE behavior plus true SP1 backend verification parity, rather than the surrounding service endpoints.
-  - As of v8.59.0, `go-game-server/` also supports an optional `/submit-proof` verification bridge via `ZK_SERVICE_URL/verify`, so the Go proof-submission shell can prefer an external verifier result while preserving the current fallback behavior.
-  - As of v8.59.0, the most meaningful remaining `/submit-proof` gap is now full backend SP1 verification parity and deeper proof semantics, not the absence of any external verification hook.
-  - As of v8.60.0, `go-game-server/main_test.go` now provides executable Go regression coverage for the new game-server shell itself: verification-bridge preference, fallback verification, FHE bridge passthrough, and WebSocket matchmaking/signaling.
-  - As of v8.60.0, Windows temp-directory cleanup issues in Go game-server tests were resolved by explicitly closing SQLite handles in test cleanup.
-  - As of v8.61.0, `go-supertorrent/main_test.go` now provides executable Go regression coverage for the supernode control-plane shell itself: torrent add/remove behavior, SPoRA response behavior, lattice accept-bid submission, and upload tracking.
-  - As of v8.61.0, both new Go service shells (`go-game-server` and `go-supertorrent`) now have first-wave executable Go regression coverage instead of relying only on successful builds.
-  - As of v8.62.0, `go-supertorrent/` now also exposes its open-bid scan as a single-pass helper (`processOpenBidsOnce()`), making bootstrap and market-accept orchestration directly testable instead of only indirectly covered through long-running polling loops.
-  - As of v8.62.0, the Go supertorrent tests now cover bootstrap/open flow from minted pending funds and single-pass open-bid processing, not just lower-level endpoint behavior.
-  - As of v8.72.0, `go-supertorrent/` now also exposes `bootstrapWalletOnLatticeOnce()` so the delayed bootstrap loop has a directly testable single-pass core path.
-  - As of v8.72.0, `go-supertorrent/main_test.go` now covers the skip-if-already-tracked path in open-bid processing, reducing regression risk around duplicate-market tracking.
-  - As of v8.71.0, `go-supertorrent/main_test.go` now also covers startup state/reporting behavior: registry loading, core-anchor bootstrapping, and `/stats` output over tracked torrents.
-  - As of v8.74.0, `go-supertorrent/main_test.go` now also covers the manifest/shard publication shell (`/upload-shard`, `/publish-manifest`, `/manifests/:id`, `/shards/:hash`), giving the Go supertorrent port executable coverage over the browser-facing storage workbench surface.
-  - As of v8.75.0, `go-supertorrent/` now also ports the root-path WebSocket matchmaking/signaling shell, aligning the service with the frontend’s Go-first signaling default.
-  - As of v8.75.0, `go-supertorrent/main_test.go` now covers signaling flow (`FIND_MATCH`, `MATCH_FOUND`, `SIGNAL`, `OPPONENT_DISCONNECTED`) in addition to storage, registry, and market-control behavior.
-  - As of v8.77.0, `go-supertorrent/` now normalizes relative manifest URLs into absolute URLs during manifest publication, improving compatibility with browser-facing storage restoration flows.
-  - As of v8.77.0, the Go supertorrent tests now assert absolute URL behavior for both shard upload responses and manifest publication responses.
-  - As of v8.79.0, `go-supertorrent/` now supports manifest registry listing via `GET /manifests`, and the Go supertorrent tests validate manifest listing alongside manifest publication and direct retrieval.
-  - As of v8.78.0, `go-supertorrent/main_test.go` now also covers root status behavior plus negative-path storage errors (invalid shard base64 and missing manifest/shard 404s).
-  - As of v8.80.0, `go-supertorrent/` now also exposes a compatibility proxy shell for Go-first HTTP/game orchestration paths (`/bankroll`, `/mint`, `/burn`, `/transactions`, `/fhe-oracle`, `/submit-proof`, `/market/bid`, `/market/accept`, `/market/bids`).
-  - As of v8.83.0, `go-supertorrent/main_test.go` now covers a broader slice of the compatibility proxy shell, including proxied `/submit-proof`, `/fhe-oracle`, and market bid/list/accept flows, not just mint and transactions.
-  - As of v8.84.0, `go-game-server/main_test.go` now also covers special-case bridge rejection behavior.
-  - As of v8.85.0, `go-supertorrent/` now more clearly distinguishes its local status shell from its proxied game-server status endpoint.
-  - As of v8.90.0, `go-casino/` ports the autonomous casino bot to Go, and passing governance proposals now trigger protocol-level execution actions.
-  - As of v8.91.0, both lattice implementations support fixture-driven automated scenario assembly for executable parity validation.
-  - As of v8.95.0, the Go lattice engine includes Merkle Proof validation against rolling state hashes for enhanced cryptographic integrity.
-  - As of v8.96.0, Go lattice nodes implement trust-weighted consensus based on dynamic peer scorecards.
+### Build & Tooling
+*   **Frontend**: Built with Vite and React. Requires `--legacy-peer-deps` due to package conflicts.
+*   **WASM**: Storage and encryption logic often utilize WASM modules (`node-seal`, Go-compiled storage kernel).
+*   **Parity Verification**: Parity is verified by replaying shared fixture JSONs onto both engines and comparing the resulting state hashes and Merkle roots.

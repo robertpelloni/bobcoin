@@ -72,8 +72,9 @@
 - [x] Deep Multi-Node Sync Hardening: Implemented reputation penalties and gossip spam prevention during automated P2P reconciliation.
 - [ ] ZK Proving Integration: Requires local Rust compiler toolchain updates.
 - [x] Cross-Feature Parity: Ensure 1:1 parity for complex multi-account same-timestamp replay scenarios across JS and Go. (Finalized in v8.107.2)
-- [x] Multisig Hardening: Participant-only authorization for on-chain vault operations.
-- [x] Supply Transparency: Deterministic total supply tracking across consensus engines.
+- [x] Multisig Hardening: Participant-only authorization for on-chain vault operations. (v8.107.3)
+- [x] Supply Transparency: Deterministic total supply tracking across consensus engines. (v8.107.3)
+- [x] AMM Liquidity Management: Implemented `amm_add_liquidity` and `amm_remove_liquidity` with 1:1 parity. (v8.107.3)
 
 
 ## Architecture Decision: Service Canonicalization

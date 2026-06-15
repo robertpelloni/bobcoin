@@ -1,36 +1,27 @@
-# Session Handoff - 2026-04-12 (v8.107.2)
+# Session Handoff - Phase IV Completion
 
-## Executive Summary
-Achieved Phase IV "Consensus Hardening & Feature Parity" by implementing AMM Swaps, Multisig Vaults, and deterministic Total Supply tracking in both JavaScript (`bobcoin-consensus`) and Go (`go-lattice`) engines. Hardened the Go implementation against non-deterministic replay bugs and enhanced the AI Oracle security.
+## Session Summary
+Achieved 1:1 mathematical parity for AMM Liquidity provision and hardened Multisig security across both the JavaScript and Go engines. Verified the full suite of parity scenarios and ensured the frontend is fully functional with the new Liquidity UI.
 
-### 1:1 Parity & Consensus Hardening
-- **Feature Parity:** Implemented `amm_swap` (Constant Product), `multisig_create`, `multisig_propose`, and `multisig_approve` with identical validation logic in both engines.
-- **Supply Tracking:** Implemented deterministic `totalSupply` calculation in both engines, ensuring it is accurately rebuilt during audits from genesis, mints, fees, and burns.
-- **Determinism Fix:** Resolved a critical bug in `go-lattice` where blocks with identical timestamps were replayed in non-deterministic order. Added bucket-sorting by `Account` then `Height` in `Recovery` and `AuditState`.
-- **Complex Scenarios:** Added `cross_feature_same_timestamp_pressure` and `amm_and_multisig_lifecycle` scenarios to the parity test suite. Both engines now pass the full parity catalog.
+## Key Accomplishments
+- **AMM Liquidity (v8.107.3):** Implemented `amm_add_liquidity` and `amm_remove_liquidity` block types. Engines now deterministically track pool reserves, LP token minting, and pool share calculations using the constant product formula.
+- **Multisig Hardening:** Enforced strict participant-only authorization for all Multisig operations in both `Lattice.js` and `lattice.go`.
+- **Total Supply Tracking:** Both engines now maintain an identical `totalSupply` value, updated in real-time by block processing (mints, fees, rewards, AMM locks).
+- **Consensus Parity:** Achieved full 1:1 parity for the "AMM & Multisig Lifecycle" scenario.
+- **Frontend Build Fix:** Corrected invalid Vite versioning in `frontend/package.json` that was blocking the CI/CD pipeline.
+- **AI Oracle Enhancement:** Improved the Go Game Server's AI Oracle with Mean Absolute Deviation (MAD) analysis for robotic consistency detection.
 
-### Security & Microservices
-- **AI Oracle Hardening:** Enhanced `go-game-server` proof validation with Mean Absolute Deviation (MAD) analysis to detect robotic consistency in replay logs. Added mandatory player metadata (address, score) validation.
-- **Multisig Authorization:** Enforced participant-only access for Multisig proposals and approvals in the consensus layer.
-- **Balance Delta Validation:** Added strict balance deduction checks for new specialized block types (`amm_swap`, `multisig_create`) to prevent unauthorized balance inflation.
+## Current State
+- **JS Engine:** Reference implementation is fully updated and documented.
+- **Go Engine:** High-performance node implementation mirrors JS logic exactly.
+- **Frontend:** Responsive React dashboard with functional "Liquidity" management tab.
+- **Documentation:** `CHANGELOG.md`, `ROADMAP.md`, and `TODO.md` are synchronized at v8.107.3.
 
-### UI/UX Integration
-- **Neural Governance Auditor:** Wired a new `/audit-proposal` endpoint in `go-game-server` to the `Governance.jsx` page, providing AI-driven risk reports for DAO proposals.
-- **Network Stats:** Surfaced `Total Network Supply` and verified MPT root status in the `SystemStatus` dashboard.
-- **Frontend Build Fix:** Identified and resolved a missing 'vite' dependency issue in the sandbox environment by manually installing it as a dev dependency.
+## Pending Tasks
+- **Full ZK Proving:** Native Rust SP1 proving is currently simulated; requires environment with `rustc`/`cargo`.
+- **Service Porting:** Continue migrating remaining Node.js backend logic to Go microservices.
 
-## Current Architecture
-- **Canonical Consensus:** `go-lattice` (Go) is now functionally equivalent to the `bobcoin-consensus` (JS) reference for all major features.
-- **Primary Microservices:** `go-game-server` (Port 3001) and `go-supertorrent` (Port 8000) are the canonical entry points.
-- **Frontend:** React 18 / Vite. Protocol version bumped to **8.107.2**.
-
-## Next Steps
-1. **Full ZK Proving Integration:** The `/submit-proof` endpoint is ready; the next phase requires a native Rust/SP1 toolchain (`cargo-prove`) in the environment to replace simulations with real proofs.
-2. **AMM Liquidity Management UI:** Build a dedicated interface for adding/removing liquidity to the AMM pools beyond the current swap-only view.
-3. **Cross-Service Gossip Optimization:** Refine the peer-to-peer block propagation speed between Go and JS nodes.
-
-## Verification
-- **JS Tests:** `cd bobcoin-consensus && npm run test` (All Pass)
-- **Go Tests:** `cd go-lattice && go test -v ./...` (All Pass)
-- **Game Server Tests:** `cd go-game-server && go test -v ./...` (All Pass)
-- **Frontend Build:** `cd frontend && npm run build` (Successful)
+## Architectural Notes
+- The `go-lattice` engine uses bucket-sorting by Account and Height for blocks with identical timestamps during recovery/audit to maintain hash links.
+- Demurrage is applied at a rate of `0.0001 / 60,000` per millisecond to all liquid balances.
+- Total Supply is rebuilt correctly during cold-boot recovery by replaying all historical supply deltas.

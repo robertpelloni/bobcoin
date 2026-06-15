@@ -461,8 +461,21 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 		if len(diffs) > 0 {
 			variance := calculateVariance(diffs)
 			log.Printf("[AI Oracle] Replay log variance: %f", variance)
-			if variance < 10.0 { // Artificial variance threshold
+
+			// Robotic consistency check: if variance is extremely low, it's a macro.
+			if variance < 5.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (macro script suspected).", variance)
+				return false
+			}
+
+			// Robotic precision check: calculate Mean Absolute Deviation (MAD)
+			var sumDiff float64
+			for _, d := range diffs {
+				sumDiff += math.Abs(d - (diffs[0])) // Simplistic MAD relative to first interval
+			}
+			mad := sumDiff / float64(len(diffs))
+			if mad < 2.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (robotic consistency detected).", mad)
 				return false
 			}
 		}

@@ -3,8 +3,8 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"sort"
+	"strconv"
 )
 
 func calculateMerkleRootFromChains(chains map[string][]*Block) string {
@@ -14,10 +14,11 @@ func calculateMerkleRootFromChains(chains map[string][]*Block) string {
 			continue
 		}
 		head := chain[len(chain)-1]
+		// Use FormatJS to ensure 1:1 string parity with JavaScript's .toString()
 		entry := Hash(account +
-			fmt.Sprintf("%f", head.Balance) +
-			fmt.Sprintf("%f", head.StakedBalance) +
-			fmt.Sprintf("%d", head.Height))
+			FormatJS(head.Balance) +
+			FormatJS(head.StakedBalance) +
+			strconv.Itoa(head.Height))
 		stateEntries = append(stateEntries, entry)
 	}
 

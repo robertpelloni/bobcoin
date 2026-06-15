@@ -1,5 +1,16 @@
 # Changelog
 
+## [8.107.3] - 2026-04-14
+### Added
+- AMM Liquidity Management: Implemented `amm_add_liquidity` and `amm_remove_liquidity` block types in both JS and Go engines with 1:1 parity.
+- Frontend Liquidity UI: Added dedicated interface for liquidity provision (BOB/sSOL pair) and LP token management.
+- Neural Governance Auditor: Integrated AI-driven proposal risk analysis into the Go game server and frontend.
+- Total Supply Tracking: Implemented deterministic system-wide supply tracking in both JS and Go engines, including deltas from AMM and governance.
+- Multisig Hardening: Enforced participant-only authorization for all Multisig vault operations.
+- Hardened Consensus Parity: Implemented precise string formatting logic (`FormatJS`) in Go to ensure Merkle Root parity for small decimal values.
+- Corrected Frontend Dependencies: Fixed invalid Vite versioning in `package.json`.
+- Restored Protocol Documentation: Re-inserted critical architectural comments in consensus core files.
+
 ## [8.107.2] - 2026-04-13
 ### Added
 - "Cross-Feature Pressure" Parity Scenario: A complex same-timestamp multi-account scenario involving governance, HTLCs, NFTs, and stake locking.

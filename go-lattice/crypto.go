@@ -5,6 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
+
 	"github.com/mr-tron/base58"
 )
 
@@ -25,6 +29,25 @@ func DeriveKeypair(mnemonic string, index int) map[string]string {
 		"mnemonic":       mnemonic,
 		"derivationPath": derivationPath,
 	}
+}
+
+// FormatJS provides a string representation of a float64 that matches JavaScript's .toString()
+// including scientific notation thresholds (abs < 1e-6 or abs >= 1e21).
+func FormatJS(f float64) string {
+	if f == 0 {
+		return "0"
+	}
+	abs := math.Abs(f)
+	if abs >= 1e21 || abs < 1e-6 {
+		s := strconv.FormatFloat(f, 'e', -1, 64)
+		parts := strings.Split(s, "e")
+		exp, _ := strconv.Atoi(parts[1])
+		if exp > 0 {
+			return parts[0] + "e+" + strconv.Itoa(exp)
+		}
+		return parts[0] + "e" + strconv.Itoa(exp)
+	}
+	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
 // Hash returns a SHA-256 hex string of the input data

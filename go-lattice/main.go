@@ -255,6 +255,7 @@ func handleFrontiers(w http.ResponseWriter, r *http.Request) {
 			"staked_balance": stakedBalance,
 			"height":         len(chain),
 			"headHash":       hash,
+			"balances":       lattice.Balances[account],
 		}
 	}
 	lattice.mu.RUnlock()
@@ -291,6 +292,7 @@ func handleFrontier(w http.ResponseWriter, r *http.Request) {
 		"balance":        balance,
 		"staked_balance": stakedBalance,
 		"height":         height,
+		"balances":       lattice.Balances[account],
 	})
 }
 

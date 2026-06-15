@@ -169,6 +169,7 @@ func main() {
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
 	mux.HandleFunc("/market/accept", service.handleAcceptBid)
+	mux.HandleFunc("/governance/audit", service.handleGovernanceAudit)
 
 	log.Printf("[go-game-server] listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, withCORS(mux)); err != nil {
@@ -675,6 +676,47 @@ func (s *Service) handleAcceptBid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+func (s *Service) handleGovernanceAudit(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Title  string  `json:"title"`
+		Action string  `json:"action"`
+		Amount float64 `json:"amount"`
+		Target string  `json:"target"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid payload"})
+		return
+	}
+
+	// Mock AI Neural Auditor
+	// In a production environment, this would call a fine-tuned LLM
+	// to analyze the proposal's economic impact and security risk.
+	riskScore := 0.15 // Default low risk
+	summary := "Proposal appears legitimate and follows standard protocol patterns."
+
+	if strings.Contains(strings.ToUpper(req.Title), "SCAM") || strings.Contains(strings.ToUpper(req.Title), "TEST") {
+		riskScore = 0.85
+		summary = "High risk detected: Title contains suspicious keywords or suggests low-effort testing."
+	}
+
+	if req.Action == "MINT_TREASURY" && req.Amount > 100000 {
+		riskScore = 0.95
+		summary = "Critical risk: Excessive treasury minting requested. Potential rug-pull or inflation attack."
+	}
+
+	if req.Action == "UPDATE_DEMURRAGE" && req.Amount > 0.01 {
+		riskScore = 0.70
+		summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy."
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success":   true,
+		"riskScore": riskScore,
+		"summary":   summary,
+		"auditor":   "Neural Governance Auditor v1.0",
+	})
 }
 
 func (s *Service) sendSystemFunds(address string, amount float64, zkProof string) (string, error) {

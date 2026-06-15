@@ -49,8 +49,8 @@ func (b *Block) CalculateHash() string {
 	data := b.Type +
 		b.Account +
 		prev +
-		strconv.FormatFloat(b.Balance, 'f', -1, 64) +
-		strconv.FormatFloat(b.StakedBalance, 'f', -1, 64) +
+		FormatJS(b.Balance) +
+		FormatJS(b.StakedBalance) +
 		strconv.Itoa(b.Height) +
 		b.Link +
 		sporaStr +

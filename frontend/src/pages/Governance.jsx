@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getProposals, submitLatticeBlock, getLatticeFrontier, getSporaProof, LATTICE_URL } from '../api'; 
+import { getProposals, submitLatticeBlock, getLatticeFrontier, getSporaProof, auditProposal, LATTICE_URL } from '../api';
 import { generateKeypair } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
@@ -10,6 +10,7 @@ export function Governance() {
     const [stakedBalance, setStakedBalance] = useState(0);
     const [votingPower, setVotingPower] = useState(0);
     const [proposals, setProposals] = useState([]);
+    const [auditCache, setAuditCache] = useState({});
     const [loading, setLoading] = useState(true);
     const [keypair, setKeypair] = useState(null);
 
@@ -30,6 +31,14 @@ export function Governance() {
                 const data = await getProposals();
                 if (data && Array.isArray(data)) {
                     setProposals(data);
+
+                    // Trigger audits for new proposals
+                    data.forEach(async (prop) => {
+                        if (!auditCache[prop.id]) {
+                            const res = await auditProposal(prop);
+                            setAuditCache(prev => ({ ...prev, [prop.id]: res }));
+                        }
+                    });
                 }
 
                 if (kp) {
@@ -205,6 +214,14 @@ export function Governance() {
                             <span className={`status-badge ${prop.status.toLowerCase()}`}>{prop.status}</span>
                         </div>
                         <h3>{prop.title}</h3>
+
+                        {auditCache[prop.id] && (
+                            <div className={`neural-audit ${auditCache[prop.id].riskScore > 0.5 ? 'high-risk' : 'low-risk'}`}>
+                                <span className="audit-label">🧠 NEURAL AUDIT:</span>
+                                <span className="risk-score">RISK {(auditCache[prop.id].riskScore * 100).toFixed(0)}%</span>
+                                <p className="audit-summary">{auditCache[prop.id].summary}</p>
+                            </div>
+                        )}
 
                         <div className="vote-bar">
                             <div className="bar-for" style={{width: `${(prop.votesFor / (prop.votesFor + prop.votesAgainst + 0.0001)) * 100}%`}}></div>

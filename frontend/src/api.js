@@ -137,6 +137,25 @@ export const getMarketBids = async () => {
     }
 };
 
+export const auditProposal = async (proposal) => {
+    try {
+        const res = await fetch(`${API_URL}/governance/audit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: proposal.title,
+                action: proposal.action || 'NONE',
+                amount: proposal.amount || 0,
+                target: proposal.target || ''
+            })
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("Neural audit failed:", e);
+        return { success: false, riskScore: 0.5, summary: "Auditor offline." };
+    }
+};
+
 export const uploadStorageShard = async ({ hash, data }) => {
     try {
         const res = await fetch(`${SUPERNODE_URL}/upload-shard`, {

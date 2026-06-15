@@ -178,6 +178,24 @@
         "stake-lock-core"
       ],
       "expectations": ["proposal-passed", "vote-preserved", "swap-claimed", "nft-owner-transferred", "stake-locked"]
+    },
+    {
+      "id": "amm_and_multisig_lifecycle",
+      "category": "mirrored-replay",
+      "features": ["amm", "multisig", "send", "receive", "same-timestamp"],
+      "accounts": 3,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "nodeTest": "testAmmAndMultisigLifecycleSemantics",
+      "goTest": "TestRecoveryReplaysAmmAndMultisigLifecycleFromSQLite",
+      "fragments": [
+        "proposer-genesis",
+        "proposer-sends-to-voter",
+        "proposer-sends-to-collector",
+        "multisig-lifecycle-core",
+        "amm-swap-core"
+      ],
+      "expectations": ["multisig-created", "vault-funded", "multisig-executed", "amm-swapped", "pool-reserves-updated"]
     }
   ]
 }

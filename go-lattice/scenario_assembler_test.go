@@ -484,6 +484,118 @@ func genStakeLockCore(ctx *scenarioContext) error {
 	return ctx.l.ProcessBlock(lock, false)
 }
 
+func genMultisigLifecycleCore(ctx *scenarioContext) error {
+	pk := ctx.getKeys("proposer")
+	vk := ctx.getKeys("voter")
+	ck := ctx.getKeys("collector")
+	ts := ctx.baseTime
+
+	participants := []string{pk["publicKey"], vk["publicKey"]}
+	vaultAddr := deterministicMultisigAddress(participants)
+
+	// 1. Create Multisig
+	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	create := &Block{
+		Type:     "multisig_create",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 100,
+		Height:   prevP.Height + 1,
+		Link:     "MULTISIG_CREATE",
+		Spora:    validSpora(prevP.Hash),
+		Payload: map[string]interface{}{
+			"participants": participants,
+			"threshold":    2.0,
+		},
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, create, pk["privateKey"])
+	if err := ctx.l.ProcessBlock(create, false); err != nil {
+		return err
+	}
+
+	// 2. Fund Multisig
+	prevP2 := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	fund := &Block{
+		Type:     "send",
+		Account:  pk["publicKey"],
+		Previous: &prevP2.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 50,
+		Height:   prevP2.Height + 1,
+		Link:     vaultAddr,
+		Spora:    validSpora(prevP2.Hash),
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, fund, pk["privateKey"])
+	if err := ctx.l.ProcessBlock(fund, false); err != nil {
+		return err
+	}
+
+	// 3. Propose from Proposer
+	prevP3 := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	prop := &Block{
+		Type:     "multisig_propose",
+		Account:  pk["publicKey"],
+		Previous: &prevP3.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts),
+		Height:   prevP3.Height + 1,
+		Link:     "MULTISIG_PROPOSE",
+		Spora:    validSpora(prevP3.Hash),
+		Payload: map[string]interface{}{
+			"vault":     vaultAddr,
+			"recipient": ck["publicKey"],
+			"amount":    40.0,
+		},
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, prop, pk["privateKey"])
+	if err := ctx.l.ProcessBlock(prop, false); err != nil {
+		return err
+	}
+
+	// 4. Approve from Voter (Triggers execution)
+	prevV := ctx.l.Chains[vk["publicKey"]][len(ctx.l.Chains[vk["publicKey"]])-1]
+	approve := &Block{
+		Type:     "multisig_approve",
+		Account:  vk["publicKey"],
+		Previous: &prevV.Hash,
+		Balance:  ctx.l.GetBalance(vk["publicKey"], ts),
+		Height:   prevV.Height + 1,
+		Link:     "MULTISIG_APPROVE",
+		Spora:    validSpora(prevV.Hash),
+		Payload: map[string]interface{}{
+			"vault":      vaultAddr,
+			"proposalID": prop.Hash,
+		},
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, approve, vk["privateKey"])
+	return ctx.l.ProcessBlock(approve, false)
+}
+
+func genAmmSwapCore(ctx *scenarioContext) error {
+	pk := ctx.getKeys("proposer")
+	ts := ctx.baseTime
+
+	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	swap := &Block{
+		Type:     "amm_swap",
+		Account:  pk["publicKey"],
+		Previous: &prevP.Hash,
+		Balance:  ctx.l.GetBalance(pk["publicKey"], ts) - 100,
+		Height:   prevP.Height + 1,
+		Link:     "AMM_SWAP",
+		Spora:    validSpora(prevP.Hash),
+		Payload: map[string]interface{}{
+			"pair":     "BOB/sSOL",
+			"amountIn": 100.0,
+		},
+		Timestamp: ts,
+	}
+	signTestBlock(ctx.t, swap, pk["privateKey"])
+	return ctx.l.ProcessBlock(swap, false)
+}
+
 // Scenario Runner
 
 func TestFixtureDrivenMirroredScenarios(t *testing.T) {
@@ -516,6 +628,8 @@ func TestFixtureDrivenMirroredScenarios(t *testing.T) {
 		"governance-fee-adjustment":      genGovernanceFeeAdjustment,
 		"demurrage-balance-pressure":     genDemurrageBalancePressure,
 		"stake-lock-core":                genStakeLockCore,
+		"multisig-lifecycle-core":        genMultisigLifecycleCore,
+		"amm-swap-core":                  genAmmSwapCore,
 	}
 
 	for _, sc := range catalog.Scenarios {

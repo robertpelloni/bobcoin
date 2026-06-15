@@ -157,6 +157,13 @@ func (l *Lattice) Recovery() {
 		remaining = remaining[bucketEnd:]
 
 		for len(bucket) > 0 {
+			sort.Slice(bucket, func(i, j int) bool {
+				if bucket[i].Account != bucket[j].Account {
+					return bucket[i].Account < bucket[j].Account
+				}
+				return bucket[i].Height < bucket[j].Height
+			})
+
 			nextBucket := make([]*Block, 0, len(bucket))
 			failures := make([]recoveryFailure, 0, len(bucket))
 			progress := false
@@ -479,9 +486,17 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("multisig propose cannot change balance")
 		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["vault"] == nil || payload["recipient"] == nil || payload["amount"] == nil {
+			return fmt.Errorf("invalid multisig propose payload")
+		}
 	} else if block.Type == "multisig_approve" {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("multisig approve cannot change balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["vault"] == nil || payload["proposalID"] == nil {
+			return fmt.Errorf("invalid multisig approve payload")
 		}
 	} else if block.Type == "stake_lock" {
 		amount := prevBalance - block.Balance
@@ -507,6 +522,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return fmt.Errorf("invalid balance for stake unlock. Expected ~%f (including reward %f)", expectedBalance, reward)
 		}
 	} else if block.Type == "amm_swap" {
+		if block.Balance > prevBalance+epsilon {
+			return fmt.Errorf("amm swap must decrease balance")
+		}
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["pair"] == nil || payload["amountIn"] == nil {
 			return fmt.Errorf("invalid amm swap payload")
@@ -694,10 +712,14 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		fmt.Printf("[Lattice] Trust Restored: %s increased by %f. New Score: %f\n", block.Account[:8], recovery, l.TrustScores[block.Account])
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
-		partsRaw := payload["participants"].([]interface{})
 		var participants []string
-		for _, p := range partsRaw {
-			participants = append(participants, p.(string))
+		switch partsRaw := payload["participants"].(type) {
+		case []interface{}:
+			for _, p := range partsRaw {
+				participants = append(participants, p.(string))
+			}
+		case []string:
+			participants = partsRaw
 		}
 		vaultAddr := deterministicMultisigAddress(participants)
 
@@ -1106,6 +1128,13 @@ func (l *Lattice) AuditState() error {
 		remaining = remaining[bucketEnd:]
 
 		for len(bucket) > 0 {
+			sort.Slice(bucket, func(i, j int) bool {
+				if bucket[i].block.Account != bucket[j].block.Account {
+					return bucket[i].block.Account < bucket[j].block.Account
+				}
+				return bucket[i].block.Height < bucket[j].block.Height
+			})
+
 			nextBucket := make([]orderedBlock, 0, len(bucket))
 			progress := false
 			var lastErr error

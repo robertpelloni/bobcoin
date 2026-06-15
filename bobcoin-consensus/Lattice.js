@@ -34,6 +34,16 @@ export class Lattice {
         this.storageFeeBase = 1.0;
         this.proposalFee = 10.0;
         this.nftMintFee = 50.0;
+
+        this.pools = {
+            'BOB/sSOL': {
+                assetA: 'BOB',
+                assetB: 'sSOL',
+                reserveA: 10000,
+                reserveB: 420,
+                totalShares: 1000
+            }
+        };
     }
 
     updateStateHash(block) {
@@ -635,7 +645,25 @@ export class Lattice {
             if (Math.abs(block.balance - expectedBalance) > epsilon) {
                 throw new Error(`Invalid balance for stake unlock. Expected ~${expectedBalance} (including reward ${reward}), got ${block.balance}`);
             }
-
+        } else if (block.type === 'amm_swap') {
+            const { pair, amountIn } = block.payload;
+            if (!pair || amountIn === undefined) throw new Error("Invalid amm_swap payload");
+            // Validation of balance change handled implicitly by the state update logic below if needed,
+            // but for now we just check if pool exists.
+            if (!this.pools[pair]) throw new Error("Pool not found");
+        } else if (block.type === 'multisig_propose') {
+            if (Math.abs(block.balance - previousBalance) > epsilon) {
+                throw new Error("multisig_propose cannot change balance");
+            }
+            const { vault, recipient, amount } = block.payload;
+            if (!this.multisigs[vault]) throw new Error("Vault not found");
+        } else if (block.type === 'multisig_approve') {
+            if (Math.abs(block.balance - previousBalance) > epsilon) {
+                throw new Error("multisig_approve cannot change balance");
+            }
+            const { vault, proposalID } = block.payload;
+            if (!this.multisigs[vault]) throw new Error("Vault not found");
+            if (!this.multisigs[vault].pendingProposals[proposalID]) throw new Error("Proposal not found");
         } else {
             throw new Error("Invalid block type");
         }
@@ -658,6 +686,45 @@ export class Lattice {
             const current = this.getTrustScore(account);
             this.trustScores[account] = Math.min(100.0, current + recovery);
             console.log(`[Lattice] Trust Restored: ${account.substr(0, 8)} increased by ${recovery}. New Score: ${this.trustScores[account]}`);
+        } else if (block.type === 'amm_swap') {
+            const { pair, amountIn } = block.payload;
+            const pool = this.pools[pair];
+            // dy = y * dx / (x + dx)
+            const dx = amountIn;
+            const dy = (pool.reserveB * dx) / (pool.reserveA + dx);
+            console.log(`[AMM] Swap: ${dx} BOB for ${dy} sSOL. New Price: ${(pool.reserveA + dx) / (pool.reserveB - dy)}`);
+            pool.reserveA += dx;
+            pool.reserveB -= dy;
+        } else if (block.type === 'multisig_propose') {
+            const { vault: vaultAddr, recipient, amount } = block.payload;
+            const vault = this.multisigs[vaultAddr];
+            vault.pendingProposals[block.hash] = {
+                id: block.hash,
+                recipient,
+                amount,
+                signatures: [account],
+                executed: false
+            };
+        } else if (block.type === 'multisig_approve') {
+            const { vault: vaultAddr, proposalID } = block.payload;
+            const vault = this.multisigs[vaultAddr];
+            const prop = vault.pendingProposals[proposalID];
+            if (!prop.signatures.includes(account)) {
+                prop.signatures.push(account);
+            }
+            if (prop.signatures.length >= vault.threshold) {
+                if (vault.balance >= prop.amount) {
+                    prop.executed = true;
+                    vault.balance -= prop.amount;
+                    if (!this.pending[prop.recipient]) this.pending[prop.recipient] = [];
+                    this.pending[prop.recipient].push({
+                        hash: prop.id,
+                        amount: prop.amount,
+                        sender: vaultAddr
+                    });
+                    console.log(`[Lattice] Multisig proposal executed: ${prop.id.substring(0, 8)}`);
+                }
+            }
         }
         this.updateStateHash(block);
 

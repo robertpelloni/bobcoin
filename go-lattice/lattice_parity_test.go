@@ -4598,3 +4598,349 @@ func TestCalculateHashParity(t *testing.T) {
 		t.Errorf("Populated Hash Mismatch.\nExpected: %s\nGot:      %s", expectedPopulated, hash)
 	}
 }
+
+func TestRecoveryRebuildsCrossFeatureSameTimestampPressureFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "cross-feature-pressure.sqlite")
+	keys := deriveDescendingKeypairs("semantic parity cross feature pressure", 3)
+	proposer := keys[0]
+	voter := keys[1]
+	collector := keys[2]
+	secret := "go-cross-feature-pressure-secret"
+	secretHash := Hash(secret)
+	base := int64(600000)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	// 1. Genesis Proposer
+	genesis := makeGenesisBlock(proposer, 1000)
+	genesis.Timestamp = base - 120000
+	signTestBlock(t, genesis, proposer["privateKey"])
+	l.ProcessBlock(genesis, false)
+
+	// 2. Fund Voter
+	sendV := &Block{
+		Type:      "send",
+		Account:   proposer["publicKey"],
+		Previous:  &genesis.Hash,
+		Balance:   l.GetBalance(proposer["publicKey"], base-90000) - 200,
+		Height:    1,
+		Link:      voter["publicKey"],
+		Spora:     validSpora(genesis.Hash),
+		Timestamp: base - 90000,
+	}
+	signTestBlock(t, sendV, proposer["privateKey"])
+	l.ProcessBlock(sendV, false)
+
+	openV := &Block{
+		Type:      "open",
+		Account:   voter["publicKey"],
+		Balance:   200,
+		Height:    0,
+		Link:      sendV.Hash,
+		Spora:     validSporaForOpenAccount(voter["publicKey"]),
+		Timestamp: base - 89000,
+	}
+	signTestBlock(t, openV, voter["privateKey"])
+	l.ProcessBlock(openV, false)
+
+	// 3. Fund Collector
+	sendC := &Block{
+		Type:      "send",
+		Account:   proposer["publicKey"],
+		Previous:  &sendV.Hash,
+		Balance:   l.GetBalance(proposer["publicKey"], base-60000) - 150,
+		Height:    2,
+		Link:      collector["publicKey"],
+		Spora:     validSpora(sendV.Hash),
+		Timestamp: base - 60000,
+	}
+	signTestBlock(t, sendC, proposer["privateKey"])
+	l.ProcessBlock(sendC, false)
+
+	openC := &Block{
+		Type:      "open",
+		Account:   collector["publicKey"],
+		Balance:   150,
+		Height:    0,
+		Link:      sendC.Hash,
+		Spora:     validSporaForOpenAccount(collector["publicKey"]),
+		Timestamp: base - 59000,
+	}
+	signTestBlock(t, openC, collector["privateKey"])
+	l.ProcessBlock(openC, false)
+
+	// 4. Same Timestamp Pressure
+	// Proposal
+	prop := &Block{
+		Type:     "proposal",
+		Account:  proposer["publicKey"],
+		Previous: &sendC.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 10,
+		Height:   3,
+		Link:     "DAO_PROPOSAL",
+		Spora:    validSpora(sendC.Hash),
+		Payload: map[string]interface{}{
+			"title":   "Cross Feature Pressure",
+			"endTime": time.UnixMilli(base + 2000).Format(time.RFC3339),
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, prop, proposer["privateKey"])
+	l.ProcessBlock(prop, false)
+
+	// Vote
+	vote := &Block{
+		Type:      "vote",
+		Account:   voter["publicKey"],
+		Previous:  &openV.Hash,
+		Balance:   l.GetBalance(voter["publicKey"], base),
+		Height:    1,
+		Link:      prop.Hash,
+		Spora:     validSpora(openV.Hash),
+		Payload:   map[string]interface{}{"vote": "FOR"},
+		Timestamp: base,
+	}
+	signTestBlock(t, vote, voter["privateKey"])
+	l.ProcessBlock(vote, false)
+
+	// Swap Lock
+	lock := &Block{
+		Type:     "swap_lock",
+		Account:  proposer["publicKey"],
+		Previous: &prop.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 50,
+		Height:   4,
+		Link:     "HTLC_LOCK",
+		Spora:    validSpora(prop.Hash),
+		Payload: map[string]interface{}{
+			"secretHash": secretHash,
+			"recipient":  proposer["publicKey"],
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, lock, proposer["privateKey"])
+	l.ProcessBlock(lock, false)
+
+	// Swap Claim
+	claim := &Block{
+		Type:     "swap_claim",
+		Account:  proposer["publicKey"],
+		Previous: &lock.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base) + 50,
+		Height:   5,
+		Link:     "HTLC_CLAIM",
+		Spora:    validSpora(lock.Hash),
+		Payload: map[string]interface{}{
+			"secret":     secret,
+			"secretHash": secretHash,
+		},
+		Timestamp: base,
+	}
+	signTestBlock(t, claim, proposer["privateKey"])
+	l.ProcessBlock(claim, false)
+
+	// Mint & Transfer NFT (Sequential within same timestamp)
+	curPrev := claim.Hash
+	curHeight := 6
+	mint := &Block{
+		Type:     "mint_nft",
+		Account:  proposer["publicKey"],
+		Previous: &curPrev,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 50,
+		Height:   curHeight,
+		Link:     "NFT_MINT",
+		Spora:    validSpora(curPrev),
+		Payload:  map[string]interface{}{"name": "Pressure NFT", "magnet": "m"},
+		Timestamp: base,
+	}
+	signTestBlock(t, mint, proposer["privateKey"])
+	l.ProcessBlock(mint, false)
+	curPrev = mint.Hash
+	curHeight++
+
+	transfer := &Block{
+		Type:     "transfer_nft",
+		Account:  proposer["publicKey"],
+		Previous: &curPrev,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 1,
+		Height:   curHeight,
+		Link:     mint.Hash,
+		Spora:    validSpora(curPrev),
+		Payload:  map[string]interface{}{"recipient": collector["publicKey"]},
+		Timestamp: base,
+	}
+	signTestBlock(t, transfer, proposer["privateKey"])
+	l.ProcessBlock(transfer, false)
+	curPrev = transfer.Hash
+	curHeight++
+
+	// Stake Lock
+	stake := &Block{
+		Type:          "stake_lock",
+		Account:       proposer["publicKey"],
+		Previous:      &curPrev,
+		Balance:       l.GetBalance(proposer["publicKey"], base) - 100,
+		StakedBalance: 100,
+		Height:        curHeight,
+		Link:          "STAKE_LOCK",
+		Spora:         validSpora(curPrev),
+		Timestamp:     base,
+	}
+	signTestBlock(t, stake, proposer["privateKey"])
+	l.ProcessBlock(stake, false)
+
+	mgr.Close()
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if len(recovered.Chains[proposer["publicKey"]]) != 9 {
+		t.Fatalf("expected recovered proposer chain length 9, got %d", len(recovered.Chains[proposer["publicKey"]]))
+	}
+	if recovered.Nfts[mint.Hash].(map[string]interface{})["owner"] != collector["publicKey"] {
+		t.Fatalf("expected recovered NFT owner to be collector")
+	}
+	if recovered.Chains[proposer["publicKey"]][8].StakedBalance != 100 {
+		t.Fatalf("expected recovered staked balance 100")
+	}
+}
+
+func TestRecoveryReplaysAmmAndMultisigLifecycleFromSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "amm-multisig.sqlite")
+	keys := deriveDescendingKeypairs("semantic parity amm multisig lifecycle", 3)
+	proposer := keys[0]
+	voter := keys[1]
+	collector := keys[2]
+	base := int64(700000)
+
+	mgr := NewDBManager(dbPath)
+	l := NewLattice(mgr)
+
+	// 1. Genesis Proposer
+	genesis := makeGenesisBlock(proposer, 1000)
+	genesis.Timestamp = base - 120000
+	signTestBlock(t, genesis, proposer["privateKey"])
+	l.ProcessBlock(genesis, false)
+
+	// 2. Fund Voter & Collector
+	sendV := &Block{
+		Type:      "send",
+		Account:   proposer["publicKey"],
+		Previous:  &genesis.Hash,
+		Balance:   l.GetBalance(proposer["publicKey"], base-90000) - 200,
+		Height:    1,
+		Link:      voter["publicKey"],
+		Spora:     validSpora(genesis.Hash),
+		Timestamp: base - 90000,
+	}
+	signTestBlock(t, sendV, proposer["privateKey"])
+	l.ProcessBlock(sendV, false)
+
+	openV := &Block{Type: "open", Account: voter["publicKey"], Balance: 200, Height: 0, Link: sendV.Hash, Spora: validSporaForOpenAccount(voter["publicKey"]), Timestamp: base - 89000}
+	signTestBlock(t, openV, voter["privateKey"])
+	l.ProcessBlock(openV, false)
+
+	sendC := &Block{
+		Type:      "send",
+		Account:   proposer["publicKey"],
+		Previous:  &sendV.Hash,
+		Balance:   l.GetBalance(proposer["publicKey"], base-60000) - 150,
+		Height:    2,
+		Link:      collector["publicKey"],
+		Spora:     validSpora(sendV.Hash),
+		Timestamp: base - 60000,
+	}
+	signTestBlock(t, sendC, proposer["privateKey"])
+	l.ProcessBlock(sendC, false)
+
+	openC := &Block{Type: "open", Account: collector["publicKey"], Balance: 150, Height: 0, Link: sendC.Hash, Spora: validSporaForOpenAccount(collector["publicKey"]), Timestamp: base - 59000}
+	signTestBlock(t, openC, collector["privateKey"])
+	l.ProcessBlock(openC, false)
+
+	// 3. Create Multisig
+	participants := []string{proposer["publicKey"], voter["publicKey"]}
+	vaultAddr := deterministicMultisigAddress(participants)
+	create := &Block{
+		Type:     "multisig_create",
+		Account:  proposer["publicKey"],
+		Previous: &sendC.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 100,
+		Height:   3,
+		Link:     "MULTISIG_CREATE",
+		Spora:    validSpora(sendC.Hash),
+		Payload:  map[string]interface{}{"participants": participants, "threshold": 2.0},
+		Timestamp: base,
+	}
+	signTestBlock(t, create, proposer["privateKey"])
+	l.ProcessBlock(create, false)
+
+	// Fund Vault
+	fund := &Block{
+		Type:     "send",
+		Account:  proposer["publicKey"],
+		Previous: &create.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 50,
+		Height:   4,
+		Link:     vaultAddr,
+		Spora:    validSpora(create.Hash),
+		Timestamp: base,
+	}
+	signTestBlock(t, fund, proposer["privateKey"])
+	l.ProcessBlock(fund, false)
+
+	// Propose
+	prop := &Block{
+		Type:     "multisig_propose",
+		Account:  proposer["publicKey"],
+		Previous: &fund.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base),
+		Height:   5,
+		Link:     "MULTISIG_PROPOSE",
+		Spora:    validSpora(fund.Hash),
+		Payload:  map[string]interface{}{"vault": vaultAddr, "recipient": collector["publicKey"], "amount": 40.0},
+		Timestamp: base,
+	}
+	signTestBlock(t, prop, proposer["privateKey"])
+	l.ProcessBlock(prop, false)
+
+	// Approve
+	approve := &Block{
+		Type:     "multisig_approve",
+		Account:  voter["publicKey"],
+		Previous: &openV.Hash,
+		Balance:  l.GetBalance(voter["publicKey"], base),
+		Height:   1,
+		Link:     "MULTISIG_APPROVE",
+		Spora:    validSpora(openV.Hash),
+		Payload:  map[string]interface{}{"vault": vaultAddr, "proposalID": prop.Hash},
+		Timestamp: base,
+	}
+	signTestBlock(t, approve, voter["privateKey"])
+	l.ProcessBlock(approve, false)
+
+	// AMM Swap
+	swap := &Block{
+		Type:     "amm_swap",
+		Account:  proposer["publicKey"],
+		Previous: &prop.Hash,
+		Balance:  l.GetBalance(proposer["publicKey"], base) - 100,
+		Height:   6,
+		Link:     "AMM_SWAP",
+		Spora:    validSpora(prop.Hash),
+		Payload:  map[string]interface{}{"pair": "BOB/sSOL", "amountIn": 100.0},
+		Timestamp: base,
+	}
+	signTestBlock(t, swap, proposer["privateKey"])
+	l.ProcessBlock(swap, false)
+
+	mgr.Close()
+	recovered := NewLattice(NewDBManager(dbPath))
+	defer recovered.db.Close()
+
+	if recovered.Multisigs[vaultAddr].Balance != 10 { // 50 - 40
+		t.Fatalf("expected vault balance 10, got %v", recovered.Multisigs[vaultAddr].Balance)
+	}
+	if recovered.Pools["BOB/sSOL"].ReserveA != 10100 {
+		t.Fatalf("expected pool reserveA 10100, got %v", recovered.Pools["BOB/sSOL"].ReserveA)
+	}
+}

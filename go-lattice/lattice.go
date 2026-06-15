@@ -74,6 +74,8 @@ type Lattice struct {
 	Anchors         map[string]interface{}
 	Multisigs       map[string]*MultisigVault
 	Pools           map[string]*LiquidityPool    // PairName -> Pool
+	Balances        map[string]map[string]float64 // Account -> Asset -> Amount
+	TotalSupply     float64
 	TrustScores     map[string]float64           // Account -> Score (0-100)
 	Identities      map[string]map[string]string // Account -> { Provider: Info }
 	Peers           map[string]*PeerInfo         // URL -> Stats
@@ -100,6 +102,8 @@ func newEphemeralLattice() *Lattice {
 		Anchors:         make(map[string]interface{}),
 		Multisigs:       make(map[string]*MultisigVault),
 		Pools:           make(map[string]*LiquidityPool),
+		Balances:        make(map[string]map[string]float64),
+		TotalSupply:     0,
 		Peers:           make(map[string]*PeerInfo),
 		TrustScores:     make(map[string]float64),
 		Identities:      make(map[string]map[string]string),
@@ -219,7 +223,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		fmt.Printf("[Lattice] Validating ZK Proof for minting block: %s...\n", block.ZKProof[:16])
 	}
 
-	// 1.6 SPoRA Verification (Succinct Proof of Random Access)
+	// 1.6 SPoRA (Succinct Proof of Random Access) Verification
+	// Ensures that the miner has access to the Bobtorrent dataset.
 	// Bypassed only for the single system genesis bootstrapping block.
 	if !isGenesisBootstrap {
 		if block.Spora == nil || block.Spora.InfoHash == "" || block.Spora.ChunkHash == "" {
@@ -297,10 +302,12 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	prevBalance := 0.0
 	if head != nil {
 		prevBalance = head.Balance
-		// Apply Demurrage
+		// Apply systemic demurrage (decay) to ensure BOB circulation
+		// and finance the decentralized oracle network.
 		elapsed := block.Timestamp - head.Timestamp
 		if elapsed > 0 {
 			decay := prevBalance * l.DemurrageRate * float64(elapsed)
+			l.TotalSupply -= decay
 			prevBalance = math.Max(0, prevBalance-decay)
 		}
 	}
@@ -479,9 +486,50 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("multisig propose cannot change balance")
 		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["vault"] == nil {
+			return fmt.Errorf("invalid multisig propose payload")
+		}
+		vaultAddr := payload["vault"].(string)
+		vault := l.Multisigs[vaultAddr]
+		if vault == nil {
+			return fmt.Errorf("vault not found")
+		}
+		isParticipant := false
+		for _, p := range vault.Participants {
+			if p == block.Account {
+				isParticipant = true
+				break
+			}
+		}
+		if !isParticipant {
+			return fmt.Errorf("not a vault participant")
+		}
 	} else if block.Type == "multisig_approve" {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("multisig approve cannot change balance")
+		}
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["vault"] == nil || payload["proposalID"] == nil {
+			return fmt.Errorf("invalid multisig approve payload")
+		}
+		vaultAddr := payload["vault"].(string)
+		vault := l.Multisigs[vaultAddr]
+		if vault == nil {
+			return fmt.Errorf("vault not found")
+		}
+		isParticipant := false
+		for _, p := range vault.Participants {
+			if p == block.Account {
+				isParticipant = true
+				break
+			}
+		}
+		if !isParticipant {
+			return fmt.Errorf("not a vault participant")
+		}
+		if _, ok := vault.PendingProposals[payload["proposalID"].(string)]; !ok {
+			return fmt.Errorf("proposal not found")
 		}
 	} else if block.Type == "stake_lock" {
 		amount := prevBalance - block.Balance
@@ -510,6 +558,49 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["pair"] == nil || payload["amountIn"] == nil {
 			return fmt.Errorf("invalid amm swap payload")
+		}
+		amountIn := payload["amountIn"].(float64)
+		if math.Abs(block.Balance-(prevBalance-amountIn)) > epsilon {
+			return fmt.Errorf("AMM swap must deduct exactly %f BOB", amountIn)
+		}
+	} else if block.Type == "amm_add_liquidity" {
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["pair"] == nil || payload["amountA"] == nil || payload["amountB"] == nil {
+			return fmt.Errorf("invalid add liquidity payload")
+		}
+		pair := payload["pair"].(string)
+		pool := l.Pools[pair]
+		if pool == nil {
+			return fmt.Errorf("pool %s not found", pair)
+		}
+		amountA := payload["amountA"].(float64)
+		amountB := payload["amountB"].(float64)
+		if math.Abs(block.Balance-(prevBalance-amountA)) > epsilon {
+			return fmt.Errorf("add liquidity must deduct %f BOB", amountA)
+		}
+		userAssets := l.Balances[block.Account]
+		if userAssets == nil || userAssets[pool.AssetB] < amountB-epsilon {
+			return fmt.Errorf("insufficient %s balance", pool.AssetB)
+		}
+	} else if block.Type == "amm_remove_liquidity" {
+		payload, ok := block.Payload.(map[string]interface{})
+		if !ok || payload["pair"] == nil || payload["shares"] == nil {
+			return fmt.Errorf("invalid remove liquidity payload")
+		}
+		pair := payload["pair"].(string)
+		pool := l.Pools[pair]
+		if pool == nil {
+			return fmt.Errorf("pool %s not found", pair)
+		}
+		shares := payload["shares"].(float64)
+		lpToken := "LP-" + pair
+		userAssets := l.Balances[block.Account]
+		if userAssets == nil || userAssets[lpToken] < shares-epsilon {
+			return fmt.Errorf("insufficient %s balance", lpToken)
+		}
+		expectedA := (shares * pool.ReserveA) / pool.TotalShares
+		if math.Abs(block.Balance-(prevBalance+expectedA)) > epsilon {
+			return fmt.Errorf("remove liquidity must credit %f BOB", expectedA)
 		}
 	} else if block.Type == "verify_identity" {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
@@ -757,21 +848,64 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload := block.Payload.(map[string]interface{})
 		pair := payload["pair"].(string)
 		pool := l.Pools[pair]
-		if pool == nil {
-			return fmt.Errorf("pool not found")
-		}
-
 		amountIn := payload["amountIn"].(float64)
-		// Swap BOB (A) for sSOL (B)
-		// Constant Product: (x + dx)(y - dy) = xy
-		// dy = y * dx / (x + dx)
 		dx := amountIn
 		dy := (pool.ReserveB * dx) / (pool.ReserveA + dx)
-
-		fmt.Printf("[AMM] Swap: %f BOB for %f sSOL. New Price: %f\n", dx, dy, (pool.ReserveA+dx)/(pool.ReserveB-dy))
-
 		pool.ReserveA += dx
 		pool.ReserveB -= dy
+		if l.Balances[block.Account] == nil {
+			l.Balances[block.Account] = make(map[string]float64)
+		}
+		l.Balances[block.Account][pool.AssetB] += dy
+		l.TotalSupply -= dx
+	} else if block.Type == "amm_add_liquidity" {
+		payload := block.Payload.(map[string]interface{})
+		pair := payload["pair"].(string)
+		pool := l.Pools[pair]
+		amountA := payload["amountA"].(float64)
+		amountB := payload["amountB"].(float64)
+		var shares float64
+		if pool.TotalShares == 0 {
+			shares = math.Sqrt(amountA * amountB)
+		} else {
+			shares = math.Min((amountA*pool.TotalShares)/pool.ReserveA, (amountB*pool.TotalShares)/pool.ReserveB)
+		}
+		pool.ReserveA += amountA
+		pool.ReserveB += amountB
+		pool.TotalShares += shares
+		if l.Balances[block.Account] == nil {
+			l.Balances[block.Account] = make(map[string]float64)
+		}
+		l.Balances[block.Account][pool.AssetB] -= amountB
+		lpToken := "LP-" + pair
+		l.Balances[block.Account][lpToken] += shares
+		l.TotalSupply -= amountA
+	} else if block.Type == "amm_remove_liquidity" {
+		payload := block.Payload.(map[string]interface{})
+		pair := payload["pair"].(string)
+		pool := l.Pools[pair]
+		shares := payload["shares"].(float64)
+		amountA := (shares * pool.ReserveA) / pool.TotalShares
+		amountB := (shares * pool.ReserveB) / pool.TotalShares
+		pool.ReserveA -= amountA
+		pool.ReserveB -= amountB
+		pool.TotalShares -= shares
+		l.Balances[block.Account]["LP-"+pair] -= shares
+		l.Balances[block.Account][pool.AssetB] += amountB
+		l.TotalSupply += amountA
+	} else if block.Type == "receive" && block.Link == "SYSTEM_GENESIS" && len(l.Chains) == 0 {
+		l.TotalSupply += block.Balance
+	} else if block.Type == "stake_unlock" {
+		unstaked := head.StakedBalance - block.StakedBalance
+		reward := block.Balance - (prevBalance + unstaked)
+		if reward > 0 {
+			l.TotalSupply += reward
+		}
+	} else if block.Type == "proposal" || block.Type == "mint_nft" || block.Type == "transfer_nft" || block.Type == "data_anchor" || block.Type == "multisig_create" || block.Type == "restore_trust" {
+		fee := prevBalance - block.Balance
+		if fee > 0 {
+			l.TotalSupply -= fee
+		}
 	}
 
 	// 7. Commit In-Memory
@@ -1001,10 +1135,13 @@ func (l *Lattice) GetStateSnapshot() map[string]interface{} {
 		"swaps":      l.Swaps,
 		"nfts":       l.Nfts,
 		"anchors":    l.Anchors,
-		"multisigs":  l.Multisigs,
-		"stateHash":  l.StateHash,
-		"merkleRoot": l.MerkleRoot,
-		"timestamp":  time.Now().UnixMilli(),
+		"multisigs":   l.Multisigs,
+		"pools":       l.Pools,
+		"balances":    l.Balances,
+		"totalSupply": l.TotalSupply,
+		"stateHash":   l.StateHash,
+		"merkleRoot":  l.MerkleRoot,
+		"timestamp":   time.Now().UnixMilli(),
 	}
 }
 
@@ -1141,6 +1278,8 @@ func (l *Lattice) AuditState() error {
 	l.Anchors = shadow.Anchors
 	l.Multisigs = shadow.Multisigs
 	l.Pools = shadow.Pools
+	l.Balances = shadow.Balances
+	l.TotalSupply = shadow.TotalSupply
 	l.StateHash = shadow.StateHash
 	l.MerkleRoot = shadow.MerkleRoot
 

@@ -4598,3 +4598,76 @@ func TestCalculateHashParity(t *testing.T) {
 		t.Errorf("Populated Hash Mismatch.\nExpected: %s\nGot:      %s", expectedPopulated, hash)
 	}
 }
+
+func TestAmmLiquidityLifecycleParity(t *testing.T) {
+	l := NewLattice(NewDBManager(":memory:"))
+	keys := DeriveKeypair("amm-liq-test", 0)
+
+	// 1. Genesis (10,000 BOB)
+	genesis := makeGenesisBlock(keys, 10000)
+	signTestBlock(t, genesis, keys["privateKey"])
+	l.ProcessBlock(genesis, true)
+
+	// 2. Open sSOL balance (Mocking sSOL received)
+	l.Balances[keys["publicKey"]] = map[string]float64{"sSOL": 1000}
+
+	// 3. Add Liquidity (1000 BOB, 10 sSOL)
+	// Initial Pool BOB/sSOL (10000 BOB, 420 sSOL, 1000 shares)
+	// shares = sqrt(1000 * 10) = 100 (if pool empty)
+	// But pool has 10000/420.
+	// shares = min(1000 * 1000 / 10000, 10 * 1000 / 420) = min(100, 23.8) = 23.8095
+	addTs := int64(2000)
+	addLiq := &Block{
+		Type:     "amm_add_liquidity",
+		Account:  keys["publicKey"],
+		Previous: &genesis.Hash,
+		Balance:  l.GetBalance(keys["publicKey"], addTs) - 1000,
+		Height:   1,
+		Spora:    validSpora(genesis.Hash),
+		Payload: map[string]interface{}{
+			"pair":    "BOB/sSOL",
+			"amountA": 1000.0,
+			"amountB": 10.0,
+		},
+		Timestamp: addTs,
+	}
+	signTestBlock(t, addLiq, keys["privateKey"])
+	if err := l.ProcessBlock(addLiq, true); err != nil {
+		t.Fatalf("failed to add liq: %v", err)
+	}
+
+	pool := l.Pools["BOB/sSOL"]
+	if pool.ReserveA != 11000 || pool.ReserveB != 430 {
+		t.Fatalf("pool reserves incorrect: %+v", pool)
+	}
+	lpBal := l.Balances[keys["publicKey"]]["LP-BOB/sSOL"]
+	if lpBal <= 0 {
+		t.Fatalf("LP tokens not minted")
+	}
+
+	// 4. Remove Liquidity
+	remTs := int64(3000)
+	sharesToRemove := lpBal
+	expectedA := (sharesToRemove * pool.ReserveA) / pool.TotalShares
+	remLiq := &Block{
+		Type:     "amm_remove_liquidity",
+		Account:  keys["publicKey"],
+		Previous: &addLiq.Hash,
+		Balance:  l.GetBalance(keys["publicKey"], remTs) + expectedA,
+		Height:   2,
+		Spora:    validSpora(addLiq.Hash),
+		Payload: map[string]interface{}{
+			"pair":   "BOB/sSOL",
+			"shares": sharesToRemove,
+		},
+		Timestamp: remTs,
+	}
+	signTestBlock(t, remLiq, keys["privateKey"])
+	if err := l.ProcessBlock(remLiq, true); err != nil {
+		t.Fatalf("failed to remove liq: %v", err)
+	}
+
+	if l.Balances[keys["publicKey"]]["LP-BOB/sSOL"] != 0 {
+		t.Fatalf("LP tokens not burned")
+	}
+}

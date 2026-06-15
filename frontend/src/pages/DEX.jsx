@@ -9,14 +9,19 @@ import './DEX.css';
 
 export function DEX() {
     const [balance, setBalance] = useState(0);
-    const [swapFrom, setSwapFrom] = useState('BOB');
-    const [swapTo, setSwapTo] = useState('sSOL');
+    const [balances, setBalances] = useState({});
     const [amount, setAmount] = useState(10);
     const [pools, setPools] = useState({});
     const [keypair, setKeypair] = useState(null);
     const [pendingBlock, setPendingBlock] = useState(null);
     const [onGuardianConfirm, setOnGuardianConfirm] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [tab, setTab] = useState('swap'); // 'swap' or 'liquidity'
+
+    // Liquidity state
+    const [amountA, setAmountA] = useState(10);
+    const [amountB, setAmountB] = useState(0);
+    const [sharesToRemove, setSharesToRemove] = useState(0);
 
     useEffect(() => {
         const storedKeys = localStorage.getItem('bobcoin_wallet');
@@ -38,18 +43,29 @@ export function DEX() {
     };
 
     const fetchData = async (pubkey) => {
-        const resBal = await getLatticeFrontier(pubkey);
-        setBalance(resBal.balance || 0);
-        
-        const resPools = await fetch(`${LATTICE_URL}/pools`).then(r => r.json());
-        setPools(resPools);
+        try {
+            const resFront = await getLatticeFrontier(pubkey);
+            setBalance(resFront.balance || 0);
+            setBalances(resFront.balances || {});
+
+            const resPools = await fetch(`${LATTICE_URL}/pools`).then(r => r.json());
+            setPools(resPools);
+        } catch (e) {
+            console.error("Fetch Error:", e);
+        }
     };
 
-    const calculateReturn = () => {
+    const calculateSwapReturn = () => {
         const pool = pools["BOB/sSOL"];
         if (!pool || !amount) return 0;
         const dy = (pool.reserveB * amount) / (pool.reserveA + amount);
         return dy;
+    };
+
+    const calculateLiquidityB = (valA) => {
+        const pool = pools["BOB/sSOL"];
+        if (!pool || pool.totalShares === 0) return 0;
+        return (valA * pool.reserveB) / pool.reserveA;
     };
 
     const handleSwap = async () => {
@@ -57,8 +73,7 @@ export function DEX() {
         setLoading(true);
         try {
             const frontier = await getLatticeFrontier(keypair.publicKey);
-            const chain = await getLatticeChain(keypair.publicKey);
-            const ret = calculateReturn();
+            const ret = calculateSwapReturn();
             
             const block = new Block({
                 type: 'amm_swap',
@@ -76,8 +91,6 @@ export function DEX() {
             });
 
             await block.signBlock(keypair.privateKey);
-            
-            // Trigger Guardian Review
             setPendingBlock(block);
             setOnGuardianConfirm(() => async () => {
                 const res = await submitLatticeBlock(block);
@@ -85,57 +98,148 @@ export function DEX() {
                     alert(`Swap Executed! You received ~${ret.toFixed(6)} sSOL.`);
                     fetchData(keypair.publicKey);
                     checkAndUnlock('LIQUIDITY_PROVIDER', keypair, []);
-                    checkAndUnlock('LATTICE_SENTINEL', keypair, []);
                 } else {
                     alert("Swap failed: " + res.error);
                 }
                 setPendingBlock(null);
             });
-        } catch (e) {
-            alert(e.message);
-        }
+        } catch (e) { alert(e.message); }
+        setLoading(false);
+    };
+
+    const handleAddLiquidity = async () => {
+        if (balance < amountA) return alert("Insufficient BOB balance");
+        if ((balances['sSOL'] || 0) < amountB) return alert("Insufficient sSOL balance");
+
+        setLoading(true);
+        try {
+            const frontier = await getLatticeFrontier(keypair.publicKey);
+            const block = new Block({
+                type: 'amm_add_liquidity',
+                account: keypair.publicKey,
+                previous: frontier.frontier,
+                balance: balance - amountA,
+                staked_balance: frontier.staked_balance || 0,
+                link: 'AMM_LIQUIDITY',
+                payload: { pair: 'BOB/sSOL', amountA, amountB },
+                height: frontier.frontier ? (frontier.height + 1) : 0
+            });
+
+            await block.signBlock(keypair.privateKey);
+            setPendingBlock(block);
+            setOnGuardianConfirm(() => async () => {
+                const res = await submitLatticeBlock(block);
+                if (res.success) {
+                    alert("Liquidity Added Successfully!");
+                    fetchData(keypair.publicKey);
+                } else { alert("Failed: " + res.error); }
+                setPendingBlock(null);
+            });
+        } catch (e) { alert(e.message); }
+        setLoading(false);
+    };
+
+    const handleRemoveLiquidity = async () => {
+        const lpToken = 'LP-BOB/sSOL';
+        if ((balances[lpToken] || 0) < sharesToRemove) return alert("Insufficient LP tokens");
+
+        setLoading(true);
+        try {
+            const frontier = await getLatticeFrontier(keypair.publicKey);
+            const pool = pools['BOB/sSOL'];
+            const reclaimedA = (sharesToRemove * pool.reserveA) / pool.totalShares;
+
+            const block = new Block({
+                type: 'amm_remove_liquidity',
+                account: keypair.publicKey,
+                previous: frontier.frontier,
+                balance: balance + reclaimedA,
+                staked_balance: frontier.staked_balance || 0,
+                link: 'AMM_LIQUIDITY',
+                payload: { pair: 'BOB/sSOL', shares: sharesToRemove },
+                height: frontier.frontier ? (frontier.height + 1) : 0
+            });
+
+            await block.signBlock(keypair.privateKey);
+            setPendingBlock(block);
+            setOnGuardianConfirm(() => async () => {
+                const res = await submitLatticeBlock(block);
+                if (res.success) {
+                    alert("Liquidity Removed Successfully!");
+                    fetchData(keypair.publicKey);
+                } else { alert("Failed: " + res.error); }
+                setPendingBlock(null);
+            });
+        } catch (e) { alert(e.message); }
         setLoading(false);
     };
 
     return (
         <div className="dex-container">
             <h1 className="glitch" data-text="SOVEREIGN DEX">SOVEREIGN DEX</h1>
-            <p className="subtitle">LATTICE-NATIVE AUTOMATED MARKET MAKER</p>
+
+            <div className="dex-tabs">
+                <button className={`tab-btn ${tab === 'swap' ? 'active' : ''}`} onClick={() => setTab('swap')}>SWAP</button>
+                <button className={`tab-btn ${tab === 'liquidity' ? 'active' : ''}`} onClick={() => setTab('liquidity')}>LIQUIDITY</button>
+            </div>
 
             <div className="dex-card">
                 <AccountSelector currentAccount={keypair} onAccountChange={handleAccountChange} />
                 
-                <div className="swap-box">
-                    <div className="token-input">
-                        <label>FROM</label>
-                        <div className="input-row">
-                            <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="cyber-input" />
-                            <span className="token-label">BOB</span>
+                {tab === 'swap' ? (
+                    <div className="swap-box">
+                        <div className="token-input">
+                            <label>FROM</label>
+                            <div className="input-row">
+                                <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="cyber-input" />
+                                <span className="token-label">BOB</span>
+                            </div>
+                        </div>
+                        <div className="swap-icon">⬇️</div>
+                        <div className="token-input">
+                            <label>TO (ESTIMATED)</label>
+                            <div className="input-row">
+                                <input type="text" value={calculateSwapReturn().toFixed(6)} readOnly className="cyber-input" />
+                                <span className="token-label">sSOL</span>
+                            </div>
+                        </div>
+                        <div className="price-info">
+                            POOL DEPTH: {pools["BOB/sSOL"]?.reserveA.toFixed(0)} BOB / {pools["BOB/sSOL"]?.reserveB.toFixed(2)} sSOL
+                        </div>
+                        <button className="cyber-button large" onClick={handleSwap} disabled={loading || balance < amount}>
+                            {loading ? 'PROCESSING...' : 'SWAP ASSETS'}
+                        </button>
+                    </div>
+                ) : (
+                    <div className="liquidity-box">
+                        <div className="liquidity-section">
+                            <h3>ADD LIQUIDITY</h3>
+                            <div className="token-input">
+                                <label>AMOUNT BOB</label>
+                                <input type="number" value={amountA} onChange={e => {
+                                    setAmountA(Number(e.target.value));
+                                    setAmountB(calculateLiquidityB(Number(e.target.value)));
+                                }} className="cyber-input" />
+                            </div>
+                            <div className="token-input">
+                                <label>AMOUNT sSOL (REQUIRED)</label>
+                                <input type="number" value={amountB.toFixed(6)} readOnly className="cyber-input" />
+                            </div>
+                            <button className="cyber-button" onClick={handleAddLiquidity} disabled={loading}>ADD LIQUIDITY</button>
+                        </div>
+
+                        <div className="liquidity-divider" />
+
+                        <div className="liquidity-section">
+                            <h3>REMOVE LIQUIDITY</h3>
+                            <div className="token-input">
+                                <label>YOUR LP TOKENS: {(balances['LP-BOB/sSOL'] || 0).toFixed(4)}</label>
+                                <input type="number" value={sharesToRemove} onChange={e => setSharesToRemove(Number(e.target.value))} className="cyber-input" />
+                            </div>
+                            <button className="cyber-button secondary" onClick={handleRemoveLiquidity} disabled={loading}>REMOVE LIQUIDITY</button>
                         </div>
                     </div>
-
-                    <div className="swap-icon">⬇️</div>
-
-                    <div className="token-input">
-                        <label>TO (ESTIMATED)</label>
-                        <div className="input-row">
-                            <input type="text" value={calculateReturn().toFixed(6)} readOnly className="cyber-input" />
-                            <span className="token-label">sSOL</span>
-                        </div>
-                    </div>
-
-                    <div className="price-info">
-                        POOL DEPTH: {pools["BOB/sSOL"]?.reserveA.toFixed(0)} BOB / {pools["BOB/sSOL"]?.reserveB.toFixed(2)} sSOL
-                    </div>
-
-                    <button className="cyber-button large" onClick={handleSwap} disabled={loading || balance < amount}>
-                        {loading ? 'PROCESSING...' : 'SWAP ASSETS'}
-                    </button>
-                </div>
-            </div>
-
-            <div className="dex-footer">
-                ALL SWAPS ARE EXECUTED VIA ON-CHAIN HASHED TIME-LOCK CONTRACTS.
+                )}
             </div>
 
             <SignConfirmModal 

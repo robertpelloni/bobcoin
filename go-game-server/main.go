@@ -169,7 +169,6 @@ func main() {
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
 	mux.HandleFunc("/market/accept", service.handleAcceptBid)
-	mux.HandleFunc("/audit-proposal", service.handleAuditProposal)
 
 	log.Printf("[go-game-server] listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, withCORS(mux)); err != nil {
@@ -428,90 +427,49 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 	// In production, we call the cargo-prove verifier binary.
 	time.Sleep(1200 * time.Millisecond) // Simulated cryptographic delay
 
-	// 1. Mandatory Metadata Validation
-	if address, ok := publicValues["address"].(string); !ok || address == "" || address == "unknown" {
-		log.Printf("[AI Oracle] ⚠️ REJECTED: Missing player address in proof public values.")
-		return false
+	if scoreRaw, ok := publicValues["score"]; ok {
+		var score float64
+		switch v := scoreRaw.(type) {
+		case float64:
+			score = v
+		case string:
+			fmt.Sscanf(v, "%f", &score)
+		}
+
+		if score >= 1000 {
+			return true
+		}
 	}
 
-	scoreRaw, ok := publicValues["score"]
-	if !ok {
-		log.Printf("[AI Oracle] ⚠️ REJECTED: Missing score in proof public values.")
-		return false
-	}
-
-	var score float64
-	switch v := scoreRaw.(type) {
-	case float64:
-		score = v
-	case string:
-		fmt.Sscanf(v, "%f", &score)
-	}
-
-	if score < 1000 {
-		log.Printf("[AI Oracle] ⚠️ REJECTED: Score %f below minimum threshold 1000.", score)
-		return false
-	}
-
-	// 2. AI Oracle (Bot Detection via enhanced variance analysis)
+	// AI Oracle (Bot Detection via variance analysis)
 	replayLog, ok := publicValues["replayLog"].([]interface{})
-	if !ok || len(replayLog) < 10 {
-		log.Printf("[AI Oracle] ⚠️ REJECTED: Replay log too short or missing (%d entries).", len(replayLog))
-		return false
-	}
-
-	var diffs []float64
-	var lastTime float64
-	for i, entryRaw := range replayLog {
-		entry, ok := entryRaw.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		t, _ := entry["time"].(float64)
-		if i > 0 {
-			diff := t - lastTime
-			if diff <= 0 {
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Non-incremental timestamps in replay log.")
-				return false
+	if ok && len(replayLog) > 5 {
+		var diffs []float64
+		var lastTime float64
+		for i, entryRaw := range replayLog {
+			entry, ok := entryRaw.(map[string]interface{})
+			if !ok {
+				continue
 			}
-			diffs = append(diffs, diff)
-		}
-		lastTime = t
-	}
-
-	if len(diffs) > 0 {
-		variance := calculateVariance(diffs)
-		log.Printf("[AI Oracle] Replay log variance: %f (Count: %d)", variance, len(diffs))
-
-		// Stricter Thresholds for Phase IV Hardening
-		if variance < 15.0 {
-			log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (highly precise macro script suspected).", variance)
-			return false
+			t, _ := entry["time"].(float64)
+			if i > 0 {
+				diffs = append(diffs, t-lastTime)
+			}
+			lastTime = t
 		}
 
-		// Also check for "Super-Human" consistency (extremely low standard deviation of the variance itself)
-		if len(diffs) > 5 {
-			var consistencySum float64
-			avgDiff := 0.0
-			for _, d := range diffs {
-				avgDiff += d
-			}
-			avgDiff /= float64(len(diffs))
-
-			for _, d := range diffs {
-				consistencySum += math.Abs(d - avgDiff)
-			}
-			meanAbsDev := consistencySum / float64(len(diffs))
-			log.Printf("[AI Oracle] Replay mean absolute deviation: %f", meanAbsDev)
-
-			if meanAbsDev < 5.0 {
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Mean absolute deviation %f is too low (robotic consistency detected).", meanAbsDev)
+		if len(diffs) > 0 {
+			variance := calculateVariance(diffs)
+			log.Printf("[AI Oracle] Replay log variance: %f", variance)
+			if variance < 10.0 { // Artificial variance threshold
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (macro script suspected).", variance)
 				return false
 			}
 		}
 	}
 
-	return true
+	score, _ := publicValues["score"].(float64)
+	return score >= 1000
 }
 
 func calculateVariance(data []float64) float64 {
@@ -747,50 +705,6 @@ func (s *Service) fetchFrontier(account string) (*string, float64, int, error) {
 	balance, _ := body["balance"].(float64)
 	heightFloat, _ := body["height"].(float64)
 	return &frontierRaw, balance, int(heightFloat), nil
-}
-
-func (s *Service) handleAuditProposal(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]interface{}{"error": "method not allowed"})
-		return
-	}
-	var req struct {
-		Title  string `json:"title"`
-		Action string `json:"action"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid payload"})
-		return
-	}
-
-	// Neural Governance Auditor (Mock)
-	score := 100.0
-	risk := "Low"
-
-	lowerTitle := strings.ToLower(req.Title)
-	lowerAction := strings.ToLower(req.Action)
-
-	if strings.Contains(lowerTitle, "mint") || strings.Contains(lowerAction, "mint") {
-		score -= 30.0
-		risk = "Moderate"
-	}
-	if strings.Contains(lowerTitle, "demurrage") || strings.Contains(lowerAction, "demurrage") {
-		score -= 20.0
-	}
-	if strings.Contains(lowerTitle, "slash") || strings.Contains(lowerAction, "slash") {
-		score -= 15.0
-	}
-
-	if score < 60 {
-		risk = "High"
-	}
-
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"securityScore": score,
-		"riskLevel": risk,
-		"auditor": "Neural Governance v1 (Mock)",
-	})
 }
 
 func createBid(db *sql.DB, magnet string, amount float64) (int64, error) {

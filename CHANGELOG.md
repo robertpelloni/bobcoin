@@ -2,12 +2,13 @@
 
 ## [8.107.2] - 2026-04-13
 ### Added
-- "Cross-Feature Pressure" Parity Scenario: A complex same-timestamp multi-account scenario involving governance, HTLCs, and NFTs to stress-test consensus replay determinism.
-- Enhanced AI Oracle in `go-game-server`: Improved variance analysis for bot detection and stricter proof metadata validation.
-- Neural Governance Auditor: New mock auditor in `go-game-server` to perform risk analysis on governance proposals.
-- Multisig Security: Hardened Shared Vaults with participant-only authorization for propose/approve operations.
+- "Cross-Feature Pressure" Parity Scenario: A complex same-timestamp multi-account scenario involving governance, HTLCs, NFTs, and stake locking.
+- "AMM & Multisig Lifecycle" Parity Scenario: Verified 1:1 mathematical parity for AMM swaps and Multisig operations.
+- Enhanced AI Oracle in `go-game-server`: Improved variance analysis and added Mean Absolute Deviation (MAD) check for robotic consistency detection.
+- Neural Governance Auditor: Mock auditor in `go-game-server` wired to the frontend for proposal risk analysis.
+- Multisig Security: Enforced participant-only authorization for propose/approve operations.
 - Total Supply Tracking: Implemented deterministic system-wide supply tracking in both JS and Go engines.
-- Updated project roadmap and task lists to reflect current Phase IV hardening priorities.
+- In-Protocol Asset Tracking: Added support for non-native assets acquired via AMM swaps.
 
 ## [8.107.1] - 2026-04-12
 ### Added

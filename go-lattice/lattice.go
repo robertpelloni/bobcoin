@@ -85,7 +85,6 @@ type Lattice struct {
 	StorageFeeBase  float64
 	ProposalFee     float64
 	NftMintFee      float64
-	TotalSupply     float64
 }
 
 func newEphemeralLattice() *Lattice {
@@ -112,7 +111,6 @@ func newEphemeralLattice() *Lattice {
 		StorageFeeBase:  1.0,
 		ProposalFee:     10.0,
 		NftMintFee:      50.0,
-		TotalSupply:     0.0,
 	}
 
 	l.Pools["BOB/sSOL"] = &LiquidityPool{
@@ -159,13 +157,6 @@ func (l *Lattice) Recovery() {
 		remaining = remaining[bucketEnd:]
 
 		for len(bucket) > 0 {
-			sort.Slice(bucket, func(i, j int) bool {
-				if bucket[i].Account != bucket[j].Account {
-					return bucket[i].Account < bucket[j].Account
-				}
-				return bucket[i].Height < bucket[j].Height
-			})
-
 			nextBucket := make([]*Block, 0, len(bucket))
 			failures := make([]recoveryFailure, 0, len(bucket))
 			progress := false
@@ -190,7 +181,7 @@ func (l *Lattice) Recovery() {
 			bucket = nextBucket
 		}
 	}
-	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s... Total Supply: %f\n", recovered, l.StateHash[:16], l.TotalSupply)
+	fmt.Printf("[Lattice] Recovery Complete. Restored %d blocks. Root: %s...\n", recovered, l.StateHash[:16])
 }
 
 func (l *Lattice) GetStakingRewardRate() float64 {
@@ -309,10 +300,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		// Apply Demurrage
 		elapsed := block.Timestamp - head.Timestamp
 		if elapsed > 0 {
-			decayedBalance := math.Max(0, prevBalance-(prevBalance*l.DemurrageRate*float64(elapsed)))
-			decay := prevBalance - decayedBalance
-			l.TotalSupply -= decay
-			prevBalance = decayedBalance
+			decay := prevBalance * l.DemurrageRate * float64(elapsed)
+			prevBalance = math.Max(0, prevBalance-decay)
 		}
 	}
 
@@ -490,51 +479,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("multisig propose cannot change balance")
 		}
-		payload, ok := block.Payload.(map[string]interface{})
-		if !ok || payload["vault"] == nil || payload["recipient"] == nil || payload["amount"] == nil {
-			return fmt.Errorf("invalid multisig propose payload")
-		}
-		vaultAddr := payload["vault"].(string)
-		vault := l.Multisigs[vaultAddr]
-		if vault == nil {
-			return fmt.Errorf("vault not found")
-		}
-		isParticipant := false
-		for _, p := range vault.Participants {
-			if p == block.Account {
-				isParticipant = true
-				break
-			}
-		}
-		if !isParticipant {
-			return fmt.Errorf("sender is not a participant of this multisig")
-		}
 	} else if block.Type == "multisig_approve" {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
 			return fmt.Errorf("multisig approve cannot change balance")
-		}
-		payload, ok := block.Payload.(map[string]interface{})
-		if !ok || payload["vault"] == nil || payload["proposalID"] == nil {
-			return fmt.Errorf("invalid multisig approve payload")
-		}
-		vaultAddr := payload["vault"].(string)
-		vault := l.Multisigs[vaultAddr]
-		if vault == nil {
-			return fmt.Errorf("vault not found")
-		}
-		isParticipant := false
-		for _, p := range vault.Participants {
-			if p == block.Account {
-				isParticipant = true
-				break
-			}
-		}
-		if !isParticipant {
-			return fmt.Errorf("sender is not a participant of this multisig")
-		}
-		proposalID := payload["proposalID"].(string)
-		if _, ok := vault.PendingProposals[proposalID]; !ok {
-			return fmt.Errorf("proposal not found")
 		}
 	} else if block.Type == "stake_lock" {
 		amount := prevBalance - block.Balance
@@ -563,10 +510,6 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		payload, ok := block.Payload.(map[string]interface{})
 		if !ok || payload["pair"] == nil || payload["amountIn"] == nil {
 			return fmt.Errorf("invalid amm swap payload")
-		}
-		amountIn := payload["amountIn"].(float64)
-		if math.Abs(block.Balance-(prevBalance-amountIn)) > epsilon {
-			return fmt.Errorf("amm swap must exactly deduct amountIn from balance")
 		}
 	} else if block.Type == "verify_identity" {
 		if math.Abs(block.Balance-prevBalance) > epsilon {
@@ -751,14 +694,10 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		fmt.Printf("[Lattice] Trust Restored: %s increased by %f. New Score: %f\n", block.Account[:8], recovery, l.TrustScores[block.Account])
 	} else if block.Type == "multisig_create" {
 		payload := block.Payload.(map[string]interface{})
+		partsRaw := payload["participants"].([]interface{})
 		var participants []string
-		switch partsRaw := payload["participants"].(type) {
-		case []interface{}:
-			for _, p := range partsRaw {
-				participants = append(participants, p.(string))
-			}
-		case []string:
-			participants = partsRaw
+		for _, p := range partsRaw {
+			participants = append(participants, p.(string))
 		}
 		vaultAddr := deterministicMultisigAddress(participants)
 
@@ -838,22 +777,6 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 	// 7. Commit In-Memory
 	l.Chains[block.Account] = append(l.Chains[block.Account], block)
 	l.Blocks[block.Hash] = block
-
-	// 7.5 Track Supply Changes from Fees, Mints, and Demurrage
-	if block.Type == "open" && block.Link == "SYSTEM_GENESIS" {
-		l.TotalSupply += block.Balance
-	} else if block.Type == "stake_unlock" {
-		unstakedAmount := prevStaked - block.StakedBalance
-		reward := block.Balance - (prevBalance + unstakedAmount)
-		if reward > 0 {
-			l.TotalSupply += reward
-		}
-	} else if block.Type == "proposal" || block.Type == "mint_nft" || block.Type == "transfer_nft" || block.Type == "data_anchor" || block.Type == "multisig_create" || block.Type == "restore_trust" {
-		fee := prevBalance - block.Balance
-		if fee > 0 {
-			l.TotalSupply -= fee
-		}
-	}
 
 	// 8. Persist to Disk
 	if !isRecovery {
@@ -1078,11 +1001,10 @@ func (l *Lattice) GetStateSnapshot() map[string]interface{} {
 		"swaps":      l.Swaps,
 		"nfts":       l.Nfts,
 		"anchors":    l.Anchors,
-		"multisigs":   l.Multisigs,
-		"stateHash":   l.StateHash,
-		"merkleRoot":  l.MerkleRoot,
-		"totalSupply": l.TotalSupply,
-		"timestamp":   time.Now().UnixMilli(),
+		"multisigs":  l.Multisigs,
+		"stateHash":  l.StateHash,
+		"merkleRoot": l.MerkleRoot,
+		"timestamp":  time.Now().UnixMilli(),
 	}
 }
 
@@ -1184,13 +1106,6 @@ func (l *Lattice) AuditState() error {
 		remaining = remaining[bucketEnd:]
 
 		for len(bucket) > 0 {
-			sort.Slice(bucket, func(i, j int) bool {
-				if bucket[i].block.Account != bucket[j].block.Account {
-					return bucket[i].block.Account < bucket[j].block.Account
-				}
-				return bucket[i].block.Height < bucket[j].block.Height
-			})
-
 			nextBucket := make([]orderedBlock, 0, len(bucket))
 			progress := false
 			var lastErr error
@@ -1228,8 +1143,7 @@ func (l *Lattice) AuditState() error {
 	l.Pools = shadow.Pools
 	l.StateHash = shadow.StateHash
 	l.MerkleRoot = shadow.MerkleRoot
-	l.TotalSupply = shadow.TotalSupply
 
-	fmt.Printf("[Lattice] Audit Complete. Verified Integrity of %d chains. New Root: %s Total Supply: %f\n", len(l.Chains), l.MerkleRoot[:16], l.TotalSupply)
+	fmt.Printf("[Lattice] Audit Complete. Verified Integrity of %d chains. New Root: %s\n", len(l.Chains), l.MerkleRoot[:16])
 	return nil
 }

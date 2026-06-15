@@ -103,4 +103,3 @@
   - As of v8.91.0, both lattice implementations support fixture-driven automated scenario assembly for executable parity validation.
   - As of v8.95.0, the Go lattice engine includes Merkle Proof validation against rolling state hashes for enhanced cryptographic integrity.
   - As of v8.96.0, Go lattice nodes implement trust-weighted consensus based on dynamic peer scorecards.
-  - As of v8.107.2, the Go game server includes enhanced AI Oracle logic for bot detection using stricter variance analysis on replay logs.

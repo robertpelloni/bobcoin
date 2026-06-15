@@ -78,10 +78,9 @@ gossipLoop();
 app.get('/status', (req, res) => {
     res.json({
         status: 'online',
-        engine: 'Node-Lattice v8.107.2',
+        engine: 'Node-Lattice v8.97.0',
         stateHash: lattice.stateHash,
         merkleRoot: lattice.merkleRoot,
-        totalSupply: lattice.totalSupply,
         chains: Object.keys(lattice.chains).length,
         blocks: Object.keys(lattice.blocks).length,
         identities: lattice.identities,

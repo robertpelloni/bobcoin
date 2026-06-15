@@ -31,6 +31,7 @@ export class Lattice {
         this.merkleRoot = '0'.repeat(64);
         this.trustScores = {}; // Account -> Score
         this.identities = {};  // Account -> { provider: username }
+        this.balances = {};    // Account -> { asset: amount } (Non-native assets)
         this.storageFeeBase = 1.0;
         this.proposalFee = 10.0;
         this.nftMintFee = 50.0;
@@ -108,7 +109,6 @@ export class Lattice {
             anchors: this.anchors,
             multisigs: this.multisigs,
             stateHash: this.stateHash,
-            totalSupply: this.totalSupply,
             timestamp: Date.now()
         };
     }
@@ -128,7 +128,6 @@ export class Lattice {
         this.anchors = snapshot.anchors || {};
         this.multisigs = snapshot.multisigs || {};
         this.stateHash = snapshot.stateHash || '0'.repeat(64);
-        this.totalSupply = snapshot.totalSupply || 0;
     }
 
     /**
@@ -704,8 +703,14 @@ export class Lattice {
             const dx = amountIn;
             const dy = (pool.reserveB * dx) / (pool.reserveA + dx);
             console.log(`[AMM] Swap: ${dx} BOB for ${dy} sSOL. New Price: ${(pool.reserveA + dx) / (pool.reserveB - dy)}`);
+
             pool.reserveA += dx;
             pool.reserveB -= dy;
+
+            // Credit the recipient asset to the user
+            const assetB = pool.assetB;
+            if (!this.balances[account]) this.balances[account] = {};
+            this.balances[account][assetB] = (this.balances[account][assetB] || 0) + dy;
         } else if (block.type === 'multisig_propose') {
             const { vault: vaultAddr, recipient, amount } = block.payload;
             const vault = this.multisigs[vaultAddr];

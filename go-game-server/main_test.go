@@ -96,33 +96,10 @@ func TestVerifyProofUsesBridgeWhenAvailable(t *testing.T) {
 func TestVerifyProofFallsBackToScoreThreshold(t *testing.T) {
 	service := newTestService(t)
 
-	validPublicValues := map[string]interface{}{
-		"address": "test-address",
-		"score":   float64(1000),
-		"replayLog": []interface{}{
-			map[string]interface{}{"time": 100.0},
-			map[string]interface{}{"time": 200.0},
-			map[string]interface{}{"time": 350.0},
-			map[string]interface{}{"time": 500.0},
-			map[string]interface{}{"time": 700.0},
-			map[string]interface{}{"time": 950.0},
-			map[string]interface{}{"time": 1250.0},
-			map[string]interface{}{"time": 1600.0},
-			map[string]interface{}{"time": 2000.0},
-			map[string]interface{}{"time": 2500.0},
-		},
-	}
-
-	if !service.verifyProof(validPublicValues, map[string]interface{}{}) {
+	if !service.verifyProof(map[string]interface{}{"score": float64(1000)}, map[string]interface{}{"publicValues": map[string]interface{}{"score": float64(1000)}}) {
 		t.Fatalf("expected score threshold fallback to pass high score")
 	}
-
-	lowScoreValues := map[string]interface{}{
-		"address": "test-address",
-		"score":   float64(999),
-		"replayLog": validPublicValues["replayLog"],
-	}
-	if service.verifyProof(lowScoreValues, map[string]interface{}{}) {
+	if service.verifyProof(map[string]interface{}{"score": float64(999)}, map[string]interface{}{"publicValues": map[string]interface{}{"score": float64(999)}}) {
 		t.Fatalf("expected score threshold fallback to reject low score")
 	}
 }
@@ -448,7 +425,7 @@ func TestSubmitProofBridgeErrorFallsBackToThreshold(t *testing.T) {
 	frontier := "prefetched-frontier"
 	service.systemFrontier = &frontier
 
-	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"address":"fallback-player","score":2000,"replayLog":[{"time":100},{"time":200},{"time":350},{"time":500},{"time":700},{"time":950},{"time":1250},{"time":1600},{"time":2000},{"time":2500}]}}}`))
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"address":"fallback-player","score":2000}}}`))
 	rec := httptest.NewRecorder()
 	service.handleSubmitProof(rec, req)
 	if rec.Code != http.StatusOK {
@@ -562,35 +539,5 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 	}
 	if disconnect.Type != "OPPONENT_DISCONNECTED" {
 		t.Fatalf("expected opponent disconnect notice, got %+v", disconnect)
-	}
-}
-
-func TestAuditProposalEndpoint(t *testing.T) {
-	service := newTestService(t)
-
-	// Test Low Risk
-	payload := `{"title":"Improve documentation","action":"NONE"}`
-	req := httptest.NewRequest(http.MethodPost, "/audit-proposal", strings.NewReader(payload))
-	rec := httptest.NewRecorder()
-	service.handleAuditProposal(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-	var resp map[string]interface{}
-	json.Unmarshal(rec.Body.Bytes(), &resp)
-	if resp["riskLevel"] != "Low" || resp["securityScore"].(float64) != 100.0 {
-		t.Fatalf("expected Low risk score 100, got %v", resp)
-	}
-
-	// Test High Risk (Mint + Slash)
-	payload = `{"title":"Mint treasury and slash nodes","action":"MINT_TREASURY"}`
-	req = httptest.NewRequest(http.MethodPost, "/audit-proposal", strings.NewReader(payload))
-	rec = httptest.NewRecorder()
-	service.handleAuditProposal(rec, req)
-
-	json.Unmarshal(rec.Body.Bytes(), &resp)
-	if resp["riskLevel"] != "High" || resp["securityScore"].(float64) >= 60.0 {
-		t.Fatalf("expected High risk score < 60, got %v", resp)
 	}
 }

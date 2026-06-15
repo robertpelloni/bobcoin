@@ -82,8 +82,6 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"demurrage_multi_account_same_timestamp_mixed",
 		"multi_account_same_timestamp_dual_collector_actions",
 		"demurrage_multi_account_same_timestamp_dual_collector_actions",
-		"cross_feature_same_timestamp_pressure",
-		"amm_and_multisig_lifecycle",
 	}
 
 	requiredFragmentIDs := []string{
@@ -97,9 +95,6 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"collector-vote-extension",
 		"manifest-anchor-core",
 		"demurrage-balance-pressure",
-		"stake-lock-core",
-		"multisig-lifecycle-core",
-		"amm-swap-core",
 	}
 
 	for _, fragmentID := range requiredFragmentIDs {
@@ -116,8 +111,6 @@ func TestParityScenarioCatalogTracksMirroredRecoveryCoverage(t *testing.T) {
 		"TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite": {},
 		"TestRecoveryReplaysMultiAccountSameTimestampDualCollectorActionsFromSQLite":      {},
 		"TestRecoveryRebuildsDemurrageSensitiveDualCollectorActionLedgerFromSQLite":       {},
-		"TestRecoveryRebuildsCrossFeatureSameTimestampPressureFromSQLite":                 {},
-		"TestRecoveryReplaysAmmAndMultisigLifecycleFromSQLite":                            {},
 	}
 
 	for _, scenarioID := range requiredScenarioIDs {

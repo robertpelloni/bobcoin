@@ -56,21 +56,6 @@
       "id": "demurrage-balance-pressure",
       "category": "economic-pressure",
       "features": ["demurrage", "elapsed-time"]
-    },
-    {
-      "id": "stake-lock-core",
-      "category": "staking-core",
-      "features": ["stake-lock", "same-timestamp"]
-    },
-    {
-      "id": "multisig-lifecycle-core",
-      "category": "multisig-core",
-      "features": ["multisig-create", "multisig-propose", "multisig-approve", "same-timestamp"]
-    },
-    {
-      "id": "amm-swap-core",
-      "category": "defi-core",
-      "features": ["amm-swap", "same-timestamp"]
     }
   ]
 }

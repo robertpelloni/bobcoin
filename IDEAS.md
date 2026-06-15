@@ -23,8 +23,3 @@ Rename the frontend to **Lattice Arcade**.
 Integrate Apple Health / Google Fit for **Proof of Vitality**.
 *   **Concept**: Earn BOB tokens by exercising or sleeping well (verified via ZK-proofs of health data).
 *   **Impact**: Connects the digital economy to physical well-being.
-
-## 6. AI Agent Oracle: Decentralized "Hyper-Audit"
-Extend the AI Oracle from bot detection to **Autonomous Code Auditing**.
-*   **Concept**: Use the AI Oracle to continuously scan new proposal payloads for malicious smart contract code or economic exploit patterns before they are executed.
-*   **Impact**: Provides a "Second Set of Eyes" on all governance actions, preventing malicious takeover attempts.

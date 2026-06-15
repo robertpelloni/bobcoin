@@ -33,3 +33,6 @@ The Bobcoin project actively maintains 1:1 mathematical parity between the legac
 
 ### Go Service Canonicalization
 The `go-game-server` and `go-supertorrent` services are now the official canonical microservices. The Node.js equivalents are officially marked for deprecation to consolidate performance under the Go stack.
+
+### AI Oracle & Integrity
+Continuous refinement of AI Oracle systems ensures that Proof-of-Play remains resistant to macro scripts and automated exploitation, preserving the value of human engagement within the ecosystem.

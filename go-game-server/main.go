@@ -427,49 +427,90 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 	// In production, we call the cargo-prove verifier binary.
 	time.Sleep(1200 * time.Millisecond) // Simulated cryptographic delay
 
-	if scoreRaw, ok := publicValues["score"]; ok {
-		var score float64
-		switch v := scoreRaw.(type) {
-		case float64:
-			score = v
-		case string:
-			fmt.Sscanf(v, "%f", &score)
-		}
-
-		if score >= 1000 {
-			return true
-		}
+	// 1. Mandatory Metadata Validation
+	if address, ok := publicValues["address"].(string); !ok || address == "" || address == "unknown" {
+		log.Printf("[AI Oracle] ⚠️ REJECTED: Missing player address in proof public values.")
+		return false
 	}
 
-	// AI Oracle (Bot Detection via variance analysis)
+	scoreRaw, ok := publicValues["score"]
+	if !ok {
+		log.Printf("[AI Oracle] ⚠️ REJECTED: Missing score in proof public values.")
+		return false
+	}
+
+	var score float64
+	switch v := scoreRaw.(type) {
+	case float64:
+		score = v
+	case string:
+		fmt.Sscanf(v, "%f", &score)
+	}
+
+	if score < 1000 {
+		log.Printf("[AI Oracle] ⚠️ REJECTED: Score %f below minimum threshold 1000.", score)
+		return false
+	}
+
+	// 2. AI Oracle (Bot Detection via enhanced variance analysis)
 	replayLog, ok := publicValues["replayLog"].([]interface{})
-	if ok && len(replayLog) > 5 {
-		var diffs []float64
-		var lastTime float64
-		for i, entryRaw := range replayLog {
-			entry, ok := entryRaw.(map[string]interface{})
-			if !ok {
-				continue
+	if !ok || len(replayLog) < 10 {
+		log.Printf("[AI Oracle] ⚠️ REJECTED: Replay log too short or missing (%d entries).", len(replayLog))
+		return false
+	}
+
+	var diffs []float64
+	var lastTime float64
+	for i, entryRaw := range replayLog {
+		entry, ok := entryRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		t, _ := entry["time"].(float64)
+		if i > 0 {
+			diff := t - lastTime
+			if diff <= 0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Non-incremental timestamps in replay log.")
+				return false
 			}
-			t, _ := entry["time"].(float64)
-			if i > 0 {
-				diffs = append(diffs, t-lastTime)
-			}
-			lastTime = t
+			diffs = append(diffs, diff)
+		}
+		lastTime = t
+	}
+
+	if len(diffs) > 0 {
+		variance := calculateVariance(diffs)
+		log.Printf("[AI Oracle] Replay log variance: %f (Count: %d)", variance, len(diffs))
+
+		// Stricter Thresholds for Phase IV Hardening
+		if variance < 15.0 {
+			log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (highly precise macro script suspected).", variance)
+			return false
 		}
 
-		if len(diffs) > 0 {
-			variance := calculateVariance(diffs)
-			log.Printf("[AI Oracle] Replay log variance: %f", variance)
-			if variance < 10.0 { // Artificial variance threshold
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (macro script suspected).", variance)
+		// Also check for "Super-Human" consistency (extremely low standard deviation of the variance itself)
+		if len(diffs) > 5 {
+			var consistencySum float64
+			avgDiff := 0.0
+			for _, d := range diffs {
+				avgDiff += d
+			}
+			avgDiff /= float64(len(diffs))
+
+			for _, d := range diffs {
+				consistencySum += math.Abs(d - avgDiff)
+			}
+			meanAbsDev := consistencySum / float64(len(diffs))
+			log.Printf("[AI Oracle] Replay mean absolute deviation: %f", meanAbsDev)
+
+			if meanAbsDev < 5.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Mean absolute deviation %f is too low (robotic consistency detected).", meanAbsDev)
 				return false
 			}
 		}
 	}
 
-	score, _ := publicValues["score"].(float64)
-	return score >= 1000
+	return true
 }
 
 func calculateVariance(data []float64) float64 {

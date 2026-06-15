@@ -464,6 +464,26 @@ func genDemurrageBalancePressure(ctx *scenarioContext) error {
 	return nil
 }
 
+func genStakeLockCore(ctx *scenarioContext) error {
+	pk := ctx.getKeys("proposer")
+	ts := ctx.baseTime
+
+	prevP := ctx.l.Chains[pk["publicKey"]][len(ctx.l.Chains[pk["publicKey"]])-1]
+	lock := &Block{
+		Type:          "stake_lock",
+		Account:       pk["publicKey"],
+		Previous:      &prevP.Hash,
+		Balance:       ctx.l.GetBalance(pk["publicKey"], ts) - 100,
+		StakedBalance: prevP.StakedBalance + 100,
+		Height:        prevP.Height + 1,
+		Link:          "STAKE_LOCK",
+		Spora:         validSpora(prevP.Hash),
+		Timestamp:     ts,
+	}
+	signTestBlock(ctx.t, lock, pk["privateKey"])
+	return ctx.l.ProcessBlock(lock, false)
+}
+
 // Scenario Runner
 
 func TestFixtureDrivenMirroredScenarios(t *testing.T) {
@@ -495,6 +515,7 @@ func TestFixtureDrivenMirroredScenarios(t *testing.T) {
 		"manifest-anchor-core":           genManifestAnchorCore,
 		"governance-fee-adjustment":      genGovernanceFeeAdjustment,
 		"demurrage-balance-pressure":     genDemurrageBalancePressure,
+		"stake-lock-core":                genStakeLockCore,
 	}
 
 	for _, sc := range catalog.Scenarios {

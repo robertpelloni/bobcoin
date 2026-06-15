@@ -382,6 +382,22 @@ const generators = {
 
     'demurrage-balance-pressure': (ctx) => {
         // Marker fragment
+    },
+
+    'stake-lock-core': (ctx) => {
+        const ts = ctx.baseTime;
+        const prev = ctx.lattice.getFrontier(ctx.proposer.publicKey);
+        const lock = createSignedBlock({
+            type: 'stake_lock',
+            account: ctx.proposer.publicKey,
+            previous: prev.hash,
+            balance: ctx.lattice.getBalance(ctx.proposer.publicKey, ts) - 100,
+            link: 'STAKE_LOCK',
+            height: prev.height + 1,
+            staked_balance: prev.staked_balance + 100,
+            spora: validSpora(prev.hash),
+        }, ts, ctx.proposer.privateKey);
+        ctx.lattice.processBlock(lock);
     }
 };
 

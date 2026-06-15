@@ -45,3 +45,6 @@ npm install --legacy-peer-deps
 
 ### Dependency Warnings
 - **Supernode**: Always install `supertorrent` dependencies using `npm install --legacy-peer-deps` due to LightProtocol SDK web3.js conflicts.
+
+### SP1 ZK Verification
+To enable true SP1 ZK verification in `go-game-server`, ensure `cargo-prove` is in your PATH. If not available, the server will fall back to simulated verification with AI Oracle analysis.

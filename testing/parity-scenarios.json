@@ -158,6 +158,26 @@
         "demurrage-balance-pressure"
       ],
       "expectations": ["proposal-passed", "votes-preserved", "swap-claimed", "nft-owner-transferred", "bid-accepted", "manifest-anchor-typed", "data-anchor-typed", "frontier-balance-recovered"]
+    },
+    {
+      "id": "cross_feature_same_timestamp_pressure",
+      "category": "mirrored-replay",
+      "features": ["governance", "vote", "htlc", "nft", "stake-lock", "same-timestamp"],
+      "accounts": 3,
+      "durableRecoveryInGo": true,
+      "nodeReplayCovered": true,
+      "nodeTest": "testCrossFeatureSameTimestampPressureSemantics",
+      "goTest": "TestRecoveryRebuildsCrossFeatureSameTimestampPressureFromSQLite",
+      "fragments": [
+        "proposer-genesis",
+        "proposer-sends-to-voter",
+        "proposer-sends-to-collector",
+        "same-timestamp-governance-core",
+        "same-timestamp-htlc-core",
+        "same-timestamp-nft-core",
+        "stake-lock-core"
+      ],
+      "expectations": ["proposal-passed", "vote-preserved", "swap-claimed", "nft-owner-transferred", "stake-locked"]
     }
   ]
 }

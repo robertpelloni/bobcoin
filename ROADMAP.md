@@ -69,8 +69,9 @@
 
 
 ## Phase IV Hardening
-- Deep Multi-Node Sync Hardening: Implemented reputation penalties and gossip spam prevention during automated P2P reconciliation.
-- ZK Proving Integration: Requires local Rust compiler toolchain updates.
+- [x] Deep Multi-Node Sync Hardening: Implemented reputation penalties and gossip spam prevention during automated P2P reconciliation.
+- [ ] ZK Proving Integration: Requires local Rust compiler toolchain updates.
+- [x] Cross-Feature Parity: Ensure 1:1 parity for complex multi-account same-timestamp replay scenarios across JS and Go. (Completed in v8.107.2)
 
 
 ## Architecture Decision: Service Canonicalization

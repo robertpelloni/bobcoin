@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.107.2] - 2026-04-13
+### Added
+- "Cross-Feature Pressure" Parity Scenario: A complex same-timestamp multi-account scenario involving governance, HTLCs, and NFTs to stress-test consensus replay determinism.
+- Enhanced AI Oracle in `go-game-server`: Improved variance analysis for bot detection and stricter proof metadata validation.
+- Updated project roadmap and task lists to reflect current Phase IV hardening priorities.
+
 ## [8.107.1] - 2026-04-12
 ### Added
 - Explicit Enactment Delays for Governance proposals in both JS (`Lattice.js`) and Go (`lattice.go`). Proposals now transition to `Passed` but wait for `enactmentDelay` before execution.

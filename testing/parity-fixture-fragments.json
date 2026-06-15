@@ -56,6 +56,11 @@
       "id": "demurrage-balance-pressure",
       "category": "economic-pressure",
       "features": ["demurrage", "elapsed-time"]
+    },
+    {
+      "id": "stake-lock-core",
+      "category": "staking-core",
+      "features": ["stake-lock", "same-timestamp"]
     }
   ]
 }

@@ -96,10 +96,33 @@ func TestVerifyProofUsesBridgeWhenAvailable(t *testing.T) {
 func TestVerifyProofFallsBackToScoreThreshold(t *testing.T) {
 	service := newTestService(t)
 
-	if !service.verifyProof(map[string]interface{}{"score": float64(1000)}, map[string]interface{}{"publicValues": map[string]interface{}{"score": float64(1000)}}) {
+	validPublicValues := map[string]interface{}{
+		"address": "test-address",
+		"score":   float64(1000),
+		"replayLog": []interface{}{
+			map[string]interface{}{"time": 100.0},
+			map[string]interface{}{"time": 200.0},
+			map[string]interface{}{"time": 350.0},
+			map[string]interface{}{"time": 500.0},
+			map[string]interface{}{"time": 700.0},
+			map[string]interface{}{"time": 950.0},
+			map[string]interface{}{"time": 1250.0},
+			map[string]interface{}{"time": 1600.0},
+			map[string]interface{}{"time": 2000.0},
+			map[string]interface{}{"time": 2500.0},
+		},
+	}
+
+	if !service.verifyProof(validPublicValues, map[string]interface{}{}) {
 		t.Fatalf("expected score threshold fallback to pass high score")
 	}
-	if service.verifyProof(map[string]interface{}{"score": float64(999)}, map[string]interface{}{"publicValues": map[string]interface{}{"score": float64(999)}}) {
+
+	lowScoreValues := map[string]interface{}{
+		"address": "test-address",
+		"score":   float64(999),
+		"replayLog": validPublicValues["replayLog"],
+	}
+	if service.verifyProof(lowScoreValues, map[string]interface{}{}) {
 		t.Fatalf("expected score threshold fallback to reject low score")
 	}
 }
@@ -425,7 +448,7 @@ func TestSubmitProofBridgeErrorFallsBackToThreshold(t *testing.T) {
 	frontier := "prefetched-frontier"
 	service.systemFrontier = &frontier
 
-	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"address":"fallback-player","score":2000}}}`))
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", strings.NewReader(`{"proof":{"publicValues":{"address":"fallback-player","score":2000,"replayLog":[{"time":100},{"time":200},{"time":350},{"time":500},{"time":700},{"time":950},{"time":1250},{"time":1600},{"time":2000},{"time":2500}]}}}`))
 	rec := httptest.NewRecorder()
 	service.handleSubmitProof(rec, req)
 	if rec.Code != http.StatusOK {

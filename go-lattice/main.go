@@ -549,7 +549,16 @@ func gossipLoop() {
 
 				// Adaptive peer scoring: high latency nodes are de-prioritized
 				if latency > 1000 {
-					log.Printf("[GOSSIP] Slow peer detected: %s (%d ms). Reducing sync priority.", url, latency)
+					log.Printf("[GOSSIP] Slow peer detected: %s (%d ms). Reducing reputation.", url, latency)
+					peer.Score -= 5
+				} else if latency < 100 {
+					peer.Score += 2
+				}
+				if peer.Score < 0 {
+					peer.Score = 0
+				}
+				if peer.Score > 100 {
+					peer.Score = 100
 				}
 			}
 

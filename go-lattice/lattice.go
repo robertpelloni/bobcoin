@@ -58,6 +58,7 @@ type PeerInfo struct {
 	Status     string `json:"status"`
 	MerkleRoot string `json:"merkleRoot"`
 	Blocks     int    `json:"blocks"`
+	Score      int    `json:"score"` // Peer reputation score
 }
 
 type Lattice struct {

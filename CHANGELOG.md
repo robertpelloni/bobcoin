@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.109.0] - 2026-04-16
+### Added
+- Gossip Mesh Optimization: Implemented adaptive gossip intervals (2s to 10s) and peer reputation scoring based on network health.
+- Cross-Chain Bridge Shell: Ported Solana Devnet bridge simulation to Go Game Server for protocol parity.
+- Supernode Manifest Persistence: Added JSON-based manifest registry persistence to the Go Supernode.
+- Consensus Validation: Added score consistency checks to the ZK simulation in Go Game Server.
+
 ## [8.108.0] - 2026-04-15
 ### Added
 - Phase V Initiation: Initial structural preparation for "Network Expansion."

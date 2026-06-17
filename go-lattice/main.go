@@ -504,7 +504,8 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func gossipLoop() {
 	// Gossip Mesh Optimization: Use adaptive intervals and peer scoring
-	ticker := time.NewTicker(5 * time.Second)
+	interval := 5 * time.Second
+	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		lattice.mu.RLock()
 		peerURLs := make([]string, 0, len(lattice.Peers))
@@ -581,6 +582,13 @@ func gossipLoop() {
 			if remoteMerkle != lattice.MerkleRoot {
 				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Batch Sync...\n", url)
 
+				// Speed up gossip when out of sync
+				if interval > 2 * time.Second {
+					interval = 2 * time.Second
+					ticker.Reset(interval)
+					log.Printf("[GOSSIP] Synchronizing... Increasing gossip frequency to 2s.")
+				}
+
 				failures := 0
 				banned := false
 
@@ -631,15 +639,26 @@ func gossipLoop() {
 			// Update Quorum Score
 			lattice.mu.Lock()
 			agreeCount := 0
+			totalOnline := 0
 			for _, p := range lattice.Peers {
-				if p.Status == "online" && p.MerkleRoot == lattice.MerkleRoot {
-					agreeCount++
+				if p.Status == "online" {
+					totalOnline++
+					if p.MerkleRoot == lattice.MerkleRoot {
+						agreeCount++
+					}
 				}
 			}
-			if len(lattice.Peers) > 0 {
-				lattice.QuorumScore = (float64(agreeCount) / float64(len(lattice.Peers))) * 100.0
+			if totalOnline > 0 {
+				lattice.QuorumScore = (float64(agreeCount) / float64(totalOnline)) * 100.0
 			} else {
 				lattice.QuorumScore = 100.0 // Solo mode
+			}
+
+			// Return to healthy interval if quorum reached
+			if lattice.QuorumScore >= lattice.QuorumThreshold && interval < 10 * time.Second {
+				interval = 10 * time.Second
+				ticker.Reset(interval)
+				log.Printf("[GOSSIP] Network healthy. Relaxing gossip frequency to 10s.")
 			}
 			lattice.mu.Unlock()
 		}

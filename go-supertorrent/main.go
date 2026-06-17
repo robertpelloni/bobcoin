@@ -34,6 +34,7 @@ type Config struct {
 	ManifestsDir  string
 	WalletFile    string
 	TorrentsFile  string
+	ManifestsFile string
 }
 
 type Wallet struct {
@@ -128,6 +129,7 @@ type SuperTorrentService struct {
 	started        time.Time
 	mu             sync.RWMutex
 	torrents       map[string]*TorrentRecord
+	manifests      map[string]map[string]interface{}
 	httpClient     *http.Client
 	matchMu        sync.Mutex
 	waitingPlayers map[string]*MatchConnection
@@ -153,6 +155,7 @@ func main() {
 		ManifestsDir:  envOrDefault("SUPERTORRENT_MANIFESTS_DIR", filepath.Join("go-supertorrent", "manifests")),
 		WalletFile:    envOrDefault("SUPERTORRENT_WALLET_FILE", filepath.Join("go-supertorrent", "wallet.json")),
 		TorrentsFile:  envOrDefault("SUPERTORRENT_TORRENTS_FILE", filepath.Join("go-supertorrent", "torrents.json")),
+		ManifestsFile: envOrDefault("SUPERTORRENT_MANIFESTS_FILE", filepath.Join("go-supertorrent", "manifests.json")),
 	}
 
 	service, err := NewSuperTorrentService(cfg)
@@ -214,12 +217,18 @@ func NewSuperTorrentService(cfg Config) (*SuperTorrentService, error) {
 		return nil, err
 	}
 
+	manifests, err := loadManifestRegistry(cfg.ManifestsFile)
+	if err != nil {
+		return nil, err
+	}
+
 	svc := &SuperTorrentService{
 		cfg:        cfg,
 		wallet:     wallet,
 		nodeID:     "sn_" + shortHash(wallet.PublicKey),
 		started:    time.Now(),
 		torrents:   torrents,
+		manifests:  manifests,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
 		waitingPlayers: make(map[string]*MatchConnection),
 		upgrader: websocket.Upgrader{
@@ -290,6 +299,38 @@ func (s *SuperTorrentService) saveTorrents() error {
 	s.mu.RUnlock()
 	data, _ := json.MarshalIndent(list, "", "  ")
 	return os.WriteFile(s.cfg.TorrentsFile, data, 0o644)
+}
+
+func (s *SuperTorrentService) saveManifests() error {
+	s.mu.RLock()
+	list := make([]map[string]interface{}, 0, len(s.manifests))
+	for _, m := range s.manifests {
+		list = append(list, m)
+	}
+	s.mu.RUnlock()
+	data, _ := json.MarshalIndent(list, "", "  ")
+	return os.WriteFile(s.cfg.ManifestsFile, data, 0o644)
+}
+
+func loadManifestRegistry(path string) (map[string]map[string]interface{}, error) {
+	registry := make(map[string]map[string]interface{})
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return registry, nil
+		}
+		return nil, err
+	}
+	var list []map[string]interface{}
+	if err := json.Unmarshal(data, &list); err != nil {
+		return nil, err
+	}
+	for _, item := range list {
+		if id, ok := item["manifestId"].(string); ok {
+			registry[id] = item
+		}
+	}
+	return registry, nil
 }
 
 func (s *SuperTorrentService) bootstrapWalletOnLattice() {
@@ -719,30 +760,22 @@ func (s *SuperTorrentService) handlePublishManifest(w http.ResponseWriter, r *ht
 		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 		return
 	}
+
+	s.mu.Lock()
+	s.manifests[manifestID] = req.Manifest
+	s.mu.Unlock()
+	_ = s.saveManifests()
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "id": manifestID, "locator": req.Manifest["locator"], "manifestUrl": req.Manifest["manifestUrl"], "manifest": req.Manifest})
 }
 
 func (s *SuperTorrentService) handleListManifests(w http.ResponseWriter, r *http.Request) {
-	entries, err := os.ReadDir(s.cfg.ManifestsDir)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
-		return
+	s.mu.RLock()
+	manifests := make([]map[string]interface{}, 0, len(s.manifests))
+	for _, m := range s.manifests {
+		manifests = append(manifests, m)
 	}
-	manifests := make([]map[string]interface{}, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(s.cfg.ManifestsDir, entry.Name()))
-		if err != nil {
-			continue
-		}
-		var manifest map[string]interface{}
-		if err := json.Unmarshal(data, &manifest); err != nil {
-			continue
-		}
-		manifests = append(manifests, manifest)
-	}
+	s.mu.RUnlock()
 	writeJSON(w, http.StatusOK, map[string]interface{}{"manifests": manifests})
 }
 
@@ -752,14 +785,17 @@ func (s *SuperTorrentService) handleGetManifest(w http.ResponseWriter, r *http.R
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "manifest id required"})
 		return
 	}
-	data, err := os.ReadFile(filepath.Join(s.cfg.ManifestsDir, manifestID+".json"))
-	if err != nil {
+
+	s.mu.RLock()
+	manifest, ok := s.manifests[manifestID]
+	s.mu.RUnlock()
+
+	if !ok {
 		writeJSON(w, http.StatusNotFound, map[string]interface{}{"error": "manifest not found"})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+
+	writeJSON(w, http.StatusOK, manifest)
 }
 
 func (s *SuperTorrentService) handleGetShard(w http.ResponseWriter, r *http.Request) {

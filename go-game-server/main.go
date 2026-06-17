@@ -536,10 +536,18 @@ func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "invalid amount"})
 		return
 	}
+
+	// Cross-Chain Bridge Shell (Solana Parity)
+	// In production, this would trigger a SPL-token burn on Solana Devnet
+	// using the Solana Go SDK or a secure relayer.
+	log.Printf("[Bridge] Initiating cross-chain burn for %f BOB. Reason: %s", req.Amount, req.Reason)
+
 	txID := "tx_burn_" + shortHash(strconv.FormatInt(time.Now().UnixNano(), 10))
-	hash := shortHash(txID + req.Reason)
-	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: req.Amount, Type: "SEND", Hash: hash})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": hash})
+	// Mock Solana transaction hash
+	solanaHash := hashString(txID + req.Reason)[:44]
+
+	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: req.Amount, Type: "SEND", Hash: solanaHash})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": solanaHash, "bridge": "solana_devnet"})
 }
 
 func (s *Service) handleTransactions(w http.ResponseWriter, r *http.Request) {

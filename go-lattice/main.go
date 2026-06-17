@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -440,7 +441,7 @@ func handlePeers(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewDecoder(r.Body).Decode(&payload)
 		lattice.mu.Lock()
-		lattice.Peers[payload.URL] = &PeerInfo{URL: payload.URL, Status: "connected"}
+		lattice.Peers[payload.URL] = &PeerInfo{URL: payload.URL, Status: "connected", Score: 100}
 		lattice.mu.Unlock()
 		w.WriteHeader(200)
 		return
@@ -509,15 +510,24 @@ func gossipLoop() {
 	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		lattice.mu.RLock()
-		peerURLs := make([]string, 0, len(lattice.Peers))
-		for url, peer := range lattice.Peers {
-			if peer.Status != "banned" {
-				peerURLs = append(peerURLs, url)
+		activePeers := make([]*PeerInfo, 0, len(lattice.Peers))
+		for _, peer := range lattice.Peers {
+			if peer.Status != "banned" && peer.Score > 20 {
+				activePeers = append(activePeers, peer)
 			}
 		}
 		lattice.mu.RUnlock()
 
-		for _, url := range peerURLs {
+		// Peer Prioritization: Sort by Score (desc) and Latency (asc)
+		sort.Slice(activePeers, func(i, j int) bool {
+			if activePeers[i].Score != activePeers[j].Score {
+				return activePeers[i].Score > activePeers[j].Score
+			}
+			return activePeers[i].Latency < activePeers[j].Latency
+		})
+
+		for _, p := range activePeers {
+			url := p.URL
 			start := time.Now()
 			resp, err := http.Get(url + "/status")
 			latency := time.Since(start).Milliseconds()
@@ -562,6 +572,12 @@ func gossipLoop() {
 				if peer.Score > 100 {
 					peer.Score = 100
 				}
+
+				// Reputation-Based Pruning
+				if peer.Score < 10 {
+					log.Printf("[GOSSIP] Pruning hostile/unreliable peer: %s (Score: %d)", url, peer.Score)
+					peer.Status = "banned"
+				}
 			}
 
 			// Peer Discovery: Request their peer list
@@ -572,7 +588,7 @@ func gossipLoop() {
 					for rUrl := range remotePeers {
 						// Don't add ourselves or already known peers
 						if rUrl != "http://localhost:"+latticePort && lattice.Peers[rUrl] == nil {
-							lattice.Peers[rUrl] = &PeerInfo{URL: rUrl, Status: "discovered"}
+							lattice.Peers[rUrl] = &PeerInfo{URL: rUrl, Status: "discovered", Score: 100}
 							fmt.Printf("[GOSSIP] Discovered new peer through %s: %s\n", url, rUrl)
 						}
 					}

@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.111.0] - 2026-04-18
+### Added
+- Gossip Mesh Prioritization: Refactored Go Lattice sync logic to prioritize high-reputation and low-latency peers.
+- Reputation-Based Pruning: Implemented automatic banning of low-score/hostile nodes in the gossip mesh.
+- Multi-Signature Relayers: Enhanced Go Game Server bridge simulation with multi-relayer signature collection for cross-chain events.
+
 ## [8.110.0] - 2026-04-17
 ### Added
 - Optimized State Sync: Implemented Bloom Filter-based delta discovery in Go Lattice for reduced network overhead.

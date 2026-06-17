@@ -56,10 +56,11 @@ export const getLatticeFrontier = async (publicKey) => {
             frontier: data.frontier || null,
             balance: data.balance || 0,
             staked_balance: data.staked_balance || 0,
-            height: data.height || 0
+            height: data.height || 0,
+            balances: data.balances || {}
         };
     } catch (e) {
-        return { frontier: null, balance: 0, staked_balance: 0, height: 0 };
+        return { frontier: null, balance: 0, staked_balance: 0, height: 0, balances: {} };
     }
 };
 
@@ -71,10 +72,11 @@ export const getGoLatticeFrontier = async (publicKey) => {
             frontier: data.frontier || null,
             balance: data.balance || 0,
             staked_balance: data.staked_balance || 0,
-            height: data.height || 0
+            height: data.height || 0,
+            balances: data.balances || {}
         };
     } catch (e) {
-        return { frontier: null, balance: 0, staked_balance: 0, height: 0 };
+        return { frontier: null, balance: 0, staked_balance: 0, height: 0, balances: {} };
     }
 };
 

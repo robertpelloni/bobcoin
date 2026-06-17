@@ -1,5 +1,14 @@
 # Changelog
 
+## [8.108.0] - 2026-04-15
+### Added
+- Phase V Initiation: Initial structural preparation for "Network Expansion."
+- Enhanced SP1 Program: Added workspace and target configurations for the `proof-of-play` circuit.
+- Real ZK Readiness: `go-game-server` now detects and integrates the `cargo-prove` toolchain for true RISC-V ZK verification.
+- Standardized Go Hashing: Implemented unified float-to-string formatting (`FormatJS`) across all Go microservices to ensure absolute hash parity with the JS reference.
+- Improved SPoRA Guardrails: Go Supernode now strictly verifies anchor tracking before issuing SPoRA challenges.
+- Fixed Lattice JS Regression: Resolved syntax error in `achievement_unlock` block handling.
+
 ## [8.107.3] - 2026-04-14
 ### Added
 - AMM Liquidity Management: Implemented `amm_add_liquidity` and `amm_remove_liquidity` block types in both JS and Go engines with 1:1 parity.

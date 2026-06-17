@@ -9,3 +9,4 @@ frontend/dist/
 wallet.json
 build-info.json
 nul
+target/

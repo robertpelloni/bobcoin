@@ -330,6 +330,8 @@ export class Lattice {
             const elapsed = block.timestamp - frontier.timestamp;
             let reward = (frontier.staked_balance || 0) * this.getStakingRewardRate() * elapsed * (this.getTrustScore(account) / 100.0);
             if (Math.abs(block.balance - (previousBalance + amount + reward)) > epsilon) throw new Error("Invalid unlock balance");
+        } else if (block.type === 'achievement_unlock') {
+            if (Math.abs(block.balance - previousBalance) > epsilon) throw new Error("Achievement unlock cannot change balance");
         } else if (block.type === 'restore_trust') {
             const amount = previousBalance - block.balance;
             this.trustScores[account] = Math.min(100.0, this.getTrustScore(account) + (amount / 10.0));

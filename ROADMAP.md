@@ -77,5 +77,10 @@
 - [x] AMM Liquidity Management: Implemented `amm_add_liquidity` and `amm_remove_liquidity` with 1:1 parity. (v8.107.3)
 
 
+## Phase V: Network Expansion (Current)
+- [ ] **Gossip Mesh Optimization**: Implement adaptive gossip intervals and peer scoring based on verified block relay latency.
+- [ ] **Cross-Chain Bridge Scalability**: Port the Solana bridge logic to Go and implement multi-signature relayers.
+- [ ] **Native Rust SP1 Verification**: Fully integrate the `cargo-prove` toolchain into the production build pipeline for non-simulated ZK proving.
+
 ## Architecture Decision: Service Canonicalization
 The `go-game-server` and `go-supertorrent` services are now the official canonical microservices. The Node.js equivalents are officially marked for deprecation.

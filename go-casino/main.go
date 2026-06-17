@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -323,8 +324,25 @@ func calculateHash(block *Block) string {
 	if block.Previous != nil {
 		prev = *block.Previous
 	}
-	data := block.Type + block.Account + prev + strconv.FormatFloat(block.Balance, 'f', -1, 64) + strconv.FormatFloat(block.StakedBalance, 'f', -1, 64) + strconv.Itoa(block.Height) + block.Link + string(sporaJSON) + string(payloadJSON)
+	data := block.Type + block.Account + prev + FormatJS(block.Balance) + FormatJS(block.StakedBalance) + strconv.Itoa(block.Height) + block.Link + string(sporaJSON) + string(payloadJSON)
 	return hashString(data)
+}
+
+func FormatJS(f float64) string {
+	if f == 0 {
+		return "0"
+	}
+	abs := math.Abs(f)
+	if abs >= 1e21 || abs < 1e-6 {
+		s := strconv.FormatFloat(f, 'e', -1, 64)
+		parts := strings.Split(s, "e")
+		exp, _ := strconv.Atoi(parts[1])
+		if exp > 0 {
+			return parts[0] + "e+" + strconv.Itoa(exp)
+		}
+		return parts[0] + "e" + strconv.Itoa(exp)
+	}
+	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
 func hashString(value string) string {

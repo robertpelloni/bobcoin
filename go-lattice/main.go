@@ -123,6 +123,7 @@ func main() {
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/heartbeat", handleHeartbeat)
 	http.HandleFunc("/blocks", gzipHandler(handleBlocks))
+	http.HandleFunc("/sync/bloom", handleBloomSync)
 	http.HandleFunc("/snapshot", gzipHandler(handleSnapshot))
 	http.HandleFunc("/bootstrap", gzipHandler(handleBootstrap))
 
@@ -580,7 +581,7 @@ func gossipLoop() {
 			}
 
 			if remoteMerkle != lattice.MerkleRoot {
-				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Batch Sync...\n", url)
+				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Bloom Sync...\n", url)
 
 				// Speed up gossip when out of sync
 				if interval > 2 * time.Second {
@@ -589,11 +590,48 @@ func gossipLoop() {
 					log.Printf("[GOSSIP] Synchronizing... Increasing gossip frequency to 2s.")
 				}
 
+				// Build Bloom Filter of local block hashes
+				lattice.mu.RLock()
+				bf := NewBloomFilter(1000, 3)
+				for h := range lattice.Blocks {
+					bf.Add([]byte(h))
+				}
+				lattice.mu.RUnlock()
+
+				bfBody, _ := json.Marshal(bf)
+				syncResp, err := http.Post(url+"/sync/bloom", "application/json", strings.NewReader(string(bfBody)))
+
 				failures := 0
 				banned := false
 
-				for {
-					// Use 100 block batches for better throughput
+				if err == nil {
+					var syncData struct {
+						Missing []*Block `json:"missing"`
+					}
+					json.NewDecoder(syncResp.Body).Decode(&syncData)
+					syncResp.Body.Close()
+
+					for _, b := range syncData.Missing {
+						lattice.mu.RLock()
+						_, exists := lattice.Blocks[b.Hash]
+						lattice.mu.RUnlock()
+						if !exists {
+							if err := lattice.ProcessBlock(b, false); err != nil {
+								failures++
+								if failures > 3 {
+									banned = true
+									break
+								}
+							}
+						}
+					}
+					if len(syncData.Missing) > 0 {
+						fmt.Printf("[SYNC] Integrated %d missing blocks via Bloom filter from %s\n", len(syncData.Missing), url)
+					}
+				}
+
+				for !banned {
+					// Fallback to sequential batch sync if still divergent
 					syncResp, err := http.Get(fmt.Sprintf("%s/blocks?after=%s&limit=100", url, lattice.StateHash))
 					if err != nil {
 						break
@@ -789,4 +827,31 @@ func handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(lattice.GetStateSnapshot())
+}
+
+func handleBloomSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	var bf BloomFilter
+	if err := json.NewDecoder(r.Body).Decode(&bf); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	lattice.mu.RLock()
+	defer lattice.mu.RUnlock()
+
+	var missing []*Block
+	for _, block := range lattice.Blocks {
+		if !bf.Test([]byte(block.Hash)) {
+			missing = append(missing, block)
+		}
+		if len(missing) >= 100 {
+			break
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"missing": missing})
 }

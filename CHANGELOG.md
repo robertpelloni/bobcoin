@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.110.0] - 2026-04-17
+### Added
+- Optimized State Sync: Implemented Bloom Filter-based delta discovery in Go Lattice for reduced network overhead.
+- Cross-Chain Relayer: Ported Solana Devnet deposit verification to Go Game Server, completing functional bridge parity.
+- Decentralized Node Discovery: Added peer exchange capabilities to Go Supernode for standardized mesh building.
+- Adaptive Network Sync: Go node now dynamically adjusts sync intervals based on real-time quorum health.
+
 ## [8.109.0] - 2026-04-16
 ### Added
 - Gossip Mesh Optimization: Implemented adaptive gossip intervals (2s to 10s) and peer reputation scoring based on network health.

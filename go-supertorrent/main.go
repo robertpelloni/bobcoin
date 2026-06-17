@@ -188,6 +188,7 @@ func main() {
 	mux.HandleFunc("/manifests", service.handleListManifests)
 	mux.HandleFunc("/manifests/", service.handleGetManifest)
 	mux.HandleFunc("/shards/", service.handleGetShard)
+	mux.HandleFunc("/peers", service.handlePeers)
 	mux.HandleFunc("/verify-attestation", service.handleVerifyAttestation)
 	mux.HandleFunc("/spora/", service.handleSpora)
 
@@ -1042,4 +1043,26 @@ func withCORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *SuperTorrentService) handlePeers(w http.ResponseWriter, r *http.Request) {
+	// Standardize peer exchange for decentralized discovery
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// For now, return a list of known lattice peers to facilitate mesh building
+	resp, err := s.httpClient.Get(s.cfg.LatticeURL + "/peers")
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": "Lattice peers unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+
+	for key, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(key, value)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
 }

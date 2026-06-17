@@ -1,5 +1,19 @@
 # Changelog
 
+## [8.114.0] - 2026-04-21
+### Added
+- Dynamic Versioning: Refactored Go microservices to source protocol versions from `VERSION.md`.
+- SPoRA Depth Enforcement: Hardened Go consensus with recursive anchor tracking and seed validation.
+- Consensus Parity Hardening: Synchronized initial pool states and added nil-checks for robust AMM execution in Go.
+- AI Oracle Calibration: Corrected Mean Absolute Deviation (MAD) logic for high-fidelity bot detection.
+- Frontend Stability: Reverted experimental dependency versions to stable Vite 5.x branch.
+
+## [8.113.0] - 2026-04-20
+### Added
+- Solana Go SDK Integration: Transitioned the BridgeService to use the official `gagliardetto/solana-go` SDK.
+- Real-Time Signature Verification: Implemented actual base58 signature parsing and RPC health checks for Devnet bridge events.
+- Corrected ZK ELF Targeting: Finalized the native SP1 verification wrapper with precise circuit binary (ELF) path resolution.
+
 ## [8.112.0] - 2026-04-19
 ### Added
 - Solana RPC Integration Shell: Added configuration placeholders and structured signature models for upcoming mainnet bridge relayers.

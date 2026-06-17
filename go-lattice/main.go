@@ -136,11 +136,15 @@ func main() {
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
+	version := "unknown"
+	if data, err := os.ReadFile("../VERSION.md"); err == nil {
+		version = strings.TrimSpace(string(data))
+	}
 	lattice.mu.RLock()
 	defer lattice.mu.RUnlock()
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":      "online",
-		"engine":      "Go-Lattice v8.107.3",
+		"engine":      "Go-Lattice " + version,
 		"stateHash":   lattice.StateHash,
 		"merkleRoot":  lattice.MerkleRoot,
 		"accounts":    len(lattice.Chains),

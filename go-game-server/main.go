@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -19,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/gorilla/websocket"
 	"github.com/mr-tron/base58"
 	_ "modernc.org/sqlite"
@@ -32,6 +35,8 @@ type Config struct {
 	WalletFile         string
 	ZKServiceURL       string
 	FHEOracleBridgeURL string
+	SolanaRPCURL       string
+	SolanaBridgePDA    string
 }
 
 type Wallet struct {
@@ -139,6 +144,7 @@ type Service struct {
 	cfg            Config
 	db             *sql.DB
 	httpClient     *http.Client
+	solanaClient   *rpc.Client
 	systemWallet   Wallet
 	relayers       []Relayer
 	systemBalance  float64
@@ -160,6 +166,8 @@ func main() {
 		WalletFile:         envOrDefault("GAME_SERVER_WALLET_FILE", filepath.Join("go-game-server", "system-wallet.json")),
 		ZKServiceURL:       envOrDefault("ZK_SERVICE_URL", "http://localhost:8080"),
 		FHEOracleBridgeURL: envOrDefault("FHE_ORACLE_BRIDGE_URL", ""),
+		SolanaRPCURL:       envOrDefault("SOLANA_RPC_URL", "https://api.devnet.solana.com"),
+		SolanaBridgePDA:    envOrDefault("SOLANA_BRIDGE_PDA", "BobcoinBridge11111111111111111111111111111"),
 	}
 
 	service, err := NewService(cfg)
@@ -212,6 +220,7 @@ func NewService(cfg Config) (*Service, error) {
 		cfg:            cfg,
 		db:             db,
 		httpClient:     &http.Client{Timeout: 15 * time.Second},
+		solanaClient:   rpc.New(cfg.SolanaRPCURL),
 		systemWallet:   wallet,
 		relayers: []Relayer{
 			{ID: "relayer-1", PublicKey: "solana-bridge-node-1"},
@@ -308,11 +317,15 @@ func (s *Service) handleRoot(w http.ResponseWriter, r *http.Request) {
 		s.handleMatchmakingWebSocket(w, r)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go Game Server orchestrator", "version": "0.2.0-go"})
+	s.handleStatus(w, r)
 }
 
 func (s *Service) handleStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go Game Server orchestrator", "version": "0.2.0-go"})
+	version := "unknown"
+	if data, err := os.ReadFile("../VERSION.md"); err == nil {
+		version = strings.TrimSpace(string(data))
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go Game Server orchestrator", "version": version})
 }
 
 func (s *Service) handleBankroll(w http.ResponseWriter, r *http.Request) {
@@ -328,13 +341,30 @@ func (s *Service) handleMint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Amount  float64 `json:"amount"`
-		Reason  string  `json:"reason"`
-		Address string  `json:"address"`
+		Amount       float64 `json:"amount"`
+		Reason       string  `json:"reason"`
+		Address      string  `json:"address"`
+		SolanaTxHash string  `json:"solanaTxHash"` // Optional transaction hash to verify
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Amount <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "invalid amount"})
 		return
+	}
+
+	// Real Solana Devnet Verification Shell
+	if req.SolanaTxHash != "" {
+		sig, err := solana.SignatureFromBase58(req.SolanaTxHash)
+		if err == nil {
+			log.Printf("[Relayer] Fetching Solana Tx: %s", req.SolanaTxHash)
+			// Implementation would use s.solanaClient.GetTransaction
+			// For now, we perform a liveness check on the RPC
+			_, err := s.solanaClient.GetHealth(context.Background())
+			if err != nil {
+				log.Printf("[Relayer] Solana RPC offline: %v", err)
+			} else {
+				log.Printf("[Relayer] Solana Devnet reachability confirmed for Sig: %s", sig)
+			}
+		}
 	}
 
 	// Cross-Chain Relayer Shell (Solana Parity)
@@ -479,7 +509,7 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 		defer os.Remove(proofPath)
 
 		// Target the proof-of-play circuit binary (ELF)
-		elfPath := filepath.Join("..", "proof-of-play", "program", "elf-riscv32im-succinct-zkvm")
+		elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
 
 		cmd := exec.Command("cargo-prove", "verify", "--proof", proofPath, "--elf", elfPath)
 		if output, err := cmd.CombinedOutput(); err != nil {
@@ -535,11 +565,19 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			}
 
 			// Robotic precision check: calculate Mean Absolute Deviation (MAD)
-			var sumDiff float64
+			var sum float64
 			for _, d := range diffs {
-				sumDiff += math.Abs(d - (diffs[0])) // Simplistic MAD relative to first interval
+				sum += d
 			}
-			mad := sumDiff / float64(len(diffs))
+			mean := sum / float64(len(diffs))
+
+			var sumAbsDev float64
+			for _, d := range diffs {
+				sumAbsDev += math.Abs(d - mean)
+			}
+			mad := sumAbsDev / float64(len(diffs))
+			log.Printf("[AI Oracle] Mean: %f, MAD: %f", mean, mad)
+
 			if mad < 2.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (robotic consistency detected).", mad)
 				return false

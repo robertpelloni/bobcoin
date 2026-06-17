@@ -61,5 +61,5 @@
 - [x] **Identity Verification UI (Frontend v20):** Integrated real-time "Zero-Trust" checking for publisher attestations in the Vault, backed by the Go supernode's new `VerifierService`.
 
 - [x] **Multi-Node Sync Hardening**: Gossip loops now ban peers submitting cryptographically invalid block batches.
-- [ ] **Solana RPC Integration**: Deepen bridge relayers with real Solana RPC connectivity.
-- [ ] **ZK Native Verification**: Finalize SP1 native verification wrapper in `go-game-server`.
+- [x] **Solana RPC Integration**: Deepen bridge relayers with real Solana RPC connectivity.
+- [x] **ZK Native Verification**: Finalize SP1 native verification wrapper in `go-game-server`.

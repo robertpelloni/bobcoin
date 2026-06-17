@@ -615,6 +615,7 @@ func gossipLoop() {
 				lattice.mu.RUnlock()
 
 				bfBody, _ := json.Marshal(bf)
+				syncStart := time.Now()
 				syncResp, err := http.Post(url+"/sync/bloom", "application/json", strings.NewReader(string(bfBody)))
 
 				failures := 0
@@ -642,7 +643,10 @@ func gossipLoop() {
 						}
 					}
 					if len(syncData.Missing) > 0 {
-						fmt.Printf("[SYNC] Integrated %d missing blocks via Bloom filter from %s\n", len(syncData.Missing), url)
+						syncDuration := time.Since(syncStart)
+						fmt.Printf("[SYNC] Integrated %d missing blocks via Bloom filter from %s (Efficiency: %.2f blocks/sec, Latency: %d ms)\n", len(syncData.Missing), url, float64(len(syncData.Missing))/syncDuration.Seconds(), syncDuration.Milliseconds())
+					} else {
+						fmt.Printf("[SYNC] Bloom filter confirms no missing blocks from %s\n", url)
 					}
 				}
 

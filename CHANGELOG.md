@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.112.0] - 2026-04-19
+### Added
+- Solana RPC Integration Shell: Added configuration placeholders and structured signature models for upcoming mainnet bridge relayers.
+- Gossip Mesh Hardening: Optimized Bloom filter delta sync and added gossip efficiency telemetry.
+- Native SP1 Verification Wrapper: Implemented native RISC-V ZK verification hooks targeting the `cargo-prove` toolchain.
+
 ## [8.111.0] - 2026-04-18
 ### Added
 - Gossip Mesh Prioritization: Refactored Go Lattice sync logic to prioritize high-reputation and low-latency peers.

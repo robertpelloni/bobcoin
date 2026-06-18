@@ -9,7 +9,7 @@ const SECTIONS = {
                 <h2>BOBCOIN: The Protocol of Useful Work</h2>
                 <p className="highlight">"Data is the Currency. Seeding is Mining. Play is Work."</p>
                 <p>
-                    Bobcoin is a next-generation decentralized ecosystem built on an asynchronous Block Lattice. 
+                    Lattice Arcade is a next-generation decentralized ecosystem built on an asynchronous Block Lattice.
                     It is the native currency for **Bobtorrent** (P2P sharing), **Bobmania**, 
                     and **Bobsgame** (arcade hardware). 
                 </p>
@@ -32,7 +32,7 @@ const SECTIONS = {
         content: (
             <>
                 <h2>THE SOVEREIGN EXCHANGE</h2>
-                <p>Bobcoin implements high-velocity financial tools directly in the consensus layer.</p>
+                <p>Lattice Arcade implements high-velocity financial tools directly in the consensus layer.</p>
                 <div className="tech-stack">
                     <div className="tech-item">
                         <h4>ON-CHAIN AMM (x * y = k)</h4>
@@ -79,7 +79,7 @@ const SECTIONS = {
             <>
                 <h2>BEYOND THE BLOCKCHAIN</h2>
                 <p>
-                    Instead of a single global chain, Bobcoin uses a Directed Acyclic Graph (DAG) of account chains.
+                    Instead of a single global chain, Lattice Arcade uses a Directed Acyclic Graph (DAG) of account chains.
                 </p>
                 <h3>ADVANTAGES</h3>
                 <ul>

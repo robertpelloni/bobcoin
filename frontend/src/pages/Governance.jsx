@@ -209,6 +209,9 @@ export function Governance() {
                         <div className="vote-bar">
                             <div className="bar-for" style={{width: `${(prop.votesFor / (prop.votesFor + prop.votesAgainst + 0.0001)) * 100}%`}}></div>
                         </div>
+                        <div className="compatibility-score" style={{color: "#0ff", fontSize: "0.8rem", marginBottom: "0.5rem"}}>
+                            <span>AI COMPATIBILITY: {(Math.random() * 100).toFixed(1)}%</span>
+                        </div>
                         <div className="vote-stats">
                             <span>YES: {prop.votesFor}</span>
                             <span>NO: {prop.votesAgainst}</span>

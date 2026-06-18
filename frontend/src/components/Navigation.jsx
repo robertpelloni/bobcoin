@@ -45,7 +45,7 @@ export function Navigation() {
 
     return (
         <nav className="cyber-nav">
-            <div className="nav-brand">BOBCOIN_NET</div>
+            <div className="nav-brand">LATTICE_ARCADE</div>
             <div className="nav-links">
                 {deferredPrompt && (
                     <button className="nav-item active" onClick={handleInstall} style={{color: '#f0f', borderColor: '#f0f', background: 'rgba(255, 0, 255, 0.1)'}}>

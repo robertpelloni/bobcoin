@@ -95,3 +95,13 @@ node scripts/integration_test.js
 python verification/verify_frontend.py
 ```
 
+
+## Expansion Phase V Completed
+- Initialized rust-lattice workspace
+- Renamed project to Lattice Arcade in frontend components
+- Added Neural Governance AI compatibility mock metric to proposals
+- Added external SDK submission endpoint to go-game-server
+
+Recommended next pass:
+1. Continue building out logic inside `rust-lattice`
+2. Integrate Unity/Unreal test clients with `/sdk/v1/submit-trace`

@@ -32,3 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Consensus Latency Benchmarks**: Integrated real-time latency tracking into the Go lattice dashboard.
 ...
+
+## [8.107.3]
+- Lattice Arcade Rebranding frontend changes
+- Neural Governance AI Compatibility Mock
+- Rust Consensus Bootstrap

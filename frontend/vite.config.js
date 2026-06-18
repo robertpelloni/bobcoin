@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
           enabled: true
         },
         manifest: {
-          name: 'Bobcoin Sovereign Wallet',
-          short_name: 'Bobcoin',
+          name: 'Lattice Arcade Sovereign Wallet',
+          short_name: 'Lattice Arcade',
           description: 'The native Asynchronous Block Lattice wallet and decentralized storage oracle.',
           theme_color: '#000000',
           background_color: '#000000',

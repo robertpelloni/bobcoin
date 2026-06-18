@@ -165,6 +165,7 @@ func main() {
 	mux.HandleFunc("/burn", service.handleBurn)
 	mux.HandleFunc("/fhe-oracle", service.handleFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleSubmitProof)
+	mux.HandleFunc("/sdk/v1/submit-trace", service.handleSubmitTrace)
 	mux.HandleFunc("/transactions", service.handleTransactions)
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
@@ -851,4 +852,10 @@ func withCORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Service) handleSubmitTrace(w http.ResponseWriter, r *http.Request) {
+	// A dedicated endpoint for game engine SDKs (Unity/Unreal) to submit traces.
+	// Functionally identical to handleSubmitProof for now, but provides a distinct API surface.
+	s.handleSubmitProof(w, r)
 }

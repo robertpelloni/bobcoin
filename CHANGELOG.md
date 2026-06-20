@@ -37,3 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lattice Arcade Rebranding frontend changes
 - Neural Governance AI Compatibility Mock
 - Rust Consensus Bootstrap
+
+## [8.107.3]
+- Implement DAG core logic structure in rust-lattice
+
+## [8.107.4]
+- Initialized Rust Lattice logic, including Block structs and Signature/Transaction validation skeleton.

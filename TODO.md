@@ -55,3 +55,7 @@
 - [x] **Identity Verification UI (Frontend v20):** Integrated real-time "Zero-Trust" checking for publisher attestations in the Vault, backed by the Go supernode's new `VerifierService`.
 
 - [x] **Multi-Node Sync Hardening**: Gossip loops now ban peers submitting cryptographically invalid block batches.
+
+## Ledger Engine Core
+- [x] **Account Chain Data Structures:** Implement asynchronous block lattice DAG foundations for handling disjoint state structures natively across peer accounts.
+- [x] **Transaction Validation Logic:** Create verification logic (signatures, previous hashes, bounds checks) specifically for asynchronous, parallel account chains.

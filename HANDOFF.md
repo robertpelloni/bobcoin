@@ -42,6 +42,7 @@ Executed successfully:
 
 ## Recommended Next Step
 1. **Unify Block Hashing Rules**: Ensure the JS `Block.calculateHash()` and Go `calculateBlockHash()` use the exact same field ordering and serialization format.
+3. **Rust Native Lattice Core**: Migrated initial Block structs, Account DAG state stubs, and core lattice validation logic into `rust-lattice`.
 2. **Multi-Node Sync Hardening**: Push the new reconciliation flow further into automated gossip scenarios.
 
 # Handoff Report
@@ -105,3 +106,7 @@ python verification/verify_frontend.py
 Recommended next pass:
 1. Continue building out logic inside `rust-lattice`
 2. Integrate Unity/Unreal test clients with `/sdk/v1/submit-trace`
+
+## Ledger Engine Core Expanded
+- Implemented `rust-lattice/src/block.rs` containing `Block` and `SporaProof` struct parsing definitions compatible with JSON payloads.
+- Added foundational DAG verification structures inside `rust-lattice/src/validator.rs` for block signatures and heights.

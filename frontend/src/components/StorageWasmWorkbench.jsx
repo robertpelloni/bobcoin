@@ -78,7 +78,7 @@ function parsePublisherProofInputs(value) {
         .filter(proof => proof.url);
 }
 
-const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
+const RECOVERY_REPORTS_KEY = 'lattice_arcade_vault_recovery_reports';
 
 function buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes }) {
     return {
@@ -167,7 +167,7 @@ export function StorageWasmWorkbench() {
 
     const refreshAnchors = async () => {
         try {
-            const stored = localStorage.getItem('bobcoin_wallet');
+            const stored = localStorage.getItem('lattice_arcade_wallet');
             if (!stored) {
                 setMyAnchors([]);
                 return;
@@ -462,9 +462,9 @@ export function StorageWasmWorkbench() {
             return;
         }
 
-        const stored = localStorage.getItem('bobcoin_wallet');
+        const stored = localStorage.getItem('lattice_arcade_wallet');
         if (!stored) {
-            alert('Create or unlock a Bobcoin wallet before anchoring manifests.');
+            alert('Create or unlock a Lattice Arcade wallet before anchoring manifests.');
             return;
         }
 

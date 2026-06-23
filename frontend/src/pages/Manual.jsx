@@ -6,7 +6,7 @@ const SECTIONS = {
         title: "0. PROTOCOL MANIFESTO",
         content: (
             <>
-                <h2>BOBCOIN: The Protocol of Useful Work</h2>
+                <h2>LATTICE_ARCADE: The Protocol of Useful Work</h2>
                 <p className="highlight">"Data is the Currency. Seeding is Mining. Play is Work."</p>
                 <p>
                     Lattice Arcade is a next-generation decentralized ecosystem built on an asynchronous Block Lattice.
@@ -117,7 +117,7 @@ export function Manual() {
         } else {
             // Reached the end! Unlock Achievement
             try {
-                const stored = localStorage.getItem('bobcoin_wallet');
+                const stored = localStorage.getItem('lattice_arcade_wallet');
                 if (stored) checkAndUnlock('LATTICE_SCHOLAR', JSON.parse(stored), []);
                 alert("SOVEREIGN EDUCATION COMPLETE. ACHIEVEMENT UNLOCKED.");
             } catch(e) {}

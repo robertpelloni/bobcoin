@@ -43,3 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [8.107.4]
 - Initialized Rust Lattice logic, including Block structs and Signature/Transaction validation skeleton.
+
+### v8.107.5
+- Add socket logic placeholder to `rust-lattice` target runtime.
+
+### v8.107.7
+- Update `VERSION.md` for continuous merge phase.

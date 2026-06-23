@@ -8,7 +8,7 @@ export function AccountSelector({ currentAccount, onAccountChange }) {
     const { identities } = useNetwork();
 
     const scan = async () => {
-        const stored = localStorage.getItem('bobcoin_wallet');
+        const stored = localStorage.getItem('lattice_arcade_wallet');
         if (!stored) return;
         setIsScanning(true);
         const master = JSON.parse(stored);

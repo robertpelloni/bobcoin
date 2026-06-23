@@ -59,3 +59,8 @@
 ## Ledger Engine Core
 - [x] **Account Chain Data Structures:** Implement asynchronous block lattice DAG foundations for handling disjoint state structures natively across peer accounts.
 - [x] **Transaction Validation Logic:** Create verification logic (signatures, previous hashes, bounds checks) specifically for asynchronous, parallel account chains.
+
+## Phase V: Ongoing
+- [x] **Game Engine SDK Endpoints:** Create a generic wrapper around `/submit-proof` to allow cross-game earning for Unity/Unreal.
+- [x] **Neural Governance:** Connect a local LLM API into the backend to provide Constitutional Compatibility checks on proposals before voting.
+- [x] **Lattice Arcade Rebrand:** Complete visual branding updates inside the frontend code.

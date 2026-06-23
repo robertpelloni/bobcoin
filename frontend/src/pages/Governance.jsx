@@ -15,10 +15,10 @@ export function Governance() {
 
     useEffect(() => {
         let kp;
-        let storedKeys = localStorage.getItem('bobcoin_wallet');
+        let storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (!storedKeys) {
             kp = generateKeypair();
-            localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+            localStorage.setItem('lattice_arcade_wallet', JSON.stringify(kp));
             setKeypair(kp);
         } else {
             kp = JSON.parse(storedKeys);
@@ -91,7 +91,7 @@ export function Governance() {
                 
                 // Unlock Achievement
                 try {
-                    const stored = localStorage.getItem('bobcoin_wallet');
+                    const stored = localStorage.getItem('lattice_arcade_wallet');
                     if (stored) {
                         const kp = JSON.parse(stored);
                         checkAndUnlock('QUADRATIC_CITIZEN', kp, []);
@@ -235,7 +235,7 @@ export function Governance() {
             <div className="info-panel">
                 <h3>ABOUT THE DAO</h3>
                 <p>
-                    Bobcoin governance is decentralized. Supernodes and Token Holders vote on protocol upgrades
+                    Lattice Arcade governance is decentralized. Supernodes and Token Holders vote on protocol upgrades
                     and <strong>Data Whitelists</strong> (deciding which datasets are eligible for mining rewards).
                     We use <strong>Quadratic Voting</strong> to ensure fair representation.
                 </p>

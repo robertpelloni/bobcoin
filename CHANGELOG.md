@@ -49,3 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v8.107.7
 - Update `VERSION.md` for continuous merge phase.
+
+### v8.107.8
+- Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.

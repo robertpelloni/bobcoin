@@ -64,3 +64,7 @@
 - [x] **Game Engine SDK Endpoints:** Create a generic wrapper around `/submit-proof` to allow cross-game earning for Unity/Unreal.
 - [x] **Neural Governance:** Connect a local LLM API into the backend to provide Constitutional Compatibility checks on proposals before voting.
 - [x] **Lattice Arcade Rebrand:** Complete visual branding updates inside the frontend code.
+
+## Phase VI: Emerging Horizons
+- [x] **Physical Mining via Wearables:** Create a prototype endpoint accepting signed Apple Health / Google Fit payloads to issue Proof of Vitality tokens.
+- [ ] **Native ZK Proving via WASM:** Move the SP1 execution down into the browser by porting the prover loop into a native WASM layer injected into Vite, removing backend dependencies entirely.

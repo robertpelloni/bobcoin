@@ -68,7 +68,7 @@ export function SystemStatus() {
             a.download = `lattice_arcade_state_${Date.now()}.json`;
             a.click();
 
-            const stored = localStorage.getItem('lattice_arcade_wallet');
+            const stored = localStorage.getItem('bobcoin_wallet');
             if (stored) checkAndUnlock('LATTICE_HISTORIAN', JSON.parse(stored), []);
         } catch (e) {
             alert('Export failed: ' + e.message);

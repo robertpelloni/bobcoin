@@ -17,7 +17,7 @@ export function Staking() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
+        const storedKeys = localStorage.getItem('bobcoin_wallet');
         if (storedKeys) {
             const kp = JSON.parse(storedKeys);
             setKeypair(kp);
@@ -26,7 +26,7 @@ export function Staking() {
     }, []);
 
     const handleAccountChange = async (index) => {
-        const stored = localStorage.getItem('lattice_arcade_wallet');
+        const stored = localStorage.getItem('bobcoin_wallet');
         if (!stored) return;
         const master = JSON.parse(stored);
         const newKp = await deriveKeypair(master.mnemonic, index);

@@ -68,3 +68,4 @@
 ## Phase VI: Emerging Horizons
 - [x] **Physical Mining via Wearables:** Create a prototype endpoint accepting signed Apple Health / Google Fit payloads to issue Proof of Vitality tokens.
 - [ ] **Native ZK Proving via WASM:** Move the SP1 execution down into the browser by porting the prover loop into a native WASM layer injected into Vite, removing backend dependencies entirely.
+- [ ] **Real-time Multi-Device Sync:** Integrate Yjs or another CRDT framework into the frontend to handle offline wallet transactions and sync them on reconnection.

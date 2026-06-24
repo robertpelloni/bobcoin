@@ -19,7 +19,7 @@ export function Wallet() {
 
     useEffect(() => {
         // Load encrypted or plain wallet
-        let stored = localStorage.getItem('lattice_arcade_wallet');
+        let stored = localStorage.getItem('bobcoin_wallet');
         if (!stored) {
             setIsGenerating(true);
             return;
@@ -54,7 +54,7 @@ export function Wallet() {
         if (!initialPassword) return alert("Password required to encrypt vault.");
         const { encryptVault } = await import('../cryptoUtils');
         const encrypted = await encryptVault(kp, initialPassword);
-        localStorage.setItem('lattice_arcade_wallet', JSON.stringify(encrypted));
+        localStorage.setItem('bobcoin_wallet', JSON.stringify(encrypted));
         setVaultData(encrypted);
         setKeypair(kp);
         setIsGenerating(false);
@@ -294,7 +294,7 @@ export function Wallet() {
             if (entropyRef.current.length >= 64) {
                 const finalize = async () => {
                     const kp = await generateKeypair();
-                    localStorage.setItem('lattice_arcade_wallet', JSON.stringify(kp));
+                    localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
                     setKeypair(kp);
                     setIsGenerating(false);
                     

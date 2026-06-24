@@ -579,7 +579,7 @@ export function Vault() {
     const [diagnosticsPackageReview, setDiagnosticsPackageReview] = useState(null);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
+        const storedKeys = localStorage.getItem('bobcoin_wallet');
         if (!storedKeys) {
             setLoading(false);
             return;

@@ -10,7 +10,7 @@ export function Layout() {
     const { heartbeat } = useNetwork();
 
     const calculateNetWorth = async () => {
-        const stored = localStorage.getItem('lattice_arcade_wallet');
+        const stored = localStorage.getItem('bobcoin_wallet');
         if (!stored) return;
         const master = JSON.parse(stored);
         let total = 0;

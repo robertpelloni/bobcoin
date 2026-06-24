@@ -12,7 +12,7 @@ export function MultiSig() {
     const [myMultisigs, setMyMultisigs] = useState([]);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
+        const storedKeys = localStorage.getItem('bobcoin_wallet');
         if (storedKeys) {
             const kp = JSON.parse(storedKeys);
             setKeypair(kp);

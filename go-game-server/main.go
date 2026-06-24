@@ -166,6 +166,7 @@ func main() {
 	mux.HandleFunc("/fhe-oracle", service.handleFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleSubmitProof)
 	mux.HandleFunc("/sdk/v1/submit-trace", service.handleSubmitTrace)
+	mux.HandleFunc("/sdk/v1/vitality", service.handleVitalityProof)
 	mux.HandleFunc("/transactions", service.handleTransactions)
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)

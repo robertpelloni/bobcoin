@@ -98,7 +98,7 @@ export function Dashboard() {
                     
                     // Unlock Achievement
                     try {
-                        const stored = localStorage.getItem('lattice_arcade_wallet');
+                        const stored = localStorage.getItem('bobcoin_wallet');
                         if (stored) {
                             const kp = JSON.parse(stored);
                             checkAndUnlock('FHE_PHANTOM', kp, []);

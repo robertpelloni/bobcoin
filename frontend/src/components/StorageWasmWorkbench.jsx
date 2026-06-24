@@ -167,7 +167,7 @@ export function StorageWasmWorkbench() {
 
     const refreshAnchors = async () => {
         try {
-            const stored = localStorage.getItem('lattice_arcade_wallet');
+            const stored = localStorage.getItem('bobcoin_wallet');
             if (!stored) {
                 setMyAnchors([]);
                 return;
@@ -462,7 +462,7 @@ export function StorageWasmWorkbench() {
             return;
         }
 
-        const stored = localStorage.getItem('lattice_arcade_wallet');
+        const stored = localStorage.getItem('bobcoin_wallet');
         if (!stored) {
             alert('Create or unlock a Lattice Arcade wallet before anchoring manifests.');
             return;

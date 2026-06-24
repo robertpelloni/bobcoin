@@ -35,10 +35,10 @@ export function StorageMarket() {
 
     useEffect(() => {
         let kp;
-        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
+        const storedKeys = localStorage.getItem('bobcoin_wallet');
         if (!storedKeys) {
             kp = generateKeypair();
-            localStorage.setItem('lattice_arcade_wallet', JSON.stringify(kp));
+            localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
             setKeypair(kp);
         } else {
             kp = JSON.parse(storedKeys);

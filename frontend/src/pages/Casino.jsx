@@ -14,7 +14,7 @@ export function Casino() {
     const [keypair, setKeypair] = useState(null);
 
     useEffect(() => {
-        const stored = localStorage.getItem('lattice_arcade_wallet');
+        const stored = localStorage.getItem('bobcoin_wallet');
         if (stored) {
             const kp = JSON.parse(stored);
             setKeypair(kp);

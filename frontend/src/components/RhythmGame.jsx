@@ -72,7 +72,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
             console.log('[WebRTC] Connected to signaling server');
             let publicKey = '';
             try {
-                const stored = localStorage.getItem('bobcoin_wallet');
+                const stored = localStorage.getItem('lattice_arcade_wallet');
                 if (stored) {
                     const kp = JSON.parse(stored);
                     const { deriveKeypair } = await import('../cryptoUtils');
@@ -109,7 +109,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
                     
                     // Retrieve keypair from localStorage to unlock achievement
                     try {
-                        const stored = localStorage.getItem('bobcoin_wallet');
+                        const stored = localStorage.getItem('lattice_arcade_wallet');
                         if (stored) {
                             const kp = JSON.parse(stored);
                             checkAndUnlock('P2P_WARRIOR', kp, []);

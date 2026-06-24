@@ -23,7 +23,3 @@ Rename the frontend to **Lattice Arcade**.
 Integrate Apple Health / Google Fit for **Proof of Vitality**.
 *   **Concept**: Earn BOB tokens by exercising or sleeping well (verified via ZK-proofs of health data).
 *   **Impact**: Connects the digital economy to physical well-being.
-
-## 6. Real-time Multi-Device Sync
-*   **Concept**: Add local conflict-free replicated data types (CRDTs) for offline wallet states to merge seamlessly when devices come back online.
-*   **Impact**: Enhances the offline-first capability introduced by the PWA wrapper.

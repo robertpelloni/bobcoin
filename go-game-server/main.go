@@ -166,7 +166,6 @@ func main() {
 	mux.HandleFunc("/fhe-oracle", service.handleFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleSubmitProof)
 	mux.HandleFunc("/sdk/v1/submit-trace", service.handleSubmitTrace)
-	mux.HandleFunc("/sdk/v1/vitality", service.handleVitalityProof)
 	mux.HandleFunc("/transactions", service.handleTransactions)
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
@@ -438,8 +437,10 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			fmt.Sscanf(v, "%f", &score)
 		}
 
-		if score >= 1000 {
-			return true
+		// Do not return true early, must pass AI Oracle validation!
+		// We still require a score of 1000 to be valid.
+		if score < 1000 {
+			return false
 		}
 	}
 
@@ -470,8 +471,8 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 		}
 	}
 
-	score, _ := publicValues["score"].(float64)
-	return score >= 1000
+	scoreFinal, _ := publicValues["score"].(float64)
+	return scoreFinal >= 1000
 }
 
 func calculateVariance(data []float64) float64 {

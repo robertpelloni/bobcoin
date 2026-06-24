@@ -9,7 +9,7 @@ export function Trophies() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) {
             const kp = JSON.parse(storedKeys);
             setKeypair(kp);

@@ -15,7 +15,7 @@ export function Swap() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const stored = localStorage.getItem('bobcoin_wallet');
+        const stored = localStorage.getItem('lattice_arcade_wallet');
         if (stored) {
             const kp = JSON.parse(stored);
             setKeypair(kp);

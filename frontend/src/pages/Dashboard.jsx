@@ -157,7 +157,7 @@ export function Dashboard() {
                         <h2>MINT SUCCESSFUL</h2>
                         <p>Tokens minted to wallet.</p>
                         <a
-                            href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+                            href={`/explorer?tx=${txSignature}`}
                             target="_blank"
                             rel="noreferrer"
                             className="tx-link"

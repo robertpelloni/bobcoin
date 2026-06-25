@@ -1,0 +1,18 @@
+[
+  {
+    "magnet": "magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678",
+    "infoHash": "1234567890abcdef1234567890abcdef12345678",
+    "name": "bobsgame-arcade-tokyo",
+    "addedAt": 1782349973233,
+    "source": "core-anchor",
+    "accepted": true
+  },
+  {
+    "magnet": "magnet:?xt=urn:btih:abcdef1234567890abcdef1234567890abcdef12",
+    "infoHash": "abcdef1234567890abcdef1234567890abcdef12",
+    "name": "fwber-hq-node",
+    "addedAt": 1782349973233,
+    "source": "core-anchor",
+    "accepted": true
+  }
+]

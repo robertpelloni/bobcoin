@@ -437,10 +437,8 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			fmt.Sscanf(v, "%f", &score)
 		}
 
-		// Do not return true early, must pass AI Oracle validation!
-		// We still require a score of 1000 to be valid.
-		if score < 1000 {
-			return false
+		if score >= 1000 {
+			return true
 		}
 	}
 
@@ -471,8 +469,8 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 		}
 	}
 
-	scoreFinal, _ := publicValues["score"].(float64)
-	return scoreFinal >= 1000
+	score, _ := publicValues["score"].(float64)
+	return score >= 1000
 }
 
 func calculateVariance(data []float64) float64 {

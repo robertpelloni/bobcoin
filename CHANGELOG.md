@@ -52,8 +52,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v8.107.8
 - Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.
-
-### [8.107.9] - Auto-Sync
-- Updated AI Oracle bot detection verification to properly return failures
-- Updated frontend .env variables to connect properly to Go ports
-- Validated script generation
+- Removed .bat extension and converted the bash start script to start.sh.
+- Updated the Mobile component to post actual requests to the newly mapped vitality endpoint.

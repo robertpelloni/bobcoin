@@ -1,34 +1,20 @@
-#!/bin/bash
-# Using bash script for starting despite .bat extension name in instruction
+@echo off
+setlocal
+title BobCoin
+cd /d "%~dp0"
 
-# Start the lattice node
-cd go-lattice
-go run ./... &
-LATTICE_PID=$!
-cd ..
+echo [BobCoin] Starting...
+where npm >nul 2>nul
+if errorlevel 1 (
+    echo [BobCoin] npm not found. Please install it.
+    pause
+    exit /b 1
+)
 
-# Start the game server
-cd go-game-server
-go run ./... &
-GAME_SERVER_PID=$!
-cd ..
+npm run parity:matrix
 
-# Start the supernode
-cd go-supertorrent
-go run ./... &
-SUPERNODE_PID=$!
-cd ..
-
-# Start the frontend
-cd frontend
-npm run preview &
-FRONTEND_PID=$!
-cd ..
-
-echo "All services started!"
-echo "Lattice: $LATTICE_PID"
-echo "Game Server: $GAME_SERVER_PID"
-echo "Supernode: $SUPERNODE_PID"
-echo "Frontend: $FRONTEND_PID"
-
-wait
+if errorlevel 1 (
+    echo [BobCoin] Exited with error code %errorlevel%.
+    pause
+)
+endlocal

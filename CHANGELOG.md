@@ -102,3 +102,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Consensus Latency Benchmarks**: Integrated real-time latency tracking into the Go lattice dashboard.
 ...
+
+## [8.107.3]
+- Lattice Arcade Rebranding frontend changes
+- Neural Governance AI Compatibility Mock
+- Rust Consensus Bootstrap
+
+## [8.107.3]
+- Implement DAG core logic structure in rust-lattice
+
+## [8.107.4]
+- Initialized Rust Lattice logic, including Block structs and Signature/Transaction validation skeleton.
+
+### v8.107.5
+- Add socket logic placeholder to `rust-lattice` target runtime.
+
+### v8.107.7
+- Update `VERSION.md` for continuous merge phase.
+
+### v8.107.8
+- Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.
+- Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
+- Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.

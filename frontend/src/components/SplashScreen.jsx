@@ -33,7 +33,7 @@ export function SplashScreen({ onComplete }) {
     return (
         <div className="splash-screen">
             <div className="splash-content">
-                <h1 className="glitch logo" data-text="BOBCOIN_NET">BOBCOIN_NET</h1>
+                <h1 className="glitch logo" data-text="LATTICE_ARCADE">LATTICE_ARCADE</h1>
                 <div className="version-tag">SOVEREIGN_OS v8.0.0 // MAINNET_ALPHA</div>
                 
                 <div className="boot-terminal">

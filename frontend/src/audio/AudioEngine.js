@@ -1,5 +1,5 @@
 /**
- * AudioEngine.js - Web Audio API Synthesizer for the Bobcoin Rhythm Game
+ * AudioEngine.js - Web Audio API Synthesizer for the Lattice Arcade Rhythm Game
  * 
  * Generates cyberpunk-themed sound effects using oscillators and filters.
  * No audio files needed — pure mathematical waveform synthesis!

@@ -19,7 +19,7 @@ export function Wallet() {
 
     useEffect(() => {
         // Load encrypted or plain wallet
-        let stored = localStorage.getItem('bobcoin_wallet');
+        let stored = localStorage.getItem('lattice_arcade_wallet');
         if (!stored) {
             setIsGenerating(true);
             return;
@@ -54,7 +54,7 @@ export function Wallet() {
         if (!initialPassword) return alert("Password required to encrypt vault.");
         const { encryptVault } = await import('../cryptoUtils');
         const encrypted = await encryptVault(kp, initialPassword);
-        localStorage.setItem('bobcoin_wallet', JSON.stringify(encrypted));
+        localStorage.setItem('lattice_arcade_wallet', JSON.stringify(encrypted));
         setVaultData(encrypted);
         setKeypair(kp);
         setIsGenerating(false);
@@ -294,7 +294,7 @@ export function Wallet() {
             if (entropyRef.current.length >= 64) {
                 const finalize = async () => {
                     const kp = await generateKeypair();
-                    localStorage.setItem('bobcoin_wallet', JSON.stringify(kp));
+                    localStorage.setItem('lattice_arcade_wallet', JSON.stringify(kp));
                     setKeypair(kp);
                     setIsGenerating(false);
                     
@@ -524,7 +524,7 @@ export function Wallet() {
                                 value={sendAddress}
                                 onChange={(e) => setSendAddress(e.target.value)}
                                 placeholder="Public Key (Ed25519 Base58)"
-                                title="The Bobcoin public address of the recipient."
+                                title="The Lattice Arcade public address of the recipient."
                                 required
                             />
                         </div>
@@ -537,7 +537,7 @@ export function Wallet() {
                                 onChange={(e) => setSendAmount(Number(e.target.value))}
                                 min="1"
                                 max={balance}
-                                title="The amount of Bobcoin to send."
+                                title="The amount of Lattice Arcade to send."
                                 required
                             />
                         </div>

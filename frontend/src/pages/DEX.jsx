@@ -24,7 +24,7 @@ export function DEX() {
     const [sharesToRemove, setSharesToRemove] = useState(0);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) {
             const kp = JSON.parse(storedKeys);
             setKeypair(kp);
@@ -33,7 +33,7 @@ export function DEX() {
     }, []);
 
     const handleAccountChange = async (index) => {
-        const stored = localStorage.getItem('bobcoin_wallet');
+        const stored = localStorage.getItem('lattice_arcade_wallet');
         if (!stored) return;
         const master = JSON.parse(stored);
         const newKp = await deriveKeypair(master.mnemonic, index);

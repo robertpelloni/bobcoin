@@ -14,7 +14,7 @@ export function Gallery() {
     const [myAnchors, setMyAnchors] = useState([]);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) {
             const kp = JSON.parse(storedKeys);
             setKeypair(kp);
@@ -32,7 +32,7 @@ export function Gallery() {
             setMyAnchors(resAnchors.anchors || []);
 
             // Universal Asset Discovery
-            const stored = localStorage.getItem('bobcoin_wallet');
+            const stored = localStorage.getItem('lattice_arcade_wallet');
             if (stored) {
                 const master = JSON.parse(stored);
                 let allNfts = [];

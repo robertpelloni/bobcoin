@@ -253,7 +253,7 @@ export const burnTokens = async (amount, reason) => {
 export const mintTokens = async (amount, reason) => {
     let address = null;
     try {
-        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) address = JSON.parse(storedKeys).publicKey;
     } catch(e) {}
 
@@ -317,7 +317,7 @@ export const submitFHEOracle = async (cipherText) => {
 export const submitProof = async (score, perfects, greats, replayLog = []) => { 
     let address = null;
     try {
-        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) address = JSON.parse(storedKeys).publicKey;
     } catch(e) {}
 

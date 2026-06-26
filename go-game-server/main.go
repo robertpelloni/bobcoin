@@ -185,6 +185,7 @@ func main() {
 	mux.HandleFunc("/burn", service.handleBurn)
 	mux.HandleFunc("/fhe-oracle", service.handleFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleSubmitProof)
+	mux.HandleFunc("/sdk/v1/submit-trace", service.handleSubmitTrace)
 	mux.HandleFunc("/transactions", service.handleTransactions)
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
@@ -282,9 +283,13 @@ func loadOrCreateWallet(path string) (Wallet, error) {
 }
 
 func (s *Service) initializeSystemChain() {
-	if err := s.initializeSystemChainOnce(); err != nil {
-		log.Printf("[go-game-server] failed to bootstrap system chain: %v", err)
-		return
+	for i := 0; i < 25; i++ {
+		if err := s.initializeSystemChainOnce(); err != nil {
+			log.Printf("[go-game-server] failed to bootstrap system chain: %v", err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
 	}
 	log.Printf("[go-game-server] initialized system chain: %s...", s.systemWallet.PublicKey[:16])
 }
@@ -296,8 +301,22 @@ func (s *Service) initializeSystemChainOnce() error {
 	if alreadyInitialized {
 		return nil
 	}
+    // Try to fetch to double check
+	frontier, balance, height, err := s.fetchFrontier(s.systemWallet.PublicKey)
+	if err == nil && frontier != nil && *frontier != "" {
+		s.mu.Lock()
+		s.systemFrontier = frontier
+		s.systemBalance = balance
+		s.mu.Unlock()
+		return nil
+	}
 
-	block := &Block{Type: "open", Account: s.systemWallet.PublicKey, Previous: nil, Balance: s.systemBalance, StakedBalance: 0, Height: 0, Link: "SYSTEM_GENESIS", Timestamp: time.Now().UnixMilli()}
+    actualHeight := 0
+    if err == nil && height > -1 {
+        actualHeight = height
+    }
+
+	block := &Block{Type: "open", Account: s.systemWallet.PublicKey, Previous: nil, Balance: s.systemBalance, StakedBalance: 0, Height: actualHeight, Link: "SYSTEM_GENESIS", Timestamp: time.Now().UnixMilli()}
 	signBlock(block, s.systemWallet.PrivateKey)
 	var resp APIResponse
 	if err := s.postJSON(s.cfg.LatticeURL+"/process", map[string]interface{}{"block": block}, &resp); err != nil {
@@ -873,7 +892,11 @@ func (s *Service) sendSystemFunds(address string, amount float64, zkProof string
 	chunkHash := hashString(infoHash + strconv.Itoa(challenge))
 	now := time.Now().UnixMilli()
 	newBalance := balance - amount
-	block := &Block{Type: "send", Account: s.systemWallet.PublicKey, Previous: frontier, Balance: newBalance, StakedBalance: 0, Height: height + 1, Link: address, Spora: &SporaProof{InfoHash: infoHash, Challenge: challenge, ChunkHash: chunkHash}, ZKProof: zkProof, Timestamp: now}
+    actualHeight := 1
+    if height != -1 {
+        actualHeight = height + 1
+    }
+	block := &Block{Type: "send", Account: s.systemWallet.PublicKey, Previous: frontier, Balance: newBalance, StakedBalance: 0, Height: actualHeight, Link: address, Spora: &SporaProof{InfoHash: infoHash, Challenge: challenge, ChunkHash: chunkHash}, ZKProof: zkProof, Timestamp: now}
 	signBlock(block, s.systemWallet.PrivateKey)
 	var resp APIResponse
 	if err := s.postJSON(s.cfg.LatticeURL+"/process", map[string]interface{}{"block": block}, &resp); err != nil {
@@ -893,12 +916,16 @@ func (s *Service) fetchFrontier(account string) (*string, float64, int, error) {
 		return nil, 0, 0, err
 	}
 	frontierRaw, _ := body["frontier"].(string)
-	if frontierRaw == "" {
-		return nil, 0, 0, nil
-	}
 	balance, _ := body["balance"].(float64)
-	heightFloat, _ := body["height"].(float64)
-	return &frontierRaw, balance, int(heightFloat), nil
+	heightFloat, ok := body["height"].(float64)
+    height := int(heightFloat)
+    if !ok {
+        height = -1 // if account doesn't exist, we start at 0
+    }
+	if frontierRaw == "" {
+		return nil, balance, height, nil
+	}
+	return &frontierRaw, balance, height, nil
 }
 
 func createBid(db *sql.DB, magnet string, amount float64) (int64, error) {
@@ -1062,4 +1089,10 @@ func withCORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Service) handleSubmitTrace(w http.ResponseWriter, r *http.Request) {
+	// A dedicated endpoint for game engine SDKs (Unity/Unreal) to submit traces.
+	// Functionally identical to handleSubmitProof for now, but provides a distinct API surface.
+	s.handleSubmitProof(w, r)
 }

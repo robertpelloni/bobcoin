@@ -138,9 +138,9 @@ function buildOwnerProfiles(manifestAnchors, legacyAnchors) {
         .sort((a, b) => b.trustScore - a.trustScore || b.totalAnchors - a.totalAnchors || b.latestTimestamp - a.latestTimestamp);
 }
 
-const VAULT_PRESETS_KEY = 'bobcoin_vault_filter_presets';
-const RECOVERY_REPORTS_KEY = 'bobcoin_vault_recovery_reports';
-const SOURCE_DIAGNOSTICS_PACKAGE_FORMAT = 'bobcoin-source-diagnostics-package-v1';
+const VAULT_PRESETS_KEY = 'lattice_arcade_vault_filter_presets';
+const RECOVERY_REPORTS_KEY = 'lattice_arcade_vault_recovery_reports';
+const SOURCE_DIAGNOSTICS_PACKAGE_FORMAT = 'lattice_arcade-source-diagnostics-package-v1';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function sortAnchors(anchors, sortMode, ownerProfiles) {
@@ -396,7 +396,7 @@ function canonicalizeForSigning(value) {
 
 async function buildSignedDiagnosticsPackage(diagnostics, keypair) {
     if (!keypair?.publicKey || !keypair?.privateKey) {
-        throw new Error('Unlock a Bobcoin wallet before exporting a signed diagnostics package.');
+        throw new Error('Unlock a Lattice Arcade wallet before exporting a signed diagnostics package.');
     }
     const canonicalDiagnostics = canonicalizeForSigning(diagnostics);
     const diagnosticsHash = await hashData(JSON.stringify(canonicalDiagnostics));
@@ -579,7 +579,7 @@ export function Vault() {
     const [diagnosticsPackageReview, setDiagnosticsPackageReview] = useState(null);
 
     useEffect(() => {
-        const storedKeys = localStorage.getItem('bobcoin_wallet');
+        const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (!storedKeys) {
             setLoading(false);
             return;

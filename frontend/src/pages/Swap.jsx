@@ -15,7 +15,7 @@ export function Swap() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const stored = localStorage.getItem('bobcoin_wallet');
+        const stored = localStorage.getItem('lattice_arcade_wallet');
         if (stored) {
             const kp = JSON.parse(stored);
             setKeypair(kp);
@@ -143,7 +143,7 @@ export function Swap() {
             </div>
 
             <div className="swap-footer">
-                BOBCOIN ATOMIC SWAPS ARE PEER-TO-PEER AND MATHEMATICALLY SECURED.
+                LATTICE_ARCADE ATOMIC SWAPS ARE PEER-TO-PEER AND MATHEMATICALLY SECURED.
             </div>
         </div>
     );

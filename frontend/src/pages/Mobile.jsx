@@ -30,24 +30,9 @@ export function Mobile() {
                     const newSteps = prev + Math.floor(Math.random() * 3) + 1;
                     if (newSteps % 200 < prev % 200) {
                         // Every 200 steps, simulate a small reward
-
-// Replace with true vitality API call
-fetch(`${import.meta.env.VITE_GAME_HTTP_URL || 'http://localhost:3001'}/sdk/v1/vitality`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        deviceId: 'mob_' + Math.random().toString(36).substr(2, 6),
-        steps: newSteps, // passing the steps to the vitality API
-        heartRateAvg: 85.5,
-        signature: 'mock_sig',
-        walletAddress: 'mock_wallet'
-    })
-}).then(res => res.json()).then(data => {
-    if (data.success) {
-        setBobEarned(b => b + data.reward);
-    }
-}).catch(console.error);
-
+                        mintTokens(0.1, 'Proof of Walk: 200 Steps').then(() => {
+                            setBobEarned(b => b + 0.1);
+                        });
                     }
                     return newSteps;
                 });

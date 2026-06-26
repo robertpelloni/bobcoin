@@ -1,0 +1,6 @@
+[submodule "research/forest"]
+	path = research/forest
+	url = https://github.com/ChainSafe/forest
+[submodule "research/solana"]
+	path = research/solana
+	url = https://github.com/solana-labs/solana

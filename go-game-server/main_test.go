@@ -38,6 +38,11 @@ func TestInitializeSystemChainOnce(t *testing.T) {
 	var processCalls int
 	var processedBlock map[string]interface{}
 	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/frontier/") {
+			w.WriteHeader(http.StatusOK)
+            w.Write([]byte(`{"frontier":""}`))
+			return
+		}
 		if r.URL.Path != "/process" {
 			t.Fatalf("unexpected lattice path during system init: %s", r.URL.Path)
 		}

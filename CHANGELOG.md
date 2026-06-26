@@ -52,5 +52,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v8.107.8
 - Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.
-- Removed .bat extension and converted the bash start script to start.sh.
-- Updated the Mobile component to post actual requests to the newly mapped vitality endpoint.
+- Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
+- Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.

@@ -122,5 +122,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v8.107.8
 - Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.
+<<<<<<< HEAD
+=======
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
+>>>>>>> origin/main
+
+## [8.114.1] - 2026-06-29
+### Changed
+- Attempted to resolve merge conflicts and align go-game-server with JS equivalents.
+- Updated documentation.

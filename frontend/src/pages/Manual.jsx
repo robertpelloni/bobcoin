@@ -9,7 +9,11 @@ const SECTIONS = {
                 <h2>LATTICE_ARCADE: The Protocol of Useful Work</h2>
                 <p className="highlight">"Data is the Currency. Seeding is Mining. Play is Work."</p>
                 <p>
+<<<<<<< HEAD
                     Lattice Arcade is a next-generation decentralized ecosystem built on an asynchronous Block Lattice.
+=======
+                    Lattice Arcade is a next-generation decentralized ecosystem built on an asynchronous Block Lattice.
+>>>>>>> origin/main
                     It is the native currency for **Bobtorrent** (P2P sharing), **Bobmania**, 
                     and **Bobsgame** (arcade hardware). 
                 </p>

@@ -35,7 +35,11 @@ impl Block {
             self.height.to_string(),
             self.link.clone().unwrap_or_else(|| "".to_string()),
         ];
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> origin/main
         if let Some(spora) = &self.spora {
             let spora_json = serde_json::to_string(spora).unwrap_or_default();
             parts.push(spora_json);

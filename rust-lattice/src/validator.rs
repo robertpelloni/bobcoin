@@ -15,7 +15,11 @@ pub struct BlockValidator;
 impl BlockValidator {
     pub fn validate_block(block: &Block, expected_height: u64, is_genesis: bool) -> Result<(), ValidationError> {
         let calculated_hash = block.calculate_hash();
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> origin/main
         if let Some(hash) = &block.hash {
             if hash != &calculated_hash {
                 return Err(ValidationError::InvalidHash);

@@ -1,0 +1,15 @@
+{
+  "name": "proof-of-play-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "proof_of_play_wasm_bg.wasm",
+    "proof_of_play_wasm.js",
+    "proof_of_play_wasm.d.ts"
+  ],
+  "main": "proof_of_play_wasm.js",
+  "types": "proof_of_play_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

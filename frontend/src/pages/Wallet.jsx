@@ -563,7 +563,7 @@ export function Wallet() {
                                 title="A private memo that only the recipient can decrypt."
                             />
                         </div>
-                        <button type="submit" className="cyber-button" disabled={isSending} style={{marginTop: '1rem', width: '100%', color: '#0f0', borderColor: '#0f0'}}>
+                            <button type="submit" className="cyber-button" disabled={isSending} style={{marginTop: '1rem', width: '100%', color: '#0f0', borderColor: '#0f0'}} title="Initiate a secure, encrypted token transfer across the network.">
                             {isSending ? 'PROCESSING...' : 'INITIATE TRANSFER'}
                         </button>
                     </form>
@@ -649,7 +649,7 @@ export function Wallet() {
                                     onChange={e => setImportSeed(e.target.value)}
                                     style={{marginBottom: '1rem', width: '100%'}}
                                 />
-                                <button className="cyber-button small" onClick={handleRestore}>RESTORE WALLET</button>
+                                <button className="cyber-button small" onClick={handleRestore} title="Recover your entire wallet from the provided mnemonic seed phrase.">RESTORE WALLET</button>
                             </div>
                         </div>
                     )}

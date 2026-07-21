@@ -125,7 +125,61 @@ app.post('/submit-proof', async (req, res) => {
         await new Promise(r => setTimeout(r, 1200)); // Simulated cryptographic delay
         
         const address = proof.publicValues.address || 'unknown';
-        const zkVerified = proof.publicValues.score >= 1000; 
+        let zkVerified = proof.publicValues.score >= 1000;
+
+        // AI Oracle (Bot Detection via variance analysis)
+        if (zkVerified && Array.isArray(proof.publicValues.replayLog) && proof.publicValues.replayLog.length > 5) {
+            const replayLog = proof.publicValues.replayLog;
+            const diffs = [];
+            let lastTime = 0;
+
+            for (let i = 0; i < replayLog.length; i++) {
+                const t = replayLog[i].time;
+                if (i > 0) {
+                    diffs.push(t - lastTime);
+                }
+                lastTime = t;
+            }
+
+            if (diffs.length > 0) {
+                // Calculate Variance
+                const sum = diffs.reduce((a, b) => a + b, 0);
+                const mean = sum / diffs.length;
+                const sqDiffSum = diffs.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
+                const variance = Math.sqrt(sqDiffSum / diffs.length);
+
+                console.log(`[AI Oracle] Replay log variance: ${variance}`);
+
+                if (variance < 5.0) {
+                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Variance ${variance} is too low (macro script suspected).`);
+                    zkVerified = false;
+                } else {
+                    // Calculate Mean Absolute Deviation (MAD)
+                    const sumAbsDev = diffs.reduce((a, b) => a + Math.abs(b - mean), 0);
+                    const mad = sumAbsDev / diffs.length;
+
+                    console.log(`[AI Oracle] Mean: ${mean}, MAD: ${mad}`);
+
+                    if (mad < 2.0) {
+                        console.log(`[AI Oracle] ⚠️ BOT DETECTED: MAD ${mad} is too low (robotic consistency detected).`);
+                        zkVerified = false;
+                    }
+                }
+            }
+        }
+
+        // Final validation: Score must be consistent with performance metrics
+        if (zkVerified) {
+            const perfects = proof.publicValues.perfects || 0;
+            const greats = proof.publicValues.greats || 0;
+            const calculatedScore = (perfects * 100) + (greats * 50);
+
+            if (Math.abs(proof.publicValues.score - calculatedScore) > 1.0) {
+                console.log(`[ZK Service] ⚠️ Score mismatch detected: reported ${proof.publicValues.score}, calculated ${calculatedScore}`);
+                zkVerified = false;
+            }
+        }
+
         const verificationHash = crypto.createHash('sha256').update(JSON.stringify(proof)).digest('hex');
 
         if (zkVerified) {

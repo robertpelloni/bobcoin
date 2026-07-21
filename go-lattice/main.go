@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sort"
@@ -251,9 +252,7 @@ func handleFrontiers(w http.ResponseWriter, r *http.Request) {
 				balance = head.Balance
 			} else {
 				decay := head.Balance * lattice.DemurrageRate * float64(elapsed)
-				if head.Balance > decay {
-					balance = head.Balance - decay
-				}
+				balance = math.Max(0, head.Balance-decay)
 			}
 		}
 		accounts[account] = map[string]interface{}{
@@ -285,9 +284,7 @@ func handleFrontier(w http.ResponseWriter, r *http.Request) {
 			balance = head.Balance
 		} else {
 			decay := head.Balance * lattice.DemurrageRate * float64(elapsed)
-			if head.Balance > decay {
-				balance = head.Balance - decay
-			}
+			balance = math.Max(0, head.Balance-decay)
 		}
 		stakedBalance = head.StakedBalance
 	}

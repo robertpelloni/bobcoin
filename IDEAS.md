@@ -23,3 +23,19 @@ Rename the frontend to **Lattice Arcade**.
 Integrate Apple Health / Google Fit for **Proof of Vitality**.
 *   **Concept**: Earn BOB tokens by exercising or sleeping well (verified via ZK-proofs of health data).
 *   **Impact**: Connects the digital economy to physical well-being.
+
+## 6. Submodule Architecture Re-evaluation
+*   **Concept**: Currently, the repository relies on several external submodules (e.g., ChainSafe/forest, solana-labs/solana). Evaluate migrating the core essential dependencies into an internal monorepo structure using a unified Go/Rust toolchain.
+*   **Impact**: Simplifies the build pipeline, reduces external dependency fragility, and ensures atomic commits across all system components.
+
+## 7. Dynamic WebAssembly Upgrades
+*   **Concept**: Instead of hardcoding the SP1 WASM client inside the frontend bundle, build a dynamic module loader that fetches the latest consensus WASM payload from the Sovereign Storage Market (Bobtorrent) via a Governance-approved manifest hash.
+*   **Impact**: Enables decentralized, zero-downtime upgrades to the client-side proving logic without requiring users to refresh or download a new frontend build.
+
+## 8. Mobile App React Native Migration
+*   **Concept**: The current "Mobile" view is a responsive web application simulating mobile features. Begin developing a true React Native (Expo) application that natively connects to the device's pedometer and Bluetooth stack.
+*   **Impact**: Unlocks true "Proof of Vitality" physical mining by securely accessing native device hardware, bypassing browser sandbox limitations.
+
+## 9. Zero-Knowledge DEX Order Book
+*   **Concept**: Enhance the current AMM DEX with a Zero-Knowledge Order Book where limit orders are encrypted (using FHE) and matched blindly by the Go Lattice nodes.
+*   **Impact**: Prevents front-running (MEV) completely, ensuring a perfectly fair trading environment.

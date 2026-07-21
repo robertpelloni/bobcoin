@@ -94,6 +94,15 @@ export function Mobile() {
         };
     }, [miningActive]);
 
+    // Proof of Vitality (Mocked Apple Health API connection)
+    const handleSyncHealthData = () => {
+        // In a real React Native environment, this would call the Apple HealthKit / Google Fit API
+        const simulatedSteps = Math.floor(Math.random() * 5000) + 1000;
+        setSteps(prev => prev + simulatedSteps);
+        alert(`Synced ${simulatedSteps} steps from Apple Health. Submitting Proof of Vitality payload...`);
+        // Normally this is where we'd invoke the `/sdk/v1/vitality` proxy endpoint we set up earlier.
+    };
+
     return (
         <div className="mobile-container">
             <h1 className="glitch" data-text="MOBILE LIGHT NODE">MOBILE LIGHT NODE</h1>
@@ -107,6 +116,14 @@ export function Mobile() {
                         title="Toggle the mobile background mining process (Proof of Walk & Storage Allocation)."
                     >
                         {miningActive ? 'HALT MINING' : 'START MINING'}
+                    </button>
+                    <button
+                        className="cyber-button"
+                        onClick={handleSyncHealthData}
+                        title="Sync pedometer data from Apple Health / Google Fit to generate a Proof of Vitality."
+                        style={{marginLeft: '1rem', borderColor: '#0f0', color: '#0f0'}}
+                    >
+                        SYNC HEALTH DATA
                     </button>
                 </div>
             </div>

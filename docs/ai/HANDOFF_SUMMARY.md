@@ -1,4 +1,4 @@
-# Session Handoff - 2026-04-08 (v8.96.0)
+# Session Handoff - 2026-06-29 (v8.114.0)
 
 ## Executive Summary
 This automated summary captures the current state of the Bobcoin mirrored parity campaign and service migration.

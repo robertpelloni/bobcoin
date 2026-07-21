@@ -144,10 +144,10 @@ export function Dashboard() {
                 </div>
 
                 <div className="controls" style={{display: 'flex', gap: '1rem'}}>
-                    <button className="cyber-button" onClick={handleMint} disabled={mintStatus === 'minting'}>
+                    <button className="cyber-button" onClick={handleMint} disabled={mintStatus === 'minting'} title="Mint tokens using a Zero-Knowledge Proof of your rhythm game score.">
                         {mintStatus === 'minting' ? 'MINTING...' : 'MINT TOKENS'}
                     </button>
-                    <button className="cyber-button" onClick={testFHE} disabled={fheStatus !== null} style={{borderColor: '#f0f', color: '#f0f'}}>
+                    <button className="cyber-button" onClick={testFHE} disabled={fheStatus !== null} style={{borderColor: '#f0f', color: '#f0f'}} title="Test Fully Homomorphic Encryption (FHE) by computing on encrypted data blindly on the server.">
                         {fheStatus ? `FHE: ${fheStatus.toUpperCase()}...` : 'TEST FHE COMPUTATION'}
                     </button>
                 </div>

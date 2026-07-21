@@ -206,7 +206,7 @@ export function DEX() {
                         <div className="price-info">
                             POOL DEPTH: {pools["BOB/sSOL"]?.reserveA.toFixed(0)} BOB / {pools["BOB/sSOL"]?.reserveB.toFixed(2)} sSOL
                         </div>
-                        <button className="cyber-button large" onClick={handleSwap} disabled={loading || balance < amount}>
+                        <button className="cyber-button large" onClick={handleSwap} disabled={loading || balance < amount} title="Execute the swap against the Automated Market Maker pool.">
                             {loading ? 'PROCESSING...' : 'SWAP ASSETS'}
                         </button>
                     </div>
@@ -225,7 +225,7 @@ export function DEX() {
                                 <label>AMOUNT sSOL (REQUIRED)</label>
                                 <input type="number" value={amountB.toFixed(6)} readOnly className="cyber-input" />
                             </div>
-                            <button className="cyber-button" onClick={handleAddLiquidity} disabled={loading}>ADD LIQUIDITY</button>
+                            <button className="cyber-button" onClick={handleAddLiquidity} disabled={loading} title="Provide tokens to the liquidity pool to earn protocol swap fees.">ADD LIQUIDITY</button>
                         </div>
 
                         <div className="liquidity-divider" />
@@ -236,7 +236,7 @@ export function DEX() {
                                 <label>YOUR LP TOKENS: {(balances['LP-BOB/sSOL'] || 0).toFixed(4)}</label>
                                 <input type="number" value={sharesToRemove} onChange={e => setSharesToRemove(Number(e.target.value))} className="cyber-input" />
                             </div>
-                            <button className="cyber-button secondary" onClick={handleRemoveLiquidity} disabled={loading}>REMOVE LIQUIDITY</button>
+                            <button className="cyber-button secondary" onClick={handleRemoveLiquidity} disabled={loading} title="Burn LP tokens to reclaim underlying tokens and earned fees.">REMOVE LIQUIDITY</button>
                         </div>
                     </div>
                 )}

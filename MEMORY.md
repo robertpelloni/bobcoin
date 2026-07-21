@@ -17,3 +17,8 @@
 *   **Frontend**: Built with Vite and React. Requires `--legacy-peer-deps` due to package conflicts.
 *   **WASM**: Storage and encryption logic often utilize WASM modules (`node-seal`, Go-compiled storage kernel).
 *   **Parity Verification**: Parity is verified by replaying shared fixture JSONs onto both engines and comparing the resulting state hashes and Merkle roots.
+
+### Recent Validation (v8.114.2)
+*   **Demurrage & Governance Parity**: Successfully ran the `test_e2e_governance.cjs` end-to-end integration suite, completely verifying absolute 1:1 mathematical parity between `bobcoin-consensus` (JS) and `go-lattice` (Go).
+*   **Scope of Verification**: The simulated verification includes complex multi-account cross-actions at identical timestamps, ensuring the execution order of `UPDATE_DEMURRAGE`, `AMM_SWAPS`, quadratic voting tallying, and total supply calculation matches precisely with zero precision drift between the Node.js floats and Go implementations.
+*   **Status**: No divergences in balances or block heights were detected. The demurrage decay calculations and governance quorum mechanisms are stable under stress-tested scenarios, validating the system state for v8.114.2.

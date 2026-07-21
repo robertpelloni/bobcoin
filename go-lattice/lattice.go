@@ -309,6 +309,8 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		if math.Abs(block.StakedBalance-prevStaked) > 0.001 {
 			return errors.New("staked balance invariant violation")
 		}
+		// Sync the staked_balance field in every block with the Go backend's precision model
+		block.StakedBalance = prevStaked
 	}
 
 	// 4. Consensus Rules (Balance, etc)
@@ -323,8 +325,9 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 		elapsed := block.Timestamp - head.Timestamp
 		if elapsed > 0 {
 			decay := prevBalance * l.DemurrageRate * float64(elapsed)
-			l.TotalSupply -= decay
-			prevBalance = math.Max(0, prevBalance-decay)
+			decayedBalance := math.Max(0, prevBalance-decay)
+			l.TotalSupply -= (prevBalance - decayedBalance)
+			prevBalance = decayedBalance
 		}
 	}
 

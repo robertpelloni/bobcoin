@@ -5,6 +5,7 @@
     "parity:handoff": "node scripts/generate-handoff.mjs"
   },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "node-seal": "^7.0.0"
   }
 }

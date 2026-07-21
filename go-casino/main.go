@@ -186,7 +186,11 @@ func (b *CasinoBot) pollAndProcess() {
 	}
 
 	for _, tx := range pending {
-		log.Printf("[go-casino] 🎰 Received %f BOB from %s... Processing bet!", tx.Amount, tx.Sender[:8])
+		senderPrefix := tx.Sender
+		if len(senderPrefix) > 8 {
+			senderPrefix = senderPrefix[:8]
+		}
+		log.Printf("[go-casino] 🎰 Received %f BOB from %s... Processing bet!", tx.Amount, senderPrefix)
 		b.processBet(tx)
 	}
 }

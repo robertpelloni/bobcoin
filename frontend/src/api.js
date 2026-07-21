@@ -1,7 +1,7 @@
 export const SUPERNODE_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8000';
 export const API_URL = import.meta.env.VITE_GAME_HTTP_URL || SUPERNODE_URL;
 export const SIGNALING_URL = import.meta.env.VITE_GAME_SIGNALING_URL || SUPERNODE_URL || import.meta.env.VITE_GAME_SERVER_URL || 'http://localhost:3001';
-export const LATTICE_URL = import.meta.env.VITE_LATTICE_URL || 'http://localhost:4001';
+export const LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4001';
 export const GO_LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4001';
 
 export const getSporaProof = async (challenge) => {
@@ -321,6 +321,30 @@ export const submitProof = async (score, perfects, greats, replayLog = []) => {
         if (storedKeys) address = JSON.parse(storedKeys).publicKey;
     } catch(e) {}
 
+    let proofBytes = 'mock_bytes';
+    try {
+        // Phase VI: Dynamic WebAssembly Upgrade
+        // Check for latest registry WASM anchor in the Sovereign Storage Market
+        let wasmModule;
+        try {
+            const marketCheck = await fetch(`${SUPERNODE_URL}/market/bids`);
+            const bids = await marketCheck.json();
+            const wasmRegistryUpdate = bids.bids?.find(b => b.magnet.includes("proof_of_play_wasm"));
+            if (wasmRegistryUpdate) {
+                console.log("[WASM-Loader] Discovered remote WASM update anchor: ", wasmRegistryUpdate.magnet);
+                // Placeholder: fetch from supernode using proxy
+            }
+        } catch(e) {}
+
+        const wasm = await import('./wasm/proof_of_play_wasm.js');
+        await wasm.default(); // Initialize WASM
+        const keystrokes = replayLog.map(log => log.time || 0);
+        proofBytes = wasm.generate_proof(score, JSON.stringify(keystrokes));
+        console.log("Successfully generated Client-Side WASM ZK Proof!");
+    } catch (e) {
+        console.warn("Failed to generate native SP1 WASM Proof, falling back to Oracle.", e);
+    }
+
     try { 
         const res = await fetch(`${API_URL}/submit-proof`, { 
             method: 'POST', 
@@ -329,7 +353,7 @@ export const submitProof = async (score, perfects, greats, replayLog = []) => {
                 proof: { 
                     playerId: 'player_' + Math.random().toString(36).substr(2, 6), 
                     publicValues: { score, perfects, greats, misses: 0, address, replayLog }, 
-                    proofBytes: 'mock_bytes' 
+                    proofBytes: proofBytes
                 } 
             }) 
         }); 

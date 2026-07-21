@@ -3,45 +3,40 @@
 ## Local Development Environment
 
 ### Prerequisites
-- Docker & Docker Compose
-- Node.js v18+ (for local script execution)
-- Python 3+ (for verification scripts)
+- Node.js v18+ (for frontend and legacy consensus execution)
+- Go 1.21+ (for core services)
+- Python 3+ (for Playwright verification scripts)
 - Rust (cargo) + SP1 Toolchain (for ZK service)
 
 ### Starting the Stack
-The preferred method to run the entire architecture locally is via Docker Compose.
+The unified method to run the entire architecture locally during active development is via the `start.sh` script which launches all Go services and the Vite frontend concurrently.
 
+#### Using Native Shell (Recommended)
 ```bash
-docker-compose up --build -d
+./start.sh
 ```
 
 ### Known Port Bindings
-- **Frontend (Vite):** `http://localhost:5173`
-- **Game Server (Express):** Host `3001` -> Container `3000`
-- **Supernode (WebTorrent):** Host `8081` -> Container `8080`
-- **ZK Service (Actix):** Internal network only `8080`
+- **Frontend (Vite preview):** `http://localhost:4173`
+- **Go Lattice Node:** `http://localhost:4001`
+- **Go Game Server:** `http://localhost:3001`
+- **Go Supertorrent:** `http://localhost:8000`
 
 ### Running End-to-End Tests
-Ensure the stack is fully operational, then run the E2E simulation script:
+Ensure the stack is fully operational, then run the E2E parity simulation script to verify Go and Node.js backend consensus:
 ```bash
-node test_e2e.js
+node test_e2e_governance.cjs
 ```
-*(Note: If utilizing ES modules, ensure package.json has `"type": "module"` or run with appropriate node flags).*
+*(Note: These scripts spin up isolated test instances and verify network state agreement).*
 
 ### UI Verification
-To generate screenshots of the frontend state:
+To generate screenshots of the frontend state, use Playwright:
 ```bash
-python verify_frontend.py
+python3 verify_frontend.py
 ```
-Outputs will be saved in the `verification/` directory.
 
-### Dependency Notes
-Due to conflicts between specific Solana web3.js versions and the LightProtocol SDK in the `supertorrent` package, always install dependencies for that module using:
-```bash
-npm install --legacy-peer-deps
-```
 ### Standalone Go Services
-- `go-casino`: Standalone high-performance casino logic daemon. Requires standard `go build` / `go run` workflow.
-
-### Dependency Warnings
-- **Supernode**: Always install `supertorrent` dependencies using `npm install --legacy-peer-deps` due to LightProtocol SDK web3.js conflicts.
+- `go-lattice`: The core sovereign Block Lattice consensus engine.
+- `go-game-server`: Native game oracle handling Proof-of-Play, FHE processing, and real-time multiplayer via signaling.
+- `go-supertorrent`: The decentralized WebTorrent anchor seeder and validator.
+- `go-casino`: Standalone high-performance casino logic daemon.

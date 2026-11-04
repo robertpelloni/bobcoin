@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { checkAndUnlock } from '../AchievementService';
 import './Manual.css';
 

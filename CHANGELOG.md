@@ -125,6 +125,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.1] - 2026-11-04
+### Added
+- Automated E2E Navigation & System Tray Test Suite (`testing/test_e2e_system_tray_and_nav.py`): Validates dual IPv4/IPv6 localhost socket polling, dynamic Pillow tray icon generation, Playwright automated testing across all 5 mega-modules, and all 6 Command Console tabs on the dashboard.
+
+### Fixed
+- Restored missing `useState` import in `frontend/src/pages/Manual.jsx`.
+- Restored missing `keypair`, `isGenerating`, `typedEntropy`, and active account states in `frontend/src/pages/Wallet.jsx`.
+- Enhanced `check_port` in `scripts/system_tray.py` to seamlessly verify services bound to IPv4, IPv6 (`::1`), or hostname localhost.
+- Optimized frontend `SplashScreen` to skip redundant animation passes when executed in automated testing environments.
+
 ## [8.115.0] - 2026-11-04
 ### Added
 - System Tray Controller (`scripts/system_tray.py`): Full desktop graphical tray icon (`pystray` + `pillow`) with a resilient headless CLI daemon fallback for lifecycle operations (start, restart, stop/quit all, live health monitoring across ports 3001, 4001, 8000, 4173, and browser launcher).

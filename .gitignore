@@ -10,3 +10,4 @@ wallet.json
 build-info.json
 nul
 target/
+__pycache__/

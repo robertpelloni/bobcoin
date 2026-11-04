@@ -634,17 +634,6 @@ func calculateVariance(data []float64) float64 {
     if allSame {
         return 0
     }
-    allSame := true
-    firstVal := data[0]
-    for _, v := range data {
-        if v != firstVal {
-            allSame = false
-            break
-        }
-    }
-    if allSame {
-        return 0
-    }
 	var sum float64
 	for _, v := range data {
 		sum += v

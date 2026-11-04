@@ -122,11 +122,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v8.107.8
 - Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.
-<<<<<<< HEAD
-=======
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
->>>>>>> origin/main
+
+## [8.115.0] - 2026-11-04
+### Added
+- System Tray Controller (`scripts/system_tray.py`): Full desktop graphical tray icon (`pystray` + `pillow`) with a resilient headless CLI daemon fallback for lifecycle operations (start, restart, stop/quit all, live health monitoring across ports 3001, 4001, 8000, 4173, and browser launcher).
+- Unified Sovereign Navigation Hub: Reorganized 17 fragmented routes into 5 high-value mega-modules (Arcade Hub, DeFi Suite, Privacy Vault, Governance, and Network Ops) with real-time telemetry metrics and contextual subbars.
+- Consolidated Command Console in Dashboard: Integrated all-in-one console tabs allowing deep operations across Arcade & Mint, DeFi & Exchange, Storage Network, Node & Topology, Casino & Rewards, and Protocol Manual without leaving the home surface.
+
+### Fixed
+- Resolved all lingering merge conflicts in `CHANGELOG.md`, `Manual.jsx`, `rust-lattice/src/block.rs`, and `rust-lattice/src/validator.rs`.
+- Corrected duplicate variable redeclarations in `go-game-server/main.go`.
+- Restored `npm test` parity suites across `bobcoin-consensus` and verified 1:1 mathematical parity with `go-lattice`.
+- Tested and verified E2E governance execution, AI Oracle proof submission, and Neural Governance audit.
 
 ## [8.114.1] - 2026-06-29
 ### Changed

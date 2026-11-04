@@ -542,21 +542,8 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 
 	time.Sleep(1200 * time.Millisecond) // Simulated cryptographic delay
 
-	if scoreRaw, ok := publicValues["score"]; ok {
-		var score float64
-		switch v := scoreRaw.(type) {
-		case float64:
-			score = v
-		case string:
-			fmt.Sscanf(v, "%f", &score)
-		}
-
-		if score >= 1000 {
-			return true
-		}
-	}
-
 	// AI Oracle (Bot Detection via variance analysis)
+	// Must execute before score validation to prevent macro bypasses
 	replayLog, ok := publicValues["replayLog"].([]interface{})
 	if ok && len(replayLog) > 5 {
 		var diffs []float64
@@ -577,9 +564,9 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			variance := calculateVariance(diffs)
 			log.Printf("[AI Oracle] Replay log variance: %f", variance)
 
-			// Robotic consistency check: if variance is extremely low, it's a macro.
-			if variance < 5.0 {
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (macro script suspected).", variance)
+			// Robotic consistency check: if variance is low, it's a macro script.
+			if variance < 10.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (< 10.0, macro script suspected).", variance)
 				return false
 			}
 
@@ -597,10 +584,24 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			mad := sumAbsDev / float64(len(diffs))
 			log.Printf("[AI Oracle] Mean: %f, MAD: %f", mean, mad)
 
-			if mad < 2.0 {
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (robotic consistency detected).", mad)
+			if mad < 5.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (< 5.0, robotic consistency detected).", mad)
 				return false
 			}
+		}
+	}
+
+	if scoreRaw, ok := publicValues["score"]; ok {
+		var score float64
+		switch v := scoreRaw.(type) {
+		case float64:
+			score = v
+		case string:
+			fmt.Sscanf(v, "%f", &score)
+		}
+
+		if score >= 1000 {
+			return true
 		}
 	}
 

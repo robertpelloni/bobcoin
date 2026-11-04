@@ -125,6 +125,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.2] - 2026-11-04
+### Changed
+- Hardened AI Oracle bot detection in `go-game-server/main.go`: Enforced variance (< 10.0) and Mean Absolute Deviation (< 5.0) threshold audits prior to score evaluations to eliminate macro bypass vulnerabilities.
+- Updated `scripts/npc_agent.py` to inject human-like timing jitter conforming to AI Oracle verification specifications.
+
 ## [8.115.1] - 2026-11-04
 ### Added
 - Automated E2E Navigation & System Tray Test Suite (`testing/test_e2e_system_tray_and_nav.py`): Validates dual IPv4/IPv6 localhost socket polling, dynamic Pillow tray icon generation, Playwright automated testing across all 5 mega-modules, and all 6 Command Console tabs on the dashboard.

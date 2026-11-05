@@ -30,6 +30,19 @@ export const submitLatticeBlock = async (block) => {
     }
 };
 
+export const submitVitalityProof = async (payload) => {
+    try {
+        const res = await fetch(`${API_URL}/sdk/v1/vitality`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+};
+
 export const getLatticePending = async (publicKey) => {
     try {
         const res = await fetch(`${LATTICE_URL}/pending/${publicKey}`);

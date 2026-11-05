@@ -125,6 +125,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.3] - 2026-11-05
+### Added
+- Proof of Vitality Frontend-to-Backend Integration: Wired `submitVitalityProof` in `frontend/src/api.js` to `/sdk/v1/vitality`.
+- Connected `frontend/src/pages/Mobile.jsx` HealthKit/Google Fit sync flow to backend wearable verification, crediting BOB mining rewards upon validation.
+- Enhanced `go-supertorrent` control plane with `/sdk/v1/vitality` reverse-proxying and resolved duplicate CORS header forwarding.
+- Expanded `testing/test_e2e_system_tray_and_nav.py` to automate Proof of Vitality wearable sync and reward verification via Playwright.
+
 ## [8.115.2] - 2026-11-04
 ### Changed
 - Hardened AI Oracle bot detection in `go-game-server/main.go`: Enforced variance (< 10.0) and Mean Absolute Deviation (< 5.0) threshold audits prior to score evaluations to eliminate macro bypass vulnerabilities.

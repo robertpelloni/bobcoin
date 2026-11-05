@@ -3,10 +3,12 @@
 ## Session Summary
 Completed comprehensive repo sanitization, resolution of git conflict markers, system tray & server lifecycle controller implementation, and consolidated the frontend into high-value sovereign mega-modules and an All-in-One Command Console.
 
-## Key Accomplishments (v8.115.2)
+## Key Accomplishments (v8.115.3)
+- **Physical Mining & Proof of Vitality Integration:** Connected frontend wearable health sync directly to `/sdk/v1/vitality` across `go-game-server` and `go-supertorrent` proxy layers. Validated step verification and reward crediting in `Mobile.jsx`.
+- **CORS Normalization:** Sanitized duplicate CORS header propagation in `go-supertorrent/main.go` proxy handlers.
 - **AI Oracle Bot Detection Hardening:** Reordered verification logic in `go-game-server/main.go` so replay log variance and Mean Absolute Deviation (MAD) checks execute strictly before score evaluations. Robotic macros with low variance (< 10.0) or low MAD (< 5.0) are reliably rejected with HTTP 400.
 - **NPC Agent Traffic Alignment:** Updated `scripts/npc_agent.py` to synthesize human-like timing jitter conforming to the hardened AI Oracle thresholds.
-- **Automated E2E Testing:** Executed full end-to-end testing of AI Oracle anti-bot verification, Governance DAO voting, stress testing, and system tray navigation.
+- **Automated E2E Testing:** Expanded `testing/test_e2e_system_tray_and_nav.py` to automate Proof of Vitality health sync alongside system tray socket monitoring and consolidated navigation.
 
 ## Current Service States
 - Go Lattice: Canonical DAG consensus engine running on port 4001.

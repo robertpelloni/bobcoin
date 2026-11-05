@@ -12,6 +12,23 @@ export function Wallet() {
     const [balance, setBalance] = useState(0.00);
     const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
+    const [keypair, setKeypair] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [typedEntropy, setTypedEntropy] = useState('');
+    const entropyRef = useRef('');
+    const [accountIndex, setAccountIndex] = useState(0);
+    const [activeAccounts, setActiveAccounts] = useState([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [pending, setPending] = useState([]);
+    const [showBackup, setShowBackup] = useState(false);
+    const [showContacts, setShowContacts] = useState(false);
+    const [contacts, setContacts] = useState({});
+    const [contactName, setContactName] = useState('');
+    const [contactAddr, setContactAddr] = useState('');
+    const [importSeed, setImportSeed] = useState('');
+    const [pendingBlock, setPendingBlock] = useState(null);
+    const [onGuardianConfirm, setOnGuardianConfirm] = useState(() => null);
+
     // Vault Lockdown State
     const [isLocked, setIsLocked] = useState(false);
     const [password, setPassword] = useState('');
@@ -163,8 +180,8 @@ export function Wallet() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
-                staked_balance: frontierData.staked_balance || 0,
-                height: frontierData.frontier ? (frontierData.height + 1) : 0,
+                staked_balance: frontRes.staked_balance || 0,
+                height: frontRes.frontier ? (frontRes.height + 1) : 0,
                 link: pend.hash, // Link is the send block hash we are claiming
                 spora: sporaProof
             });

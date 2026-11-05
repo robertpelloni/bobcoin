@@ -122,11 +122,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v8.107.8
 - Introduced `/sdk/v1/vitality` Go API for physical mining / Proof of Vitality prototype testing.
-<<<<<<< HEAD
-=======
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
->>>>>>> origin/main
+
+## [8.115.2] - 2026-11-04
+### Changed
+- Hardened AI Oracle bot detection in `go-game-server/main.go`: Enforced variance (< 10.0) and Mean Absolute Deviation (< 5.0) threshold audits prior to score evaluations to eliminate macro bypass vulnerabilities.
+- Updated `scripts/npc_agent.py` to inject human-like timing jitter conforming to AI Oracle verification specifications.
+
+## [8.115.1] - 2026-11-04
+### Added
+- Automated E2E Navigation & System Tray Test Suite (`testing/test_e2e_system_tray_and_nav.py`): Validates dual IPv4/IPv6 localhost socket polling, dynamic Pillow tray icon generation, Playwright automated testing across all 5 mega-modules, and all 6 Command Console tabs on the dashboard.
+
+### Fixed
+- Restored missing `useState` import in `frontend/src/pages/Manual.jsx`.
+- Restored missing `keypair`, `isGenerating`, `typedEntropy`, and active account states in `frontend/src/pages/Wallet.jsx`.
+- Enhanced `check_port` in `scripts/system_tray.py` to seamlessly verify services bound to IPv4, IPv6 (`::1`), or hostname localhost.
+- Optimized frontend `SplashScreen` to skip redundant animation passes when executed in automated testing environments.
+
+## [8.115.0] - 2026-11-04
+### Added
+- System Tray Controller (`scripts/system_tray.py`): Full desktop graphical tray icon (`pystray` + `pillow`) with a resilient headless CLI daemon fallback for lifecycle operations (start, restart, stop/quit all, live health monitoring across ports 3001, 4001, 8000, 4173, and browser launcher).
+- Unified Sovereign Navigation Hub: Reorganized 17 fragmented routes into 5 high-value mega-modules (Arcade Hub, DeFi Suite, Privacy Vault, Governance, and Network Ops) with real-time telemetry metrics and contextual subbars.
+- Consolidated Command Console in Dashboard: Integrated all-in-one console tabs allowing deep operations across Arcade & Mint, DeFi & Exchange, Storage Network, Node & Topology, Casino & Rewards, and Protocol Manual without leaving the home surface.
+
+### Fixed
+- Resolved all lingering merge conflicts in `CHANGELOG.md`, `Manual.jsx`, `rust-lattice/src/block.rs`, and `rust-lattice/src/validator.rs`.
+- Corrected duplicate variable redeclarations in `go-game-server/main.go`.
+- Restored `npm test` parity suites across `bobcoin-consensus` and verified 1:1 mathematical parity with `go-lattice`.
+- Tested and verified E2E governance execution, AI Oracle proof submission, and Neural Governance audit.
 
 ## [8.114.1] - 2026-06-29
 ### Changed

@@ -125,6 +125,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.4] - 2026-11-06
+### Added
+- Real-time AI Oracle Telemetry on the Sovereign Dashboard: Added live calculation and display of input entropy variance and Mean Absolute Deviation (MAD) with interactive verification status badges (`HUMAN_VERIFIED` vs `CALCULATING`).
+
 ## [8.115.3] - 2026-11-05
 ### Added
 - Proof of Vitality Frontend-to-Backend Integration: Wired `submitVitalityProof` in `frontend/src/api.js` to `/sdk/v1/vitality`.

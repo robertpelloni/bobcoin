@@ -119,6 +119,21 @@ def test_consolidated_navigation_and_command_console():
             assert expected_content_snippet in body_text, f"Snippet '{expected_content_snippet}' not found in active tab content"
             print(f"    ✓ Tab switched and content contains '{expected_content_snippet}'.")
 
+        # 3. Test Mobile Vitality Sync integration
+        print("  * Navigating to Mobile Light Node (/mobile)...")
+        page.goto(f"{base_url}/mobile")
+        page.wait_for_selector(".mobile-container", timeout=15000)
+        sync_btn = page.locator("button:has-text('SYNC HEALTH DATA')")
+        assert sync_btn.is_visible()
+        # Set up dialog handler to auto-accept alert
+        dialog_text = []
+        page.on("dialog", lambda dialog: (dialog_text.append(dialog.message), dialog.accept()))
+        with page.expect_event("dialog", timeout=10000):
+            sync_btn.click()
+        time.sleep(0.5)
+        assert len(dialog_text) > 0 and "Vitality" in dialog_text[0]
+        print(f"    ✓ Vitality Proof synced successfully: {dialog_text[0]}")
+
         # Capture verification snapshot
         out_path = REPO_ROOT / "verification" / "e2e_consolidated_navigation.png"
         page.screenshot(path=str(out_path))

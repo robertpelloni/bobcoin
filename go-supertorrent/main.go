@@ -177,6 +177,7 @@ func main() {
 	mux.HandleFunc("/transactions", service.handleProxyTransactions)
 	mux.HandleFunc("/fhe-oracle", service.handleProxyFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleProxySubmitProof)
+	mux.HandleFunc("/sdk/v1/vitality", service.handleProxyVitality)
 	mux.HandleFunc("/market/bid", service.handleProxyMarketBid)
 	mux.HandleFunc("/market/accept", service.handleProxyMarketAccept)
 	mux.HandleFunc("/market/bids", service.handleProxyMarketBids)
@@ -594,6 +595,11 @@ func (s *SuperTorrentService) proxyGameServerRequest(w http.ResponseWriter, r *h
 	}
 	defer resp.Body.Close()
 	for key, values := range resp.Header {
+		if strings.EqualFold(key, "Access-Control-Allow-Origin") ||
+			strings.EqualFold(key, "Access-Control-Allow-Methods") ||
+			strings.EqualFold(key, "Access-Control-Allow-Headers") {
+			continue
+		}
 		for _, value := range values {
 			w.Header().Add(key, value)
 		}
@@ -619,6 +625,9 @@ func (s *SuperTorrentService) handleProxyFHEOracle(w http.ResponseWriter, r *htt
 }
 func (s *SuperTorrentService) handleProxySubmitProof(w http.ResponseWriter, r *http.Request) {
 	s.proxyGameServerRequest(w, r, "/submit-proof")
+}
+func (s *SuperTorrentService) handleProxyVitality(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/sdk/v1/vitality")
 }
 func (s *SuperTorrentService) handleProxyMarketBid(w http.ResponseWriter, r *http.Request) {
 	s.proxyGameServerRequest(w, r, "/market/bid")

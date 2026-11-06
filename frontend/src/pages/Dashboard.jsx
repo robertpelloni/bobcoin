@@ -31,6 +31,7 @@ export function Dashboard() {
     const [txSignature, setTxSignature] = useState('');
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
+    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, status: 'STANDBY' });
 
     // Command Center Active Sub-Module Tab (Eliminates fragmentation)
     const [commandTab, setCommandTab] = useState('arcade');
@@ -40,6 +41,22 @@ export function Dashboard() {
 
     const handleLogEvent = (evt) => {
         replayLog.current.push(evt);
+        if (replayLog.current.length > 5) {
+            const diffs = [];
+            for (let i = 1; i < replayLog.current.length; i++) {
+                diffs.push(replayLog.current[i].time - replayLog.current[i - 1].time);
+            }
+            if (diffs.length > 0) {
+                const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                const variance = diffs.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / diffs.length;
+                const mad = diffs.reduce((a, b) => a + Math.abs(b - mean), 0) / diffs.length;
+                setOracleStats({
+                    variance: parseFloat(variance.toFixed(2)),
+                    mad: parseFloat(mad.toFixed(2)),
+                    status: (variance >= 10.0 && mad >= 5.0) ? 'HUMAN_VERIFIED' : 'CALCULATING'
+                });
+            }
+        }
     };
 
     useEffect(() => {
@@ -198,6 +215,10 @@ export function Dashboard() {
                         <div className="stats-box">
                             <p title="Current rhythm accuracy points">SCORE: <span className="neon-text">{score}</span></p>
                             <p title="Consecutive successful key hits multiplier">COMBO: <span className="neon-text-blue">x{combo}</span></p>
+                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy variance and MAD">
+                                ORACLE ENTROPY: <span style={{color: oracleStats.status === 'HUMAN_VERIFIED' ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>{oracleStats.status}</span>
+                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad}]</span>
+                            </p>
                         </div>
 
                         <div className="play-area-wrapper" style={{display: 'flex', justifyContent: 'center'}}>

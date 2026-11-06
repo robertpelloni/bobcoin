@@ -3,12 +3,11 @@
 ## Session Summary
 Completed comprehensive repo sanitization, resolution of git conflict markers, system tray & server lifecycle controller implementation, and consolidated the frontend into high-value sovereign mega-modules and an All-in-One Command Console.
 
-## Key Accomplishments (v8.115.4)
+## Key Accomplishments (v8.115.5)
+- **Cryptographic Stealth Addresses (DKSAP):** Upgraded `frontend/src/cryptoUtils.js` with `generateStealthAddress` based on Dual-Key Stealth Address Protocol, generating ephemeral Diffie-Hellman secrets and spend tweaks. Replaced static mocks in `Wallet.jsx` with real dynamic derivation.
+- **Governance & Privacy Automation:** Expanded `testing/test_e2e_system_tray_and_nav.py` with Playwright assertions verifying live DKSAP stealth address generation, alongside governance consensus verification in `test_e2e_governance.cjs`.
 - **AI Oracle Real-time Entropy Telemetry:** Surfaced live variance and MAD entropy tracking directly on the Sovereign Dashboard, informing players of bot detection status and anti-cheat validation in real time.
 - **Physical Mining & Proof of Vitality Integration:** Connected frontend wearable health sync directly to `/sdk/v1/vitality` across `go-game-server` and `go-supertorrent` proxy layers. Validated step verification and reward crediting in `Mobile.jsx`.
-- **CORS Normalization:** Sanitized duplicate CORS header propagation in `go-supertorrent/main.go` proxy handlers.
-- **AI Oracle Bot Detection Hardening:** Reordered verification logic in `go-game-server/main.go` so replay log variance and Mean Absolute Deviation (MAD) checks execute strictly before score evaluations. Robotic macros with low variance (< 10.0) or low MAD (< 5.0) are reliably rejected with HTTP 400.
-- **Automated E2E Testing:** Expanded `testing/test_e2e_system_tray_and_nav.py` to automate Proof of Vitality health sync alongside system tray socket monitoring and consolidated navigation.
 
 ## Current Service States
 - Go Lattice: Canonical DAG consensus engine running on port 4001.

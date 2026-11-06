@@ -125,7 +125,6 @@ def test_consolidated_navigation_and_command_console():
         page.wait_for_selector(".mobile-container", timeout=15000)
         sync_btn = page.locator("button:has-text('SYNC HEALTH DATA')")
         assert sync_btn.is_visible()
-        # Set up dialog handler to auto-accept alert
         dialog_text = []
         page.on("dialog", lambda dialog: (dialog_text.append(dialog.message), dialog.accept()))
         with page.expect_event("dialog", timeout=10000):
@@ -133,6 +132,23 @@ def test_consolidated_navigation_and_command_console():
         time.sleep(0.5)
         assert len(dialog_text) > 0 and "Vitality" in dialog_text[0]
         print(f"    ✓ Vitality Proof synced successfully: {dialog_text[0]}")
+
+        # 4. Test Privacy Vault Stealth Address Generation (DKSAP)
+        print("  * Testing Privacy Vault Stealth Address Generation (DKSAP)...")
+        import json
+        dummy_wallet = {
+            'publicKey': '25HWBaVCATNfnM9etagmiuiJRdj9NaqCtzxnFgPQSKMf',
+            'privateKey': 'fake_priv_key_base58',
+            'boxPublicKey': '6FHYYQHZVfuaBHMMkvtcgJFacE9pJhzE7k8fDcJgiYVU',
+            'boxPrivateKey': 'fake_box_priv_key_base58',
+            'mnemonic': 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima'
+        }
+        page.evaluate(f'localStorage.setItem("lattice_arcade_wallet", JSON.stringify({json.dumps(dummy_wallet)}))')
+        page.goto(f"{base_url}/wallet")
+        page.wait_for_selector(".wallet-card", timeout=15000)
+        stealth_addr = page.locator(".stealth").inner_text()
+        assert stealth_addr.startswith("stealth:") and len(stealth_addr) > 25
+        print(f"    ✓ DKSAP Stealth Address verified: {stealth_addr[:24]}...")
 
         # Capture verification snapshot
         out_path = REPO_ROOT / "verification" / "e2e_consolidated_navigation.png"

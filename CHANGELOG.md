@@ -125,6 +125,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.5] - 2026-11-06
+### Added
+- Cryptographic Dual-Key Stealth Address Protocol (DKSAP): Implemented `generateStealthAddress` in `frontend/src/cryptoUtils.js` combining ephemeral X25519 Diffie-Hellman secrets with Ed25519 spend key tweaks.
+- Dynamic Stealth Destination Display in `frontend/src/pages/Wallet.jsx` with real-time ephemeral public key derivation.
+- Expanded `testing/test_e2e_system_tray_and_nav.py` with automated Playwright validation of live DKSAP stealth address generation.
+
 ## [8.115.4] - 2026-11-06
 ### Added
 - Real-time AI Oracle Telemetry on the Sovereign Dashboard: Added live calculation and display of input entropy variance and Mean Absolute Deviation (MAD) with interactive verification status badges (`HUMAN_VERIFIED` vs `CALCULATING`).

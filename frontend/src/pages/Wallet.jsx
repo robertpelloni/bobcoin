@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL, getLatticeChain } from '../api';
-import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair } from '../cryptoUtils';
+import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair, generateStealthAddress } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
 import { SignConfirmModal } from '../components/SignConfirmModal';
@@ -12,6 +12,7 @@ export function Wallet() {
     const [balance, setBalance] = useState(0.00);
     const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
+    const [stealthInfo, setStealthInfo] = useState(null);
     const [keypair, setKeypair] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [typedEntropy, setTypedEntropy] = useState('');
@@ -101,6 +102,11 @@ export function Wallet() {
 
     useEffect(() => {
         fetchState();
+        if (keypair && keypair.publicKey && keypair.boxPublicKey) {
+            generateStealthAddress(keypair.publicKey, keypair.boxPublicKey).then(info => {
+                setStealthInfo(info);
+            });
+        }
         const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
     }, [keypair]);
@@ -487,10 +493,14 @@ export function Wallet() {
                     {privacyMode && (
                         <div className="stealth-address-box">
                             <label>ONE-TIME STEALTH ADDRESS (GENERATED)</label>
-                            <code className="stealth">stealth:9z8y7x6w...1c4d</code>
+                            <code className="stealth">{stealthInfo ? stealthInfo.stealthAddress : 'GENERATING STEALTH DESTINATION...'}</code>
                             <div className="description" style={{fontSize: '0.8rem', color: '#ff00ff'}}>
-                                Generated via Diffie-Hellman Key Exchange using the sender's ephemeral key and your view key.
-                                Only you can link this address to your wallet.
+                                Generated via Dual-Key Stealth Address Protocol (DKSAP) using ephemeral Diffie-Hellman exchange and your view key.
+                                {stealthInfo && (
+                                    <div style={{marginTop: '0.25rem', fontFamily: 'monospace', fontSize: '0.65rem', color: '#888'}}>
+                                        EPHEMERAL PUBKEY: {stealthInfo.ephemeralPublicKey.slice(0, 16)}...
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

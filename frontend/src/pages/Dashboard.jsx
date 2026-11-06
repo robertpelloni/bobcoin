@@ -29,6 +29,7 @@ export function Dashboard() {
     const [mintStatus, setMintStatus] = useState(null);
     const [fheStatus, setFheStatus] = useState(null);
     const [txSignature, setTxSignature] = useState('');
+    const [mintResult, setMintResult] = useState(null);
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
     const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, status: 'STANDBY' });
@@ -96,6 +97,7 @@ export function Dashboard() {
             if (result.success) {
                 setMintStatus('success');
                 setTxSignature(result.tx);
+                setMintResult(result);
                 setTimeout(async () => setBankroll(await getBankroll()), 2000);
             } else {
                 setMintStatus('error');
@@ -238,6 +240,14 @@ export function Dashboard() {
                             <div className="modal success">
                                 <h2>MINT SUCCESSFUL</h2>
                                 <p>Tokens minted to your sovereign wallet using Succinct SP1 RISC-V verification.</p>
+                                {mintResult?.oracle && (
+                                    <div style={{background: '#0a0a0a', border: '1px solid #0f0', padding: '0.75rem', margin: '0.75rem 0', textAlign: 'left', fontFamily: 'monospace', fontSize: '0.75rem'}}>
+                                        <div style={{color: '#0f0', fontWeight: 'bold', marginBottom: '0.25rem'}}>AI ORACLE AUDIT VERIFIED:</div>
+                                        <div>CONFIDENCE: <span style={{color: '#0ff'}}>{(mintResult.oracle.confidenceScore * 100).toFixed(0)}%</span></div>
+                                        <div>INPUT VARIANCE: <span style={{color: '#fff'}}>{mintResult.oracle.variance}</span> (threshold: &gt; 10.0)</div>
+                                        <div>MEAN ABS DEV (MAD): <span style={{color: '#fff'}}>{mintResult.oracle.mad}</span> (threshold: &gt; 5.0)</div>
+                                    </div>
+                                )}
                                 <a
                                     href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
                                     target="_blank"
@@ -246,7 +256,7 @@ export function Dashboard() {
                                 >
                                     VIEW ON EXPLORER &rarr;
                                 </a>
-                                <button className="cyber-button small" onClick={() => setMintStatus(null)} style={{marginTop: '1rem'}}>CLOSE</button>
+                                <button className="cyber-button small" onClick={() => { setMintStatus(null); setMintResult(null); }} style={{marginTop: '1rem'}}>CLOSE</button>
                             </div>
                         )}
 

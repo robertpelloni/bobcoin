@@ -125,6 +125,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.6] - 2026-11-06
+### Added
+- AI Oracle Audit Telemetry Breakdown: Added structured verification diagnostics (`variance`, `mad`, `confidenceScore`) to `/submit-proof` in `go-game-server/main.go`.
+- Real-time Mint Modal Audit Card: Exposed the AI Oracle statistical audit breakdown directly in the mint confirmation modal on `Dashboard.jsx`.
+
 ## [8.115.5] - 2026-11-06
 ### Added
 - Cryptographic Dual-Key Stealth Address Protocol (DKSAP): Implemented `generateStealthAddress` in `frontend/src/cryptoUtils.js` combining ephemeral X25519 Diffie-Hellman secrets with Ed25519 spend key tweaks.

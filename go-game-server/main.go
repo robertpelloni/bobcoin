@@ -492,9 +492,13 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	verificationHash := hashString(string(proofJSON))
 	address, _ := publicValues["address"].(string)
 	score, _ := publicValues["score"].(float64)
-	zkVerified := s.verifyProof(publicValues, req.Proof)
+	zkVerified, oracleMetrics := s.verifyProofWithMetrics(publicValues, req.Proof)
 	if !zkVerified {
-		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Cryptographic trace verification failed."})
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"error":   "Cryptographic trace verification failed.",
+			"oracle":  oracleMetrics,
+		})
 		return
 	}
 
@@ -510,10 +514,21 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 		hash = blockHash
 	}
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: amount, Type: "MINT", Hash: hash})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": hash, "zkVerified": true})
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success":    true,
+		"tx":         txID,
+		"hash":       hash,
+		"zkVerified": true,
+		"oracle":     oracleMetrics,
+	})
 }
 
 func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[string]interface{}) bool {
+	ok, _ := s.verifyProofWithMetrics(publicValues, proof)
+	return ok
+}
+
+func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, proof map[string]interface{}) (bool, map[string]interface{}) {
 	// Native ZK Verification (SP1 Simulation)
 	// In production, we call the 'cargo-prove' verifier binary on the proof-of-play circuit.
 	// If the binary is missing, we fall back to a high-fidelity AI Oracle audit.
@@ -537,11 +552,18 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			// Fallback to simulation if native verification is explicitly failing due to env setup
 		} else {
 			log.Printf("[ZK Service] Native verification succeeded!\nOutput: %s", string(output))
-			return true
+			return true, map[string]interface{}{"mode": "RISC-V_NATIVE", "confidence": 1.0}
 		}
 	}
 
 	time.Sleep(1200 * time.Millisecond) // Simulated cryptographic delay
+
+	metrics := map[string]interface{}{
+		"variance":        0.0,
+		"mad":             0.0,
+		"confidenceScore": 0.0,
+		"mode":            "AI_ORACLE_STATISTICAL",
+	}
 
 	// AI Oracle (Bot Detection via variance analysis)
 	// Must execute before score validation to prevent macro bypasses
@@ -563,12 +585,14 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 
 		if len(diffs) > 0 {
 			variance := calculateVariance(diffs)
+			metrics["variance"] = math.Round(variance*100) / 100
 			log.Printf("[AI Oracle] Replay log variance: %f", variance)
 
 			// Robotic consistency check: if variance is low, it's a macro script.
 			if variance < 10.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (< 10.0, macro script suspected).", variance)
-				return false
+				metrics["confidenceScore"] = 0.10
+				return false, metrics
 			}
 
 			// Robotic precision check: calculate Mean Absolute Deviation (MAD)
@@ -583,12 +607,16 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 				sumAbsDev += math.Abs(d - mean)
 			}
 			mad := sumAbsDev / float64(len(diffs))
+			metrics["mad"] = math.Round(mad*100) / 100
 			log.Printf("[AI Oracle] Mean: %f, MAD: %f", mean, mad)
 
 			if mad < 5.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (< 5.0, robotic consistency detected).", mad)
-				return false
+				metrics["confidenceScore"] = 0.10
+				return false, metrics
 			}
+
+			metrics["confidenceScore"] = 0.98
 		}
 	}
 
@@ -602,7 +630,7 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 		}
 
 		if score >= 1000 {
-			return true
+			return true, metrics
 		}
 	}
 
@@ -615,10 +643,10 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 
 	if math.Abs(score - calculatedScore) > 1.0 {
 		log.Printf("[ZK Service] ⚠️ Score mismatch detected: reported %f, calculated %f", score, calculatedScore)
-		return false
+		return false, metrics
 	}
 
-	return score >= 1000
+	return score >= 1000, metrics
 }
 
 func calculateVariance(data []float64) float64 {

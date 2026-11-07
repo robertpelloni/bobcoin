@@ -125,6 +125,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adjusted consensus strict height enforcement to allow temporary test drift during cold boot tests, resolving a persistent failure during multi-node mock startups.
 - Finalized Phase III: E2E testing of Lattice Governance, WebTorrent Supernodes, and AI Oracle.
 
+## [8.115.7] - 2026-11-06
+### Added
+- Comprehensive Anti-Bot Automated Parity Testing: Expanded `verify_oracle_governance.cjs` with explicit automated test cases validating robotic macro rejection (HTTP 400, confidence <= 0.10) versus human jitter acceptance (HTTP 200, confidence >= 0.90) with structured telemetry validation.
+
 ## [8.115.6] - 2026-11-06
 ### Added
 - AI Oracle Audit Telemetry Breakdown: Added structured verification diagnostics (`variance`, `mad`, `confidenceScore`) to `/submit-proof` in `go-game-server/main.go`.

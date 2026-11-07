@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.0] - 2026-11-07
+### Added
+- **AI Oracle Audit Persistence & Telemetry Feed**: Implemented SQLite table `oracle_audits` in `go-game-server` and added `/oracle/audits` query endpoint (proxied through `go-supertorrent`).
+- **Dashboard Security Feed**: Added a real-time "AI Oracle Security Feed" card to `Dashboard.jsx`, rendering live verification verdicts, entropy ratings, and confidence scores directly alongside the Hall of Fame and SPoRA Storage Market.
+- **E2E Automation Coverage**: Updated `testing/test_e2e_system_tray_and_nav.py` to assert audit log persistence and endpoint querying.
+
 ## [8.115.9] - 2026-11-07
 ### Added
 - **AI Oracle Shannon Entropy & Monotonicity Engine**: Upgraded `go-game-server` and `game-server` bot detection engines with strict temporal monotonicity checks and Shannon timing delta entropy evaluation (`H >= 1.0`), preventing advanced clustered and repetitive macro bypasses.

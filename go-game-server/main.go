@@ -192,6 +192,7 @@ func main() {
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
 	mux.HandleFunc("/market/accept", service.handleAcceptBid)
 	mux.HandleFunc("/governance/audit", service.handleGovernanceAudit)
+	mux.HandleFunc("/oracle/audits", service.handleOracleAudits)
 
 	log.Printf("[go-game-server] listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, withCORS(mux)); err != nil {
@@ -253,6 +254,17 @@ func initDatabase(db *sql.DB) error {
 			amount REAL NOT NULL,
 			type TEXT NOT NULL,
 			hash TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS oracle_audits (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			address TEXT NOT NULL,
+			score REAL NOT NULL,
+			variance REAL NOT NULL,
+			mad REAL NOT NULL,
+			entropy REAL NOT NULL,
+			confidence_score REAL NOT NULL,
+			verified INTEGER NOT NULL,
+			timestamp TEXT NOT NULL
 		)`,
 	}
 	for _, stmt := range schema {
@@ -493,6 +505,21 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	address, _ := publicValues["address"].(string)
 	score, _ := publicValues["score"].(float64)
 	zkVerified, oracleMetrics := s.verifyProofWithMetrics(publicValues, req.Proof)
+
+	// Persist oracle audit log to SQLite
+	variance, _ := oracleMetrics["variance"].(float64)
+	mad, _ := oracleMetrics["mad"].(float64)
+	entropy, _ := oracleMetrics["entropy"].(float64)
+	confidence, _ := oracleMetrics["confidenceScore"].(float64)
+	verifiedInt := 0
+	if zkVerified {
+		verifiedInt = 1
+	}
+	_, _ = s.db.Exec(`
+		INSERT INTO oracle_audits (address, score, variance, mad, entropy, confidence_score, verified, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, address, score, variance, mad, entropy, confidence, verifiedInt, formatDBDate(time.Now()))
+
 	if !zkVerified {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
 			"success": false,
@@ -1190,4 +1217,47 @@ func (s *Service) handleSubmitTrace(w http.ResponseWriter, r *http.Request) {
 	// A dedicated endpoint for game engine SDKs (Unity/Unreal) to submit traces.
 	// Functionally identical to handleSubmitProof for now, but provides a distinct API surface.
 	s.handleSubmitProof(w, r)
+}
+
+func (s *Service) handleOracleAudits(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.db.Query(`
+		SELECT id, address, score, variance, mad, entropy, confidence_score, verified, timestamp
+		FROM oracle_audits
+		ORDER BY id DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": "Failed to fetch oracle audits"})
+		return
+	}
+	defer rows.Close()
+
+	var audits []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var addr, ts string
+		var score, variance, mad, entropy, conf float64
+		var verified int
+		if err := rows.Scan(&id, &addr, &score, &variance, &mad, &entropy, &conf, &verified, &ts); err == nil {
+			audits = append(audits, map[string]interface{}{
+				"id":              id,
+				"address":         addr,
+				"score":           score,
+				"variance":        variance,
+				"mad":             mad,
+				"entropy":         entropy,
+				"confidenceScore": conf,
+				"verified":        verified == 1,
+				"timestamp":       ts,
+			})
+		}
+	}
+	if audits == nil {
+		audits = []map[string]interface{}{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"audits":  audits,
+	})
 }

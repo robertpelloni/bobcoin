@@ -3,7 +3,7 @@ import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
-import { submitProof, getBankroll, submitFHEOracle } from '../api';
+import { submitProof, getBankroll, submitFHEOracle, getOracleAudits } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 import { useNetwork } from '../NetworkContext';
@@ -33,6 +33,7 @@ export function Dashboard() {
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
     const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, status: 'STANDBY' });
+    const [oracleAudits, setOracleAudits] = useState([]);
 
     // Command Center Active Sub-Module Tab (Eliminates fragmentation)
     const [commandTab, setCommandTab] = useState('arcade');
@@ -77,14 +78,18 @@ export function Dashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const bal = await getBankroll();
+                const [bal, audits] = await Promise.all([
+                    getBankroll().catch(() => 0),
+                    getOracleAudits().catch(() => [])
+                ]);
                 setBankroll(bal);
+                setOracleAudits(audits);
             } catch (e) {
-                console.warn("Failed to fetch bankroll", e);
+                console.warn("Failed to fetch bankroll or oracle audits", e);
             }
         };
         fetchStats();
-        const interval = setInterval(fetchStats, 10000);
+        const interval = setInterval(fetchStats, 6000);
         return () => clearInterval(interval);
     }, []);
 
@@ -274,7 +279,7 @@ export function Dashboard() {
                             </div>
                         )}
 
-                        <div className="arcade-auxiliary-grid" style={{marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', width: '100%'}}>
+                        <div className="arcade-auxiliary-grid" style={{marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', width: '100%'}}>
                             <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
                                 <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>HALL OF FAME</h3>
                                 <Leaderboard mintStatus={mintStatus} />
@@ -282,6 +287,32 @@ export function Dashboard() {
                             <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
                                 <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>SPoRA STORAGE MARKET</h3>
                                 <Marketplace />
+                            </div>
+                            <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
+                                <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <span>AI ORACLE SECURITY FEED</span>
+                                    <span style={{fontSize: '0.65rem', color: '#0f0'}}>ACTIVE</span>
+                                </h3>
+                                <div className="oracle-audit-feed" style={{maxHeight: '220px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.7rem'}}>
+                                    {oracleAudits.length === 0 ? (
+                                        <div style={{color: '#666', padding: '1rem 0'}}>NO RECENT AUDITS LOGGED</div>
+                                    ) : (
+                                        oracleAudits.slice(0, 8).map(audit => (
+                                            <div key={audit.id} style={{padding: '0.4rem 0', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                                <div>
+                                                    <span style={{color: audit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', marginRight: '6px'}}>
+                                                        {audit.verified ? '✓ PASSED' : '⚠️ REJECTED'}
+                                                    </span>
+                                                    <span style={{color: '#888'}}>{audit.address?.slice(0, 10)}...</span>
+                                                </div>
+                                                <div style={{textAlign: 'right', color: '#555'}}>
+                                                    <span style={{color: '#0ff'}}>H: {audit.entropy?.toFixed(1) || '0.0'}</span>
+                                                    <span style={{marginLeft: '6px', color: '#888'}}>{(audit.confidenceScore * 100).toFixed(0)}%</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
 

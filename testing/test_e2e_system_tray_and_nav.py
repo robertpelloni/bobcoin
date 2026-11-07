@@ -86,6 +86,13 @@ def test_ai_oracle_integrity():
         assert res.get("oracle", {}).get("entropy") >= 1.0
         assert res.get("oracle", {}).get("confidenceScore") == 0.98
         print(f"  ✓ High-entropy human jitter accepted: variance={res['oracle']['variance']}, MAD={res['oracle']['mad']}, entropy={res['oracle']['entropy']}.")
+
+    # 4. Oracle Audits Endpoint & Persistence
+    resp = urllib.request.urlopen(f"{base_url}/oracle/audits")
+    audits = json.loads(resp.read().decode()).get("audits", [])
+    assert len(audits) >= 1
+    print(f"  ✓ Oracle audit log successfully persisted to SQLite (total logged: {len(audits)}).")
+
     print(">>> [E2E] AI Oracle integrity verification passed!\n")
 
 def test_system_tray_module():

@@ -152,6 +152,17 @@ export const getMarketBids = async () => {
     }
 };
 
+export const getOracleAudits = async () => {
+    try {
+        const res = await fetch(`${API_URL}/oracle/audits`);
+        const data = await res.json();
+        return data.audits || [];
+    } catch(e) {
+        console.error("Failed to fetch oracle audits:", e);
+        return [];
+    }
+};
+
 export const auditProposal = async (proposal) => {
     try {
         const res = await fetch(`${API_URL}/governance/audit`, {

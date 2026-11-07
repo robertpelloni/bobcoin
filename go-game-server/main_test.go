@@ -598,3 +598,59 @@ func TestSubmitProofRejectsSuperhumanAPMAndScoreMismatch(t *testing.T) {
 		t.Fatalf("expected score mismatch rejection, got %d with %s", mismatchRec.Code, mismatchRec.Body.String())
 	}
 }
+
+func TestOracleWebSocketBroadcast(t *testing.T) {
+	service := newTestService(t)
+
+	server := httptest.NewServer(http.HandlerFunc(service.handleRoot))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("failed to connect websocket: %v", err)
+	}
+	defer clientConn.Close()
+
+	// Subscribe to oracle stream
+	if err := clientConn.WriteJSON(map[string]interface{}{"type": "SUBSCRIBE_ORACLE"}); err != nil {
+		t.Fatalf("failed to send subscribe message: %v", err)
+	}
+
+	var ack map[string]interface{}
+	_ = clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := clientConn.ReadJSON(&ack); err != nil {
+		t.Fatalf("failed to read subscribe ack: %v", err)
+	}
+	if ack["type"] != "ORACLE_SUBSCRIBED" {
+		t.Fatalf("expected ORACLE_SUBSCRIBED, got %v", ack)
+	}
+
+	// Trigger broadcast
+	testAudit := map[string]interface{}{
+		"id":              int64(999),
+		"address":         "test-prover",
+		"score":           1500.0,
+		"variance":        25.5,
+		"mad":             8.2,
+		"entropy":         2.4,
+		"confidenceScore": 0.98,
+		"verified":        true,
+		"timestamp":       "2026-03-30 12:00:00",
+	}
+	service.broadcastOracleAudit(testAudit)
+
+	var streamMsg map[string]interface{}
+	_ = clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := clientConn.ReadJSON(&streamMsg); err != nil {
+		t.Fatalf("failed to read broadcast message: %v", err)
+	}
+
+	if streamMsg["type"] != "ORACLE_AUDIT" {
+		t.Fatalf("expected ORACLE_AUDIT type, got %v", streamMsg["type"])
+	}
+	auditData, ok := streamMsg["audit"].(map[string]interface{})
+	if !ok || auditData["address"] != "test-prover" {
+		t.Fatalf("audit data mismatch: %v", auditData)
+	}
+}

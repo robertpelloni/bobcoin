@@ -56,10 +56,28 @@ func (s *Service) handleVitalityProof(w http.ResponseWriter, r *http.Request) {
 
 	// Log to oracle_audits table if database is active
 	if s.db != nil {
-		_, _ = s.db.Exec(`
+		ts := formatDBDate(time.Now())
+		res, _ := s.db.Exec(`
 			INSERT INTO oracle_audits (address, score, variance, mad, entropy, confidence_score, verified, timestamp)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		`, req.WalletAddress, float64(req.Steps), req.HeartRateAvg, req.Cadence, 3.5, 0.98, 1, formatDBDate(time.Now()))
+		`, req.WalletAddress, float64(req.Steps), req.HeartRateAvg, req.Cadence, 3.5, 0.98, 1, ts)
+
+		var lastID int64
+		if res != nil {
+			lastID, _ = res.LastInsertId()
+		}
+
+		s.broadcastOracleAudit(map[string]interface{}{
+			"id":              lastID,
+			"address":         req.WalletAddress,
+			"score":           float64(req.Steps),
+			"variance":        req.HeartRateAvg,
+			"mad":             req.Cadence,
+			"entropy":         3.5,
+			"confidenceScore": 0.98,
+			"verified":        true,
+			"timestamp":       ts,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

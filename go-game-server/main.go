@@ -152,6 +152,8 @@ type Service struct {
 	mu             sync.Mutex
 	matchMu        sync.Mutex
 	waitingPlayers map[string]*MatchConnection
+	auditClients   map[*websocket.Conn]bool
+	auditMu        sync.Mutex
 	upgrader       websocket.Upgrader
 }
 
@@ -233,6 +235,7 @@ func NewService(cfg Config) (*Service, error) {
 		systemBalance:  1000000,
 		systemFrontier: nil,
 		waitingPlayers: make(map[string]*MatchConnection),
+		auditClients:   make(map[*websocket.Conn]bool),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -515,10 +518,29 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	if zkVerified {
 		verifiedInt = 1
 	}
-	_, _ = s.db.Exec(`
+	ts := formatDBDate(time.Now())
+	res, _ := s.db.Exec(`
 		INSERT INTO oracle_audits (address, score, variance, mad, entropy, confidence_score, verified, timestamp)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, address, score, variance, mad, entropy, confidence, verifiedInt, formatDBDate(time.Now()))
+	`, address, score, variance, mad, entropy, confidence, verifiedInt, ts)
+
+	var lastID int64
+	if res != nil {
+		lastID, _ = res.LastInsertId()
+	}
+
+	// Broadcast live audit to all connected WebSockets
+	s.broadcastOracleAudit(map[string]interface{}{
+		"id":              lastID,
+		"address":         address,
+		"score":           score,
+		"variance":        variance,
+		"mad":             mad,
+		"entropy":         entropy,
+		"confidenceScore": confidence,
+		"verified":        zkVerified,
+		"timestamp":       ts,
+	})
 
 	if !zkVerified {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
@@ -838,6 +860,19 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 		log.Printf("[go-game-server] websocket upgrade failed: %v", err)
 		return
 	}
+
+	// Register client for real-time AI Oracle and signaling events
+	s.auditMu.Lock()
+	s.auditClients[conn] = true
+	s.auditMu.Unlock()
+
+	defer func() {
+		s.auditMu.Lock()
+		delete(s.auditClients, conn)
+		s.auditMu.Unlock()
+		_ = conn.Close()
+	}()
+
 	player := &MatchConnection{conn: conn}
 	defer s.disconnectPlayer(player)
 
@@ -847,6 +882,12 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		switch message.Type {
+		case "SUBSCRIBE_ORACLE":
+			_ = conn.WriteJSON(map[string]interface{}{
+				"type":    "ORACLE_SUBSCRIBED",
+				"status":  "CONNECTED",
+				"service": "AI_ORACLE_REALTIME_STREAM",
+			})
 		case "FIND_MATCH":
 			player.roomID = message.RoomID
 			if player.roomID == "" {
@@ -1239,6 +1280,23 @@ func (s *Service) handleSubmitTrace(w http.ResponseWriter, r *http.Request) {
 	// A dedicated endpoint for game engine SDKs (Unity/Unreal) to submit traces.
 	// Functionally identical to handleSubmitProof for now, but provides a distinct API surface.
 	s.handleSubmitProof(w, r)
+}
+
+func (s *Service) broadcastOracleAudit(audit map[string]interface{}) {
+	s.auditMu.Lock()
+	defer s.auditMu.Unlock()
+
+	msg := map[string]interface{}{
+		"type":  "ORACLE_AUDIT",
+		"audit": audit,
+	}
+
+	for conn := range s.auditClients {
+		if err := conn.WriteJSON(msg); err != nil {
+			_ = conn.Close()
+			delete(s.auditClients, conn)
+		}
+	}
 }
 
 func (s *Service) handleOracleAudits(w http.ResponseWriter, r *http.Request) {

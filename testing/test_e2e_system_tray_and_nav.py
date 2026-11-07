@@ -293,6 +293,25 @@ def test_consolidated_navigation_and_command_console():
         assert stealth_addr.startswith("stealth:") and len(stealth_addr) > 25
         print(f"    ✓ DKSAP Stealth Address verified: {stealth_addr[:24]}...")
 
+        # 5. Test AI Oracle Real-Time Audit Inspector Modal
+        print("  * Testing AI Oracle Real-Time Audit Inspector Modal...")
+        page.goto(f"{base_url}/")
+        page.wait_for_selector(".oracle-audit-feed", timeout=15000)
+        audit_items = page.locator(".oracle-audit-item")
+        if audit_items.count() > 0:
+            audit_items.first.click()
+            page.wait_for_selector(".modal-content", timeout=5000)
+            modal_text = page.locator(".modal-content").inner_text()
+            assert "AI ORACLE AUDIT INSPECTOR" in modal_text
+            assert "BIOMETRIC & TIMING DELTA METRICS" in modal_text
+            assert "CONFIDENCE RATING" in modal_text
+            print("    ✓ AI Oracle Audit Inspector modal successfully opened and verified.")
+            dismiss_btn = page.locator("button:has-text('DISMISS INSPECTOR')")
+            dismiss_btn.click()
+            time.sleep(0.3)
+            assert page.locator(".modal-content").count() == 0
+            print("    ✓ AI Oracle Audit Inspector dismissed cleanly.")
+
         # Capture verification snapshot
         out_path = REPO_ROOT / "verification" / "e2e_consolidated_navigation.png"
         page.screenshot(path=str(out_path))

@@ -3,7 +3,7 @@ import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
-import { submitProof, getBankroll, submitFHEOracle, getOracleAudits } from '../api';
+import { submitProof, getBankroll, submitFHEOracle, getOracleAudits, SIGNALING_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 import { useNetwork } from '../NetworkContext';
@@ -34,6 +34,7 @@ export function Dashboard() {
     const [glitch, setGlitch] = useState(false);
     const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, status: 'STANDBY' });
     const [oracleAudits, setOracleAudits] = useState([]);
+    const [selectedAudit, setSelectedAudit] = useState(null);
 
     // Command Center Active Sub-Module Tab (Eliminates fragmentation)
     const [commandTab, setCommandTab] = useState('arcade');
@@ -90,7 +91,35 @@ export function Dashboard() {
         };
         fetchStats();
         const interval = setInterval(fetchStats, 6000);
-        return () => clearInterval(interval);
+
+        // Real-Time WebSocket Streaming for instant AI Oracle audit feed updates
+        let ws;
+        try {
+            const wsTarget = SIGNALING_URL.replace(/^http/, 'ws');
+            ws = new WebSocket(wsTarget);
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'SUBSCRIBE_ORACLE' }));
+            };
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'ORACLE_AUDIT' && data.audit) {
+                        setOracleAudits(prev => [data.audit, ...prev.filter(a => a.id !== data.audit.id)].slice(0, 50));
+                    }
+                } catch (e) {
+                    // Ignore non-json frames
+                }
+            };
+        } catch (e) {
+            console.warn("Real-time Oracle WebSocket connection failed:", e);
+        }
+
+        return () => {
+            clearInterval(interval);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+        };
     }, []);
 
     const handleScoreUpdate = (points) => {
@@ -298,16 +327,23 @@ export function Dashboard() {
                                         <div style={{color: '#666', padding: '1rem 0'}}>NO RECENT AUDITS LOGGED</div>
                                     ) : (
                                         oracleAudits.slice(0, 8).map(audit => (
-                                            <div key={audit.id} style={{padding: '0.4rem 0', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                            <div
+                                                key={audit.id}
+                                                onClick={() => setSelectedAudit(audit)}
+                                                className="oracle-audit-item"
+                                                style={{padding: '0.4rem 0', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.2s'}}
+                                                title="Click to inspect real-time cryptographic audit breakdown"
+                                            >
                                                 <div>
                                                     <span style={{color: audit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', marginRight: '6px'}}>
                                                         {audit.verified ? '✓ PASSED' : '⚠️ REJECTED'}
                                                     </span>
-                                                    <span style={{color: '#888'}}>{audit.address?.slice(0, 10)}...</span>
+                                                    <span style={{color: '#aaa'}}>{audit.address?.slice(0, 10)}...</span>
                                                 </div>
                                                 <div style={{textAlign: 'right', color: '#555'}}>
                                                     <span style={{color: '#0ff'}}>H: {audit.entropy?.toFixed(1) || '0.0'}</span>
                                                     <span style={{marginLeft: '6px', color: '#888'}}>{(audit.confidenceScore * 100).toFixed(0)}%</span>
+                                                    <span style={{marginLeft: '6px', color: '#0ff', fontSize: '0.65rem'}}>🔍</span>
                                                 </div>
                                             </div>
                                         ))
@@ -390,6 +426,66 @@ export function Dashboard() {
                     </Suspense>
                 )}
             </div>
+
+            {/* AI Oracle Telemetry & Audit Inspector Modal */}
+            {selectedAudit && (
+                <div className="modal-overlay" style={{position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                    <div className="modal-content" style={{background: '#0a0a0a', border: '1px solid #0ff', padding: '2rem', maxWidth: '550px', width: '90%', borderRadius: '6px', fontFamily: 'monospace'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '0.8rem', marginBottom: '1.2rem'}}>
+                            <h3 style={{margin: 0, color: '#0ff', fontSize: '1.1rem'}}>AI ORACLE AUDIT INSPECTOR</h3>
+                            <button className="cyber-button small" onClick={() => setSelectedAudit(null)} style={{padding: '0.2rem 0.6rem'}}>✕</button>
+                        </div>
+
+                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem', fontSize: '0.85rem'}}>
+                            <div style={{background: '#111', padding: '0.8rem', borderRadius: '4px'}}>
+                                <div style={{color: '#888', fontSize: '0.75rem'}}>VERIFICATION STATUS</div>
+                                <div style={{color: selectedAudit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.2rem'}}>
+                                    {selectedAudit.verified ? '✓ PASSED (HUMAN)' : '⚠️ REJECTED (BOT)'}
+                                </div>
+                            </div>
+                            <div style={{background: '#111', padding: '0.8rem', borderRadius: '4px'}}>
+                                <div style={{color: '#888', fontSize: '0.75rem'}}>CONFIDENCE RATING</div>
+                                <div style={{color: '#0ff', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.2rem'}}>
+                                    {((selectedAudit.confidenceScore || 0) * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', marginBottom: '1.2rem', fontSize: '0.8rem', lineHeight: '1.6'}}>
+                            <div><strong style={{color: '#888'}}>AUDIT ID:</strong> #{selectedAudit.id}</div>
+                            <div><strong style={{color: '#888'}}>PROVER WALLET:</strong> <span style={{wordBreak: 'break-all', color: '#fff'}}>{selectedAudit.address}</span></div>
+                            <div><strong style={{color: '#888'}}>SCORE / STEPS:</strong> <span style={{color: '#ff0'}}>{selectedAudit.score}</span></div>
+                            <div><strong style={{color: '#888'}}>TIMESTAMP:</strong> {selectedAudit.timestamp}</div>
+                        </div>
+
+                        <h4 style={{color: '#0ff', fontSize: '0.85rem', marginBottom: '0.5rem'}}>BIOMETRIC & TIMING DELTA METRICS</h4>
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', textAlign: 'center'}}>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.7rem'}}>VARIANCE (min 10.0)</div>
+                                <div style={{color: selectedAudit.variance >= 10.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.variance?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.7rem'}}>MAD (min 5.0)</div>
+                                <div style={{color: selectedAudit.mad >= 5.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.mad?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.7rem'}}>ENTROPY (min 1.0)</div>
+                                <div style={{color: selectedAudit.entropy >= 1.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.entropy?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+                            <button className="cyber-button small" onClick={() => setSelectedAudit(null)}>DISMISS INSPECTOR</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

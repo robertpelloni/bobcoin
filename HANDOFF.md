@@ -1,7 +1,13 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.2
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.3
 
 ## Architectural Milestones Accomplished
-1. **AI Oracle Anti-Manipulation & Score Integrity**:
+1. **AI Oracle Real-Time WebSocket Streaming & Live Audit Inspector**:
+   - Implemented real-time `ORACLE_AUDIT` broadcasting via WebSockets in `go-game-server` and `game-server`.
+   - Connected `Dashboard.jsx` to the real-time WebSocket stream to instantly populate audits without polling delay.
+   - Built an interactive "AI Oracle Audit Inspector" modal on the dashboard allowing operators to inspect verification verdicts, confidence ratings, prover addresses, variance, MAD, and Shannon entropy ($H$) with a single click.
+   - Verified via unit test `TestOracleWebSocketBroadcast` in `go-game-server/main_test.go` and end-to-end browser assertions in `testing/test_e2e_system_tray_and_nav.py`.
+
+2. **AI Oracle Anti-Manipulation & Score Integrity**:
    - Enforced performance arithmetic consistency: reported `score` must match `(perfects * 100) + (greats * 50)` within 1.0 margin, eliminating score inflation exploits.
    - Enforced human biological APM limit: reject any replay trace exceeding 15 notes per second.
    - Unit tests added in `go-game-server/main_test.go` and verified against `game-server/server.js`.

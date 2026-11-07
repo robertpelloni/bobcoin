@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.3] - 2026-11-07
+### Added
+- **AI Oracle Real-Time WebSocket Streaming**: Implemented real-time audit event broadcasting (`ORACLE_AUDIT`) across `go-game-server` and `game-server`, allowing nodes to subscribe and receive instant anti-bot decisions.
+- **Interactive AI Oracle Audit Inspector Modal**: Added a detailed modal visualizer to `frontend/src/pages/Dashboard.jsx` providing deep inspection into raw variance, Mean Absolute Deviation (MAD), Shannon timing entropy ($H$), confidence rating, and prover wallet addresses.
+- **Unit & E2E Test Suite**: Added `TestOracleWebSocketBroadcast` in `go-game-server/main_test.go` and verified browser modal opening/dismissal in `testing/test_e2e_system_tray_and_nav.py`.
+
 ## [8.116.2] - 2026-11-07
 ### Added
 - **AI Oracle Anti-Manipulation Hardening**: Enforced strict performance arithmetic consistency (`(perfects * 100) + (greats * 50) == score`) and biological input rate limits (<= 15 events/sec) in both `go-game-server` and `game-server`.

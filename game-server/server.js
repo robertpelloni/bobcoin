@@ -237,6 +237,19 @@ app.post('/submit-proof', async (req, res) => {
 
         const verificationHash = crypto.createHash('sha256').update(JSON.stringify(proof)).digest('hex');
 
+        // Broadcast Oracle Evaluation via WebSockets
+        broadcastOracleAudit({
+            id: Date.now(),
+            address: address,
+            score: proof.publicValues.score || 0,
+            variance: oracleMetrics.variance || 0,
+            mad: oracleMetrics.mad || 0,
+            entropy: oracleMetrics.entropy || 0,
+            confidenceScore: oracleMetrics.confidenceScore || (zkVerified ? 0.98 : 0.05),
+            verified: zkVerified,
+            timestamp: new Date().toISOString()
+        });
+
         if (zkVerified) {
             let hash = verificationHash.substr(0, 32);
             const amount = proof.publicValues.score / 100;
@@ -379,9 +392,18 @@ const server = app.listen(PORT, () => {
     console.log(`[Game Server] Listening on internal port ${PORT}`);
 });
 
-// --- WebRTC Matchmaking (Signaling Server) ---
+// --- WebRTC Matchmaking & AI Oracle Telemetry Hub ---
 const wss = new WebSocketServer({ server });
 let rooms = new Map(); // RoomID -> WebSocket (waiting)
+
+function broadcastOracleAudit(audit) {
+    const payload = JSON.stringify({ type: 'ORACLE_AUDIT', audit });
+    wss.clients.forEach(client => {
+        if (client.readyState === 1) {
+            try { client.send(payload); } catch(e){}
+        }
+    });
+}
 
 async function getTrustScore(account) {
     if (!account) return 100.0;

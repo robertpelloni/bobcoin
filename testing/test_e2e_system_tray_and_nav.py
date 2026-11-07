@@ -16,6 +16,7 @@ Validates:
   * Lattice Governance (/governance)
   * Network Ops (/system)
   * Protocol Manual (/manual)
+- Sub-navigation links under each mega-module.
 - Command console tab switching directly on the Dashboard (/):
   * Arcade & Mint tab
   * DeFi & Exchange tab
@@ -23,16 +24,69 @@ Validates:
   * Node & Topology tab
   * Casino & Rewards tab
   * Protocol Manual tab
+- Mobile Vitality Sync integration (/mobile).
+- Cryptographic Dual-Key Stealth Address Protocol (DKSAP) address generation (/wallet).
 """
 
 import sys
 import os
+import json
 import time
 import subprocess
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+def test_ai_oracle_integrity():
+    print(">>> [E2E] Testing AI Oracle Anti-Bot Telemetry and Shannon Entropy...")
+    import urllib.request
+    base_url = "http://localhost:3001"
+
+    # 1. Non-monotonic timestamp rejection
+    non_mono = [{'time': 100.0}, {'time': 90.0}, {'time': 150.0}, {'time': 200.0}, {'time': 250.0}, {'time': 300.0}]
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {"address": "test_addr", "score": 2000, "replayLog": non_mono}}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Non-monotonic timestamps must be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.05
+        print("  ✓ Non-monotonic timestamp sequence rejected with confidenceScore 0.05.")
+
+    # 2. Robotic macro rejection (zero variance, zero MAD, zero entropy)
+    macro = [{'time': float(i * 100)} for i in range(10)]
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {"address": "test_addr", "score": 2000, "replayLog": macro}}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Monotonous macro must be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.10
+        print("  ✓ Monotonous zero-jitter macro rejected with confidenceScore 0.10.")
+
+    # 3. High-entropy human timing jitter acceptance
+    deltas = [75.0, 140.0, 90.0, 160.0, 85.0, 130.0, 110.0, 175.0, 95.0, 120.0]
+    t = 0.0
+    human_log = [{'time': t}]
+    for d in deltas:
+        t += d
+        human_log.append({'time': t})
+
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {"address": "25HWBaVCATNfnM9etagmiuiJRdj9NaqCtzxnFgPQSKMf", "score": 2000, "replayLog": human_log}}
+    }).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req) as resp:
+        res = json.loads(resp.read().decode())
+        assert res.get("zkVerified") is True
+        assert res.get("oracle", {}).get("entropy") >= 1.0
+        assert res.get("oracle", {}).get("confidenceScore") == 0.98
+        print(f"  ✓ High-entropy human jitter accepted: variance={res['oracle']['variance']}, MAD={res['oracle']['mad']}, entropy={res['oracle']['entropy']}.")
+    print(">>> [E2E] AI Oracle integrity verification passed!\n")
 
 def test_system_tray_module():
     print(">>> [E2E] Testing System Tray Module & Icon Generation...")
@@ -67,6 +121,16 @@ def test_consolidated_navigation_and_command_console():
         page.wait_for_selector(".navigation-wrapper", timeout=15000)
         print("  ✓ Navigation wrapper confirmed in DOM.")
 
+        # Seed authenticated wallet into localStorage to prevent onboarding modal on /wallet
+        dummy_wallet = {
+            'publicKey': '25HWBaVCATNfnM9etagmiuiJRdj9NaqCtzxnFgPQSKMf',
+            'privateKey': 'fake_priv_key_base58',
+            'boxPublicKey': '6FHYYQHZVfuaBHMMkvtcgJFacE9pJhzE7k8fDcJgiYVU',
+            'boxPrivateKey': 'fake_box_priv_key_base58',
+            'mnemonic': 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima'
+        }
+        page.evaluate(f'localStorage.setItem("lattice_arcade_wallet", JSON.stringify({json.dumps(dummy_wallet)}))')
+
         # Test Telemetry bar
         telemetry = page.locator(".network-live-bar")
         assert telemetry.is_visible()
@@ -84,7 +148,6 @@ def test_consolidated_navigation_and_command_console():
 
         for label, expected_path in mega_links:
             print(f"  * Testing Mega-Module Link: {label} -> {expected_path}")
-            # Ensure navigation is ready
             page.wait_for_selector(".cyber-nav", timeout=5000)
             link = page.locator(f".nav-item:has-text('{label}')").first
             assert link.is_visible(), f"Nav item '{label}' not found"
@@ -93,6 +156,48 @@ def test_consolidated_navigation_and_command_console():
             current_path = page.evaluate("window.location.pathname")
             assert current_path == expected_path, f"Expected path {expected_path}, got {current_path}"
             print(f"    ✓ Routed to {current_path} successfully.")
+
+        # 1b. Test Contextual Sub-Nav Bar Links across each parent module
+        sub_modules = [
+            ("NETWORK OPS", [
+                ("SUPERNODE", "/supernode"),
+                ("DAG EXPLORER", "/explorer"),
+                ("MOBILE MINING", "/mobile"),
+                ("SYSTEM STATUS", "/system"),
+            ]),
+            ("DEFI SUITE", [
+                ("ORDERBOOK DEX", "/dex"),
+                ("ATOMIC SWAPS", "/swap"),
+                ("STAKING", "/staking"),
+                ("MULTISIG", "/multisig"),
+                ("STORAGE MARKET", "/market"),
+            ]),
+            ("PRIVACY VAULT", [
+                ("SOVEREIGN WALLET", "/wallet"),
+                ("ENCRYPTED VAULT", "/vault"),
+                ("NFT GALLERY", "/gallery"),
+            ]),
+            ("ARCADE HUB", [
+                ("MINT GAME", "/"),
+                ("TROPHIES", "/trophies"),
+                ("CASINO", "/casino"),
+            ]),
+        ]
+
+        for parent_nav, links in sub_modules:
+            print(f"  * Activating parent mega-module: {parent_nav}...")
+            parent_link = page.locator(f".nav-item:has-text('{parent_nav}')").first
+            parent_link.click(force=True)
+            time.sleep(0.5)
+            for sub_label, expected_path in links:
+                print(f"    * Testing sub-link: {sub_label} -> {expected_path}...")
+                sub_btn = page.locator(f".sub-item:has-text('{sub_label}')").first
+                assert sub_btn.is_visible(), f"Sub-item {sub_label} should be visible under {parent_nav}"
+                sub_btn.click(force=True)
+                time.sleep(0.5)
+                current_path = page.evaluate("window.location.pathname")
+                assert current_path == expected_path, f"Expected {expected_path}, got {current_path}"
+                print(f"      ✓ Routed to {current_path} successfully.")
 
         # 2. Return to Dashboard and test all Command Console tabs
         print("  * Returning to Dashboard to test Command Console tabs...")
@@ -135,15 +240,6 @@ def test_consolidated_navigation_and_command_console():
 
         # 4. Test Privacy Vault Stealth Address Generation (DKSAP)
         print("  * Testing Privacy Vault Stealth Address Generation (DKSAP)...")
-        import json
-        dummy_wallet = {
-            'publicKey': '25HWBaVCATNfnM9etagmiuiJRdj9NaqCtzxnFgPQSKMf',
-            'privateKey': 'fake_priv_key_base58',
-            'boxPublicKey': '6FHYYQHZVfuaBHMMkvtcgJFacE9pJhzE7k8fDcJgiYVU',
-            'boxPrivateKey': 'fake_box_priv_key_base58',
-            'mnemonic': 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima'
-        }
-        page.evaluate(f'localStorage.setItem("lattice_arcade_wallet", JSON.stringify({json.dumps(dummy_wallet)}))')
         page.goto(f"{base_url}/wallet")
         page.wait_for_selector(".wallet-card", timeout=15000)
         stealth_addr = page.locator(".stealth").inner_text()
@@ -160,8 +256,9 @@ def test_consolidated_navigation_and_command_console():
 
 def main():
     print("=" * 60)
-    print("  LATTICE ARCADE E2E NAVIGATION & TRAY AUTOMATED TEST SUITE")
+    print("  LATTICE ARCADE E2E NAVIGATION, ORACLE & TRAY TEST SUITE")
     print("=" * 60)
+    test_ai_oracle_integrity()
     test_system_tray_module()
     test_consolidated_navigation_and_command_console()
     print("✅ ALL TESTS PASSED.")

@@ -10,12 +10,12 @@ def generate_random_address():
 
 def simulate_npc_minting():
     print("[NPC-Agent] Bootstrapping liquidity: Generating simulated Proof-of-Play...")
-    # Generate human-like jitter so AI Oracle accepts the proof
+    # Generate human-like jitter with diverse multi-bucket reaction intervals so AI Oracle accepts the proof
     curr_time = 0
     replay_log = []
-    for _ in range(10):
-        curr_time += 100 + random.randint(15, 60)
-        replay_log.append({"time": curr_time, "action": "press"})
+    for _ in range(12):
+        curr_time += random.randint(70, 180)
+        replay_log.append({"time": float(curr_time), "action": "press"})
 
     proof_payload = {
         "proof": {

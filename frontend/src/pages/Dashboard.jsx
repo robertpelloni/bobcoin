@@ -32,7 +32,7 @@ export function Dashboard() {
     const [mintResult, setMintResult] = useState(null);
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
-    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, status: 'STANDBY' });
+    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, status: 'STANDBY' });
 
     // Command Center Active Sub-Module Tab (Eliminates fragmentation)
     const [commandTab, setCommandTab] = useState('arcade');
@@ -51,10 +51,24 @@ export function Dashboard() {
                 const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
                 const variance = diffs.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / diffs.length;
                 const mad = diffs.reduce((a, b) => a + Math.abs(b - mean), 0) / diffs.length;
+
+                // Shannon Entropy estimation of delta buckets (10ms)
+                const freqs = {};
+                diffs.forEach(d => {
+                    const bucket = Math.floor(d / 10.0);
+                    freqs[bucket] = (freqs[bucket] || 0) + 1;
+                });
+                let entropy = 0.0;
+                Object.values(freqs).forEach(count => {
+                    const p = count / diffs.length;
+                    if (p > 0) entropy -= p * Math.log2(p);
+                });
+
                 setOracleStats({
                     variance: parseFloat(variance.toFixed(2)),
                     mad: parseFloat(mad.toFixed(2)),
-                    status: (variance >= 10.0 && mad >= 5.0) ? 'HUMAN_VERIFIED' : 'CALCULATING'
+                    entropy: parseFloat(entropy.toFixed(2)),
+                    status: (variance >= 10.0 && mad >= 5.0 && entropy >= 1.0) ? 'HUMAN_VERIFIED' : 'CALCULATING'
                 });
             }
         }
@@ -217,9 +231,9 @@ export function Dashboard() {
                         <div className="stats-box">
                             <p title="Current rhythm accuracy points">SCORE: <span className="neon-text">{score}</span></p>
                             <p title="Consecutive successful key hits multiplier">COMBO: <span className="neon-text-blue">x{combo}</span></p>
-                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy variance and MAD">
+                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy, variance, and MAD">
                                 ORACLE ENTROPY: <span style={{color: oracleStats.status === 'HUMAN_VERIFIED' ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>{oracleStats.status}</span>
-                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad}]</span>
+                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad} | H: {oracleStats.entropy || 0.0}]</span>
                             </p>
                         </div>
 

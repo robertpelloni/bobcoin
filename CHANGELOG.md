@@ -1,5 +1,21 @@
 # Changelog
 
+## [8.115.9] - 2026-11-07
+### Added
+- **AI Oracle Shannon Entropy & Monotonicity Engine**: Upgraded `go-game-server` and `game-server` bot detection engines with strict temporal monotonicity checks and Shannon timing delta entropy evaluation (`H >= 1.0`), preventing advanced clustered and repetitive macro bypasses.
+- **Dynamic Replay Entropy Telemetry**: Integrated real-time Shannon entropy metrics `[VAR | MAD | H]` directly into the Sovereign Dashboard stats bar and proof submission responses.
+- **NPC Traffic Generator Calibration**: Enhanced `scripts/npc_agent.py` to synthesize realistic human jitter across varied 70–180ms delta buckets, ensuring continuous liquidity injection without AI Oracle rejections.
+
+## [8.115.8] - 2026-11-07
+### Added
+- **Sovereign Dashboard Consolidation & Redesign**: Consolidated 17 fragmented top-level navigation routes into 5 high-value Sovereign Mega-Modules (`ARCADE HUB`, `DEFI SUITE`, `PRIVACY VAULT`, `GOVERNANCE`, `NETWORK OPS`, `MANUAL`), paired with a dynamic contextual sub-nav bar.
+- **Unified Command Console**: Embedded an All-in-One Command Console directly on `Dashboard.jsx` using React Suspense and dynamic chunk imports for frictionless deep-module interaction without page reloads.
+- **Cross-Platform System Tray & Lifecycle Controller**: Implemented `scripts/system_tray.py` with dynamic 64x64 neon RGBA icon synthesis, IPv4/IPv6 socket polling for all microservice daemons (ports 3001, 4001, 8000, 4173), start/stop (`SIGTERM`)/restart lifecycle hooks, and an automated headless fallback mode.
+- **Dual-Key Stealth Address Protocol (DKSAP)**: Implemented cryptographic stealth address generation in `frontend/src/cryptoUtils.js` combining ephemeral X25519 Diffie-Hellman secret exchange with Ed25519 spend key tweaks.
+- **Physical Mining / Vitality Sync**: Integrated `/sdk/v1/vitality` across `go-game-server` and `Mobile.jsx` for wearable fitness proof verification.
+- **AI Oracle Anti-Bot Hardening**: Reordered verification pipeline in `go-game-server/main.go` to reject zero-entropy and robotic macro replay logs prior to score checks, enforcing variance and Mean Absolute Deviation (MAD) standards.
+- **End-to-End Playwright Automation Suite**: Developed `testing/test_e2e_system_tray_and_nav.py` with multi-tier browser assertions covering all mega-modules, sub-modules, command center tabs, vitality sync, and stealth keys.
+
 ## [8.114.0] - 2026-04-21
 ### Added
 - Dynamic Versioning: Refactored Go microservices to source protocol versions from `VERSION.md`.

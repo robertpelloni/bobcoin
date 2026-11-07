@@ -561,16 +561,19 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 	metrics := map[string]interface{}{
 		"variance":        0.0,
 		"mad":             0.0,
+		"entropy":         0.0,
 		"confidenceScore": 0.0,
 		"mode":            "AI_ORACLE_STATISTICAL",
 	}
 
-	// AI Oracle (Bot Detection via variance analysis)
-	// Must execute before score validation to prevent macro bypasses
+	// AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
+	// Must execute before score validation to prevent robotic macro bypasses
 	replayLog, ok := publicValues["replayLog"].([]interface{})
 	if ok && len(replayLog) > 5 {
 		var diffs []float64
 		var lastTime float64
+		isMonotonic := true
+
 		for i, entryRaw := range replayLog {
 			entry, ok := entryRaw.(map[string]interface{})
 			if !ok {
@@ -578,9 +581,20 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 			}
 			t, _ := entry["time"].(float64)
 			if i > 0 {
-				diffs = append(diffs, t-lastTime)
+				delta := t - lastTime
+				// Strict monotonicity: each timestamp must be strictly greater than previous
+				if delta <= 0.0 {
+					isMonotonic = false
+				}
+				diffs = append(diffs, delta)
 			}
 			lastTime = t
+		}
+
+		if !isMonotonic {
+			log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Replay timestamps are not strictly monotonic.")
+			metrics["confidenceScore"] = 0.05
+			return false, metrics
 		}
 
 		if len(diffs) > 0 {
@@ -613,6 +627,18 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 			if mad < 5.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (< 5.0, robotic consistency detected).", mad)
 				metrics["confidenceScore"] = 0.10
+				return false, metrics
+			}
+
+			// Shannon Entropy of binned timing deltas (10ms buckets)
+			entropy := calculateDeltaEntropy(diffs, 10.0)
+			metrics["entropy"] = math.Round(entropy*100) / 100
+			log.Printf("[AI Oracle] Replay delta entropy: %f", entropy)
+
+			// A minimum entropy threshold ensures diverse human reaction times
+			if entropy < 1.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Entropy %f is too low (< 1.0, repeated pattern detected).", entropy)
+				metrics["confidenceScore"] = 0.15
 				return false, metrics
 			}
 
@@ -674,6 +700,34 @@ func calculateVariance(data []float64) float64 {
 		sqDiffSum += math.Pow(v-mean, 2)
 	}
 	return math.Sqrt(sqDiffSum / float64(len(data)))
+}
+
+// calculateDeltaEntropy estimates the Shannon Entropy of time deltas by binning them into buckets.
+// Highly randomized human timings distribute across multiple buckets resulting in higher entropy (H > 1.0),
+// whereas robotic/macro sequences cluster into 1 or 2 buckets resulting in near-zero entropy.
+func calculateDeltaEntropy(deltas []float64, bucketSize float64) float64 {
+	if len(deltas) == 0 {
+		return 0.0
+	}
+	if bucketSize <= 0.0 {
+		bucketSize = 10.0
+	}
+
+	freqs := make(map[int]int)
+	for _, d := range deltas {
+		bucket := int(math.Floor(d / bucketSize))
+		freqs[bucket]++
+	}
+
+	total := float64(len(deltas))
+	var entropy float64
+	for _, count := range freqs {
+		p := float64(count) / total
+		if p > 0 {
+			entropy -= p * math.Log2(p)
+		}
+	}
+	return entropy
 }
 
 func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {

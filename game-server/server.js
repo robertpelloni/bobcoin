@@ -127,42 +127,75 @@ app.post('/submit-proof', async (req, res) => {
         const address = proof.publicValues.address || 'unknown';
         let zkVerified = proof.publicValues.score >= 1000;
 
-        // AI Oracle (Bot Detection via variance analysis)
+        // AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
+        let oracleMetrics = { variance: 0, mad: 0, entropy: 0, confidenceScore: 0.98 };
         if (zkVerified && Array.isArray(proof.publicValues.replayLog) && proof.publicValues.replayLog.length > 5) {
             const replayLog = proof.publicValues.replayLog;
             const diffs = [];
             let lastTime = 0;
+            let isMonotonic = true;
 
             for (let i = 0; i < replayLog.length; i++) {
                 const t = replayLog[i].time;
                 if (i > 0) {
-                    diffs.push(t - lastTime);
+                    const delta = t - lastTime;
+                    if (delta <= 0) isMonotonic = false;
+                    diffs.push(delta);
                 }
                 lastTime = t;
             }
 
-            if (diffs.length > 0) {
+            if (!isMonotonic) {
+                console.log(`[AI Oracle] ⚠️ BOT DETECTED: Replay timestamps are not strictly monotonic.`);
+                zkVerified = false;
+                oracleMetrics.confidenceScore = 0.05;
+            } else if (diffs.length > 0) {
                 // Calculate Variance
                 const sum = diffs.reduce((a, b) => a + b, 0);
                 const mean = sum / diffs.length;
                 const sqDiffSum = diffs.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
                 const variance = Math.sqrt(sqDiffSum / diffs.length);
+                oracleMetrics.variance = Math.round(variance * 100) / 100;
 
                 console.log(`[AI Oracle] Replay log variance: ${variance}`);
 
-                if (variance < 5.0) {
-                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Variance ${variance} is too low (macro script suspected).`);
+                if (variance < 10.0) {
+                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Variance ${variance} is too low (< 10.0, macro script suspected).`);
                     zkVerified = false;
+                    oracleMetrics.confidenceScore = 0.10;
                 } else {
                     // Calculate Mean Absolute Deviation (MAD)
                     const sumAbsDev = diffs.reduce((a, b) => a + Math.abs(b - mean), 0);
                     const mad = sumAbsDev / diffs.length;
+                    oracleMetrics.mad = Math.round(mad * 100) / 100;
 
                     console.log(`[AI Oracle] Mean: ${mean}, MAD: ${mad}`);
 
-                    if (mad < 2.0) {
-                        console.log(`[AI Oracle] ⚠️ BOT DETECTED: MAD ${mad} is too low (robotic consistency detected).`);
+                    if (mad < 5.0) {
+                        console.log(`[AI Oracle] ⚠️ BOT DETECTED: MAD ${mad} is too low (< 5.0, robotic consistency detected).`);
                         zkVerified = false;
+                        oracleMetrics.confidenceScore = 0.10;
+                    } else {
+                        // Shannon Entropy of binned timing deltas (10ms buckets)
+                        const bucketSize = 10.0;
+                        const freqs = {};
+                        diffs.forEach(d => {
+                            const bucket = Math.floor(d / bucketSize);
+                            freqs[bucket] = (freqs[bucket] || 0) + 1;
+                        });
+                        let entropy = 0.0;
+                        Object.values(freqs).forEach(count => {
+                            const p = count / diffs.length;
+                            if (p > 0) entropy -= p * Math.log2(p);
+                        });
+                        oracleMetrics.entropy = Math.round(entropy * 100) / 100;
+                        console.log(`[AI Oracle] Replay delta entropy: ${entropy}`);
+
+                        if (entropy < 1.0) {
+                            console.log(`[AI Oracle] ⚠️ BOT DETECTED: Entropy ${entropy} is too low (< 1.0).`);
+                            zkVerified = false;
+                            oracleMetrics.confidenceScore = 0.15;
+                        }
                     }
                 }
             }

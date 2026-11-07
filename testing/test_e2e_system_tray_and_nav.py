@@ -87,7 +87,44 @@ def test_ai_oracle_integrity():
         assert res.get("oracle", {}).get("confidenceScore") == 0.98
         print(f"  ✓ High-entropy human jitter accepted: variance={res['oracle']['variance']}, MAD={res['oracle']['mad']}, entropy={res['oracle']['entropy']}.")
 
-    # 4. Oracle Audits Endpoint & Persistence
+    # 4. Score Manipulation Rejection: reported score 4000 but perfects=10, greats=0 (1000)
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "manip_bot",
+            "score": 4000,
+            "perfects": 10,
+            "greats": 0,
+            "replayLog": human_log
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Score manipulation should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.05
+        print("  ✓ Score arithmetic mismatch rejected with confidenceScore 0.05.")
+
+    # 5. Superhuman APM Rejection (> 15 events/sec)
+    fast_log = [{"time": float(i * 10)} for i in range(10)]
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "rapid_bot",
+            "score": 1000,
+            "perfects": 10,
+            "greats": 0,
+            "replayLog": fast_log
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Superhuman event frequency should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") <= 0.10
+        print("  ✓ Superhuman APM burst rejected by AI Oracle.")
+
+    # 6. Oracle Audits Endpoint & Persistence
     resp = urllib.request.urlopen(f"{base_url}/oracle/audits")
     audits = json.loads(resp.read().decode()).get("audits", [])
     assert len(audits) >= 1

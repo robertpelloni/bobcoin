@@ -669,37 +669,59 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 				return false, metrics
 			}
 
+			// Superhuman APM / input frequency check:
+			// Calculate total duration from first to last event
+			firstTime, _ := replayLog[0].(map[string]interface{})["time"].(float64)
+			totalDurationSec := (lastTime - firstTime) / 1000.0
+			if totalDurationSec > 0.0 {
+				eventsPerSec := float64(len(replayLog)) / totalDurationSec
+				metrics["eventsPerSec"] = math.Round(eventsPerSec*100) / 100
+				if eventsPerSec > 15.0 {
+					log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Input frequency %f events/sec exceeds biological limits (max 15/s).", eventsPerSec)
+					metrics["confidenceScore"] = 0.08
+					return false, metrics
+				}
+			}
+
 			metrics["confidenceScore"] = 0.98
 		}
 	}
 
+	var score float64
 	if scoreRaw, ok := publicValues["score"]; ok {
-		var score float64
 		switch v := scoreRaw.(type) {
 		case float64:
 			score = v
 		case string:
 			fmt.Sscanf(v, "%f", &score)
 		}
-
-		if score >= 1000 {
-			return true, metrics
-		}
 	}
 
-	score, _ := publicValues["score"].(float64)
-
-	// Final validation: Score must be consistent with performance metrics
-	perfects, _ := publicValues["perfects"].(float64)
-	greats, _ := publicValues["greats"].(float64)
-	calculatedScore := (perfects * 100) + (greats * 50)
-
-	if math.Abs(score - calculatedScore) > 1.0 {
-		log.Printf("[ZK Service] ⚠️ Score mismatch detected: reported %f, calculated %f", score, calculatedScore)
+	// Score must meet minimum minting requirement
+	if score < 1000 {
 		return false, metrics
 	}
 
-	return score >= 1000, metrics
+	// Performance arithmetic: if granular breakdown is supplied, it must strictly balance
+	perfectsRaw, hasPerf := publicValues["perfects"]
+	greatsRaw, hasGreats := publicValues["greats"]
+	if hasPerf || hasGreats {
+		var perfects, greats float64
+		if hasPerf {
+			perfects, _ = perfectsRaw.(float64)
+		}
+		if hasGreats {
+			greats, _ = greatsRaw.(float64)
+		}
+		calculatedScore := (perfects * 100.0) + (greats * 50.0)
+		if math.Abs(score-calculatedScore) > 1.0 {
+			log.Printf("[ZK Service] ⚠️ Score mismatch detected: reported %f, calculated %f", score, calculatedScore)
+			metrics["confidenceScore"] = 0.05
+			return false, metrics
+		}
+	}
+
+	return true, metrics
 }
 
 func calculateVariance(data []float64) float64 {

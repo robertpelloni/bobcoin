@@ -1,5 +1,10 @@
 # Changelog
 
+## [8.116.2] - 2026-11-07
+### Added
+- **AI Oracle Anti-Manipulation Hardening**: Enforced strict performance arithmetic consistency (`(perfects * 100) + (greats * 50) == score`) and biological input rate limits (<= 15 events/sec) in both `go-game-server` and `game-server`.
+- **Unit Test Hardening**: Added explicit test coverage in `go-game-server/main_test.go` and `testing/test_e2e_system_tray_and_nav.py` preventing score inflation and superhuman APM bypasses.
+
 ## [8.116.1] - 2026-11-07
 ### Added
 - **AI Oracle Physiological Validation**: Hardened `/sdk/v1/vitality` in `go-game-server` with biological boundaries on heart rate (40–220 bpm) and human locomotion cadence (<= 300 steps/min).

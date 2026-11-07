@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -544,5 +545,56 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 	}
 	if disconnect.Type != "OPPONENT_DISCONNECTED" {
 		t.Fatalf("expected opponent disconnect notice, got %+v", disconnect)
+	}
+}
+
+func TestSubmitProofRejectsSuperhumanAPMAndScoreMismatch(t *testing.T) {
+	service := newTestService(t)
+
+	// 1. Superhuman APM: 10 events within 100ms (100 events/sec)
+	superFastLog := make([]map[string]interface{}, 10)
+	for i := 0; i < 10; i++ {
+		superFastLog[i] = map[string]interface{}{"time": float64(i * 10)}
+	}
+	superPayload := map[string]interface{}{
+		"proof": map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "fast-bot",
+				"score":     2000.0,
+				"replayLog": superFastLog,
+			},
+		},
+	}
+	superBody, _ := json.Marshal(superPayload)
+	superReq := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(superBody))
+	superRec := httptest.NewRecorder()
+	service.handleSubmitProof(superRec, superReq)
+	if superRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected superhuman APM rejection, got %d with %s", superRec.Code, superRec.Body.String())
+	}
+
+	// 2. Score Mismatch: reported score 5000, but perfects=10, greats=0 (1000 score)
+	mismatchLog := []map[string]interface{}{
+		{"time": 100.0}, {"time": 240.0}, {"time": 390.0}, {"time": 560.0},
+		{"time": 710.0}, {"time": 880.0}, {"time": 1030.0}, {"time": 1190.0},
+		{"time": 1350.0}, {"time": 1520.0},
+	}
+	mismatchPayload := map[string]interface{}{
+		"proof": map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "manipulated-player",
+				"score":     5000.0,
+				"perfects":  10.0,
+				"greats":    0.0,
+				"replayLog": mismatchLog,
+			},
+		},
+	}
+	mismatchBody, _ := json.Marshal(mismatchPayload)
+	mismatchReq := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(mismatchBody))
+	mismatchRec := httptest.NewRecorder()
+	service.handleSubmitProof(mismatchRec, mismatchReq)
+	if mismatchRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected score mismatch rejection, got %d with %s", mismatchRec.Code, mismatchRec.Body.String())
 	}
 }

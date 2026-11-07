@@ -195,9 +195,31 @@ app.post('/submit-proof', async (req, res) => {
                             console.log(`[AI Oracle] ⚠️ BOT DETECTED: Entropy ${entropy} is too low (< 1.0).`);
                             zkVerified = false;
                             oracleMetrics.confidenceScore = 0.15;
+                        } else {
+                            // Superhuman APM / input frequency check (max 15/sec)
+                            const totalDurationSec = (lastTime - replayLog[0].time) / 1000.0;
+                            if (totalDurationSec > 0.0) {
+                                const eventsPerSec = replayLog.length / totalDurationSec;
+                                oracleMetrics.eventsPerSec = Math.round(eventsPerSec * 100) / 100;
+                                if (eventsPerSec > 15.0) {
+                                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Input frequency ${eventsPerSec} events/sec exceeds limits.`);
+                                    zkVerified = false;
+                                    oracleMetrics.confidenceScore = 0.08;
+                                }
+                            }
                         }
                     }
                 }
+            }
+        }
+
+        // Score consistency check if breakdown exists
+        if (proof.publicValues.perfects !== undefined || proof.publicValues.greats !== undefined) {
+            const calculated = ((proof.publicValues.perfects || 0) * 100) + ((proof.publicValues.greats || 0) * 50);
+            if (Math.abs(proof.publicValues.score - calculated) > 1.0) {
+                console.log(`[AI Oracle] ⚠️ Score mismatch: reported ${proof.publicValues.score}, calculated ${calculated}`);
+                zkVerified = false;
+                oracleMetrics.confidenceScore = 0.05;
             }
         }
 

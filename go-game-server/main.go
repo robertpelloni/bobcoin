@@ -492,9 +492,13 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	verificationHash := hashString(string(proofJSON))
 	address, _ := publicValues["address"].(string)
 	score, _ := publicValues["score"].(float64)
-	zkVerified := s.verifyProof(publicValues, req.Proof)
+	zkVerified, oracleMetrics := s.verifyProofWithMetrics(publicValues, req.Proof)
 	if !zkVerified {
-		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Cryptographic trace verification failed."})
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"error":   "Cryptographic trace verification failed.",
+			"oracle":  oracleMetrics,
+		})
 		return
 	}
 
@@ -510,10 +514,21 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 		hash = blockHash
 	}
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: amount, Type: "MINT", Hash: hash})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": hash, "zkVerified": true})
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success":    true,
+		"tx":         txID,
+		"hash":       hash,
+		"zkVerified": true,
+		"oracle":     oracleMetrics,
+	})
 }
 
 func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[string]interface{}) bool {
+	ok, _ := s.verifyProofWithMetrics(publicValues, proof)
+	return ok
+}
+
+func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, proof map[string]interface{}) (bool, map[string]interface{}) {
 	// Native ZK Verification (SP1 Simulation)
 	// In production, we call the 'cargo-prove' verifier binary on the proof-of-play circuit.
 	// If the binary is missing, we fall back to a high-fidelity AI Oracle audit.
@@ -537,18 +552,28 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			// Fallback to simulation if native verification is explicitly failing due to env setup
 		} else {
 			log.Printf("[ZK Service] Native verification succeeded!\nOutput: %s", string(output))
-			return true
+			return true, map[string]interface{}{"mode": "RISC-V_NATIVE", "confidence": 1.0}
 		}
 	}
 
 	time.Sleep(1200 * time.Millisecond) // Simulated cryptographic delay
 
-	// AI Oracle (Bot Detection via variance analysis)
-	// Must execute before score validation to prevent macro bypasses
+	metrics := map[string]interface{}{
+		"variance":        0.0,
+		"mad":             0.0,
+		"entropy":         0.0,
+		"confidenceScore": 0.0,
+		"mode":            "AI_ORACLE_STATISTICAL",
+	}
+
+	// AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
+	// Must execute before score validation to prevent robotic macro bypasses
 	replayLog, ok := publicValues["replayLog"].([]interface{})
 	if ok && len(replayLog) > 5 {
 		var diffs []float64
 		var lastTime float64
+		isMonotonic := true
+
 		for i, entryRaw := range replayLog {
 			entry, ok := entryRaw.(map[string]interface{})
 			if !ok {
@@ -556,19 +581,32 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			}
 			t, _ := entry["time"].(float64)
 			if i > 0 {
-				diffs = append(diffs, t-lastTime)
+				delta := t - lastTime
+				// Strict monotonicity: each timestamp must be strictly greater than previous
+				if delta <= 0.0 {
+					isMonotonic = false
+				}
+				diffs = append(diffs, delta)
 			}
 			lastTime = t
 		}
 
+		if !isMonotonic {
+			log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Replay timestamps are not strictly monotonic.")
+			metrics["confidenceScore"] = 0.05
+			return false, metrics
+		}
+
 		if len(diffs) > 0 {
 			variance := calculateVariance(diffs)
+			metrics["variance"] = math.Round(variance*100) / 100
 			log.Printf("[AI Oracle] Replay log variance: %f", variance)
 
 			// Robotic consistency check: if variance is low, it's a macro script.
 			if variance < 10.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (< 10.0, macro script suspected).", variance)
-				return false
+				metrics["confidenceScore"] = 0.10
+				return false, metrics
 			}
 
 			// Robotic precision check: calculate Mean Absolute Deviation (MAD)
@@ -583,12 +621,28 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 				sumAbsDev += math.Abs(d - mean)
 			}
 			mad := sumAbsDev / float64(len(diffs))
+			metrics["mad"] = math.Round(mad*100) / 100
 			log.Printf("[AI Oracle] Mean: %f, MAD: %f", mean, mad)
 
 			if mad < 5.0 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (< 5.0, robotic consistency detected).", mad)
-				return false
+				metrics["confidenceScore"] = 0.10
+				return false, metrics
 			}
+
+			// Shannon Entropy of binned timing deltas (10ms buckets)
+			entropy := calculateDeltaEntropy(diffs, 10.0)
+			metrics["entropy"] = math.Round(entropy*100) / 100
+			log.Printf("[AI Oracle] Replay delta entropy: %f", entropy)
+
+			// A minimum entropy threshold ensures diverse human reaction times
+			if entropy < 1.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Entropy %f is too low (< 1.0, repeated pattern detected).", entropy)
+				metrics["confidenceScore"] = 0.15
+				return false, metrics
+			}
+
+			metrics["confidenceScore"] = 0.98
 		}
 	}
 
@@ -602,7 +656,7 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 		}
 
 		if score >= 1000 {
-			return true
+			return true, metrics
 		}
 	}
 
@@ -615,10 +669,10 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 
 	if math.Abs(score - calculatedScore) > 1.0 {
 		log.Printf("[ZK Service] ⚠️ Score mismatch detected: reported %f, calculated %f", score, calculatedScore)
-		return false
+		return false, metrics
 	}
 
-	return score >= 1000
+	return score >= 1000, metrics
 }
 
 func calculateVariance(data []float64) float64 {
@@ -646,6 +700,34 @@ func calculateVariance(data []float64) float64 {
 		sqDiffSum += math.Pow(v-mean, 2)
 	}
 	return math.Sqrt(sqDiffSum / float64(len(data)))
+}
+
+// calculateDeltaEntropy estimates the Shannon Entropy of time deltas by binning them into buckets.
+// Highly randomized human timings distribute across multiple buckets resulting in higher entropy (H > 1.0),
+// whereas robotic/macro sequences cluster into 1 or 2 buckets resulting in near-zero entropy.
+func calculateDeltaEntropy(deltas []float64, bucketSize float64) float64 {
+	if len(deltas) == 0 {
+		return 0.0
+	}
+	if bucketSize <= 0.0 {
+		bucketSize = 10.0
+	}
+
+	freqs := make(map[int]int)
+	for _, d := range deltas {
+		bucket := int(math.Floor(d / bucketSize))
+		freqs[bucket]++
+	}
+
+	total := float64(len(deltas))
+	var entropy float64
+	for _, count := range freqs {
+		p := float64(count) / total
+		if p > 0 {
+			entropy -= p * math.Log2(p)
+		}
+	}
+	return entropy
 }
 
 func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {

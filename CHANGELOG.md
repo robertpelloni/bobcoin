@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.1] - 2026-11-07
+### Added
+- **AI Oracle Physiological Validation**: Hardened `/sdk/v1/vitality` in `go-game-server` with biological boundaries on heart rate (40–220 bpm) and human locomotion cadence (<= 300 steps/min).
+- **Mobile Biometric Vitals Dashboard**: Added a real-time "BIOMETRIC VITALS" telemetry card in `Mobile.jsx` displaying heart rate, cadence, and AI Oracle validation status.
+- **Automated Vitality E2E Tests**: Expanded `testing/test_e2e_system_tray_and_nav.py` with multi-step physiological assertions and UI validation badges.
+
 ## [8.116.0] - 2026-11-07
 ### Added
 - **AI Oracle Audit Persistence & Telemetry Feed**: Implemented SQLite table `oracle_audits` in `go-game-server` and added `/oracle/audits` query endpoint (proxied through `go-supertorrent`).

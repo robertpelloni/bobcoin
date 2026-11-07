@@ -17,6 +17,7 @@ export function Mobile() {
     const [bobEarned, setBobEarned] = useState(0);
     const [plotCount, setPlotCount] = useState(0);
     const [currentChallenge, setCurrentChallenge] = useState('');
+    const [vitals, setVitals] = useState({ heartRate: 72, cadence: 128, verified: false });
     
     // In-memory "hard drive" for Proof of Space
     const plotData = useRef(new Map());
@@ -97,12 +98,16 @@ export function Mobile() {
     // Proof of Vitality (Wearable HealthKit / Google Fit API connection)
     const handleSyncHealthData = async () => {
         const simulatedSteps = Math.floor(Math.random() * 5000) + 1200;
+        const hr = Math.floor(75 + Math.random() * 35);
+        const cadence = Math.floor(115 + Math.random() * 40);
         setSteps(prev => prev + simulatedSteps);
 
         const payload = {
             deviceId: 'wearable_' + Math.random().toString(36).substring(2, 10),
             steps: simulatedSteps,
-            heartRateAvg: Math.floor(65 + Math.random() * 30),
+            heartRateAvg: hr,
+            cadence: cadence,
+            durationSec: Math.floor(simulatedSteps / (cadence / 60)),
             signature: 'sig_' + Math.random().toString(36).substring(2, 16),
             wallet: localStorage.getItem('lattice_arcade_wallet') ? JSON.parse(localStorage.getItem('lattice_arcade_wallet')).publicKey : 'anon_wearable_wallet'
         };
@@ -112,7 +117,8 @@ export function Mobile() {
             if (res && res.success) {
                 const reward = res.reward || 1.5;
                 setBobEarned(b => b + reward);
-                alert(`Proof of Vitality Accepted! Synced ${simulatedSteps} steps and earned ${reward} BOB.`);
+                setVitals({ heartRate: hr, cadence: cadence, verified: true });
+                alert(`Proof of Vitality Accepted! Synced ${simulatedSteps} steps (${cadence} spm, ${hr} bpm) and earned ${reward} BOB.`);
             } else {
                 alert(`Proof of Vitality Rejected: ${res.error || 'Failed'}`);
             }
@@ -168,6 +174,19 @@ export function Mobile() {
                     <div className="metric-info">
                         <h3>BOB EARNED</h3>
                         <p className="value">{bobEarned} BOB</p>
+                    </div>
+                </div>
+
+                <div className="metric-card">
+                    <div className="icon">❤️</div>
+                    <div className="metric-info">
+                        <h3>BIOMETRIC VITALS</h3>
+                        <p className="value" style={{fontSize: '0.9rem'}}>
+                            {vitals.heartRate} BPM | {vitals.cadence} SPM
+                        </p>
+                        <span style={{fontSize: '0.65rem', color: vitals.verified ? '#0f0' : '#888'}}>
+                            {vitals.verified ? 'AI ORACLE VALIDATED' : 'READY TO SYNC'}
+                        </span>
                     </div>
                 </div>
             </div>

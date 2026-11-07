@@ -242,8 +242,11 @@ def test_consolidated_navigation_and_command_console():
         with page.expect_event("dialog", timeout=10000):
             sync_btn.click()
         time.sleep(0.5)
-        assert len(dialog_text) > 0 and "Vitality" in dialog_text[0]
+        assert len(dialog_text) > 0 and "Vitality" in dialog_text[0] and "spm" in dialog_text[0]
         print(f"    ✓ Vitality Proof synced successfully: {dialog_text[0]}")
+        metrics_text = page.locator(".mining-metrics").inner_text()
+        assert "AI ORACLE VALIDATED" in metrics_text
+        print("    ✓ Biometric vitals metric card validated by AI Oracle.")
 
         # 4. Test Privacy Vault Stealth Address Generation (DKSAP)
         print("  * Testing Privacy Vault Stealth Address Generation (DKSAP)...")

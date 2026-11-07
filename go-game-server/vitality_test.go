@@ -59,3 +59,41 @@ func TestHandleVitalityProof_InsufficientSteps(t *testing.T) {
 		t.Errorf("Expected 400 Bad Request, got %d", res.StatusCode)
 	}
 }
+
+func TestHandleVitalityProof_PhysiologicalChecks(t *testing.T) {
+	service := &Service{}
+
+	// Impossible heart rate (> 220 bpm)
+	payloadHighHR := VitalityPayload{
+		DeviceID:      "apple-watch-s9-001",
+		Steps:         2500,
+		HeartRateAvg:  280.0,
+		Cadence:       120.0,
+		Signature:     "mock-zk-signature",
+		WalletAddress: "mock-wallet-address",
+	}
+	body, _ := json.Marshal(payloadHighHR)
+	req := httptest.NewRequest(http.MethodPost, "/sdk/v1/vitality", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	service.handleVitalityProof(w, req)
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for impossible heart rate, got %d", w.Result().StatusCode)
+	}
+
+	// Impossible cadence (> 300 steps/min)
+	payloadHighCadence := VitalityPayload{
+		DeviceID:      "apple-watch-s9-001",
+		Steps:         2500,
+		HeartRateAvg:  135.0,
+		Cadence:       450.0,
+		Signature:     "mock-zk-signature",
+		WalletAddress: "mock-wallet-address",
+	}
+	body, _ = json.Marshal(payloadHighCadence)
+	req = httptest.NewRequest(http.MethodPost, "/sdk/v1/vitality", bytes.NewReader(body))
+	w = httptest.NewRecorder()
+	service.handleVitalityProof(w, req)
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for impossible cadence, got %d", w.Result().StatusCode)
+	}
+}

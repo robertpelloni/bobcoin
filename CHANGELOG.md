@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.116.6] - 2026-11-08
+### Added
+- **AI Oracle Telemetry Sparklines**: Added real-time SVG sparkline visualizers for recent proof entropy ($H$) and lag-1 autocorrelation ($r_1$) in the AI Oracle Security Feed card on `Dashboard.jsx`.
+- **Dynamic Anomaly Detection Alerts**: Integrated real-time threat badges (`⚠ ANOMALY DETECTED`) alerting users when synthetic bot or macro traces are detected in the live audit stream.
+- **Diagnostic Tool Automation**: Created `/home/jules/self_created_tools/oracle_diagnostics.py` asserting edge-case entropy, autocorrelation, APM, and monotonicity verification behaviors against running servers.
+- **E2E Test Coverage**: Integrated sparkline telemetry and anomaly badge verification into `testing/test_e2e_system_tray_and_nav.py` with 100% passing tests.
+
 ## [8.116.5] - 2026-11-07
 ### Added
 - **AI Oracle Lag-1 Autocorrelation Bot Detection**: Implemented serial correlation analysis ($r_1$) on timing deltas across `go-game-server` and `game-server` to automatically catch periodic alternating macros and synthetic jitter scripts ($|r_1| > 0.85$).

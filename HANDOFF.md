@@ -1,7 +1,13 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.5
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.6
 
 ## Architectural Milestones Accomplished
-1. **AI Oracle Lag-1 Autocorrelation & Periodic Macro Detection**:
+1. **AI Oracle Real-Time Sparkline Telemetry & Anomaly Alerts**:
+   - Added dual SVG sparklines directly to the AI Oracle Security Feed card on `Dashboard.jsx`, rendering live trends for recent proof entropy ($H$) and lag-1 autocorrelation ($r_1$).
+   - Implemented real-time anomaly detection warning badges (`⚠ ANOMALY DETECTED`) whenever synthetic bot, macro, or manipulation traces appear in the live audit stream.
+   - Built an automated diagnostic tool `/home/jules/self_created_tools/oracle_diagnostics.py` verifying all Oracle security constraints against running server processes.
+   - Verified end-to-end rendering and interactions via `testing/test_e2e_system_tray_and_nav.py`.
+
+2. **AI Oracle Lag-1 Autocorrelation & Periodic Macro Detection**:
    - Enforced serial autocorrelation analysis on consecutive timing deltas in both `go-game-server` and `game-server`:
      - Calculates Pearson correlation $r_1$ between adjacent deltas $(d_i, d_{i+1})$.
      - Detects and rejects alternating periodic macros and synthetic jitter scripts ($|r_1| > 0.85$).

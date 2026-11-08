@@ -332,11 +332,74 @@ export function Dashboard() {
                                 <Marketplace />
                             </div>
                             <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
-                                <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                                    <span>AI ORACLE SECURITY FEED</span>
-                                    <span style={{fontSize: '0.65rem', color: '#0f0'}}>ACTIVE</span>
-                                </h3>
-                                <div className="oracle-audit-feed" style={{maxHeight: '220px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.7rem'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>
+                                    <h3 style={{color: '#0ff', margin: 0}}>AI ORACLE SECURITY FEED</h3>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                        {oracleAudits.some(a => !a.verified) && (
+                                            <span className="anomaly-alert-badge" style={{background: 'rgba(255, 0, 85, 0.2)', border: '1px solid #ff0055', color: '#ff0055', padding: '0.1rem 0.4rem', borderRadius: '3px', fontSize: '0.65rem', fontWeight: 'bold'}} title="Synthetic / Bot Anomaly Detected in Recent Stream">
+                                                ⚠ ANOMALY DETECTED
+                                            </span>
+                                        )}
+                                        <span style={{fontSize: '0.65rem', color: '#0f0'}}>ACTIVE</span>
+                                    </div>
+                                </div>
+
+                                {/* Real-time Telemetry Sparklines for Entropy and Autocorrelation */}
+                                {oracleAudits.length > 1 && (
+                                    <div className="oracle-sparklines-container" style={{display: 'flex', gap: '1rem', padding: '0.6rem 0', borderBottom: '1px solid #161616', fontSize: '0.65rem', fontFamily: 'monospace'}}>
+                                        <div style={{flex: 1, background: '#0a0a0a', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #1a1a1a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px'}}>
+                                                <span>ENTROPY (H)</span>
+                                                <span style={{color: '#0ff'}}>{oracleAudits[0]?.entropy?.toFixed(2) || '0.00'}</span>
+                                            </div>
+                                            <svg className="sparkline-entropy" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                                {(() => {
+                                                    const recent = oracleAudits.slice(0, 10).reverse();
+                                                    if (recent.length < 2) return null;
+                                                    const maxH = Math.max(4.0, ...recent.map(r => r.entropy || 0));
+                                                    const points = recent.map((r, idx) => {
+                                                        const x = (idx / (recent.length - 1)) * 100;
+                                                        const y = 22 - (((r.entropy || 0) / maxH) * 20);
+                                                        return `${x},${y}`;
+                                                    }).join(' ');
+                                                    return (
+                                                        <>
+                                                            <line x1="0" y1="17" x2="100" y2="17" stroke="#ff0055" strokeWidth="0.5" strokeDasharray="2,2" />
+                                                            <polyline fill="none" stroke="#00ffff" strokeWidth="1.5" points={points} />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </svg>
+                                        </div>
+
+                                        <div style={{flex: 1, background: '#0a0a0a', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #1a1a1a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px'}}>
+                                                <span>AUTOCORR (R1)</span>
+                                                <span style={{color: '#f0f'}}>{oracleAudits[0]?.autocorrelation ? oracleAudits[0].autocorrelation.toFixed(2) : '0.00'}</span>
+                                            </div>
+                                            <svg className="sparkline-autocorr" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                                {(() => {
+                                                    const recent = oracleAudits.slice(0, 10).reverse();
+                                                    if (recent.length < 2) return null;
+                                                    const points = recent.map((r, idx) => {
+                                                        const x = (idx / (recent.length - 1)) * 100;
+                                                        const r1 = Math.max(-1.0, Math.min(1.0, r.autocorrelation || 0));
+                                                        const y = 12 - (r1 * 10);
+                                                        return `${x},${y}`;
+                                                    }).join(' ');
+                                                    return (
+                                                        <>
+                                                            <line x1="0" y1="12" x2="100" y2="12" stroke="#444" strokeWidth="0.5" />
+                                                            <polyline fill="none" stroke="#ff00ff" strokeWidth="1.5" points={points} />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </svg>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="oracle-audit-feed" style={{maxHeight: '180px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.7rem'}}>
                                     {oracleAudits.length === 0 ? (
                                         <div style={{color: '#666', padding: '1rem 0'}}>NO RECENT AUDITS LOGGED</div>
                                     ) : (

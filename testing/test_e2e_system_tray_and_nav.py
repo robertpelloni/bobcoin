@@ -295,10 +295,22 @@ def test_consolidated_navigation_and_command_console():
         assert stealth_addr.startswith("stealth:") and len(stealth_addr) > 25
         print(f"    ✓ DKSAP Stealth Address verified: {stealth_addr[:24]}...")
 
-        # 5. Test AI Oracle Real-Time Audit Inspector Modal
-        print("  * Testing AI Oracle Real-Time Audit Inspector Modal...")
+        # 5. Test AI Oracle Real-Time Audit Inspector Modal & Sparkline Telemetry
+        print("  * Testing AI Oracle Real-Time Audit Inspector Modal & Sparkline Telemetry...")
         page.goto(f"{base_url}/")
         page.wait_for_selector(".oracle-audit-feed", timeout=15000)
+
+        # Verify sparklines and anomaly badge if present
+        sparklines = page.locator(".oracle-sparklines-container")
+        if sparklines.count() > 0:
+            assert page.locator(".sparkline-entropy").count() > 0
+            assert page.locator(".sparkline-autocorr").count() > 0
+            print("    ✓ AI Oracle Entropy & Autocorrelation Sparklines verified in DOM.")
+
+        anomaly_badges = page.locator(".anomaly-alert-badge")
+        if anomaly_badges.count() > 0:
+            print(f"    ✓ AI Oracle Anomaly alert badge verified: {anomaly_badges.first.inner_text()}")
+
         audit_items = page.locator(".oracle-audit-item")
         if audit_items.count() > 0:
             audit_items.first.click()

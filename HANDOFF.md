@@ -1,7 +1,15 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.4
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.5
 
 ## Architectural Milestones Accomplished
-1. **AI Oracle Metabolic & Locomotion Velocity Boundaries**:
+1. **AI Oracle Lag-1 Autocorrelation & Periodic Macro Detection**:
+   - Enforced serial autocorrelation analysis on consecutive timing deltas in both `go-game-server` and `game-server`:
+     - Calculates Pearson correlation $r_1$ between adjacent deltas $(d_i, d_{i+1})$.
+     - Detects and rejects alternating periodic macros and synthetic jitter scripts ($|r_1| > 0.85$).
+     - Logs $r_1$ to SQLite `oracle_audits` and streams live over WebSockets.
+     - Surfaces $r_1$ in the dashboard gameplay HUD (`[VAR | MAD | H | R1]`) and the interactive Audit Inspector modal.
+   - Verified via unit test `TestHandleSubmitProof_Autocorrelation` and Playwright E2E tests in `testing/test_e2e_system_tray_and_nav.py`.
+
+2. **AI Oracle Metabolic & Locomotion Velocity Boundaries**:
    - Hardened wearable Proof of Vitality (`/sdk/v1/vitality`) in `go-game-server/vitality.go`:
      - Enforces caloric burn limits: rejects metabolic burn rates $> 32$ kcal/min.
      - Enforces maximum locomotion speed: rejects velocities $> 10.5$ m/s ($> 37$ km/h).

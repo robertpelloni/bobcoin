@@ -32,7 +32,7 @@ export function Dashboard() {
     const [mintResult, setMintResult] = useState(null);
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
-    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, status: 'STANDBY' });
+    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, autocorr: 0, status: 'STANDBY' });
     const [oracleAudits, setOracleAudits] = useState([]);
     const [selectedAudit, setSelectedAudit] = useState(null);
 
@@ -66,11 +66,25 @@ export function Dashboard() {
                     if (p > 0) entropy -= p * Math.log2(p);
                 });
 
+                // Lag-1 Autocorrelation
+                let autocorr = 0.0;
+                if (diffs.length >= 4) {
+                    let num = 0, den = 0;
+                    for (let i = 0; i < diffs.length - 1; i++) {
+                        num += (diffs[i] - mean) * (diffs[i + 1] - mean);
+                    }
+                    for (let i = 0; i < diffs.length; i++) {
+                        den += Math.pow(diffs[i] - mean, 2);
+                    }
+                    if (den > 0) autocorr = num / den;
+                }
+
                 setOracleStats({
                     variance: parseFloat(variance.toFixed(2)),
                     mad: parseFloat(mad.toFixed(2)),
                     entropy: parseFloat(entropy.toFixed(2)),
-                    status: (variance >= 10.0 && mad >= 5.0 && entropy >= 1.0) ? 'HUMAN_VERIFIED' : 'CALCULATING'
+                    autocorr: parseFloat(autocorr.toFixed(2)),
+                    status: (variance >= 10.0 && mad >= 5.0 && entropy >= 1.0 && Math.abs(autocorr) <= 0.85) ? 'HUMAN_VERIFIED' : 'CALCULATING'
                 });
             }
         }
@@ -265,9 +279,9 @@ export function Dashboard() {
                         <div className="stats-box">
                             <p title="Current rhythm accuracy points">SCORE: <span className="neon-text">{score}</span></p>
                             <p title="Consecutive successful key hits multiplier">COMBO: <span className="neon-text-blue">x{combo}</span></p>
-                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy, variance, and MAD">
+                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy, variance, MAD, and lag-1 autocorrelation">
                                 ORACLE ENTROPY: <span style={{color: oracleStats.status === 'HUMAN_VERIFIED' ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>{oracleStats.status}</span>
-                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad} | H: {oracleStats.entropy || 0.0}]</span>
+                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad} | H: {oracleStats.entropy || 0.0} | R1: {oracleStats.autocorr || 0.0}]</span>
                             </p>
                         </div>
 
@@ -459,23 +473,29 @@ export function Dashboard() {
                         </div>
 
                         <h4 style={{color: '#0ff', fontSize: '0.85rem', marginBottom: '0.5rem'}}>BIOMETRIC & TIMING DELTA METRICS</h4>
-                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', textAlign: 'center'}}>
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center'}}>
                             <div>
-                                <div style={{color: '#666', fontSize: '0.7rem'}}>VARIANCE (min 10.0)</div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>VARIANCE (&ge; 10.0)</div>
                                 <div style={{color: selectedAudit.variance >= 10.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
                                     {selectedAudit.variance?.toFixed(2) || '0.00'}
                                 </div>
                             </div>
                             <div>
-                                <div style={{color: '#666', fontSize: '0.7rem'}}>MAD (min 5.0)</div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>MAD (&ge; 5.0)</div>
                                 <div style={{color: selectedAudit.mad >= 5.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
                                     {selectedAudit.mad?.toFixed(2) || '0.00'}
                                 </div>
                             </div>
                             <div>
-                                <div style={{color: '#666', fontSize: '0.7rem'}}>ENTROPY (min 1.0)</div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>ENTROPY (&ge; 1.0)</div>
                                 <div style={{color: selectedAudit.entropy >= 1.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
                                     {selectedAudit.entropy?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>AUTOCORR (|r1| &le; 0.85)</div>
+                                <div style={{color: Math.abs(selectedAudit.autocorrelation || 0) <= 0.85 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {(selectedAudit.autocorrelation || 0.0).toFixed(2)}
                                 </div>
                             </div>
                         </div>

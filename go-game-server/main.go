@@ -267,6 +267,7 @@ func initDatabase(db *sql.DB) error {
 			entropy REAL NOT NULL,
 			confidence_score REAL NOT NULL,
 			verified INTEGER NOT NULL,
+			autocorrelation REAL DEFAULT 0.0,
 			timestamp TEXT NOT NULL
 		)`,
 	}
@@ -514,15 +515,16 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	mad, _ := oracleMetrics["mad"].(float64)
 	entropy, _ := oracleMetrics["entropy"].(float64)
 	confidence, _ := oracleMetrics["confidenceScore"].(float64)
+	autocorr, _ := oracleMetrics["autocorrelation"].(float64)
 	verifiedInt := 0
 	if zkVerified {
 		verifiedInt = 1
 	}
 	ts := formatDBDate(time.Now())
 	res, _ := s.db.Exec(`
-		INSERT INTO oracle_audits (address, score, variance, mad, entropy, confidence_score, verified, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, address, score, variance, mad, entropy, confidence, verifiedInt, ts)
+		INSERT INTO oracle_audits (address, score, variance, mad, entropy, confidence_score, verified, autocorrelation, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, address, score, variance, mad, entropy, confidence, verifiedInt, autocorr, ts)
 
 	var lastID int64
 	if res != nil {
@@ -538,6 +540,7 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 		"mad":             mad,
 		"entropy":         entropy,
 		"confidenceScore": confidence,
+		"autocorrelation": autocorr,
 		"verified":        zkVerified,
 		"timestamp":       ts,
 	})
@@ -691,6 +694,17 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 				return false, metrics
 			}
 
+			// Lag-1 Autocorrelation Check (detects periodic oscillators or synthetic pseudo-random macros)
+			autocorr := calculateLag1Autocorrelation(diffs)
+			metrics["autocorrelation"] = autocorr
+			log.Printf("[AI Oracle] Replay lag-1 autocorrelation: %f", autocorr)
+
+			if math.Abs(autocorr) > 0.85 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Lag-1 Autocorrelation %f is too high (> 0.85, periodic macro suspected).", autocorr)
+				metrics["confidenceScore"] = 0.12
+				return false, metrics
+			}
+
 			// Superhuman APM / input frequency check:
 			// Calculate total duration from first to last event
 			firstTime, _ := replayLog[0].(map[string]interface{})["time"].(float64)
@@ -771,6 +785,35 @@ func calculateVariance(data []float64) float64 {
 		sqDiffSum += math.Pow(v-mean, 2)
 	}
 	return math.Sqrt(sqDiffSum / float64(len(data)))
+}
+
+// calculateLag1Autocorrelation computes the serial correlation between consecutive timing deltas.
+// Natural human input exhibits near-zero linear serial correlation (|r1| < 0.85).
+// Macro bots that alternate (e.g. 100ms, 200ms, 100ms, 200ms) or have fixed linear trends show |r1| -> 1.0.
+func calculateLag1Autocorrelation(diffs []float64) float64 {
+	n := len(diffs)
+	if n < 4 {
+		return 0.0
+	}
+	var sum float64
+	for _, d := range diffs {
+		sum += d
+	}
+	mean := sum / float64(n)
+
+	var numerator, denom float64
+	for i := 0; i < n-1; i++ {
+		numerator += (diffs[i] - mean) * (diffs[i+1] - mean)
+	}
+	for i := 0; i < n; i++ {
+		denom += math.Pow(diffs[i]-mean, 2)
+	}
+
+	if denom == 0.0 {
+		return 0.0
+	}
+	r1 := numerator / denom
+	return math.Round(r1*100) / 100
 }
 
 // calculateDeltaEntropy estimates the Shannon Entropy of time deltas by binning them into buckets.
@@ -1301,7 +1344,7 @@ func (s *Service) broadcastOracleAudit(audit map[string]interface{}) {
 
 func (s *Service) handleOracleAudits(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.db.Query(`
-		SELECT id, address, score, variance, mad, entropy, confidence_score, verified, timestamp
+		SELECT id, address, score, variance, mad, entropy, confidence_score, verified, COALESCE(autocorrelation, 0.0), timestamp
 		FROM oracle_audits
 		ORDER BY id DESC
 		LIMIT 50
@@ -1316,9 +1359,9 @@ func (s *Service) handleOracleAudits(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var id int
 		var addr, ts string
-		var score, variance, mad, entropy, conf float64
+		var score, variance, mad, entropy, conf, autocorr float64
 		var verified int
-		if err := rows.Scan(&id, &addr, &score, &variance, &mad, &entropy, &conf, &verified, &ts); err == nil {
+		if err := rows.Scan(&id, &addr, &score, &variance, &mad, &entropy, &conf, &verified, &autocorr, &ts); err == nil {
 			audits = append(audits, map[string]interface{}{
 				"id":              id,
 				"address":         addr,
@@ -1327,6 +1370,7 @@ func (s *Service) handleOracleAudits(w http.ResponseWriter, r *http.Request) {
 				"mad":             mad,
 				"entropy":         entropy,
 				"confidenceScore": conf,
+				"autocorrelation": autocorr,
 				"verified":        verified == 1,
 				"timestamp":       ts,
 			})

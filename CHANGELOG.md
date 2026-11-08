@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.5] - 2026-11-07
+### Added
+- **AI Oracle Lag-1 Autocorrelation Bot Detection**: Implemented serial correlation analysis ($r_1$) on timing deltas across `go-game-server` and `game-server` to automatically catch periodic alternating macros and synthetic jitter scripts ($|r_1| > 0.85$).
+- **Dashboard Autocorrelation Telemetry**: Surfaced live $r_1$ metric in the gameplay stats HUD and inside the interactive "AI ORACLE AUDIT INSPECTOR" modal on `Dashboard.jsx`.
+- **Unit & E2E Test Suite**: Added `TestHandleSubmitProof_Autocorrelation` in `go-game-server/main_test.go` and verified browser inspector modal rendering in `testing/test_e2e_system_tray_and_nav.py`.
+
 ## [8.116.4] - 2026-11-07
 ### Added
 - **AI Oracle Metabolic & Locomotion Velocity Boundaries**: Hardened `/sdk/v1/vitality` in `go-game-server` to reject caloric burn rates exceeding human biological maximums (> 32 kcal/min) and locomotion velocities exceeding human sprint capacity (> 10.5 m/s).

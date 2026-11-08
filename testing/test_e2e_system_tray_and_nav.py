@@ -306,6 +306,7 @@ def test_consolidated_navigation_and_command_console():
             modal_text = page.locator(".modal-content").inner_text()
             assert "AI ORACLE AUDIT INSPECTOR" in modal_text
             assert "BIOMETRIC & TIMING DELTA METRICS" in modal_text
+            assert "AUTOCORR" in modal_text
             assert "CONFIDENCE RATING" in modal_text
             print("    ✓ AI Oracle Audit Inspector modal successfully opened and verified.")
             dismiss_btn = page.locator("button:has-text('DISMISS INSPECTOR')")

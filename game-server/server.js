@@ -196,6 +196,28 @@ app.post('/submit-proof', async (req, res) => {
                             zkVerified = false;
                             oracleMetrics.confidenceScore = 0.15;
                         } else {
+                            // Lag-1 Autocorrelation Check (detects periodic oscillators or synthetic jitter macros)
+                            let autocorr = 0.0;
+                            if (diffs.length >= 4) {
+                                let num = 0, den = 0;
+                                for (let i = 0; i < diffs.length - 1; i++) {
+                                    num += (diffs[i] - mean) * (diffs[i + 1] - mean);
+                                }
+                                for (let i = 0; i < diffs.length; i++) {
+                                    den += Math.pow(diffs[i] - mean, 2);
+                                }
+                                if (den > 0) autocorr = num / den;
+                            }
+                            oracleMetrics.autocorrelation = Math.round(autocorr * 100) / 100;
+
+                            if (Math.abs(autocorr) > 0.85) {
+                                console.log(`[AI Oracle] ⚠️ BOT DETECTED: Lag-1 Autocorrelation ${autocorr} is too high (> 0.85).`);
+                                zkVerified = false;
+                                oracleMetrics.confidenceScore = 0.12;
+                            }
+                        }
+
+                        if (zkVerified) {
                             // Superhuman APM / input frequency check (max 15/sec)
                             const totalDurationSec = (lastTime - replayLog[0].time) / 1000.0;
                             if (totalDurationSec > 0.0) {

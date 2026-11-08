@@ -654,3 +654,40 @@ func TestOracleWebSocketBroadcast(t *testing.T) {
 		t.Fatalf("audit data mismatch: %v", auditData)
 	}
 }
+
+func TestHandleSubmitProof_Autocorrelation(t *testing.T) {
+	service := newTestService(t)
+
+	// An alternating periodic macro (e.g. alternating between 100ms and 200ms)
+	// has large variance and MAD, but high negative lag-1 autocorrelation (r1 -> -1.0)
+	var alternatingLog []map[string]interface{}
+	curr := 100.0
+	for i := 0; i < 20; i++ {
+		alternatingLog = append(alternatingLog, map[string]interface{}{"time": curr})
+		if i%2 == 0 {
+			curr += 100.0
+		} else {
+			curr += 200.0
+		}
+	}
+
+	payload := map[string]interface{}{
+		"proof": map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "periodic-macro-bot",
+				"score":     1500.0,
+				"perfects":  15.0,
+				"greats":    0.0,
+				"replayLog": alternatingLog,
+			},
+		},
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected periodic macro rejection due to high autocorrelation, got %d with body: %s", rec.Code, rec.Body.String())
+	}
+}

@@ -17,7 +17,9 @@ export function Mobile() {
     const [bobEarned, setBobEarned] = useState(0);
     const [plotCount, setPlotCount] = useState(0);
     const [currentChallenge, setCurrentChallenge] = useState('');
-    const [vitals, setVitals] = useState({ heartRate: 72, cadence: 128, verified: false });
+    const [activityType, setActivityType] = useState('WALK');
+    const [caloriesBurned, setCaloriesBurned] = useState(0);
+    const [vitals, setVitals] = useState({ heartRate: 72, cadence: 128, calories: 0, activity: 'WALK', verified: false });
     
     // In-memory "hard drive" for Proof of Space
     const plotData = useRef(new Map());
@@ -98,16 +100,28 @@ export function Mobile() {
     // Proof of Vitality (Wearable HealthKit / Google Fit API connection)
     const handleSyncHealthData = async () => {
         const simulatedSteps = Math.floor(Math.random() * 5000) + 1200;
-        const hr = Math.floor(75 + Math.random() * 35);
-        const cadence = Math.floor(115 + Math.random() * 40);
+        const hr = activityType === 'RUN'
+            ? Math.floor(135 + Math.random() * 35)
+            : Math.floor(80 + Math.random() * 30);
+        const cadence = activityType === 'RUN'
+            ? Math.floor(155 + Math.random() * 25)
+            : Math.floor(110 + Math.random() * 30);
+        const durationSec = Math.max(60, Math.floor(simulatedSteps / (cadence / 60)));
+        // Approximate caloric burn: METs * weight (70kg) * time
+        const mets = activityType === 'RUN' ? 9.5 : 3.8;
+        const calculatedKcal = Math.round((mets * 3.5 * 70 / 200) * (durationSec / 60));
+
         setSteps(prev => prev + simulatedSteps);
+        setCaloriesBurned(prev => prev + calculatedKcal);
 
         const payload = {
             deviceId: 'wearable_' + Math.random().toString(36).substring(2, 10),
             steps: simulatedSteps,
             heartRateAvg: hr,
             cadence: cadence,
-            durationSec: Math.floor(simulatedSteps / (cadence / 60)),
+            durationSec: durationSec,
+            caloriesBurned: calculatedKcal,
+            activityType: activityType,
             signature: 'sig_' + Math.random().toString(36).substring(2, 16),
             wallet: localStorage.getItem('lattice_arcade_wallet') ? JSON.parse(localStorage.getItem('lattice_arcade_wallet')).publicKey : 'anon_wearable_wallet'
         };
@@ -117,8 +131,8 @@ export function Mobile() {
             if (res && res.success) {
                 const reward = res.reward || 1.5;
                 setBobEarned(b => b + reward);
-                setVitals({ heartRate: hr, cadence: cadence, verified: true });
-                alert(`Proof of Vitality Accepted! Synced ${simulatedSteps} steps (${cadence} spm, ${hr} bpm) and earned ${reward} BOB.`);
+                setVitals({ heartRate: hr, cadence: cadence, calories: calculatedKcal, activity: activityType, verified: true });
+                alert(`Proof of Vitality Accepted! Synced ${simulatedSteps} steps (${cadence} spm, ${hr} bpm, ${calculatedKcal} kcal) and earned ${reward} BOB.`);
             } else {
                 alert(`Proof of Vitality Rejected: ${res.error || 'Failed'}`);
             }
@@ -141,14 +155,27 @@ export function Mobile() {
                     >
                         {miningActive ? 'HALT MINING' : 'START MINING'}
                     </button>
-                    <button
-                        className="cyber-button"
-                        onClick={handleSyncHealthData}
-                        title="Sync pedometer data from Apple Health / Google Fit to generate a Proof of Vitality."
-                        style={{marginLeft: '1rem', borderColor: '#0f0', color: '#0f0'}}
-                    >
-                        SYNC HEALTH DATA
-                    </button>
+                    <div style={{display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem'}}>
+                        <select
+                            value={activityType}
+                            onChange={(e) => setActivityType(e.target.value)}
+                            className="cyber-select"
+                            style={{background: '#0a0a0a', border: '1px solid #333', color: '#0ff', padding: '0.4rem 0.8rem', borderRadius: '4px', fontFamily: 'monospace'}}
+                            title="Select physical activity modality for biometric verification"
+                        >
+                            <option value="WALK">WALK</option>
+                            <option value="RUN">RUN</option>
+                            <option value="HIKE">HIKE</option>
+                        </select>
+                        <button
+                            className="cyber-button"
+                            onClick={handleSyncHealthData}
+                            title="Sync pedometer data from Apple Health / Google Fit to generate a Proof of Vitality."
+                            style={{borderColor: '#0f0', color: '#0f0'}}
+                        >
+                            SYNC HEALTH DATA
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -178,14 +205,23 @@ export function Mobile() {
                 </div>
 
                 <div className="metric-card">
+                    <div className="icon">🔥</div>
+                    <div className="metric-info">
+                        <h3>METABOLIC BURN</h3>
+                        <p className="value">{caloriesBurned} KCAL</p>
+                        <span style={{fontSize: '0.65rem', color: '#0ff'}}>ACTIVE EXPENDITURE</span>
+                    </div>
+                </div>
+
+                <div className="metric-card">
                     <div className="icon">❤️</div>
                     <div className="metric-info">
                         <h3>BIOMETRIC VITALS</h3>
-                        <p className="value" style={{fontSize: '0.9rem'}}>
+                        <p className="value" style={{fontSize: '0.85rem'}}>
                             {vitals.heartRate} BPM | {vitals.cadence} SPM
                         </p>
                         <span style={{fontSize: '0.65rem', color: vitals.verified ? '#0f0' : '#888'}}>
-                            {vitals.verified ? 'AI ORACLE VALIDATED' : 'READY TO SYNC'}
+                            {vitals.verified ? `✓ ${vitals.activity} VERIFIED (${vitals.calories} kcal)` : 'READY TO SYNC'}
                         </span>
                     </div>
                 </div>

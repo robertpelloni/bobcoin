@@ -1,7 +1,16 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.3
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.4
 
 ## Architectural Milestones Accomplished
-1. **AI Oracle Real-Time WebSocket Streaming & Live Audit Inspector**:
+1. **AI Oracle Metabolic & Locomotion Velocity Boundaries**:
+   - Hardened wearable Proof of Vitality (`/sdk/v1/vitality`) in `go-game-server/vitality.go`:
+     - Enforces caloric burn limits: rejects metabolic burn rates $> 32$ kcal/min.
+     - Enforces maximum locomotion speed: rejects velocities $> 10.5$ m/s ($> 37$ km/h).
+     - Enforces strictly positive durations.
+     - Supports activity modality tags (`WALK`, `RUN`, `HIKE`).
+   - Upgraded `Mobile.jsx` with an activity selector, MET-based dynamic calorie estimation, a new METABOLIC BURN metric card (`KCAL`), and live biometric feedback.
+   - Verified via unit test suite in `go-game-server/vitality_test.go` and browser assertions in `testing/test_e2e_system_tray_and_nav.py`.
+
+2. **AI Oracle Real-Time WebSocket Streaming & Live Audit Inspector**:
    - Implemented real-time `ORACLE_AUDIT` broadcasting via WebSockets in `go-game-server` and `game-server`.
    - Connected `Dashboard.jsx` to the real-time WebSocket stream to instantly populate audits without polling delay.
    - Built an interactive "AI Oracle Audit Inspector" modal on the dashboard allowing operators to inspect verification verdicts, confidence ratings, prover addresses, variance, MAD, and Shannon entropy ($H$) with a single click.

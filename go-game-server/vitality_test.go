@@ -96,4 +96,41 @@ func TestHandleVitalityProof_PhysiologicalChecks(t *testing.T) {
 	if w.Result().StatusCode != http.StatusBadRequest {
 		t.Fatalf("Expected 400 for impossible cadence, got %d", w.Result().StatusCode)
 	}
+
+	// Impossible calorie burn rate (> 32 kcal/min)
+	payloadHighCal := VitalityPayload{
+		DeviceID:       "apple-watch-s9-001",
+		Steps:          2000,
+		HeartRateAvg:   140.0,
+		Cadence:        140.0,
+		DurationSec:    60.0, // 1 minute
+		CaloriesBurned: 100.0, // 100 kcal/min > 32 kcal/min limit
+		Signature:      "mock-zk-signature",
+		WalletAddress:  "mock-wallet-address",
+	}
+	body, _ = json.Marshal(payloadHighCal)
+	req = httptest.NewRequest(http.MethodPost, "/sdk/v1/vitality", bytes.NewReader(body))
+	w = httptest.NewRecorder()
+	service.handleVitalityProof(w, req)
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for impossible caloric burn rate, got %d", w.Result().StatusCode)
+	}
+
+	// Impossible locomotion speed (> 10.5 m/s)
+	payloadSuperSpeed := VitalityPayload{
+		DeviceID:      "apple-watch-s9-001",
+		Steps:         5000,
+		HeartRateAvg:  140.0,
+		Cadence:       140.0,
+		DurationSec:   50.0, // 5000 steps in 50 seconds -> 75 m/s
+		Signature:     "mock-zk-signature",
+		WalletAddress: "mock-wallet-address",
+	}
+	body, _ = json.Marshal(payloadSuperSpeed)
+	req = httptest.NewRequest(http.MethodPost, "/sdk/v1/vitality", bytes.NewReader(body))
+	w = httptest.NewRecorder()
+	service.handleVitalityProof(w, req)
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for superhuman velocity, got %d", w.Result().StatusCode)
+	}
 }

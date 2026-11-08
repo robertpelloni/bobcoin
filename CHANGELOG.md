@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.4] - 2026-11-07
+### Added
+- **AI Oracle Metabolic & Locomotion Velocity Boundaries**: Hardened `/sdk/v1/vitality` in `go-game-server` to reject caloric burn rates exceeding human biological maximums (> 32 kcal/min) and locomotion velocities exceeding human sprint capacity (> 10.5 m/s).
+- **Mobile Multi-Activity Biometric Telemetry**: Added an activity modality selector (`WALK`, `RUN`, `HIKE`) to `Mobile.jsx`, dynamic MET-based energy expenditure calculation, and a live "METABOLIC BURN" metric card (`KCAL`).
+- **Comprehensive Unit & E2E Tests**: Expanded `vitality_test.go` and `testing/test_e2e_system_tray_and_nav.py` to assert metabolic validation and browser verification badges.
+
 ## [8.116.3] - 2026-11-07
 ### Added
 - **AI Oracle Real-Time WebSocket Streaming**: Implemented real-time audit event broadcasting (`ORACLE_AUDIT`) across `go-game-server` and `game-server`, allowing nodes to subscribe and receive instant anti-bot decisions.

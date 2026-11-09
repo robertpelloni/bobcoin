@@ -533,18 +533,23 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 		lastID, _ = res.LastInsertId()
 	}
 
+	autocorrLag2, _ := oracleMetrics["autocorrelationLag2"].(float64)
+	diversityRatio, _ := oracleMetrics["diversityRatio"].(float64)
+
 	// Broadcast live audit to all connected WebSockets
 	s.broadcastOracleAudit(map[string]interface{}{
-		"id":              lastID,
-		"address":         address,
-		"score":           score,
-		"variance":        variance,
-		"mad":             mad,
-		"entropy":         entropy,
-		"confidenceScore": confidence,
-		"autocorrelation": autocorr,
-		"verified":        zkVerified,
-		"timestamp":       ts,
+		"id":                   lastID,
+		"address":              address,
+		"score":                score,
+		"variance":             variance,
+		"mad":                  mad,
+		"entropy":              entropy,
+		"confidenceScore":      confidence,
+		"autocorrelation":      autocorr,
+		"autocorrelationLag2":  autocorrLag2,
+		"diversityRatio":       diversityRatio,
+		"verified":             zkVerified,
+		"timestamp":            ts,
 	})
 
 	if !zkVerified {

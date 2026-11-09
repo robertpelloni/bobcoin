@@ -623,7 +623,7 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 	// AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
 	// Must execute before score validation to prevent robotic macro bypasses
 	replayLog, ok := publicValues["replayLog"].([]interface{})
-	if ok && len(replayLog) > 5 {
+	if ok && len(replayLog) >= 2 {
 		var diffs []float64
 		var lastTime float64
 		isMonotonic := true
@@ -651,7 +651,8 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 			return false, metrics
 		}
 
-		if len(diffs) > 0 {
+		// Advanced statistical checks for full traces (len > 5)
+		if len(replayLog) > 5 && len(diffs) > 0 {
 			variance := calculateVariance(diffs)
 			metrics["variance"] = math.Round(variance*100) / 100
 			log.Printf("[AI Oracle] Replay log variance: %f", variance)

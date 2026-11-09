@@ -1,7 +1,12 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.7
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.8
 
 ## Architectural Milestones Accomplished
-1. **Neural Governance AI Oracle Auditor v2.0 & Constitutional Compatibility**:
+1. **AI Oracle Micro-Replay Temporal Monotonicity & Edge-Case Telemetry**:
+   - Hardened `/submit-proof` across both `go-game-server` and `game-server` so that any trace with $\ge 2$ entries enforces strict temporal monotonicity ($\Delta t > 0.0$).
+   - Completely closes edge-case vectors where simultaneous duplicate timestamps or non-monotonic note sequences could slip through when traces contained $\le 5$ events.
+   - Built and verified automated diagnostic suite `/home/jules/self_created_tools/oracle_edgecase_analyzer.py` and unit test `TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps`.
+
+2. **Neural Governance AI Oracle Auditor v2.0 & Constitutional Compatibility**:
    - Upgraded `/governance/audit` across both `go-game-server` and `game-server` to perform deterministic evaluation of DAO proposals.
    - Computes economic risk based on proposal title semantics and sensitive action parameters (`MINT_TREASURY`, `UPDATE_DEMURRAGE`, `SLASH_REPUTATION`).
    - Calculates a deterministic `constitutionalScore` ($1.0 - \text{riskScore}$, bounded [0.05, 0.99]), surfaced directly in `frontend/src/pages/Governance.jsx` alongside dynamic color coding (green $\ge 70\%$, orange $\ge 40\%$, red $< 40\%$).

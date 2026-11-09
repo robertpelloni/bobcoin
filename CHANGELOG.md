@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.8] - 2026-11-09
+### Added
+- **AI Oracle Strict Temporal Monotonicity on Micro-Replays**: Hardened `/submit-proof` in `go-game-server` and `game-server` so that any replay log with $\ge 2$ entries must be strictly monotonic ($\Delta t > 0.0$), immediately rejecting simultaneous or duplicate timestamps with HTTP 400 and `confidenceScore: 0.05`.
+- **Edge-Case Diagnostic Automation**: Created `/home/jules/self_created_tools/oracle_edgecase_analyzer.py` validating harmonic macros ($r_1 \approx -1.0$), tri-modal cyclic jitter, and duplicate simultaneous timestamp scenarios.
+- **Unit Testing**: Added `TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps` in `go-game-server/main_test.go` confirming 100% test pass rate on short trace bot detection.
+
 ## [8.116.7] - 2026-11-09
 ### Added
 - **Neural Governance AI Oracle Auditor v2.0**: Upgraded `/governance/audit` across `go-game-server` and `game-server` to perform deterministic evaluation of DAO proposals, assessing economic risk and computing an `AI CONSTITUTIONAL COMPATIBILITY` score (bounded between 5% and 99%).

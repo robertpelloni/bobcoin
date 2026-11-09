@@ -129,7 +129,7 @@ app.post('/submit-proof', async (req, res) => {
 
         // AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
         let oracleMetrics = { variance: 0, mad: 0, entropy: 0, confidenceScore: 0.98 };
-        if (zkVerified && Array.isArray(proof.publicValues.replayLog) && proof.publicValues.replayLog.length > 5) {
+        if (zkVerified && Array.isArray(proof.publicValues.replayLog) && proof.publicValues.replayLog.length >= 2) {
             const replayLog = proof.publicValues.replayLog;
             const diffs = [];
             let lastTime = 0;
@@ -149,7 +149,7 @@ app.post('/submit-proof', async (req, res) => {
                 console.log(`[AI Oracle] ⚠️ BOT DETECTED: Replay timestamps are not strictly monotonic.`);
                 zkVerified = false;
                 oracleMetrics.confidenceScore = 0.05;
-            } else if (diffs.length > 0) {
+            } else if (replayLog.length > 5 && diffs.length > 0) {
                 // Calculate Variance
                 const sum = diffs.reduce((a, b) => a + b, 0);
                 const mean = sum / diffs.length;

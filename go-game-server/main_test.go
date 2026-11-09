@@ -730,3 +730,37 @@ func TestHandleGovernanceAudit_ConstitutionalScore(t *testing.T) {
 		t.Fatalf("expected low constitutional compatibility for treasury attack, got risk=%v const=%v", resAttack["riskScore"], resAttack["constitutionalScore"])
 	}
 }
+
+func TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps(t *testing.T) {
+	service := newTestService(t)
+
+	// A short trace of 3 notes containing duplicate timestamp (delta = 0.0)
+	shortDupReplay := []map[string]interface{}{
+		{"time": 100.0},
+		{"time": 100.0},
+		{"time": 180.0},
+	}
+	reqBody, _ := json.Marshal(ProofSubmissionRequest{
+		Proof: map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "test_short_dup",
+				"score":     2000.0,
+				"replayLog": shortDupReplay,
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request for short duplicate timestamp trace, got %d with body: %s", rec.Code, rec.Body.String())
+	}
+
+	var res map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&res)
+	oracle, _ := res["oracle"].(map[string]interface{})
+	if oracle["confidenceScore"].(float64) != 0.05 {
+		t.Fatalf("expected confidenceScore 0.05 for non-monotonic short trace, got %v", oracle["confidenceScore"])
+	}
+}

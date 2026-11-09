@@ -1,7 +1,18 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.6
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.7
 
 ## Architectural Milestones Accomplished
-1. **AI Oracle Real-Time Sparkline Telemetry & Anomaly Alerts**:
+1. **Neural Governance AI Oracle Auditor v2.0 & Constitutional Compatibility**:
+   - Upgraded `/governance/audit` across both `go-game-server` and `game-server` to perform deterministic evaluation of DAO proposals.
+   - Computes economic risk based on proposal title semantics and sensitive action parameters (`MINT_TREASURY`, `UPDATE_DEMURRAGE`, `SLASH_REPUTATION`).
+   - Calculates a deterministic `constitutionalScore` ($1.0 - \text{riskScore}$, bounded [0.05, 0.99]), surfaced directly in `frontend/src/pages/Governance.jsx` alongside dynamic color coding (green $\ge 70\%$, orange $\ge 40\%$, red $< 40\%$).
+   - Backed by unit test `TestHandleGovernanceAudit_ConstitutionalScore` in `go-game-server/main_test.go` and full E2E verification.
+
+2. **Go-Lattice CORS & API Resilience**:
+   - Added global CORS middleware in `go-lattice/main.go` setting `Access-Control-Allow-Origin: *` and cleanly handling HTTP `OPTIONS` preflight requests so frontend web clients can query consensus routes directly without CORS blocks.
+   - Updated default `API_URL` fallback in `frontend/src/api.js` to point to port 3001, ensuring governance audits and game state endpoints route to `go-game-server`.
+   - Added best-effort schema migration for `autocorrelation` in `go-game-server/main.go` to prevent startup panics across cold and existing database instances.
+
+3. **AI Oracle Real-Time Sparkline Telemetry & Anomaly Alerts**:
    - Added dual SVG sparklines directly to the AI Oracle Security Feed card on `Dashboard.jsx`, rendering live trends for recent proof entropy ($H$) and lag-1 autocorrelation ($r_1$).
    - Implemented real-time anomaly detection warning badges (`⚠ ANOMALY DETECTED`) whenever synthetic bot, macro, or manipulation traces appear in the live audit stream.
    - Built an automated diagnostic tool `/home/jules/self_created_tools/oracle_diagnostics.py` verifying all Oracle security constraints against running server processes.

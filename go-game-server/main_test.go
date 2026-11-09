@@ -691,3 +691,42 @@ func TestHandleSubmitProof_Autocorrelation(t *testing.T) {
 		t.Fatalf("expected periodic macro rejection due to high autocorrelation, got %d with body: %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestHandleGovernanceAudit_ConstitutionalScore(t *testing.T) {
+	service := newTestService(t)
+
+	// 1. Test standard legitimate proposal
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"title":  "Upgrade block lattice anchor interval",
+		"action": "NONE",
+		"amount": 0.0,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/governance/audit", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	service.handleGovernanceAudit(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rec.Code)
+	}
+	var res map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&res)
+	if res["constitutionalScore"].(float64) < 0.70 {
+		t.Fatalf("expected high constitutional compatibility, got %v", res["constitutionalScore"])
+	}
+
+	// 2. Test high-risk inflation attack proposal
+	reqBodyAttack, _ := json.Marshal(map[string]interface{}{
+		"title":  "Mint millions to treasury",
+		"action": "MINT_TREASURY",
+		"amount": 500000.0,
+	})
+	reqAttack := httptest.NewRequest(http.MethodPost, "/governance/audit", bytes.NewReader(reqBodyAttack))
+	recAttack := httptest.NewRecorder()
+	service.handleGovernanceAudit(recAttack, reqAttack)
+
+	var resAttack map[string]interface{}
+	json.NewDecoder(recAttack.Body).Decode(&resAttack)
+	if resAttack["riskScore"].(float64) < 0.90 || resAttack["constitutionalScore"].(float64) > 0.15 {
+		t.Fatalf("expected low constitutional compatibility for treasury attack, got risk=%v const=%v", resAttack["riskScore"], resAttack["constitutionalScore"])
+	}
+}

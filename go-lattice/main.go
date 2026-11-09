@@ -132,8 +132,21 @@ func main() {
 	go gossipLoop()
 	go broadcastHeartbeat()
 
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
 	log.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s", latticePort)
-	log.Fatal(http.ListenAndServe(":"+latticePort, nil))
+	log.Fatal(http.ListenAndServe(":"+latticePort, corsMiddleware(http.DefaultServeMux)))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {

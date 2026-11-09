@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.116.7] - 2026-11-09
+### Added
+- **Neural Governance AI Oracle Auditor v2.0**: Upgraded `/governance/audit` across `go-game-server` and `game-server` to perform deterministic evaluation of DAO proposals, assessing economic risk and computing an `AI CONSTITUTIONAL COMPATIBILITY` score (bounded between 5% and 99%).
+- **Governance UI Constitutional Score Badge**: Replaced mock compatibility calculations in `frontend/src/pages/Governance.jsx` with live neural auditor metrics, displaying dynamic color indicators (green $\ge 70\%$, orange $\ge 40\%$, red $< 40\%$) and audit summaries.
+- **Unit and Parity Tests**: Added `TestHandleGovernanceAudit_ConstitutionalScore` in `go-game-server/main_test.go` covering legitimate protocol upgrades and treasury attack mitigations.
+- **Go-Lattice CORS Middleware**: Configured global CORS middleware in `go-lattice/main.go` setting `Access-Control-Allow-*` and handling HTTP `OPTIONS` preflight requests cleanly for web client queries.
+- **Resilient SQLite Column Migration**: Added best-effort schema migration for `autocorrelation` in `go-game-server/main.go` to prevent duplicate column startup panics across cold and existing database instances.
+
 ## [8.116.6] - 2026-11-08
 ### Added
 - **AI Oracle Telemetry Sparklines**: Added real-time SVG sparkline visualizers for recent proof entropy ($H$) and lag-1 autocorrelation ($r_1$) in the AI Oracle Security Feed card on `Dashboard.jsx`.

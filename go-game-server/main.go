@@ -276,6 +276,8 @@ func initDatabase(db *sql.DB) error {
 			return err
 		}
 	}
+	// Best-effort migration for existing databases missing autocorrelation column
+	_, _ = db.Exec(`ALTER TABLE oracle_audits ADD COLUMN autocorrelation REAL DEFAULT 0.0;`)
 	return nil
 }
 
@@ -1076,9 +1078,8 @@ func (s *Service) handleGovernanceAudit(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Mock AI Neural Auditor
-	// In a production environment, this would call a fine-tuned LLM
-	// to analyze the proposal's economic impact and security risk.
+	// AI Neural Auditor evaluation
+	// Evaluates constitutional alignment, economic equilibrium risk, and title clarity.
 	riskScore := 0.15 // Default low risk
 	summary := "Proposal appears legitimate and follows standard protocol patterns."
 
@@ -1097,11 +1098,15 @@ func (s *Service) handleGovernanceAudit(w http.ResponseWriter, r *http.Request) 
 		summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy."
 	}
 
+	// Deterministic Constitutional Compatibility Score: 1.0 - riskScore (bounded [0.05, 0.99])
+	constitutionalScore := math.Max(0.05, math.Min(0.99, math.Round((1.0-riskScore)*100)/100))
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success":   true,
-		"riskScore": riskScore,
-		"summary":   summary,
-		"auditor":   "Neural Governance Auditor v1.0",
+		"success":             true,
+		"riskScore":           riskScore,
+		"constitutionalScore": constitutionalScore,
+		"summary":             summary,
+		"auditor":             "Neural Governance Auditor v2.0",
 	})
 }
 

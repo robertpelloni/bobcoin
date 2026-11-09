@@ -251,8 +251,11 @@ export function Governance() {
                         <div className="vote-bar">
                             <div className="bar-for" style={{width: `${(prop.votesFor / (prop.votesFor + prop.votesAgainst + 0.0001)) * 100}%`}}></div>
                         </div>
-                        <div className="compatibility-score" style={{color: "#0ff", fontSize: "0.8rem", marginBottom: "0.5rem"}}>
-                            <span>AI COMPATIBILITY: {(Math.random() * 100).toFixed(1)}%</span>
+                        <div className="compatibility-score" style={{color: "#0ff", fontSize: "0.8rem", marginBottom: "0.5rem", display: 'flex', justifyContent: 'space-between'}}>
+                            <span>AI CONSTITUTIONAL COMPATIBILITY:</span>
+                            <span style={{fontWeight: 'bold', color: auditCache[prop.id]?.constitutionalScore >= 0.7 ? '#0f0' : auditCache[prop.id]?.constitutionalScore >= 0.4 ? '#ffaa00' : '#ff0055'}}>
+                                {auditCache[prop.id]?.constitutionalScore ? `${(auditCache[prop.id].constitutionalScore * 100).toFixed(0)}%` : 'EVALUATING...'}
+                            </span>
                         </div>
                         <div className="vote-stats">
                             <span>YES: {prop.votesFor}</span>

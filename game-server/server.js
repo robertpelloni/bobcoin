@@ -346,6 +346,38 @@ app.post('/burn', async (req, res) => {
     res.json({ success: true, tx });
 });
 
+// AI Neural Governance Audit Endpoint (Parity with Go Game Server)
+app.post('/governance/audit', (req, res) => {
+    const { title, action, amount, target } = req.body || {};
+    let riskScore = 0.15;
+    let summary = "Proposal appears legitimate and follows standard protocol patterns.";
+
+    if (title && (title.toUpperCase().includes("SCAM") || title.toUpperCase().includes("TEST"))) {
+        riskScore = 0.85;
+        summary = "High risk detected: Title contains suspicious keywords or suggests low-effort testing.";
+    }
+
+    if (action === "MINT_TREASURY" && (amount || 0) > 100000) {
+        riskScore = 0.95;
+        summary = "Critical risk: Excessive treasury minting requested. Potential rug-pull or inflation attack.";
+    }
+
+    if (action === "UPDATE_DEMURRAGE" && (amount || 0) > 0.01) {
+        riskScore = 0.70;
+        summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy.";
+    }
+
+    const constitutionalScore = Math.max(0.05, Math.min(0.99, Math.round((1.0 - riskScore) * 100) / 100));
+
+    res.json({
+        success: true,
+        riskScore,
+        constitutionalScore,
+        summary,
+        auditor: "Neural Governance Auditor v2.0"
+    });
+});
+
 // Generic Mint Endpoint (System Sending to User)
 app.post('/mint', async (req, res) => {
     const { amount, reason, address } = req.body;

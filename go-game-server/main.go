@@ -697,15 +697,42 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 				return false, metrics
 			}
 
-			// Lag-1 Autocorrelation Check (detects periodic oscillators or synthetic pseudo-random macros)
-			autocorr := calculateLag1Autocorrelation(diffs)
+			// Multi-Lag Autocorrelation Check (Lag-1 and Lag-2 to detect periodic oscillators & cyclic macros)
+			autocorr := calculateLagKAutocorrelation(diffs, 1)
+			autocorrLag2 := calculateLagKAutocorrelation(diffs, 2)
 			metrics["autocorrelation"] = autocorr
-			log.Printf("[AI Oracle] Replay lag-1 autocorrelation: %f", autocorr)
+			metrics["autocorrelationLag2"] = autocorrLag2
+			log.Printf("[AI Oracle] Replay lag-1: %f, lag-2: %f", autocorr, autocorrLag2)
 
 			if math.Abs(autocorr) > 0.85 {
 				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Lag-1 Autocorrelation %f is too high (> 0.85, periodic macro suspected).", autocorr)
 				metrics["confidenceScore"] = 0.12
 				return false, metrics
+			}
+			if math.Abs(autocorrLag2) > 0.85 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Lag-2 Autocorrelation %f is too high (> 0.85, cyclic macro suspected).", autocorrLag2)
+				metrics["confidenceScore"] = 0.12
+				return false, metrics
+			}
+
+			// Delta Diversity Ratio Check:
+			// For larger traces (len >= 15), human timing deltas show rich diversity (ratio > 0.25).
+			// Synthetic cyclic macros repeating the exact same small set of numbers will have an abnormally low ratio.
+			if len(diffs) >= 15 {
+				uniqueBuckets := make(map[int]bool)
+				for _, d := range diffs {
+					bucket := int(math.Round(d))
+					uniqueBuckets[bucket] = true
+				}
+				diversityRatio := float64(len(uniqueBuckets)) / float64(len(diffs))
+				metrics["diversityRatio"] = math.Round(diversityRatio*100) / 100
+				log.Printf("[AI Oracle] Delta diversity ratio: %f (%d unique in %d)", diversityRatio, len(uniqueBuckets), len(diffs))
+
+				if diversityRatio < 0.25 {
+					log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Timing diversity ratio %f is too low (< 0.25, cyclic bot pattern detected).", diversityRatio)
+					metrics["confidenceScore"] = 0.14
+					return false, metrics
+				}
 			}
 
 			// Superhuman APM / input frequency check:
@@ -790,12 +817,12 @@ func calculateVariance(data []float64) float64 {
 	return math.Sqrt(sqDiffSum / float64(len(data)))
 }
 
-// calculateLag1Autocorrelation computes the serial correlation between consecutive timing deltas.
-// Natural human input exhibits near-zero linear serial correlation (|r1| < 0.85).
-// Macro bots that alternate (e.g. 100ms, 200ms, 100ms, 200ms) or have fixed linear trends show |r1| -> 1.0.
-func calculateLag1Autocorrelation(diffs []float64) float64 {
+// calculateLagKAutocorrelation computes the serial correlation at arbitrary lag k between timing deltas.
+// Natural human input exhibits near-zero serial correlation at any lag (|rk| < 0.85).
+// Macro bots with alternating or cyclic periods (e.g. 2-step or 3-step repeating loops) show |rk| -> 1.0.
+func calculateLagKAutocorrelation(diffs []float64, k int) float64 {
 	n := len(diffs)
-	if n < 4 {
+	if n <= k || k <= 0 {
 		return 0.0
 	}
 	var sum float64
@@ -805,8 +832,8 @@ func calculateLag1Autocorrelation(diffs []float64) float64 {
 	mean := sum / float64(n)
 
 	var numerator, denom float64
-	for i := 0; i < n-1; i++ {
-		numerator += (diffs[i] - mean) * (diffs[i+1] - mean)
+	for i := 0; i < n-k; i++ {
+		numerator += (diffs[i] - mean) * (diffs[i+k] - mean)
 	}
 	for i := 0; i < n; i++ {
 		denom += math.Pow(diffs[i]-mean, 2)

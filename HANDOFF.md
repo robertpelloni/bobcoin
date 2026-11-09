@@ -1,7 +1,12 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.8
+# HANDOFF SUMMARY - LATTICE ARCADE v8.116.9
 
 ## Architectural Milestones Accomplished
-1. **AI Oracle Micro-Replay Temporal Monotonicity & Edge-Case Telemetry**:
+1. **AI Oracle Multi-Lag Autocorrelation & Delta Diversity Ratio**:
+   - Implemented Lag-2 serial autocorrelation ($|r_2| \le 0.85$) and delta diversity ratio analysis ($\text{unique}(\Delta t) / N \ge 0.25$) across `go-game-server` and `game-server`.
+   - Blocks complex cyclic macros (e.g., multi-modal repeating delta loops) that previously tried to bypass lag-1 autocorrelation.
+   - Fully tested with unit test `TestHandleSubmitProof_CyclicMacroAndDiversityRatio` and `/home/jules/self_created_tools/oracle_edgecase_analyzer.py`.
+
+2. **AI Oracle Micro-Replay Temporal Monotonicity & Edge-Case Telemetry**:
    - Hardened `/submit-proof` across both `go-game-server` and `game-server` so that any trace with $\ge 2$ entries enforces strict temporal monotonicity ($\Delta t > 0.0$).
    - Completely closes edge-case vectors where simultaneous duplicate timestamps or non-monotonic note sequences could slip through when traces contained $\le 5$ events.
    - Built and verified automated diagnostic suite `/home/jules/self_created_tools/oracle_edgecase_analyzer.py` and unit test `TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps`.

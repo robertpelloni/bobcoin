@@ -197,23 +197,44 @@ app.post('/submit-proof', async (req, res) => {
                             oracleMetrics.confidenceScore = 0.15;
                         } else {
                             // Lag-1 Autocorrelation Check (detects periodic oscillators or synthetic jitter macros)
-                            let autocorr = 0.0;
-                            if (diffs.length >= 4) {
+                            // Calculate Multi-Lag Autocorrelation (Lag-1 and Lag-2)
+                            const calcLag = (k) => {
+                                if (diffs.length <= k) return 0.0;
                                 let num = 0, den = 0;
-                                for (let i = 0; i < diffs.length - 1; i++) {
-                                    num += (diffs[i] - mean) * (diffs[i + 1] - mean);
+                                for (let i = 0; i < diffs.length - k; i++) {
+                                    num += (diffs[i] - mean) * (diffs[i + k] - mean);
                                 }
                                 for (let i = 0; i < diffs.length; i++) {
                                     den += Math.pow(diffs[i] - mean, 2);
                                 }
-                                if (den > 0) autocorr = num / den;
-                            }
+                                return den > 0 ? (num / den) : 0;
+                            };
+
+                            const autocorr = calcLag(1);
+                            const autocorrLag2 = calcLag(2);
                             oracleMetrics.autocorrelation = Math.round(autocorr * 100) / 100;
+                            oracleMetrics.autocorrelationLag2 = Math.round(autocorrLag2 * 100) / 100;
 
                             if (Math.abs(autocorr) > 0.85) {
                                 console.log(`[AI Oracle] ⚠️ BOT DETECTED: Lag-1 Autocorrelation ${autocorr} is too high (> 0.85).`);
                                 zkVerified = false;
                                 oracleMetrics.confidenceScore = 0.12;
+                            } else if (Math.abs(autocorrLag2) > 0.85) {
+                                console.log(`[AI Oracle] ⚠️ BOT DETECTED: Lag-2 Autocorrelation ${autocorrLag2} is too high (> 0.85).`);
+                                zkVerified = false;
+                                oracleMetrics.confidenceScore = 0.12;
+                            }
+
+                            // Delta Diversity Ratio Check for long sequences
+                            if (diffs.length >= 15) {
+                                const uniqueBuckets = new Set(diffs.map(d => Math.round(d)));
+                                const diversityRatio = uniqueBuckets.size / diffs.length;
+                                oracleMetrics.diversityRatio = Math.round(diversityRatio * 100) / 100;
+                                if (diversityRatio < 0.25) {
+                                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Timing diversity ratio ${diversityRatio} is too low (< 0.25).`);
+                                    zkVerified = false;
+                                    oracleMetrics.confidenceScore = 0.14;
+                                }
                             }
                         }
 

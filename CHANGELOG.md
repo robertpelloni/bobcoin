@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.116.9] - 2026-11-09
+### Added
+- **AI Oracle Multi-Lag Autocorrelation & Delta Diversity Ratio**: Expanded anti-bot analysis across `go-game-server` and `game-server` with Lag-2 serial autocorrelation ($|r_2| \le 0.85$) and timing delta diversity ratio ($\ge 0.25$ for $N \ge 15$), shutting down cyclical macros and repeating multi-step loop scripts.
+- **Unit Testing for Cyclic Macros**: Added `TestHandleSubmitProof_CyclicMacroAndDiversityRatio` in `go-game-server/main_test.go` confirming 100% test pass rate.
+- **Automated Diagnostic Suite Upgrades**: Updated `/home/jules/self_created_tools/oracle_edgecase_analyzer.py` asserting proper rejection of tri-modal cyclic loops alongside natural high-diversity human jitter acceptance.
+
 ## [8.116.8] - 2026-11-09
 ### Added
 - **AI Oracle Strict Temporal Monotonicity on Micro-Replays**: Hardened `/submit-proof` in `go-game-server` and `game-server` so that any replay log with $\ge 2$ entries must be strictly monotonic ($\Delta t > 0.0$), immediately rejecting simultaneous or duplicate timestamps with HTTP 400 and `confidenceScore: 0.05`.

@@ -764,3 +764,40 @@ func TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps(t *testing.T) {
 		t.Fatalf("expected confidenceScore 0.05 for non-monotonic short trace, got %v", oracle["confidenceScore"])
 	}
 }
+
+func TestHandleSubmitProof_CyclicMacroAndDiversityRatio(t *testing.T) {
+	service := newTestService(t)
+
+	// Tri-modal cyclic macro: [60, 90, 140] repeating 10 times (30 notes)
+	var cyclicLog []map[string]interface{}
+	cycle := []float64{60.0, 90.0, 140.0}
+	tAcc := 0.0
+	for i := 0; i < 30; i++ {
+		tAcc += cycle[i%3]
+		cyclicLog = append(cyclicLog, map[string]interface{}{"time": tAcc})
+	}
+
+	reqBody, _ := json.Marshal(ProofSubmissionRequest{
+		Proof: map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "test_cyclic_macro",
+				"score":     2000.0,
+				"replayLog": cyclicLog,
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request for low diversity cyclic macro, got %d with body: %s", rec.Code, rec.Body.String())
+	}
+
+	var res map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&res)
+	oracle, _ := res["oracle"].(map[string]interface{})
+	if oracle["confidenceScore"].(float64) != 0.14 {
+		t.Fatalf("expected confidenceScore 0.14 for cyclic macro, got %v", oracle["confidenceScore"])
+	}
+}

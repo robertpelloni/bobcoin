@@ -1131,6 +1131,11 @@ func (s *Service) handleGovernanceAudit(w http.ResponseWriter, r *http.Request) 
 		summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy."
 	}
 
+	if req.Action == "SLASH_REPUTATION" && req.Amount > 500 {
+		riskScore = 0.75
+		summary = "Warning: High reputation slash penalty requested without multi-party dispute arbitration."
+	}
+
 	// Deterministic Constitutional Compatibility Score: 1.0 - riskScore (bounded [0.05, 0.99])
 	constitutionalScore := math.Max(0.05, math.Min(0.99, math.Round((1.0-riskScore)*100)/100))
 

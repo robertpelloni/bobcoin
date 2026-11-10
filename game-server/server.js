@@ -388,6 +388,11 @@ app.post('/governance/audit', (req, res) => {
         summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy.";
     }
 
+    if (action === "SLASH_REPUTATION" && (amount || 0) > 500) {
+        riskScore = 0.75;
+        summary = "Warning: High reputation slash penalty requested without multi-party dispute arbitration.";
+    }
+
     const constitutionalScore = Math.max(0.05, Math.min(0.99, Math.round((1.0 - riskScore) * 100) / 100));
 
     res.json({

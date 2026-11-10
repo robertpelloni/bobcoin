@@ -561,6 +561,18 @@ export function Dashboard() {
                                     {(selectedAudit.autocorrelation || 0.0).toFixed(2)}
                                 </div>
                             </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>CYCLIC (|r2| &le; 0.85)</div>
+                                <div style={{color: Math.abs(selectedAudit.autocorrelationLag2 || 0) <= 0.85 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {(selectedAudit.autocorrelationLag2 || 0.0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>DIVERSITY (&ge; 0.25)</div>
+                                <div style={{color: (selectedAudit.diversityRatio || 1.0) >= 0.25 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.diversityRatio ? `${(selectedAudit.diversityRatio * 100).toFixed(0)}%` : 'N/A'}
+                                </div>
+                            </div>
                         </div>
 
                         <div style={{display: 'flex', justifyContent: 'flex-end'}}>

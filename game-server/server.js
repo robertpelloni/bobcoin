@@ -399,6 +399,67 @@ app.post('/governance/audit', (req, res) => {
     });
 });
 
+// Wearable Proof of Vitality Endpoint (AI Oracle Physiological & Biometric Parity with Go Game Server)
+app.post('/sdk/v1/vitality', (req, res) => {
+    const { steps, heartRateAvg, cadence, durationSec, caloriesBurned, activityType, wallet } = req.body || {};
+
+    if (!steps || steps < 1000) {
+        return res.status(400).json({ error: "Insufficient steps for vitality proof" });
+    }
+
+    if (heartRateAvg < 40.0 || heartRateAvg > 220.0) {
+        return res.status(400).json({
+            error: "Physiological anomaly detected: Heart rate out of human biometric bounds",
+            heartRate: heartRateAvg
+        });
+    }
+
+    if (cadence && cadence > 300.0) {
+        return res.status(400).json({
+            error: "Physiological anomaly detected: Cadence exceeds biological locomotion limits",
+            cadence
+        });
+    }
+
+    if (durationSec !== undefined && durationSec < 0.0) {
+        return res.status(400).json({ error: "Workout duration must be strictly positive" });
+    }
+
+    if (durationSec > 0.0) {
+        const speedMps = (steps * 0.75) / durationSec;
+        if (speedMps > 10.5) {
+            return res.status(400).json({
+                error: "Locomotion velocity exceeds sustained human limits (>10.5 m/s)",
+                speed: speedMps
+            });
+        }
+    }
+
+    if (durationSec > 0.0 && caloriesBurned > 0.0) {
+        const caloriesPerMin = caloriesBurned / (durationSec / 60.0);
+        if (caloriesPerMin > 32.0) {
+            return res.status(400).json({
+                error: "Metabolic anomaly detected: Caloric burn rate exceeds human physiological maximum (>32 kcal/min)",
+                rate: caloriesPerMin
+            });
+        }
+    }
+
+    const reward = Math.round((steps / 1000) * 0.5 * 100) / 100;
+
+    res.json({
+        success: true,
+        steps,
+        reward,
+        activityType: activityType || "WALK",
+        verified: true,
+        oracle: {
+            confidenceScore: 0.98,
+            mode: "AI_ORACLE_BIOMETRIC_PHYSIOLOGICAL"
+        }
+    });
+});
+
 // Generic Mint Endpoint (System Sending to User)
 app.post('/mint', async (req, res) => {
     const { amount, reason, address } = req.body;

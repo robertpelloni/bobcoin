@@ -124,7 +124,46 @@ def test_ai_oracle_integrity():
         assert res.get("oracle", {}).get("confidenceScore") <= 0.10
         print("  ✓ Superhuman APM burst rejected by AI Oracle.")
 
-    # 6. Oracle Audits Endpoint & Persistence
+    # 6. Cyclic Multi-Modal Loop & Low Delta Diversity Rejection
+    cycle_deltas = [60.0, 90.0, 140.0]
+    t = 0.0
+    cyclic_log = []
+    for i in range(30):
+        t += cycle_deltas[i % 3]
+        cyclic_log.append({'time': t})
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "cyclic_bot",
+            "score": 2000,
+            "replayLog": cyclic_log
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Cyclic low-diversity macro should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.14
+        print("  ✓ Cyclic multi-modal macro rejected by AI Oracle diversity analysis.")
+
+    # 7. Short Trace Duplicate Timestamp Rejection
+    short_dup = [{'time': 100.0}, {'time': 100.0}, {'time': 180.0}]
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "dup_bot",
+            "score": 2000,
+            "replayLog": short_dup
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Short trace with duplicate timestamps should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.05
+        print("  ✓ Short trace with duplicate timestamp rejected with confidence 0.05.")
+
+    # 8. Oracle Audits Endpoint & Persistence
     resp = urllib.request.urlopen(f"{base_url}/oracle/audits")
     audits = json.loads(resp.read().decode()).get("audits", [])
     assert len(audits) >= 1

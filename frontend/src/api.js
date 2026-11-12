@@ -1,5 +1,5 @@
 export const SUPERNODE_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8000';
-export const API_URL = import.meta.env.VITE_GAME_HTTP_URL || SUPERNODE_URL;
+export const API_URL = import.meta.env.VITE_GAME_HTTP_URL || 'http://localhost:3001';
 export const SIGNALING_URL = import.meta.env.VITE_GAME_SIGNALING_URL || SUPERNODE_URL || import.meta.env.VITE_GAME_SERVER_URL || 'http://localhost:3001';
 export const LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4001';
 export const GO_LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4001';
@@ -148,6 +148,17 @@ export const getMarketBids = async () => {
         return data.bids || [];
     } catch (e) {
         console.error("Failed to fetch market bids:", e);
+        return [];
+    }
+};
+
+export const getOracleAudits = async () => {
+    try {
+        const res = await fetch(`${API_URL}/oracle/audits`);
+        const data = await res.json();
+        return data.audits || [];
+    } catch(e) {
+        console.error("Failed to fetch oracle audits:", e);
         return [];
     }
 };

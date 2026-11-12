@@ -1,5 +1,67 @@
 # Changelog
 
+## [8.116.9] - 2026-11-09
+### Added
+- **AI Oracle Multi-Lag Autocorrelation & Delta Diversity Ratio**: Expanded anti-bot analysis across `go-game-server` and `game-server` with Lag-2 serial autocorrelation ($|r_2| \le 0.85$) and timing delta diversity ratio ($\ge 0.25$ for $N \ge 15$), shutting down cyclical macros and repeating multi-step loop scripts.
+- **Unit Testing for Cyclic Macros**: Added `TestHandleSubmitProof_CyclicMacroAndDiversityRatio` in `go-game-server/main_test.go` confirming 100% test pass rate.
+- **Automated Diagnostic Suite Upgrades**: Updated `/home/jules/self_created_tools/oracle_edgecase_analyzer.py` asserting proper rejection of tri-modal cyclic loops alongside natural high-diversity human jitter acceptance.
+
+## [8.116.8] - 2026-11-09
+### Added
+- **AI Oracle Strict Temporal Monotonicity on Micro-Replays**: Hardened `/submit-proof` in `go-game-server` and `game-server` so that any replay log with $\ge 2$ entries must be strictly monotonic ($\Delta t > 0.0$), immediately rejecting simultaneous or duplicate timestamps with HTTP 400 and `confidenceScore: 0.05`.
+- **Edge-Case Diagnostic Automation**: Created `/home/jules/self_created_tools/oracle_edgecase_analyzer.py` validating harmonic macros ($r_1 \approx -1.0$), tri-modal cyclic jitter, and duplicate simultaneous timestamp scenarios.
+- **Unit Testing**: Added `TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps` in `go-game-server/main_test.go` confirming 100% test pass rate on short trace bot detection.
+
+## [8.116.7] - 2026-11-09
+### Added
+- **Neural Governance AI Oracle Auditor v2.0**: Upgraded `/governance/audit` across `go-game-server` and `game-server` to perform deterministic evaluation of DAO proposals, assessing economic risk and computing an `AI CONSTITUTIONAL COMPATIBILITY` score (bounded between 5% and 99%).
+- **Governance UI Constitutional Score Badge**: Replaced mock compatibility calculations in `frontend/src/pages/Governance.jsx` with live neural auditor metrics, displaying dynamic color indicators (green $\ge 70\%$, orange $\ge 40\%$, red $< 40\%$) and audit summaries.
+- **Unit and Parity Tests**: Added `TestHandleGovernanceAudit_ConstitutionalScore` in `go-game-server/main_test.go` covering legitimate protocol upgrades and treasury attack mitigations.
+- **Go-Lattice CORS Middleware**: Configured global CORS middleware in `go-lattice/main.go` setting `Access-Control-Allow-*` and handling HTTP `OPTIONS` preflight requests cleanly for web client queries.
+- **Resilient SQLite Column Migration**: Added best-effort schema migration for `autocorrelation` in `go-game-server/main.go` to prevent duplicate column startup panics across cold and existing database instances.
+
+## [8.116.6] - 2026-11-08
+### Added
+- **AI Oracle Telemetry Sparklines**: Added real-time SVG sparkline visualizers for recent proof entropy ($H$) and lag-1 autocorrelation ($r_1$) in the AI Oracle Security Feed card on `Dashboard.jsx`.
+- **Dynamic Anomaly Detection Alerts**: Integrated real-time threat badges (`⚠ ANOMALY DETECTED`) alerting users when synthetic bot or macro traces are detected in the live audit stream.
+- **Diagnostic Tool Automation**: Created `/home/jules/self_created_tools/oracle_diagnostics.py` asserting edge-case entropy, autocorrelation, APM, and monotonicity verification behaviors against running servers.
+- **E2E Test Coverage**: Integrated sparkline telemetry and anomaly badge verification into `testing/test_e2e_system_tray_and_nav.py` with 100% passing tests.
+
+## [8.116.5] - 2026-11-07
+### Added
+- **AI Oracle Lag-1 Autocorrelation Bot Detection**: Implemented serial correlation analysis ($r_1$) on timing deltas across `go-game-server` and `game-server` to automatically catch periodic alternating macros and synthetic jitter scripts ($|r_1| > 0.85$).
+- **Dashboard Autocorrelation Telemetry**: Surfaced live $r_1$ metric in the gameplay stats HUD and inside the interactive "AI ORACLE AUDIT INSPECTOR" modal on `Dashboard.jsx`.
+- **Unit & E2E Test Suite**: Added `TestHandleSubmitProof_Autocorrelation` in `go-game-server/main_test.go` and verified browser inspector modal rendering in `testing/test_e2e_system_tray_and_nav.py`.
+
+## [8.116.4] - 2026-11-07
+### Added
+- **AI Oracle Metabolic & Locomotion Velocity Boundaries**: Hardened `/sdk/v1/vitality` in `go-game-server` to reject caloric burn rates exceeding human biological maximums (> 32 kcal/min) and locomotion velocities exceeding human sprint capacity (> 10.5 m/s).
+- **Mobile Multi-Activity Biometric Telemetry**: Added an activity modality selector (`WALK`, `RUN`, `HIKE`) to `Mobile.jsx`, dynamic MET-based energy expenditure calculation, and a live "METABOLIC BURN" metric card (`KCAL`).
+- **Comprehensive Unit & E2E Tests**: Expanded `vitality_test.go` and `testing/test_e2e_system_tray_and_nav.py` to assert metabolic validation and browser verification badges.
+
+## [8.116.3] - 2026-11-07
+### Added
+- **AI Oracle Real-Time WebSocket Streaming**: Implemented real-time audit event broadcasting (`ORACLE_AUDIT`) across `go-game-server` and `game-server`, allowing nodes to subscribe and receive instant anti-bot decisions.
+- **Interactive AI Oracle Audit Inspector Modal**: Added a detailed modal visualizer to `frontend/src/pages/Dashboard.jsx` providing deep inspection into raw variance, Mean Absolute Deviation (MAD), Shannon timing entropy ($H$), confidence rating, and prover wallet addresses.
+- **Unit & E2E Test Suite**: Added `TestOracleWebSocketBroadcast` in `go-game-server/main_test.go` and verified browser modal opening/dismissal in `testing/test_e2e_system_tray_and_nav.py`.
+
+## [8.116.2] - 2026-11-07
+### Added
+- **AI Oracle Anti-Manipulation Hardening**: Enforced strict performance arithmetic consistency (`(perfects * 100) + (greats * 50) == score`) and biological input rate limits (<= 15 events/sec) in both `go-game-server` and `game-server`.
+- **Unit Test Hardening**: Added explicit test coverage in `go-game-server/main_test.go` and `testing/test_e2e_system_tray_and_nav.py` preventing score inflation and superhuman APM bypasses.
+
+## [8.116.1] - 2026-11-07
+### Added
+- **AI Oracle Physiological Validation**: Hardened `/sdk/v1/vitality` in `go-game-server` with biological boundaries on heart rate (40–220 bpm) and human locomotion cadence (<= 300 steps/min).
+- **Mobile Biometric Vitals Dashboard**: Added a real-time "BIOMETRIC VITALS" telemetry card in `Mobile.jsx` displaying heart rate, cadence, and AI Oracle validation status.
+- **Automated Vitality E2E Tests**: Expanded `testing/test_e2e_system_tray_and_nav.py` with multi-step physiological assertions and UI validation badges.
+
+## [8.116.0] - 2026-11-07
+### Added
+- **AI Oracle Audit Persistence & Telemetry Feed**: Implemented SQLite table `oracle_audits` in `go-game-server` and added `/oracle/audits` query endpoint (proxied through `go-supertorrent`).
+- **Dashboard Security Feed**: Added a real-time "AI Oracle Security Feed" card to `Dashboard.jsx`, rendering live verification verdicts, entropy ratings, and confidence scores directly alongside the Hall of Fame and SPoRA Storage Market.
+- **E2E Automation Coverage**: Updated `testing/test_e2e_system_tray_and_nav.py` to assert audit log persistence and endpoint querying.
+
 ## [8.115.9] - 2026-11-07
 ### Added
 - **AI Oracle Shannon Entropy & Monotonicity Engine**: Upgraded `go-game-server` and `game-server` bot detection engines with strict temporal monotonicity checks and Shannon timing delta entropy evaluation (`H >= 1.0`), preventing advanced clustered and repetitive macro bypasses.

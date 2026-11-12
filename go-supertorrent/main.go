@@ -181,6 +181,7 @@ func main() {
 	mux.HandleFunc("/market/bid", service.handleProxyMarketBid)
 	mux.HandleFunc("/market/accept", service.handleProxyMarketAccept)
 	mux.HandleFunc("/market/bids", service.handleProxyMarketBids)
+	mux.HandleFunc("/oracle/audits", service.handleProxyOracleAudits)
 	mux.HandleFunc("/add-torrent", service.handleAddTorrent)
 	mux.HandleFunc("/remove-torrent", service.handleRemoveTorrent)
 	mux.HandleFunc("/upload", service.handleUpload)
@@ -637,6 +638,9 @@ func (s *SuperTorrentService) handleProxyMarketAccept(w http.ResponseWriter, r *
 }
 func (s *SuperTorrentService) handleProxyMarketBids(w http.ResponseWriter, r *http.Request) {
 	s.proxyGameServerRequest(w, r, "/market/bids")
+}
+func (s *SuperTorrentService) handleProxyOracleAudits(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/oracle/audits")
 }
 
 func (s *SuperTorrentService) simulateDownloadProgress() {

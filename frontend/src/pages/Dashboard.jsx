@@ -3,7 +3,7 @@ import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
-import { submitProof, getBankroll, submitFHEOracle } from '../api';
+import { submitProof, getBankroll, submitFHEOracle, getOracleAudits, SIGNALING_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 import { useNetwork } from '../NetworkContext';
@@ -32,7 +32,9 @@ export function Dashboard() {
     const [mintResult, setMintResult] = useState(null);
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
-    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, status: 'STANDBY' });
+    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, autocorr: 0, status: 'STANDBY' });
+    const [oracleAudits, setOracleAudits] = useState([]);
+    const [selectedAudit, setSelectedAudit] = useState(null);
 
     // Command Center Active Sub-Module Tab (Eliminates fragmentation)
     const [commandTab, setCommandTab] = useState('arcade');
@@ -64,11 +66,25 @@ export function Dashboard() {
                     if (p > 0) entropy -= p * Math.log2(p);
                 });
 
+                // Lag-1 Autocorrelation
+                let autocorr = 0.0;
+                if (diffs.length >= 4) {
+                    let num = 0, den = 0;
+                    for (let i = 0; i < diffs.length - 1; i++) {
+                        num += (diffs[i] - mean) * (diffs[i + 1] - mean);
+                    }
+                    for (let i = 0; i < diffs.length; i++) {
+                        den += Math.pow(diffs[i] - mean, 2);
+                    }
+                    if (den > 0) autocorr = num / den;
+                }
+
                 setOracleStats({
                     variance: parseFloat(variance.toFixed(2)),
                     mad: parseFloat(mad.toFixed(2)),
                     entropy: parseFloat(entropy.toFixed(2)),
-                    status: (variance >= 10.0 && mad >= 5.0 && entropy >= 1.0) ? 'HUMAN_VERIFIED' : 'CALCULATING'
+                    autocorr: parseFloat(autocorr.toFixed(2)),
+                    status: (variance >= 10.0 && mad >= 5.0 && entropy >= 1.0 && Math.abs(autocorr) <= 0.85) ? 'HUMAN_VERIFIED' : 'CALCULATING'
                 });
             }
         }
@@ -77,15 +93,47 @@ export function Dashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const bal = await getBankroll();
+                const [bal, audits] = await Promise.all([
+                    getBankroll().catch(() => 0),
+                    getOracleAudits().catch(() => [])
+                ]);
                 setBankroll(bal);
+                setOracleAudits(audits);
             } catch (e) {
-                console.warn("Failed to fetch bankroll", e);
+                console.warn("Failed to fetch bankroll or oracle audits", e);
             }
         };
         fetchStats();
-        const interval = setInterval(fetchStats, 10000);
-        return () => clearInterval(interval);
+        const interval = setInterval(fetchStats, 6000);
+
+        // Real-Time WebSocket Streaming for instant AI Oracle audit feed updates
+        let ws;
+        try {
+            const wsTarget = SIGNALING_URL.replace(/^http/, 'ws');
+            ws = new WebSocket(wsTarget);
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'SUBSCRIBE_ORACLE' }));
+            };
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'ORACLE_AUDIT' && data.audit) {
+                        setOracleAudits(prev => [data.audit, ...prev.filter(a => a.id !== data.audit.id)].slice(0, 50));
+                    }
+                } catch (e) {
+                    // Ignore non-json frames
+                }
+            };
+        } catch (e) {
+            console.warn("Real-time Oracle WebSocket connection failed:", e);
+        }
+
+        return () => {
+            clearInterval(interval);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+        };
     }, []);
 
     const handleScoreUpdate = (points) => {
@@ -231,9 +279,9 @@ export function Dashboard() {
                         <div className="stats-box">
                             <p title="Current rhythm accuracy points">SCORE: <span className="neon-text">{score}</span></p>
                             <p title="Consecutive successful key hits multiplier">COMBO: <span className="neon-text-blue">x{combo}</span></p>
-                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy, variance, and MAD">
+                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy, variance, MAD, and lag-1 autocorrelation">
                                 ORACLE ENTROPY: <span style={{color: oracleStats.status === 'HUMAN_VERIFIED' ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>{oracleStats.status}</span>
-                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad} | H: {oracleStats.entropy || 0.0}]</span>
+                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad} | H: {oracleStats.entropy || 0.0} | R1: {oracleStats.autocorr || 0.0}]</span>
                             </p>
                         </div>
 
@@ -274,7 +322,7 @@ export function Dashboard() {
                             </div>
                         )}
 
-                        <div className="arcade-auxiliary-grid" style={{marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', width: '100%'}}>
+                        <div className="arcade-auxiliary-grid" style={{marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', width: '100%'}}>
                             <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
                                 <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>HALL OF FAME</h3>
                                 <Leaderboard mintStatus={mintStatus} />
@@ -282,6 +330,102 @@ export function Dashboard() {
                             <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
                                 <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>SPoRA STORAGE MARKET</h3>
                                 <Marketplace />
+                            </div>
+                            <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>
+                                    <h3 style={{color: '#0ff', margin: 0}}>AI ORACLE SECURITY FEED</h3>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                        {oracleAudits.some(a => !a.verified) && (
+                                            <span className="anomaly-alert-badge" style={{background: 'rgba(255, 0, 85, 0.2)', border: '1px solid #ff0055', color: '#ff0055', padding: '0.1rem 0.4rem', borderRadius: '3px', fontSize: '0.65rem', fontWeight: 'bold'}} title="Synthetic / Bot Anomaly Detected in Recent Stream">
+                                                ⚠ ANOMALY DETECTED
+                                            </span>
+                                        )}
+                                        <span style={{fontSize: '0.65rem', color: '#0f0'}}>ACTIVE</span>
+                                    </div>
+                                </div>
+
+                                {/* Real-time Telemetry Sparklines for Entropy and Autocorrelation */}
+                                {oracleAudits.length > 1 && (
+                                    <div className="oracle-sparklines-container" style={{display: 'flex', gap: '1rem', padding: '0.6rem 0', borderBottom: '1px solid #161616', fontSize: '0.65rem', fontFamily: 'monospace'}}>
+                                        <div style={{flex: 1, background: '#0a0a0a', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #1a1a1a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px'}}>
+                                                <span>ENTROPY (H)</span>
+                                                <span style={{color: '#0ff'}}>{oracleAudits[0]?.entropy?.toFixed(2) || '0.00'}</span>
+                                            </div>
+                                            <svg className="sparkline-entropy" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                                {(() => {
+                                                    const recent = oracleAudits.slice(0, 10).reverse();
+                                                    if (recent.length < 2) return null;
+                                                    const maxH = Math.max(4.0, ...recent.map(r => r.entropy || 0));
+                                                    const points = recent.map((r, idx) => {
+                                                        const x = (idx / (recent.length - 1)) * 100;
+                                                        const y = 22 - (((r.entropy || 0) / maxH) * 20);
+                                                        return `${x},${y}`;
+                                                    }).join(' ');
+                                                    return (
+                                                        <>
+                                                            <line x1="0" y1="17" x2="100" y2="17" stroke="#ff0055" strokeWidth="0.5" strokeDasharray="2,2" />
+                                                            <polyline fill="none" stroke="#00ffff" strokeWidth="1.5" points={points} />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </svg>
+                                        </div>
+
+                                        <div style={{flex: 1, background: '#0a0a0a', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #1a1a1a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px'}}>
+                                                <span>AUTOCORR (R1)</span>
+                                                <span style={{color: '#f0f'}}>{oracleAudits[0]?.autocorrelation ? oracleAudits[0].autocorrelation.toFixed(2) : '0.00'}</span>
+                                            </div>
+                                            <svg className="sparkline-autocorr" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                                {(() => {
+                                                    const recent = oracleAudits.slice(0, 10).reverse();
+                                                    if (recent.length < 2) return null;
+                                                    const points = recent.map((r, idx) => {
+                                                        const x = (idx / (recent.length - 1)) * 100;
+                                                        const r1 = Math.max(-1.0, Math.min(1.0, r.autocorrelation || 0));
+                                                        const y = 12 - (r1 * 10);
+                                                        return `${x},${y}`;
+                                                    }).join(' ');
+                                                    return (
+                                                        <>
+                                                            <line x1="0" y1="12" x2="100" y2="12" stroke="#444" strokeWidth="0.5" />
+                                                            <polyline fill="none" stroke="#ff00ff" strokeWidth="1.5" points={points} />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </svg>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="oracle-audit-feed" style={{maxHeight: '180px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.7rem'}}>
+                                    {oracleAudits.length === 0 ? (
+                                        <div style={{color: '#666', padding: '1rem 0'}}>NO RECENT AUDITS LOGGED</div>
+                                    ) : (
+                                        oracleAudits.slice(0, 8).map(audit => (
+                                            <div
+                                                key={audit.id}
+                                                onClick={() => setSelectedAudit(audit)}
+                                                className="oracle-audit-item"
+                                                style={{padding: '0.4rem 0', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.2s'}}
+                                                title="Click to inspect real-time cryptographic audit breakdown"
+                                            >
+                                                <div>
+                                                    <span style={{color: audit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', marginRight: '6px'}}>
+                                                        {audit.verified ? '✓ PASSED' : '⚠️ REJECTED'}
+                                                    </span>
+                                                    <span style={{color: '#aaa'}}>{audit.address?.slice(0, 10)}...</span>
+                                                </div>
+                                                <div style={{textAlign: 'right', color: '#555'}}>
+                                                    <span style={{color: '#0ff'}}>H: {audit.entropy?.toFixed(1) || '0.0'}</span>
+                                                    <span style={{marginLeft: '6px', color: '#888'}}>{(audit.confidenceScore * 100).toFixed(0)}%</span>
+                                                    <span style={{marginLeft: '6px', color: '#0ff', fontSize: '0.65rem'}}>🔍</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -359,6 +503,84 @@ export function Dashboard() {
                     </Suspense>
                 )}
             </div>
+
+            {/* AI Oracle Telemetry & Audit Inspector Modal */}
+            {selectedAudit && (
+                <div className="modal-overlay" style={{position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                    <div className="modal-content" style={{background: '#0a0a0a', border: '1px solid #0ff', padding: '2rem', maxWidth: '550px', width: '90%', borderRadius: '6px', fontFamily: 'monospace'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '0.8rem', marginBottom: '1.2rem'}}>
+                            <h3 style={{margin: 0, color: '#0ff', fontSize: '1.1rem'}}>AI ORACLE AUDIT INSPECTOR</h3>
+                            <button className="cyber-button small" onClick={() => setSelectedAudit(null)} style={{padding: '0.2rem 0.6rem'}}>✕</button>
+                        </div>
+
+                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem', fontSize: '0.85rem'}}>
+                            <div style={{background: '#111', padding: '0.8rem', borderRadius: '4px'}}>
+                                <div style={{color: '#888', fontSize: '0.75rem'}}>VERIFICATION STATUS</div>
+                                <div style={{color: selectedAudit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.2rem'}}>
+                                    {selectedAudit.verified ? '✓ PASSED (HUMAN)' : '⚠️ REJECTED (BOT)'}
+                                </div>
+                            </div>
+                            <div style={{background: '#111', padding: '0.8rem', borderRadius: '4px'}}>
+                                <div style={{color: '#888', fontSize: '0.75rem'}}>CONFIDENCE RATING</div>
+                                <div style={{color: '#0ff', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.2rem'}}>
+                                    {((selectedAudit.confidenceScore || 0) * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', marginBottom: '1.2rem', fontSize: '0.8rem', lineHeight: '1.6'}}>
+                            <div><strong style={{color: '#888'}}>AUDIT ID:</strong> #{selectedAudit.id}</div>
+                            <div><strong style={{color: '#888'}}>PROVER WALLET:</strong> <span style={{wordBreak: 'break-all', color: '#fff'}}>{selectedAudit.address}</span></div>
+                            <div><strong style={{color: '#888'}}>SCORE / STEPS:</strong> <span style={{color: '#ff0'}}>{selectedAudit.score}</span></div>
+                            <div><strong style={{color: '#888'}}>TIMESTAMP:</strong> {selectedAudit.timestamp}</div>
+                        </div>
+
+                        <h4 style={{color: '#0ff', fontSize: '0.85rem', marginBottom: '0.5rem'}}>BIOMETRIC & TIMING DELTA METRICS</h4>
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center'}}>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>VARIANCE (&ge; 10.0)</div>
+                                <div style={{color: selectedAudit.variance >= 10.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.variance?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>MAD (&ge; 5.0)</div>
+                                <div style={{color: selectedAudit.mad >= 5.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.mad?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>ENTROPY (&ge; 1.0)</div>
+                                <div style={{color: selectedAudit.entropy >= 1.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.entropy?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>AUTOCORR (|r1| &le; 0.85)</div>
+                                <div style={{color: Math.abs(selectedAudit.autocorrelation || 0) <= 0.85 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {(selectedAudit.autocorrelation || 0.0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>CYCLIC (|r2| &le; 0.85)</div>
+                                <div style={{color: Math.abs(selectedAudit.autocorrelationLag2 || 0) <= 0.85 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {(selectedAudit.autocorrelationLag2 || 0.0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>DIVERSITY (&ge; 0.25)</div>
+                                <div style={{color: (selectedAudit.diversityRatio || 1.0) >= 0.25 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.diversityRatio ? `${(selectedAudit.diversityRatio * 100).toFixed(0)}%` : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+                            <button className="cyber-button small" onClick={() => setSelectedAudit(null)}>DISMISS INSPECTOR</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

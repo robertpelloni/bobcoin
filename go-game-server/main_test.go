@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -544,5 +545,259 @@ func TestMatchmakingSignalingFlow(t *testing.T) {
 	}
 	if disconnect.Type != "OPPONENT_DISCONNECTED" {
 		t.Fatalf("expected opponent disconnect notice, got %+v", disconnect)
+	}
+}
+
+func TestSubmitProofRejectsSuperhumanAPMAndScoreMismatch(t *testing.T) {
+	service := newTestService(t)
+
+	// 1. Superhuman APM: 10 events within 100ms (100 events/sec)
+	superFastLog := make([]map[string]interface{}, 10)
+	for i := 0; i < 10; i++ {
+		superFastLog[i] = map[string]interface{}{"time": float64(i * 10)}
+	}
+	superPayload := map[string]interface{}{
+		"proof": map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "fast-bot",
+				"score":     2000.0,
+				"replayLog": superFastLog,
+			},
+		},
+	}
+	superBody, _ := json.Marshal(superPayload)
+	superReq := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(superBody))
+	superRec := httptest.NewRecorder()
+	service.handleSubmitProof(superRec, superReq)
+	if superRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected superhuman APM rejection, got %d with %s", superRec.Code, superRec.Body.String())
+	}
+
+	// 2. Score Mismatch: reported score 5000, but perfects=10, greats=0 (1000 score)
+	mismatchLog := []map[string]interface{}{
+		{"time": 100.0}, {"time": 240.0}, {"time": 390.0}, {"time": 560.0},
+		{"time": 710.0}, {"time": 880.0}, {"time": 1030.0}, {"time": 1190.0},
+		{"time": 1350.0}, {"time": 1520.0},
+	}
+	mismatchPayload := map[string]interface{}{
+		"proof": map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "manipulated-player",
+				"score":     5000.0,
+				"perfects":  10.0,
+				"greats":    0.0,
+				"replayLog": mismatchLog,
+			},
+		},
+	}
+	mismatchBody, _ := json.Marshal(mismatchPayload)
+	mismatchReq := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(mismatchBody))
+	mismatchRec := httptest.NewRecorder()
+	service.handleSubmitProof(mismatchRec, mismatchReq)
+	if mismatchRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected score mismatch rejection, got %d with %s", mismatchRec.Code, mismatchRec.Body.String())
+	}
+}
+
+func TestOracleWebSocketBroadcast(t *testing.T) {
+	service := newTestService(t)
+
+	server := httptest.NewServer(http.HandlerFunc(service.handleRoot))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("failed to connect websocket: %v", err)
+	}
+	defer clientConn.Close()
+
+	// Subscribe to oracle stream
+	if err := clientConn.WriteJSON(map[string]interface{}{"type": "SUBSCRIBE_ORACLE"}); err != nil {
+		t.Fatalf("failed to send subscribe message: %v", err)
+	}
+
+	var ack map[string]interface{}
+	_ = clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := clientConn.ReadJSON(&ack); err != nil {
+		t.Fatalf("failed to read subscribe ack: %v", err)
+	}
+	if ack["type"] != "ORACLE_SUBSCRIBED" {
+		t.Fatalf("expected ORACLE_SUBSCRIBED, got %v", ack)
+	}
+
+	// Trigger broadcast
+	testAudit := map[string]interface{}{
+		"id":              int64(999),
+		"address":         "test-prover",
+		"score":           1500.0,
+		"variance":        25.5,
+		"mad":             8.2,
+		"entropy":         2.4,
+		"confidenceScore": 0.98,
+		"verified":        true,
+		"timestamp":       "2026-03-30 12:00:00",
+	}
+	service.broadcastOracleAudit(testAudit)
+
+	var streamMsg map[string]interface{}
+	_ = clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := clientConn.ReadJSON(&streamMsg); err != nil {
+		t.Fatalf("failed to read broadcast message: %v", err)
+	}
+
+	if streamMsg["type"] != "ORACLE_AUDIT" {
+		t.Fatalf("expected ORACLE_AUDIT type, got %v", streamMsg["type"])
+	}
+	auditData, ok := streamMsg["audit"].(map[string]interface{})
+	if !ok || auditData["address"] != "test-prover" {
+		t.Fatalf("audit data mismatch: %v", auditData)
+	}
+}
+
+func TestHandleSubmitProof_Autocorrelation(t *testing.T) {
+	service := newTestService(t)
+
+	// An alternating periodic macro (e.g. alternating between 100ms and 200ms)
+	// has large variance and MAD, but high negative lag-1 autocorrelation (r1 -> -1.0)
+	var alternatingLog []map[string]interface{}
+	curr := 100.0
+	for i := 0; i < 20; i++ {
+		alternatingLog = append(alternatingLog, map[string]interface{}{"time": curr})
+		if i%2 == 0 {
+			curr += 100.0
+		} else {
+			curr += 200.0
+		}
+	}
+
+	payload := map[string]interface{}{
+		"proof": map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "periodic-macro-bot",
+				"score":     1500.0,
+				"perfects":  15.0,
+				"greats":    0.0,
+				"replayLog": alternatingLog,
+			},
+		},
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected periodic macro rejection due to high autocorrelation, got %d with body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHandleGovernanceAudit_ConstitutionalScore(t *testing.T) {
+	service := newTestService(t)
+
+	// 1. Test standard legitimate proposal
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"title":  "Upgrade block lattice anchor interval",
+		"action": "NONE",
+		"amount": 0.0,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/governance/audit", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	service.handleGovernanceAudit(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rec.Code)
+	}
+	var res map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&res)
+	if res["constitutionalScore"].(float64) < 0.70 {
+		t.Fatalf("expected high constitutional compatibility, got %v", res["constitutionalScore"])
+	}
+
+	// 2. Test high-risk inflation attack proposal
+	reqBodyAttack, _ := json.Marshal(map[string]interface{}{
+		"title":  "Mint millions to treasury",
+		"action": "MINT_TREASURY",
+		"amount": 500000.0,
+	})
+	reqAttack := httptest.NewRequest(http.MethodPost, "/governance/audit", bytes.NewReader(reqBodyAttack))
+	recAttack := httptest.NewRecorder()
+	service.handleGovernanceAudit(recAttack, reqAttack)
+
+	var resAttack map[string]interface{}
+	json.NewDecoder(recAttack.Body).Decode(&resAttack)
+	if resAttack["riskScore"].(float64) < 0.90 || resAttack["constitutionalScore"].(float64) > 0.15 {
+		t.Fatalf("expected low constitutional compatibility for treasury attack, got risk=%v const=%v", resAttack["riskScore"], resAttack["constitutionalScore"])
+	}
+}
+
+func TestHandleSubmitProof_ShortTraceAndDuplicateTimestamps(t *testing.T) {
+	service := newTestService(t)
+
+	// A short trace of 3 notes containing duplicate timestamp (delta = 0.0)
+	shortDupReplay := []map[string]interface{}{
+		{"time": 100.0},
+		{"time": 100.0},
+		{"time": 180.0},
+	}
+	reqBody, _ := json.Marshal(ProofSubmissionRequest{
+		Proof: map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "test_short_dup",
+				"score":     2000.0,
+				"replayLog": shortDupReplay,
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request for short duplicate timestamp trace, got %d with body: %s", rec.Code, rec.Body.String())
+	}
+
+	var res map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&res)
+	oracle, _ := res["oracle"].(map[string]interface{})
+	if oracle["confidenceScore"].(float64) != 0.05 {
+		t.Fatalf("expected confidenceScore 0.05 for non-monotonic short trace, got %v", oracle["confidenceScore"])
+	}
+}
+
+func TestHandleSubmitProof_CyclicMacroAndDiversityRatio(t *testing.T) {
+	service := newTestService(t)
+
+	// Tri-modal cyclic macro: [60, 90, 140] repeating 10 times (30 notes)
+	var cyclicLog []map[string]interface{}
+	cycle := []float64{60.0, 90.0, 140.0}
+	tAcc := 0.0
+	for i := 0; i < 30; i++ {
+		tAcc += cycle[i%3]
+		cyclicLog = append(cyclicLog, map[string]interface{}{"time": tAcc})
+	}
+
+	reqBody, _ := json.Marshal(ProofSubmissionRequest{
+		Proof: map[string]interface{}{
+			"publicValues": map[string]interface{}{
+				"address":   "test_cyclic_macro",
+				"score":     2000.0,
+				"replayLog": cyclicLog,
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/submit-proof", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	service.handleSubmitProof(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request for low diversity cyclic macro, got %d with body: %s", rec.Code, rec.Body.String())
+	}
+
+	var res map[string]interface{}
+	json.NewDecoder(rec.Body).Decode(&res)
+	oracle, _ := res["oracle"].(map[string]interface{})
+	if oracle["confidenceScore"].(float64) != 0.14 {
+		t.Fatalf("expected confidenceScore 0.14 for cyclic macro, got %v", oracle["confidenceScore"])
 	}
 }

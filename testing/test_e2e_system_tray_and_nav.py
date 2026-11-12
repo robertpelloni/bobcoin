@@ -86,6 +86,89 @@ def test_ai_oracle_integrity():
         assert res.get("oracle", {}).get("entropy") >= 1.0
         assert res.get("oracle", {}).get("confidenceScore") == 0.98
         print(f"  ✓ High-entropy human jitter accepted: variance={res['oracle']['variance']}, MAD={res['oracle']['mad']}, entropy={res['oracle']['entropy']}.")
+
+    # 4. Score Manipulation Rejection: reported score 4000 but perfects=10, greats=0 (1000)
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "manip_bot",
+            "score": 4000,
+            "perfects": 10,
+            "greats": 0,
+            "replayLog": human_log
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Score manipulation should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.05
+        print("  ✓ Score arithmetic mismatch rejected with confidenceScore 0.05.")
+
+    # 5. Superhuman APM Rejection (> 15 events/sec)
+    fast_log = [{"time": float(i * 10)} for i in range(10)]
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "rapid_bot",
+            "score": 1000,
+            "perfects": 10,
+            "greats": 0,
+            "replayLog": fast_log
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Superhuman event frequency should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") <= 0.10
+        print("  ✓ Superhuman APM burst rejected by AI Oracle.")
+
+    # 6. Cyclic Multi-Modal Loop & Low Delta Diversity Rejection
+    cycle_deltas = [60.0, 90.0, 140.0]
+    t = 0.0
+    cyclic_log = []
+    for i in range(30):
+        t += cycle_deltas[i % 3]
+        cyclic_log.append({'time': t})
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "cyclic_bot",
+            "score": 2000,
+            "replayLog": cyclic_log
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Cyclic low-diversity macro should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.14
+        print("  ✓ Cyclic multi-modal macro rejected by AI Oracle diversity analysis.")
+
+    # 7. Short Trace Duplicate Timestamp Rejection
+    short_dup = [{'time': 100.0}, {'time': 100.0}, {'time': 180.0}]
+    req = urllib.request.Request(f"{base_url}/submit-proof", data=json.dumps({
+        "proof": {"publicValues": {
+            "address": "dup_bot",
+            "score": 2000,
+            "replayLog": short_dup
+        }}
+    }).encode(), headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req)
+        assert False, "Short trace with duplicate timestamps should be rejected!"
+    except urllib.error.HTTPError as e:
+        res = json.loads(e.read().decode())
+        assert res.get("oracle", {}).get("confidenceScore") == 0.05
+        print("  ✓ Short trace with duplicate timestamp rejected with confidence 0.05.")
+
+    # 8. Oracle Audits Endpoint & Persistence
+    resp = urllib.request.urlopen(f"{base_url}/oracle/audits")
+    audits = json.loads(resp.read().decode()).get("audits", [])
+    assert len(audits) >= 1
+    print(f"  ✓ Oracle audit log successfully persisted to SQLite (total logged: {len(audits)}).")
+
     print(">>> [E2E] AI Oracle integrity verification passed!\n")
 
 def test_system_tray_module():
@@ -235,8 +318,13 @@ def test_consolidated_navigation_and_command_console():
         with page.expect_event("dialog", timeout=10000):
             sync_btn.click()
         time.sleep(0.5)
-        assert len(dialog_text) > 0 and "Vitality" in dialog_text[0]
+        assert len(dialog_text) > 0 and "Vitality" in dialog_text[0] and "spm" in dialog_text[0]
         print(f"    ✓ Vitality Proof synced successfully: {dialog_text[0]}")
+        metrics_text = page.locator(".mining-metrics").inner_text()
+        assert "METABOLIC BURN" in metrics_text
+        assert "KCAL" in metrics_text
+        assert "VERIFIED" in metrics_text
+        print("    ✓ Biometric vitals and metabolic burn metrics validated by AI Oracle.")
 
         # 4. Test Privacy Vault Stealth Address Generation (DKSAP)
         print("  * Testing Privacy Vault Stealth Address Generation (DKSAP)...")
@@ -245,6 +333,38 @@ def test_consolidated_navigation_and_command_console():
         stealth_addr = page.locator(".stealth").inner_text()
         assert stealth_addr.startswith("stealth:") and len(stealth_addr) > 25
         print(f"    ✓ DKSAP Stealth Address verified: {stealth_addr[:24]}...")
+
+        # 5. Test AI Oracle Real-Time Audit Inspector Modal & Sparkline Telemetry
+        print("  * Testing AI Oracle Real-Time Audit Inspector Modal & Sparkline Telemetry...")
+        page.goto(f"{base_url}/")
+        page.wait_for_selector(".oracle-audit-feed", timeout=15000)
+
+        # Verify sparklines and anomaly badge if present
+        sparklines = page.locator(".oracle-sparklines-container")
+        if sparklines.count() > 0:
+            assert page.locator(".sparkline-entropy").count() > 0
+            assert page.locator(".sparkline-autocorr").count() > 0
+            print("    ✓ AI Oracle Entropy & Autocorrelation Sparklines verified in DOM.")
+
+        anomaly_badges = page.locator(".anomaly-alert-badge")
+        if anomaly_badges.count() > 0:
+            print(f"    ✓ AI Oracle Anomaly alert badge verified: {anomaly_badges.first.inner_text()}")
+
+        audit_items = page.locator(".oracle-audit-item")
+        if audit_items.count() > 0:
+            audit_items.first.click()
+            page.wait_for_selector(".modal-content", timeout=5000)
+            modal_text = page.locator(".modal-content").inner_text()
+            assert "AI ORACLE AUDIT INSPECTOR" in modal_text
+            assert "BIOMETRIC & TIMING DELTA METRICS" in modal_text
+            assert "AUTOCORR" in modal_text
+            assert "CONFIDENCE RATING" in modal_text
+            print("    ✓ AI Oracle Audit Inspector modal successfully opened and verified.")
+            dismiss_btn = page.locator("button:has-text('DISMISS INSPECTOR')")
+            dismiss_btn.click()
+            time.sleep(0.3)
+            assert page.locator(".modal-content").count() == 0
+            print("    ✓ AI Oracle Audit Inspector dismissed cleanly.")
 
         # Capture verification snapshot
         out_path = REPO_ROOT / "verification" / "e2e_consolidated_navigation.png"

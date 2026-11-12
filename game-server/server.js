@@ -129,7 +129,7 @@ app.post('/submit-proof', async (req, res) => {
 
         // AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
         let oracleMetrics = { variance: 0, mad: 0, entropy: 0, confidenceScore: 0.98 };
-        if (zkVerified && Array.isArray(proof.publicValues.replayLog) && proof.publicValues.replayLog.length > 5) {
+        if (zkVerified && Array.isArray(proof.publicValues.replayLog) && proof.publicValues.replayLog.length >= 2) {
             const replayLog = proof.publicValues.replayLog;
             const diffs = [];
             let lastTime = 0;
@@ -149,7 +149,7 @@ app.post('/submit-proof', async (req, res) => {
                 console.log(`[AI Oracle] ⚠️ BOT DETECTED: Replay timestamps are not strictly monotonic.`);
                 zkVerified = false;
                 oracleMetrics.confidenceScore = 0.05;
-            } else if (diffs.length > 0) {
+            } else if (replayLog.length > 5 && diffs.length > 0) {
                 // Calculate Variance
                 const sum = diffs.reduce((a, b) => a + b, 0);
                 const mean = sum / diffs.length;
@@ -195,9 +195,74 @@ app.post('/submit-proof', async (req, res) => {
                             console.log(`[AI Oracle] ⚠️ BOT DETECTED: Entropy ${entropy} is too low (< 1.0).`);
                             zkVerified = false;
                             oracleMetrics.confidenceScore = 0.15;
+                        } else {
+                            // Lag-1 Autocorrelation Check (detects periodic oscillators or synthetic jitter macros)
+                            // Calculate Multi-Lag Autocorrelation (Lag-1 and Lag-2)
+                            const calcLag = (k) => {
+                                if (diffs.length <= k) return 0.0;
+                                let num = 0, den = 0;
+                                for (let i = 0; i < diffs.length - k; i++) {
+                                    num += (diffs[i] - mean) * (diffs[i + k] - mean);
+                                }
+                                for (let i = 0; i < diffs.length; i++) {
+                                    den += Math.pow(diffs[i] - mean, 2);
+                                }
+                                return den > 0 ? (num / den) : 0;
+                            };
+
+                            const autocorr = calcLag(1);
+                            const autocorrLag2 = calcLag(2);
+                            oracleMetrics.autocorrelation = Math.round(autocorr * 100) / 100;
+                            oracleMetrics.autocorrelationLag2 = Math.round(autocorrLag2 * 100) / 100;
+
+                            if (Math.abs(autocorr) > 0.85) {
+                                console.log(`[AI Oracle] ⚠️ BOT DETECTED: Lag-1 Autocorrelation ${autocorr} is too high (> 0.85).`);
+                                zkVerified = false;
+                                oracleMetrics.confidenceScore = 0.12;
+                            } else if (Math.abs(autocorrLag2) > 0.85) {
+                                console.log(`[AI Oracle] ⚠️ BOT DETECTED: Lag-2 Autocorrelation ${autocorrLag2} is too high (> 0.85).`);
+                                zkVerified = false;
+                                oracleMetrics.confidenceScore = 0.12;
+                            }
+
+                            // Delta Diversity Ratio Check for long sequences
+                            if (diffs.length >= 15) {
+                                const uniqueBuckets = new Set(diffs.map(d => Math.round(d)));
+                                const diversityRatio = uniqueBuckets.size / diffs.length;
+                                oracleMetrics.diversityRatio = Math.round(diversityRatio * 100) / 100;
+                                if (diversityRatio < 0.25) {
+                                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Timing diversity ratio ${diversityRatio} is too low (< 0.25).`);
+                                    zkVerified = false;
+                                    oracleMetrics.confidenceScore = 0.14;
+                                }
+                            }
+                        }
+
+                        if (zkVerified) {
+                            // Superhuman APM / input frequency check (max 15/sec)
+                            const totalDurationSec = (lastTime - replayLog[0].time) / 1000.0;
+                            if (totalDurationSec > 0.0) {
+                                const eventsPerSec = replayLog.length / totalDurationSec;
+                                oracleMetrics.eventsPerSec = Math.round(eventsPerSec * 100) / 100;
+                                if (eventsPerSec > 15.0) {
+                                    console.log(`[AI Oracle] ⚠️ BOT DETECTED: Input frequency ${eventsPerSec} events/sec exceeds limits.`);
+                                    zkVerified = false;
+                                    oracleMetrics.confidenceScore = 0.08;
+                                }
+                            }
                         }
                     }
                 }
+            }
+        }
+
+        // Score consistency check if breakdown exists
+        if (proof.publicValues.perfects !== undefined || proof.publicValues.greats !== undefined) {
+            const calculated = ((proof.publicValues.perfects || 0) * 100) + ((proof.publicValues.greats || 0) * 50);
+            if (Math.abs(proof.publicValues.score - calculated) > 1.0) {
+                console.log(`[AI Oracle] ⚠️ Score mismatch: reported ${proof.publicValues.score}, calculated ${calculated}`);
+                zkVerified = false;
+                oracleMetrics.confidenceScore = 0.05;
             }
         }
 
@@ -214,6 +279,19 @@ app.post('/submit-proof', async (req, res) => {
         }
 
         const verificationHash = crypto.createHash('sha256').update(JSON.stringify(proof)).digest('hex');
+
+        // Broadcast Oracle Evaluation via WebSockets
+        broadcastOracleAudit({
+            id: Date.now(),
+            address: address,
+            score: proof.publicValues.score || 0,
+            variance: oracleMetrics.variance || 0,
+            mad: oracleMetrics.mad || 0,
+            entropy: oracleMetrics.entropy || 0,
+            confidenceScore: oracleMetrics.confidenceScore || (zkVerified ? 0.98 : 0.05),
+            verified: zkVerified,
+            timestamp: new Date().toISOString()
+        });
 
         if (zkVerified) {
             let hash = verificationHash.substr(0, 32);
@@ -289,6 +367,104 @@ app.post('/burn', async (req, res) => {
     res.json({ success: true, tx });
 });
 
+// AI Neural Governance Audit Endpoint (Parity with Go Game Server)
+app.post('/governance/audit', (req, res) => {
+    const { title, action, amount, target } = req.body || {};
+    let riskScore = 0.15;
+    let summary = "Proposal appears legitimate and follows standard protocol patterns.";
+
+    if (title && (title.toUpperCase().includes("SCAM") || title.toUpperCase().includes("TEST"))) {
+        riskScore = 0.85;
+        summary = "High risk detected: Title contains suspicious keywords or suggests low-effort testing.";
+    }
+
+    if (action === "MINT_TREASURY" && (amount || 0) > 100000) {
+        riskScore = 0.95;
+        summary = "Critical risk: Excessive treasury minting requested. Potential rug-pull or inflation attack.";
+    }
+
+    if (action === "UPDATE_DEMURRAGE" && (amount || 0) > 0.01) {
+        riskScore = 0.70;
+        summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy.";
+    }
+
+    if (action === "SLASH_REPUTATION" && (amount || 0) > 500) {
+        riskScore = 0.75;
+        summary = "Warning: High reputation slash penalty requested without multi-party dispute arbitration.";
+    }
+
+    const constitutionalScore = Math.max(0.05, Math.min(0.99, Math.round((1.0 - riskScore) * 100) / 100));
+
+    res.json({
+        success: true,
+        riskScore,
+        constitutionalScore,
+        summary,
+        auditor: "Neural Governance Auditor v2.0"
+    });
+});
+
+// Wearable Proof of Vitality Endpoint (AI Oracle Physiological & Biometric Parity with Go Game Server)
+app.post('/sdk/v1/vitality', (req, res) => {
+    const { steps, heartRateAvg, cadence, durationSec, caloriesBurned, activityType, wallet } = req.body || {};
+
+    if (!steps || steps < 1000) {
+        return res.status(400).json({ error: "Insufficient steps for vitality proof" });
+    }
+
+    if (heartRateAvg < 40.0 || heartRateAvg > 220.0) {
+        return res.status(400).json({
+            error: "Physiological anomaly detected: Heart rate out of human biometric bounds",
+            heartRate: heartRateAvg
+        });
+    }
+
+    if (cadence && cadence > 300.0) {
+        return res.status(400).json({
+            error: "Physiological anomaly detected: Cadence exceeds biological locomotion limits",
+            cadence
+        });
+    }
+
+    if (durationSec !== undefined && durationSec < 0.0) {
+        return res.status(400).json({ error: "Workout duration must be strictly positive" });
+    }
+
+    if (durationSec > 0.0) {
+        const speedMps = (steps * 0.75) / durationSec;
+        if (speedMps > 10.5) {
+            return res.status(400).json({
+                error: "Locomotion velocity exceeds sustained human limits (>10.5 m/s)",
+                speed: speedMps
+            });
+        }
+    }
+
+    if (durationSec > 0.0 && caloriesBurned > 0.0) {
+        const caloriesPerMin = caloriesBurned / (durationSec / 60.0);
+        if (caloriesPerMin > 32.0) {
+            return res.status(400).json({
+                error: "Metabolic anomaly detected: Caloric burn rate exceeds human physiological maximum (>32 kcal/min)",
+                rate: caloriesPerMin
+            });
+        }
+    }
+
+    const reward = Math.round((steps / 1000) * 0.5 * 100) / 100;
+
+    res.json({
+        success: true,
+        steps,
+        reward,
+        activityType: activityType || "WALK",
+        verified: true,
+        oracle: {
+            confidenceScore: 0.98,
+            mode: "AI_ORACLE_BIOMETRIC_PHYSIOLOGICAL"
+        }
+    });
+});
+
 // Generic Mint Endpoint (System Sending to User)
 app.post('/mint', async (req, res) => {
     const { amount, reason, address } = req.body;
@@ -357,9 +533,18 @@ const server = app.listen(PORT, () => {
     console.log(`[Game Server] Listening on internal port ${PORT}`);
 });
 
-// --- WebRTC Matchmaking (Signaling Server) ---
+// --- WebRTC Matchmaking & AI Oracle Telemetry Hub ---
 const wss = new WebSocketServer({ server });
 let rooms = new Map(); // RoomID -> WebSocket (waiting)
+
+function broadcastOracleAudit(audit) {
+    const payload = JSON.stringify({ type: 'ORACLE_AUDIT', audit });
+    wss.clients.forEach(client => {
+        if (client.readyState === 1) {
+            try { client.send(payload); } catch(e){}
+        }
+    });
+}
 
 async function getTrustScore(account) {
     if (!account) return 100.0;

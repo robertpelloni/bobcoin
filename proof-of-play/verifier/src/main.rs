@@ -14,10 +14,62 @@
 
 use sp1_sdk::blocking::{Prover, ProverClient};
 use sp1_sdk::{Elf, ProvingKey, SP1ProofWithPublicValues};
+use std::io::{BufRead, BufReader, Write};
+use std::net::TcpListener;
 use std::process::ExitCode;
+
+fn arg_value(args: &[String], name: &str) -> Option<String> {
+    args.windows(2)
+        .find(|w| w[0] == name)
+        .map(|w| w[1].clone())
+}
+
+/// Long-lived daemon: runs the expensive `client.setup(elf)` once, then
+/// verifies proof files named by newline-terminated TCP requests.
+/// Protocol per connection: send "<proof-path>\n", read back
+/// "VALID\n" or "INVALID <reason>\n". Start with:
+///   proof-of-play-verifier --serve 127.0.0.1:9823 --elf <program-elf>
+fn serve(addr: &str, elf_path: &str) -> Result<(), String> {
+    let elf_bytes =
+        std::fs::read(elf_path).map_err(|e| format!("cannot read ELF {elf_path}: {e}"))?;
+    let client = ProverClient::from_env();
+    let pk = client
+        .setup(Elf::from(elf_bytes))
+        .map_err(|e| format!("setup failed: {e}"))?;
+    let listener = TcpListener::bind(addr).map_err(|e| format!("cannot bind {addr}: {e}"))?;
+    println!("SP1 VERIFIER DAEMON READY {addr}");
+    for stream in listener.incoming() {
+        let mut stream = match stream {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let mut line = String::new();
+        let proof_path = {
+            let mut reader = BufReader::new(stream.try_clone().map_err(|e| e.to_string())?);
+            match reader.read_line(&mut line) {
+                Ok(_) => line.trim().to_string(),
+                Err(_) => continue,
+            }
+        };
+        let verdict = match SP1ProofWithPublicValues::load(&proof_path) {
+            Ok(proof) => match client.verify(&proof, pk.verifying_key(), None) {
+                Ok(()) => "VALID".to_string(),
+                Err(e) => format!("INVALID verification failed: {e}"),
+            },
+            Err(e) => format!("INVALID cannot load proof: {e}"),
+        };
+        let _ = stream.write_all(format!("{verdict}\n").as_bytes());
+    }
+    Ok(())
+}
 
 fn run() -> Result<(), String> {
     let args: Vec<String> = std::env::args().collect();
+    if let Some(pos) = args.iter().position(|a| a == "--serve") {
+        let addr = args.get(pos + 1).cloned().ok_or("missing --serve <addr>")?;
+        let elf_path = arg_value(&args, "--elf").ok_or("missing --elf <path>")?;
+        return serve(&addr, &elf_path);
+    }
     let mut elf_path: Option<String> = None;
     let mut proof_path: Option<String> = None;
     let mut i = 1;

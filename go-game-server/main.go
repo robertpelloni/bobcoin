@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -12,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -614,6 +616,37 @@ func sp1VerifierCommand(proofPath, elfPath string) *exec.Cmd {
 	return nil
 }
 
+// verifyViaDaemon asks the long-lived SP1 verifier daemon (cached setup;
+// see proof-of-play/verifier --serve) to verify a proof file. Returns
+// (attempted, valid). The daemon speaks a one-line TCP protocol and reads
+// the proof from the filesystem, so on Windows the path is WSL-translated.
+func verifyViaDaemon(proofPath string) (bool, bool) {
+	addr := os.Getenv("SP1_VERIFIER_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:9823"
+	}
+	conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+	if err != nil {
+		return false, false
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(15 * time.Minute))
+	sendPath := proofPath
+	if runtime.GOOS == "windows" {
+		if converted := windowsPathToWSL(proofPath); converted != "" {
+			sendPath = converted
+		}
+	}
+	if _, err := fmt.Fprintf(conn, "%s\n", sendPath); err != nil {
+		return true, false
+	}
+	reply, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		return true, false
+	}
+	return true, strings.HasPrefix(reply, "VALID")
+}
+
 // windowsPathToWSL converts C:\a\b to /mnt/c/a/b ("" for non-absolute paths).
 func windowsPathToWSL(p string) string {
 	abs, err := filepath.Abs(p)
@@ -637,7 +670,12 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 			if os.WriteFile(proofPath, raw, 0644) == nil {
 				defer os.Remove(proofPath)
 				elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
-				if cmd := sp1VerifierCommand(proofPath, elfPath); cmd != nil {
+				if attempted, valid := verifyViaDaemon(proofPath); attempted {
+					log.Printf("[ZK Service] Verifier daemon verdict: valid=%v", valid)
+					if valid {
+						return true, map[string]interface{}{"mode": "RISC-V_NATIVE_DAEMON", "confidenceScore": 1.0}
+					}
+				} else if cmd := sp1VerifierCommand(proofPath, elfPath); cmd != nil {
 					log.Printf("[ZK Service] Verifier detected (%s). Commencing RISC-V ZK verification...", cmd.Path)
 					if output, err := cmd.CombinedOutput(); err != nil {
 						log.Printf("[ZK Service] Native verification failed: %v\nOutput: %s", err, string(output))

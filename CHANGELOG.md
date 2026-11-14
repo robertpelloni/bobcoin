@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.117.5] - 2026-11-14
+### Added
+- **SP1 verifier daemon**: `proof-of-play-verifier --serve 127.0.0.1:9823 --elf <elf>` runs the expensive proving-key setup once and verifies proof files over a one-line TCP protocol (`<proof-path>` → `VALID`/`INVALID …`). Managed by `scripts/wsl-sp1-daemon.sh [start|stop|status]`. The Go bridge tries the daemon first (`SP1_VERIFIER_ADDR`, default `127.0.0.1:9823`), then the CLI spawn, then the AI Oracle.
+### Verified
+- Live: a regenerated real SP1 proof submitted as `proofBytesB64` was verified by the daemon (`Verifier daemon verdict: valid=true`, audit confidence 1.0, mode `RISC-V_NATIVE_DAEMON`). End-to-end latency is still minutes — SP1 core-proof verification itself is heavy on CPU; compressed/Groth16 proof modes are the remaining latency fix.
+
 ## [8.117.4] - 2026-11-14
 ### Added
 - **SP1 prover sidecar**: `proof-of-play/prover` (sp1-sdk blocking) executes the zkVM program on a game trace (`--score`, `--keystrokes`) and writes a serialized proof for `proofBytesB64` submission. Verified end-to-end live: a real 2.7MB core proof was generated in WSL, submitted to the Go game-server, and natively verified through the WSL bridge (`Native verification succeeded!`). Build/prove/verify driver: `scripts/wsl-sp1-prover.sh --prove`.

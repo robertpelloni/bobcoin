@@ -139,3 +139,9 @@
 - **Latency warning**: native verification took ~11 minutes per invocation (proving-key setup + core-proof verification, cold WSL start each time). Before any production use: cache the setup/vk in a long-lived verifier daemon, or switch to compressed/Groth16 proofs. The AI Oracle path remains the fast path for browser submissions.
 - **Next**: verifier daemon with cached setup; compressed proof mode in the prover (`.mode(SP1ProofMode::Compressed)`); then wire a proving sidecar so live gameplay can submit `proofBytesB64`.
 
+
+## Session 2026-11-14 (continuation, v8.117.5)
+- **Verifier daemon live**: `proof-of-play-verifier --serve 127.0.0.1:9823` (`scripts/wsl-sp1-daemon.sh`) caches SP1 setup; Go bridge tries daemon (`SP1_VERIFIER_ADDR`) -> CLI -> AI Oracle. Live real-proof submission verified by daemon (audit #767, confidence 1.0, `RISC-V_NATIVE_DAEMON`).
+- **Latency reality**: even with cached setup, SP1 *core* proof verification takes minutes on this CPU (submission 05:06 -> verdict 05:15). Next: prover `.mode(SP1ProofMode::Compressed)` (and/or Groth16) + verifier accepting those modes; measure again. WSL `/tmp` clears on distro restart — regenerate proofs with `scripts/wsl-sp1-reprove.sh`.
+- Daemon is currently running in WSL (pid via `scripts/wsl-sp1-daemon.sh status`); it does not auto-start — wire into `start.ps1` if native proving becomes a default path.
+

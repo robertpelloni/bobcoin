@@ -1,0 +1,12 @@
+[package]
+name = "proof-of-play-prover"
+version = "0.1.0"
+edition = "2021"
+
+# Standalone crate (not a proof-of-play workspace member): proving runs on
+# the host (WSL/Linux/CI) where the SP1 toolchain lives.
+[workspace]
+
+[dependencies]
+sp1-sdk = { version = "6.0.0", features = ["blocking"] }
+serde = { version = "1.0", features = ["derive"] }

@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.117.4] - 2026-11-14
+### Added
+- **SP1 prover sidecar**: `proof-of-play/prover` (sp1-sdk blocking) executes the zkVM program on a game trace (`--score`, `--keystrokes`) and writes a serialized proof for `proofBytesB64` submission. Verified end-to-end live: a real 2.7MB core proof was generated in WSL, submitted to the Go game-server, and natively verified through the WSL bridge (`Native verification succeeded!`). Build/prove/verify driver: `scripts/wsl-sp1-prover.sh --prove`.
+### Notes
+- Native verification currently takes ~11 min per invocation (per-process proving-key setup + cold WSL start). A long-lived verifier daemon with cached setup is the next optimization; browser submissions still use the fast AI Oracle path.
+
 ## [8.117.3] - 2026-11-14
 ### Added
 - **Host-side SP1 verifier**: `proof-of-play/verifier` (sp1-sdk) exposes `proof-of-play-verifier --elf <elf> --proof <file>` (exit 0 = valid). This replaces the Go bridge's obsolete `cargo-prove verify` invocation, which does not exist in SP1 v6.

@@ -133,3 +133,9 @@
 - **SP1 v6 API notes**: `cargo prove` has no `verify`; `ProverClient::from_env()` is async in the default API — use `sp1_sdk::blocking` (feature `blocking`) with `client.setup(Elf::from(bytes))` + `verify(&proof, pk.verifying_key(), None)`. `protoc` must exist for sp1-prover-types (bootstrapped to `~/.local/protoc` by `scripts/wsl-sp1-verifier.sh`).
 - **Next**: a real sp1-sdk prover emitting `proofBytesB64` (e.g. a WSL sidecar proving service) so browser plays can be proven for real; the frontend still submits simulated proofs audited statistically.
 
+
+## Session 2026-11-14 (continuation, v8.117.4)
+- **Real Proof-of-Play, end to end**: `proof-of-play/prover` (sp1-sdk blocking; import `blocking::ProveRequest` for `.run()`) proved a sample trace (score 2000, 11 keystrokes) in WSL: 2.7MB core proof at `/tmp/pop_proof.bin`. Submitted to the Windows Go server as `proofBytesB64`; the bridge invoked the WSL verifier and logged `Native verification succeeded!` — the full prover -> proof -> Go -> verifier chain is cryptographically real.
+- **Latency warning**: native verification took ~11 minutes per invocation (proving-key setup + core-proof verification, cold WSL start each time). Before any production use: cache the setup/vk in a long-lived verifier daemon, or switch to compressed/Groth16 proofs. The AI Oracle path remains the fast path for browser submissions.
+- **Next**: verifier daemon with cached setup; compressed proof mode in the prover (`.mode(SP1ProofMode::Compressed)`); then wire a proving sidecar so live gameplay can submit `proofBytesB64`.
+

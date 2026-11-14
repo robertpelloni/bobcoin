@@ -120,3 +120,9 @@
 - **SP1 status**: cargo/rustc 1.99.1 present; `cargo prove` (sp1up) NOT installed — that install is the only remaining SP1 step.
 - Note: go-supertorrent `/status` intentionally proxies the game-server status payload (compat layer); its own identity is at `writeServiceStatus` (Go SuperTorrent control plane).
 
+
+## Session 2026-11-14 (continuation, v8.117.2)
+- **SP1 unblocked via WSL**: no win32 `cargo-prove` exists (v6.10.0 assets are linux/darwin only). Installed SP1 in WSL2 Ubuntu (`scripts/wsl-sp1-setup.sh`). v1.2 toolchain fails with `unknown pass name 'loweratomic'`, so migrated `proof-of-play/program` sp1-zkvm 1.0.0 -> 6.0.0; `cargo prove build` succeeds (~2 min, riscv64im ELF at `proof-of-play/program/elf/proof-of-play`; v1 ELF/manifests kept as `*.v1.bak` on disk).
+- **CI fixed**: `zk-pipeline.yml` called `cargo prove build` without installing SP1; now runs `sp1up` first.
+- **Next**: wire the Windows Go game-server ZK bridge through WSL (`wsl -d Ubuntu -- cargo-prove verify ...`) or run proving as a WSL sidecar; until then Windows verification remains the AI Oracle simulation by design. Also regenerate the browser WASM client (`wasm-pack`) against SP1 6 if the in-browser prover is revived.
+

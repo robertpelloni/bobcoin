@@ -25,9 +25,17 @@ jobs:
       with:
         node-version: 18
 
+    - name: Install SP1 Toolchain
+      run: |
+        curl -L https://sp1up.succinct.xyz | bash
+        export PATH="$HOME/.sp1/bin:$PATH"
+        sp1up
+
     - name: Build SP1 ZK Circuits (Proof of Play)
       working-directory: proof-of-play/program
-      run: cargo prove build
+      run: |
+        export PATH="$HOME/.sp1/bin:$PATH"
+        cargo prove build
 
     - name: Build WASM Verification Client
       working-directory: proof-of-play/wasm

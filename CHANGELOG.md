@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.117.2] - 2026-11-14
+### Added
+- **Real SP1 proving (WSL)**: SP1 ships no win32 `cargo-prove` (verified against v6.10.0 release assets), so the toolchain now lives in WSL2 Ubuntu via `scripts/wsl-sp1-setup.sh` / `scripts/wsl-sp1-build.sh`. The v1.2 toolchain's LLVM rejects its own passes (`unknown pass name 'loweratomic'`), so `proof-of-play/program` was migrated from `sp1-zkvm 1.0.0` to `6.0.0` (pre-migration manifests/ELF kept as `*.v1.bak`) and builds cleanly: `cargo prove build` finished in ~2 min, producing a riscv64im ELF now installed at `proof-of-play/program/elf/proof-of-play`.
+- **CI**: `zk-pipeline.yml` now installs SP1 (`sp1up`) before `cargo prove build` — it previously invoked `cargo prove` without ever installing it.
+### Notes
+- The Windows Go game-server still falls back to the AI Oracle simulation because `cargo-prove` cannot run natively on Windows; real proving runs in WSL/CI. Wiring the Go bridge through WSL is the next step.
+
 ## [8.117.1] - 2026-11-14
 ### Fixed
 - **SPoRA challenge mismatch (Go supertorrent)**: `/spora/:challenge` re-parsed the caller-supplied decimal challenge as hex (`atoiDefault`), turning `4102374674` into `279210051188` and failing every lattice SPoRA verification for frontend-submitted blocks. The endpoint now echoes the decimal value (matching the legacy JS `parseInt(challenge, 10)`), restoring JS/Go parity. Regression asserted in `TestSporaEndpoint`.

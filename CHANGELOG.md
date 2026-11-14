@@ -1,5 +1,10 @@
 # Changelog
 
+## [8.117.10] - 2026-11-14
+### Added
+- **WASM artifact rebuilt**: `frontend/src/wasm` regenerated with wasm-pack (WSL, `scripts/wsl-wasm-rebuild.sh`); the binary now emits the honest `pop_input_commitment_v1_` prefix (verified via strings).
+- **Tray SP1 controls**: the system tray reports SP1 daemon/sidecar status alongside the core services and can start/stop the SP1 held sessions on Windows.
+
 ## [8.117.9] - 2026-11-14
 ### Fixed
 - **Honest WASM labeling**: `proof-of-play/wasm` never produced a ZK proof — it is a SHA-256 input-commitment hash that was labeled `sp1_zk_proof_v1_…`. Renamed to `pop_input_commitment_v1_…` with the real proving path (sidecar + daemon) documented in code and console output. The prebuilt artifact in `frontend/src/wasm` still emits the old string (no `wasm-pack` available to rebuild it); the server treats the value as opaque, so behavior is unchanged.

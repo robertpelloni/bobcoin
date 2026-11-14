@@ -36,6 +36,7 @@ PORTS = {
 }
 
 PID_FILE = REPO_ROOT / ".services.pids"
+SP1_PORTS = {"sp1-verifier-daemon": 9823, "sp1-prover-sidecar": 9824}
 
 def check_port(port: int, host: str = "127.0.0.1", timeout: float = 0.5) -> bool:
     """Check if a TCP port is actively accepting connections (checks IPv4 & IPv6 localhost)."""
@@ -52,7 +53,34 @@ def get_services_status():
     status = {}
     for name, port in PORTS.items():
         status[name] = check_port(port)
+    for name, port in SP1_PORTS.items():
+        status[name] = check_port(port)
     return status
+
+
+def _run_ps_script(name: str) -> bool:
+    """Run a repo PowerShell helper (Windows SP1 held-session launchers)."""
+    script = REPO_ROOT / "scripts" / name
+    if not IS_WINDOWS or not script.exists():
+        print(f"[SystemTray] {name} is only available on Windows/WSL in this build.")
+        return False
+    subprocess.Popen(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)],
+        cwd=str(REPO_ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"[SystemTray] Launched {name}")
+    return True
+
+
+def start_sp1_services():
+    """Start the SP1 verifier daemon + prover sidecar (held WSL sessions)."""
+    _run_ps_script("start-sp1-daemon.ps1")
+    _run_ps_script("start-sp1-prover.ps1")
+
+
+def stop_sp1_services():
+    """Stop the SP1 verifier daemon + prover sidecar held sessions."""
+    _run_ps_script("stop-sp1-daemon.ps1")
+    _run_ps_script("stop-sp1-prover.ps1")
 
 IS_WINDOWS = sys.platform.startswith("win")
 
@@ -189,6 +217,12 @@ def run_gui_tray():
         stop_services()
         icon.stop()
 
+    def on_start_sp1(icon, item):
+        start_sp1_services()
+
+    def on_stop_sp1(icon, item):
+        stop_sp1_services()
+
     menu = pystray.Menu(
         item("Lattice Arcade (Bobcoin)", lambda icon, item: None, enabled=False),
         pystray.Menu.SEPARATOR,
@@ -196,6 +230,9 @@ def run_gui_tray():
         item("Start All Services", on_start),
         item("Restart All Services", on_restart),
         item("Stop All Services", on_stop),
+        pystray.Menu.SEPARATOR,
+        item("Start SP1 Daemon + Prover (WSL)", on_start_sp1),
+        item("Stop SP1 Daemon + Prover", on_stop_sp1),
         pystray.Menu.SEPARATOR,
         item("Quit & Terminate All", on_quit)
     )

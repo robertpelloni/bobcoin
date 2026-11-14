@@ -12,7 +12,7 @@
 //! validity verdict (score >= keystroke count, at least 5 keystrokes).
 
 use serde::{Deserialize, Serialize};
-use sp1_sdk::blocking::{ProveRequest, Prover, ProverClient};
+use sp1_sdk::blocking::{ProveRequest, Prover, ProverClient, SP1ProofMode};
 use sp1_sdk::{Elf, SP1Stdin};
 use std::process::ExitCode;
 
@@ -55,8 +55,12 @@ fn run() -> Result<(), String> {
     let mut stdin = SP1Stdin::new();
     stdin.write(&GameInput { score, keystrokes });
 
+    // Compressed proofs verify far faster than core proofs (the daemon
+    // spent minutes verifying a core proof); proving takes longer but
+    // happens once, on the prover side.
     let proof = client
         .prove(&pk, stdin)
+        .mode(SP1ProofMode::Compressed)
         .run()
         .map_err(|e| format!("proving failed: {e}"))?;
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.117.6] - 2026-11-14
+### Changed
+- **Compressed SP1 proofs**: the prover now emits `SP1ProofMode::Compressed` proofs (1.27 MB vs 2.78 MB core). Daemon verification drops from ~9 minutes (core) to **1 second** (measured directly and end-to-end via the Go bridge, audit #899, `RISC-V_NATIVE_DAEMON`). Proving is slower (~16 min CPU) — the right trade: prove once, verify instantly.
+- **Concurrent verifier daemon**: thread-per-connection with shared client/proving-key, so requests no longer serialize.
+- **Daemon lifecycle on Windows**: WSL2 kills the distro seconds after the last `wsl.exe` disconnects, which silently killed the daemon between requests. `scripts/start-sp1-daemon.ps1` now holds one WSL session open running the daemon (BelowNormal, PID in `.sp1-daemon.pid`); `scripts/stop-sp1-daemon.ps1` stops it. Proof artifacts moved from WSL `/tmp` (wiped on distro restart) to `~/sp1-proofs/`.
+
 ## [8.117.5] - 2026-11-14
 ### Added
 - **SP1 verifier daemon**: `proof-of-play-verifier --serve 127.0.0.1:9823 --elf <elf>` runs the expensive proving-key setup once and verifies proof files over a one-line TCP protocol (`<proof-path>` → `VALID`/`INVALID …`). Managed by `scripts/wsl-sp1-daemon.sh [start|stop|status]`. The Go bridge tries the daemon first (`SP1_VERIFIER_ADDR`, default `127.0.0.1:9823`), then the CLI spawn, then the AI Oracle.

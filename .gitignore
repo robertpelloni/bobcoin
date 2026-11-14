@@ -15,3 +15,5 @@ __pycache__/
 .services.pids
 logs/
 bin/
+
+.sp1-daemon.pid

@@ -145,3 +145,9 @@
 - **Latency reality**: even with cached setup, SP1 *core* proof verification takes minutes on this CPU (submission 05:06 -> verdict 05:15). Next: prover `.mode(SP1ProofMode::Compressed)` (and/or Groth16) + verifier accepting those modes; measure again. WSL `/tmp` clears on distro restart — regenerate proofs with `scripts/wsl-sp1-reprove.sh`.
 - Daemon is currently running in WSL (pid via `scripts/wsl-sp1-daemon.sh status`); it does not auto-start — wire into `start.ps1` if native proving becomes a default path.
 
+
+## Session 2026-11-14 (continuation, v8.117.6)
+- **Compressed proofs verified**: prover emits `SP1ProofMode::Compressed` (1.27MB). Direct daemon verify: **VALID in 1s** (core was ~9 min). Go end-to-end: audit #899 `RISC-V_NATIVE_DAEMON` confidence 1.0. Proving took ~16 min CPU (98 min user time across cores) — prove once, verify instantly.
+- **Daemon concurrency + lifecycle**: thread-per-connection; on Windows the daemon must be held by a persistent `wsl.exe` session (`scripts/start-sp1-daemon.ps1`, BelowNormal, `.sp1-daemon.pid`) because WSL2 terminates the distro after the last client disconnects. Currently running that way and answering (garbage path -> `INVALID cannot load proof` in <1s after setup).
+- **Next**: regenerate the compressed proof into `~/sp1-proofs/` (WSL `/tmp` wiped the last one) via `scripts/wsl-sp1-reprove-compressed.sh` when a fresh end-to-end run is needed; then consider Groth16 for on-chain-size proofs, and auto-starting the daemon from `start.ps1` behind a flag.
+

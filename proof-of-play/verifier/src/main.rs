@@ -38,27 +38,38 @@ fn serve(addr: &str, elf_path: &str) -> Result<(), String> {
         .map_err(|e| format!("setup failed: {e}"))?;
     let listener = TcpListener::bind(addr).map_err(|e| format!("cannot bind {addr}: {e}"))?;
     println!("SP1 VERIFIER DAEMON READY {addr}");
+    // Thread per connection: verification is CPU-heavy and requests must not
+    // serialize behind one slow proof. Client and proving key are shared.
+    let client = std::sync::Arc::new(client);
+    let pk = std::sync::Arc::new(pk);
     for stream in listener.incoming() {
         let mut stream = match stream {
             Ok(s) => s,
             Err(_) => continue,
         };
-        let mut line = String::new();
-        let proof_path = {
-            let mut reader = BufReader::new(stream.try_clone().map_err(|e| e.to_string())?);
-            match reader.read_line(&mut line) {
-                Ok(_) => line.trim().to_string(),
-                Err(_) => continue,
-            }
-        };
-        let verdict = match SP1ProofWithPublicValues::load(&proof_path) {
-            Ok(proof) => match client.verify(&proof, pk.verifying_key(), None) {
-                Ok(()) => "VALID".to_string(),
-                Err(e) => format!("INVALID verification failed: {e}"),
-            },
-            Err(e) => format!("INVALID cannot load proof: {e}"),
-        };
-        let _ = stream.write_all(format!("{verdict}\n").as_bytes());
+        let client = client.clone();
+        let pk = pk.clone();
+        std::thread::spawn(move || {
+            let mut line = String::new();
+            let proof_path = match stream.try_clone() {
+                Ok(cloned) => {
+                    let mut reader = BufReader::new(cloned);
+                    match reader.read_line(&mut line) {
+                        Ok(_) => line.trim().to_string(),
+                        Err(_) => return,
+                    }
+                }
+                Err(_) => return,
+            };
+            let verdict = match SP1ProofWithPublicValues::load(&proof_path) {
+                Ok(proof) => match client.verify(&proof, pk.verifying_key(), None) {
+                    Ok(()) => "VALID".to_string(),
+                    Err(e) => format!("INVALID verification failed: {e}"),
+                },
+                Err(e) => format!("INVALID cannot load proof: {e}"),
+            };
+            let _ = stream.write_all(format!("{verdict}\n").as_bytes());
+        });
     }
     Ok(())
 }

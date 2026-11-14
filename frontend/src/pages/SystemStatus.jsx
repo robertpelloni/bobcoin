@@ -192,7 +192,7 @@ export function SystemStatus() {
         <div className="system-container">
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h1 className="glitch" data-text="SYSTEM STATUS">SYSTEM STATUS</h1>
-                <button className="cyber-button small" onClick={toggleFullScreen}>TOGGLE FULLSCREEN</button>
+                <button className="cyber-button small" title="Toggle fullscreen 3D lattice topology view" onClick={toggleFullScreen}>TOGGLE FULLSCREEN</button>
             </div>
 
             <div className="version-display">
@@ -242,12 +242,12 @@ export function SystemStatus() {
                 </div>
 
                 <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
-                    <button className="cyber-button small" onClick={handleExport}>EXPORT STATE (.JSON)</button>
+                    <button className="cyber-button small" title="Export the current lattice state snapshot as JSON" onClick={handleExport}>EXPORT STATE (.JSON)</button>
                     <div style={{position: 'relative'}}>
-                        <button className="cyber-button small secondary" disabled={syncing}>{syncing ? 'SYNCING...' : 'IMPORT SNAPSHOT'}</button>
+                        <button className="cyber-button small secondary" title="Import a lattice state snapshot file to bootstrap this node" disabled={syncing}>{syncing ? 'SYNCING...' : 'IMPORT SNAPSHOT'}</button>
                         <input type="file" onChange={handleImport} style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer'}} />
                     </div>
-                    <button className="cyber-button small" onClick={handleAddPeer}>REGISTER NEW PEER</button>
+                    <button className="cyber-button small" title="Register a new gossip peer with this node" onClick={handleAddPeer}>REGISTER NEW PEER</button>
                 </div>
 
                 <p style={{color: '#888', fontSize: '0.8rem', marginTop: '1.5rem'}}>Export the current network history or bootstrap your local node from a snapshot.</p>

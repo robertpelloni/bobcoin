@@ -107,7 +107,7 @@ export function Casino() {
                         onChange={(e) => setBetAmount(Number(e.target.value))}
                         disabled={status === 'BETTING' || status === 'WAITING_FOR_ROLL'}
                     />
-                    <button 
+                    <button title="Place this bet and roll against the provably-fair casino daemon" 
                         className="cyber-button" 
                         onClick={handleBet}
                         disabled={status === 'BETTING' || status === 'WAITING_FOR_ROLL' || balance < betAmount}

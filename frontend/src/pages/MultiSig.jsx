@@ -138,7 +138,7 @@ export function MultiSig() {
                 <div className="create-panel">
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
                         <h2 style={{margin: 0}}>INITIALIZE NEW VAULT</h2>
-                        <button className="cyber-button small" onClick={() => fetchData(keypair.publicKey)}>REFRESH</button>
+                        <button className="cyber-button small" title="Reload multisig vaults and pending proposals" onClick={() => fetchData(keypair.publicKey)}>REFRESH</button>
                     </div>
                     <p className="fee">CREATION FEE: 100.00 BOB</p>
                     <div className="field">
@@ -149,7 +149,7 @@ export function MultiSig() {
                         <label>SIGNATURE THRESHOLD (M-of-N)</label>
                         <input type="number" className="cyber-input" value={threshold} onChange={e => setThreshold(e.target.value)} />
                     </div>
-                    <button className="cyber-button" onClick={handleCreate} disabled={loading || balance < 100}>CREATE VAULT</button>
+                    <button className="cyber-button" title="Create a threshold multisig vault (creation fee 100 BOB)" onClick={handleCreate} disabled={loading || balance < 100}>CREATE VAULT</button>
                 </div>
 
                 <div className="vault-list">
@@ -171,12 +171,12 @@ export function MultiSig() {
                                                 <div style={{color: '#666', fontSize: '0.7rem'}}>SIGS: {p.signatures.length}/{v.threshold}</div>
                                             </div>
                                             {!p.signatures.includes(keypair.publicKey) && !p.executed && (
-                                                <button className="cyber-button small" onClick={() => handleApprove(v.addr, p.id)}>APPROVE</button>
+                                                <button className="cyber-button small" title="Approve this multisig proposal with your key" onClick={() => handleApprove(v.addr, p.id)}>APPROVE</button>
                                             )}
                                             {p.executed && <span style={{color: '#0f0', fontSize: '0.7rem'}}>EXECUTED</span>}
                                         </div>
                                     ))}
-                                    <button className="cyber-button small secondary" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => handlePropose(v.addr)}>NEW PROPOSAL</button>
+                                    <button className="cyber-button small secondary" title="Propose a new spend from this multisig vault" style={{width: '100%', marginTop: '0.5rem'}} onClick={() => handlePropose(v.addr)}>NEW PROPOSAL</button>
                                 </div>
 
                                 <div className="vault-participants" style={{marginTop: '1rem', borderTop: '1px solid #222', paddingTop: '0.5rem'}}>

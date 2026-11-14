@@ -293,6 +293,8 @@ def test_consolidated_navigation_and_command_console():
             ("💾 STORAGE NETWORK", "SUPERNODE"),
             ("🖥️ NODE & TOPOLOGY", "SYSTEM STATUS"),
             ("🎰 CASINO & REWARDS", "CASINO"),
+            ("🔒 WALLET & VAULT", "WALLET"),
+            ("⚖️ GOVERNANCE", "GOVERNANCE"),
             ("📖 MANUAL", "PROTOCOL MANIFESTO"),
         ]
 

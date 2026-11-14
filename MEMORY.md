@@ -22,3 +22,10 @@
 *   **Demurrage & Governance Parity**: Successfully ran the `test_e2e_governance.cjs` end-to-end integration suite, completely verifying absolute 1:1 mathematical parity between `bobcoin-consensus` (JS) and `go-lattice` (Go).
 *   **Scope of Verification**: The simulated verification includes complex multi-account cross-actions at identical timestamps, ensuring the execution order of `UPDATE_DEMURRAGE`, `AMM_SWAPS`, quadratic voting tallying, and total supply calculation matches precisely with zero precision drift between the Node.js floats and Go implementations.
 *   **Status**: No divergences in balances or block heights were detected. The demurrage decay calculations and governance quorum mechanisms are stable under stress-tested scenarios, validating the system state for v8.114.2.
+
+### Session Note (v8.117.0, 2026-11-14)
+* **Dashboard is the product surface**: `/` embeds all 17 routes in 8 tabs; standalone routes are deep-link/fullscreen views only. Guarded by `testing/dashboard_coverage.py`.
+* **Tooltip rule is now enforced, not aspirational**: every `<button>` needs a descriptive `title=`; the old TODO claim was false for ~62 buttons.
+* **Windows is a first-class runtime**: `start.ps1`/`stop.ps1` + tray via recorded `.services.pids`; POSIX `start.sh` mirrors ports/logs. All heavyweight children run BelowNormal/niced.
+* **Nothing was running at session start**: ports 3001/4001/8000/4173 free; MS Edge CDP live on 9222 with no page targets listed.
+

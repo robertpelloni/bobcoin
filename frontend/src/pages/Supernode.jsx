@@ -177,6 +177,7 @@ export function Supernode() {
                                         className="cyber-button"
                                         style={{fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderColor: '#ff0055', color: '#ff0055'}}
                                         onClick={() => handleRemoveTorrent(t.infoHash)}
+                                        title="Stop seeding and remove this torrent from the supernode"
                                     >
                                         STOP
                                     </button>

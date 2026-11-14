@@ -82,5 +82,12 @@
 - [x] **Cross-Chain Bridge Scalability**: Port the Solana bridge logic to Go and implement multi-signature relayers.
 - [ ] **Native Rust SP1 Verification**: Fully integrate the `cargo-prove` toolchain into the production build pipeline for non-simulated ZK proving.
 
+## Phase VI: Consolidation & Operability (v8.117.0, 2026-11-14)
+- [x] **One-Page Dashboard:** all 17 routes embedded in the `/` Command Console under 8 high-value tabs (Arcade, DeFi, Storage, Node, Casino, Wallet & Vault, Governance, Manual), ordered by value with Arcade first; standalone routes kept for deep links.
+- [x] **Coverage Gate:** `testing/dashboard_coverage.py` keeps routes + button tooltips from regressing.
+- [x] **Windows Operability:** `start.ps1`/`stop.ps1` + cross-platform system tray with Quit & Terminate All.
+- [ ] **Native Rust SP1 Verification** in the production pipeline (carried from Phase V).
+- [ ] **True React Native mobile app** for native Proof-of-Vitality hardware access (see IDEAS).
+
 ## Architecture Decision: Service Canonicalization
 The `go-game-server` and `go-supertorrent` services are now the official canonical microservices. The Node.js equivalents are officially marked for deprecation.

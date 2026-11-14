@@ -179,8 +179,8 @@ export function DEX() {
             <h1 className="glitch" data-text="SOVEREIGN DEX">SOVEREIGN DEX</h1>
 
             <div className="dex-tabs">
-                <button className={`tab-btn ${tab === 'swap' ? 'active' : ''}`} onClick={() => setTab('swap')}>SWAP</button>
-                <button className={`tab-btn ${tab === 'liquidity' ? 'active' : ''}`} onClick={() => setTab('liquidity')}>LIQUIDITY</button>
+                <button className={`tab-btn ${tab === 'swap' ? 'active' : ''}`} onClick={() => setTab('swap')} title="Swap tokens against the AMM pool">SWAP</button>
+                <button className={`tab-btn ${tab === 'liquidity' ? 'active' : ''}`} onClick={() => setTab('liquidity')} title="Manage AMM liquidity positions and LP tokens">LIQUIDITY</button>
             </div>
 
             <div className="dex-card">

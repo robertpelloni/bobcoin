@@ -134,6 +134,7 @@ export function Manual() {
                         key={key}
                         className={`sidebar-btn ${activeSection === key ? 'active' : ''}`}
                         onClick={() => setActiveSection(key)}
+                        title={`Read the ${key} chapter of the protocol manual`}
                     >
                         {SECTIONS[key].title}
                     </button>
@@ -143,7 +144,7 @@ export function Manual() {
                 <div className="content-scroll">
                     {SECTIONS[activeSection].content}
                     <div style={{marginTop: '3rem', borderTop: '1px solid #333', paddingTop: '2rem', textAlign: 'right'}}>
-                        <button className="cyber-button" onClick={handleNext}>
+                        <button className="cyber-button" title="Continue to the next manual chapter" onClick={handleNext}>
                             {activeSection === 'TOKENOMICS' ? 'COMPLETE INITIATION' : 'NEXT CHAPTER'}
                         </button>
                     </div>

@@ -369,7 +369,7 @@ export function Wallet() {
                             style={{width: '100%', marginBottom: '1rem'}}
                             onChange={e => setPassword(e.target.value)} 
                         />
-                        <button className="cyber-button" onClick={async () => {
+                        <button className="cyber-button" title="Generate a new keypair and initialize your encrypted vault" onClick={async () => {
                             const kp = await generateKeypair();
                             handleOnboardingComplete(kp, password);
                         }}>INITIALIZE ENCRYPTED VAULT</button>
@@ -394,7 +394,7 @@ export function Wallet() {
                     placeholder="Password..."
                     autoFocus
                 />
-                <button className="cyber-button large" style={{marginTop: '2rem'}} onClick={handleUnlock}>UNLOCK VAULT</button>
+                <button className="cyber-button large" title="Unlock your encrypted wallet vault with your password" style={{marginTop: '2rem'}} onClick={handleUnlock}>UNLOCK VAULT</button>
             </div>
         );
     }
@@ -428,7 +428,7 @@ export function Wallet() {
                 <div className="account-switcher" style={{marginTop: '1.5rem', borderTop: '1px solid #222', paddingTop: '1rem', textAlign: 'left'}}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                         <label style={{fontSize: '0.7rem', color: '#666', letterSpacing: '1px'}}>SUB-ACCOUNT PORTFOLIO (BIP-44)</label>
-                        <button className="cyber-button small" onClick={scanForAccounts} disabled={isScanning} style={{fontSize: '0.6rem'}}>
+                        <button className="cyber-button small" title="Rescan derived sub-accounts and refresh the portfolio list" onClick={scanForAccounts} disabled={isScanning} style={{fontSize: '0.6rem'}}>
                             {isScanning ? 'SCANNING...' : 'REFRESH LIST'}
                         </button>
                     </div>
@@ -471,6 +471,7 @@ export function Wallet() {
                                 key={idx} 
                                 className={`cyber-button small ${accountIndex === idx ? 'active' : 'secondary'}`}
                                 onClick={() => handleSwitchAccount(idx)}
+                                title={`Switch to derived sub-account #${idx}`}
                                 style={{fontSize: '0.6rem', minWidth: '30px', padding: '0.2rem'}}
                             >
                                 #{idx}
@@ -526,7 +527,7 @@ export function Wallet() {
                                         <span style={{color: '#0f0', fontWeight: 'bold'}}>{p.amount.toFixed(2)} BOB</span>
                                         <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {p.sender.slice(0, 8)}...</span>
                                     </div>
-                                    <button className="cyber-button small" onClick={() => claimPending(p)}>CLAIM</button>
+                                    <button className="cyber-button small" title="Claim this pending incoming transfer" onClick={() => claimPending(p)}>CLAIM</button>
                                 </div>
                                 {decryptedMemo && (
                                     <div style={{marginTop: '0.5rem', fontSize: '0.8rem', color: '#ff00ff', borderTop: '1px dashed #333', paddingTop: '0.5rem'}}>
@@ -639,7 +640,7 @@ export function Wallet() {
                             <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
                                 <input className="cyber-input" style={{flex: 1}} placeholder="Name..." value={contactName} onChange={e => setContactName(e.target.value)} />
                                 <input className="cyber-input" style={{flex: 2}} placeholder="Public Key..." value={contactAddr} onChange={e => setContactAddr(e.target.value)} />
-                                <button className="cyber-button small" onClick={handleAddContact}>ADD</button>
+                                <button className="cyber-button small" title="Save this contact to your address book" onClick={handleAddContact}>ADD</button>
                             </div>
                             <div className="contact-list" style={{maxHeight: '200px', overflowY: 'auto'}}>
                                 {Object.entries(contacts).map(([addr, name]) => (
@@ -649,8 +650,8 @@ export function Wallet() {
                                             <div style={{color: '#444', fontSize: '0.7rem', fontFamily: 'monospace'}}>{addr.slice(0, 16)}...</div>
                                         </div>
                                         <div style={{display: 'flex', gap: '0.5rem'}}>
-                                            <button className="cyber-button small" onClick={() => setSendAddress(addr)}>USE</button>
-                                            <button className="cyber-button small secondary" onClick={() => handleDeleteContact(addr)}>DEL</button>
+                                            <button className="cyber-button small" title="Use this contact as the send recipient" onClick={() => setSendAddress(addr)}>USE</button>
+                                            <button className="cyber-button small secondary" title="Delete this contact from your address book" onClick={() => handleDeleteContact(addr)}>DEL</button>
                                         </div>
                                     </div>
                                 ))}
@@ -753,6 +754,7 @@ export function Wallet() {
                                         className="cyber-button"
                                         style={{fontSize: '0.7rem', padding: '0.2rem 0.5rem'}}
                                         onClick={() => toggleDecode(tx.id)}
+                                        title="Decode or hide this transaction's encrypted memo"
                                     >
                                         {tx.decoded ? 'HIDE' : 'DECODE'}
                                     </button>

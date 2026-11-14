@@ -9,9 +9,15 @@
 - Rust (cargo) + SP1 Toolchain (for ZK service)
 
 ### Starting the Stack
-The unified method to run the entire architecture locally during active development is via the `start.sh` script which launches all Go services and the Vite frontend concurrently.
+#### Windows (Recommended on Windows)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1   # builds, then starts all at BelowNormal; logs in logs\; PIDs in .services.pids
+.\stop.ps1                                             # stops exactly the recorded PIDs
+python scripts\system_tray.py                          # tray icon: Open Dashboard / Start / Restart / Stop / Quit & Terminate All
+```
+Heavyweight processes are started at **BelowNormal** priority by both launchers (niced on POSIX).
 
-#### Using Native Shell (Recommended)
+#### POSIX
 ```bash
 ./start.sh
 ```

@@ -39,3 +39,8 @@ Integrate Apple Health / Google Fit for **Proof of Vitality**.
 ## 9. Zero-Knowledge DEX Order Book
 *   **Concept**: Enhance the current AMM DEX with a Zero-Knowledge Order Book where limit orders are encrypted (using FHE) and matched blindly by the Go Lattice nodes.
 *   **Impact**: Prevents front-running (MEV) completely, ensuring a perfectly fair trading environment.
+
+## 10. One-Page-First, Fullscreen-Second (v8.117.0)
+* **Concept**: Keep every feature reachable without navigation (Dashboard tabs), and treat standalone routes purely as fullscreen/deep-link views of the same components. Add `?tab=` deep-linking so support links can open the console on the right tab.
+* **Impact**: New features cannot ship invisibly — the coverage gate forces a Dashboard home and a tooltip for every new button.
+

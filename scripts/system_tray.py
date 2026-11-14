@@ -54,36 +54,90 @@ def get_services_status():
         status[name] = check_port(port)
     return status
 
-def start_services():
-    """Starts all backend services and frontend using start.sh."""
-    print("[SystemTray] Launching Lattice Arcade ecosystem...")
-    start_sh = REPO_ROOT / "start.sh"
-    if not start_sh.exists():
-        print(f"[SystemTray] Error: {start_sh} not found.")
-        return False
+IS_WINDOWS = sys.platform.startswith("win")
 
-    proc = subprocess.Popen(["bash", str(start_sh)], cwd=str(REPO_ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"[SystemTray] start.sh executed with root PID {proc.pid}")
+
+def _pids_on_port(port: int):
+    """Return PIDs listening on a TCP port, cross-platform."""
+    pids = set()
+    try:
+        if IS_WINDOWS:
+            out = subprocess.check_output(
+                ["powershell", "-NoProfile", "-Command",
+                 f"(Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue).OwningProcess"],
+                stderr=subprocess.DEVNULL, timeout=10).decode().strip()
+            pids.update(int(p) for p in out.split() if p.strip().isdigit())
+        else:
+            out = subprocess.check_output(["lsof", "-t", f"-i:{port}"], stderr=subprocess.DEVNULL).decode().strip()
+            pids.update(int(p) for p in out.split() if p.isdigit())
+    except Exception:
+        pass
+    # PIDs recorded by start.ps1 / start.sh launchers are authoritative.
+    try:
+        import json
+        recorded = json.loads(PID_FILE.read_text(encoding="utf-8"))
+        for pid in recorded.values():
+            if isinstance(pid, int):
+                pids.add(pid)
+    except Exception:
+        pass
+    return sorted(pids)
+
+
+def _terminate(pid: int):
+    try:
+        if IS_WINDOWS:
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15)
+        else:
+            os.kill(pid, signal.SIGTERM)
+        print(f"[SystemTray] Stopped PID {pid}")
+    except OSError:
+        pass
+
+
+def start_services():
+    """Start all services via the platform launcher (start.ps1 / start.sh).
+
+    Launchers run every child at BelowNormal priority and record PIDs in
+    .services.pids so Quit can stop exactly the processes it started.
+    """
+    print("[SystemTray] Launching Lattice Arcade ecosystem...")
+    if IS_WINDOWS:
+        launcher = REPO_ROOT / "start.ps1"
+        if not launcher.exists():
+            print(f"[SystemTray] Error: {launcher} not found.")
+            return False
+        proc = subprocess.Popen(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(launcher)],
+            cwd=str(REPO_ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        launcher = REPO_ROOT / "start.sh"
+        if not launcher.exists():
+            print(f"[SystemTray] Error: {launcher} not found.")
+            return False
+        proc = subprocess.Popen(["bash", str(launcher)], cwd=str(REPO_ROOT),
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"[SystemTray] {launcher.name} executed with root PID {proc.pid}")
     return True
 
-def stop_services():
-    """Stops all running services gracefully or forcefully if required."""
-    print("[SystemTray] Stopping all Lattice Arcade services...")
-    for name, port in PORTS.items():
-        try:
-            out = subprocess.check_output(["lsof", "-t", f"-i:{port}"], stderr=subprocess.DEVNULL).decode().strip()
-            pids = [int(p) for p in out.split() if p.isdigit()]
-            for pid in pids:
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                    print(f"[SystemTray] Sent SIGTERM to {name} (PID {pid})")
-                except OSError:
-                    pass
-        except Exception:
-            pass
 
-    subprocess.run(["pkill", "-f", "npc_agent.py"], stderr=subprocess.DEVNULL)
-    subprocess.run(["pkill", "-f", "go-casino"], stderr=subprocess.DEVNULL)
+def stop_services():
+    """Stop services recorded in .services.pids, then sweep known ports."""
+    print("[SystemTray] Stopping all Lattice Arcade services...")
+    seen = set()
+    for port in PORTS.values():
+        for pid in _pids_on_port(port):
+            if pid not in seen and pid != os.getpid():
+                seen.add(pid)
+                _terminate(pid)
+    if not IS_WINDOWS:
+        subprocess.run(["pkill", "-f", "npc_agent.py"], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-f", "go-casino"], stderr=subprocess.DEVNULL)
+    try:
+        PID_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
     print("[SystemTray] All services signaled to stop.")
 
 def restart_services():
@@ -206,8 +260,10 @@ def run_cli_daemon():
             break
 
 def main():
-    display = os.environ.get("DISPLAY")
-    if display:
+    # Windows has no DISPLAY variable; a desktop session is assumed there.
+    # POSIX needs DISPLAY/WAYLAND_DISPLAY for pystray.
+    has_display = IS_WINDOWS or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+    if has_display:
         try:
             run_gui_tray()
             return

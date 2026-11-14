@@ -29,6 +29,14 @@
 - [x] **Supply Rebuild Logic:** Ensure total supply is accurately recalculated during chain audit and recovery. (v8.107.3)
 - [x] **AMM Liquidity Parity:** Implement `amm_add_liquidity` and `amm_remove_liquidity` with 1:1 parity. (v8.107.3)
 
+## v8.117.0 Session (2026-11-14)
+- [x] **Single-Page Console Complete:** Dashboard now embeds all 17 routes (added Wallet/Vault/Gallery + Governance tabs; DeFi/Storage/Network tabs embed their subpages). Enforced by `testing/dashboard_coverage.py`.
+- [x] **Tooltip Gate:** ~62 buttons gained descriptive `title=` tooltips; coverage gate fails on regressions.
+- [x] **Windows Runtime:** `start.ps1`/`stop.ps1` (BelowNormal, `logs/`, `.services.pids`); tray fixed for Windows (no `DISPLAY`/`lsof`/`pkill` dependency).
+- [ ] **Native Rust SP1 Verification:** still requires the `cargo-prove` toolchain in the production pipeline (see ROADMAP Phase V).
+- [ ] **Frontend version sync:** `frontend/package.json` is `2.6.1` while the global version lives in `VERSION.md` (currently the Vite footer reads `VERSION.md` correctly; align the package version or document the split).
+- [ ] **Retire root log files:** older launchers wrote `*.log` at repo root; launchers now write `logs/` — clean stale root logs on next tidy pass (nondestructive: archive first).
+
 ## System Ready
 - All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem.
 - The single remaining task (`Full ZK Proving`) requires an updated environment with the proper `rustc`/`cargo` compiler installed.

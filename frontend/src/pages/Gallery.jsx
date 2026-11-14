@@ -151,7 +151,7 @@ export function Gallery() {
                                         </option>
                                     ))}
                                 </select>
-                                <button type="button" className="cyber-button small" onClick={() => keypair && fetchData(keypair.publicKey)}>
+                                <button type="button" className="cyber-button small" title="Reload your on-chain NFT artifacts" onClick={() => keypair && fetchData(keypair.publicKey)}>
                                     REFRESH
                                 </button>
                             </div>
@@ -170,7 +170,7 @@ export function Gallery() {
                             <label>DESCRIPTION</label>
                             <textarea className="cyber-input" value={nftDesc} onChange={e => setNftDesc(e.target.value)} placeholder="A rare digital relic..." />
                         </div>
-                        <button className="cyber-button" disabled={loading || balance < 50}>MINT ARTIFACT</button>
+                        <button className="cyber-button" title="Mint a new NFT artifact on-chain (costs 50 BOB)" disabled={loading || balance < 50}>MINT ARTIFACT</button>
                     </form>
                 </div>
 
@@ -190,7 +190,7 @@ export function Gallery() {
                                     <div className="nft-id">ID: {nft.id.substring(0, 8)}...</div>
                                     <div style={{fontSize: '0.6rem', color: '#0ff', background: 'rgba(0,255,255,0.1)', padding: '2px 6px', border: '1px solid #0ff'}}>ACC #{nft.accountIndex}</div>
                                 </div>
-                                <button className="cyber-button small" onClick={() => handleTransfer(nft.id)}>TRANSFER</button>
+                                <button className="cyber-button small" title="Transfer this NFT artifact to another account" onClick={() => handleTransfer(nft.id)}>TRANSFER</button>
                             </div>
                         ))}
                         {ownedNfts.length === 0 && <p className="empty">NO ARTIFACTS FOUND IN YOUR CHAIN.</p>}

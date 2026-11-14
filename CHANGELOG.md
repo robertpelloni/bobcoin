@@ -1,5 +1,16 @@
 # Changelog
 
+## [8.117.0] - 2026-11-14
+### Added
+- **Single-Page Command Console (complete)**: The Dashboard (`/`) now embeds every one of the 17 routes. New `WALLET & VAULT` tab (Wallet + Vault + NFT Gallery) and `GOVERNANCE` tab join Arcade, DeFi (now also embedding Swap, Staking, MultiSig, Storage Market), Storage (now also embedding Storage Market + Vault), Node & Topology (now also embedding Explorer + Mobile), Casino & Rewards, and Manual — each with descriptive tooltips and fullscreen links. Standalone routes remain for deep links.
+- **Tooltip coverage gate**: `testing/dashboard_coverage.py` (stdlib only) fails if any route is unreachable from the Dashboard console or any `<button>` lacks a `title=` tooltip. ~62 previously untooltipped buttons across Casino, Gallery, MultiSig, Swap, SystemStatus, Supernode, Vault, Wallet, RhythmGame, SignConfirmModal, StorageWasmWorkbench, and others now carry descriptive tooltips.
+- **Windows launchers**: `start.ps1` builds the Go services + frontend, starts everything at BelowNormal priority, logs to `logs/<service>.*.log`, and records PIDs in `.services.pids`; `stop.ps1` stops exactly those PIDs. `start.sh` now nices children and logs into `logs/` for parity.
+- **System tray on Windows**: `scripts/system_tray.py` no longer requires `DISPLAY`/`lsof`/`pkill`/`bash` on Windows — it launches via `start.ps1`, stops via the recorded PID file + `taskkill`, and offers Open Dashboard / Start / Restart / Stop / **Quit & Terminate All**. Documented in `scripts/README.md`.
+- **Recurring autopilot**: a permanent 15-minute cron continuation was scheduled for this workspace.
+
+### Fixed
+- Corrected the stale TODO claim that "every button has a tooltip" — it is now true and enforced by the coverage gate.
+
 ## [8.116.9] - 2026-11-09
 ### Added
 - **AI Oracle Multi-Lag Autocorrelation & Delta Diversity Ratio**: Expanded anti-bot analysis across `go-game-server` and `game-server` with Lag-2 serial autocorrelation ($|r_2| \le 0.85$) and timing delta diversity ratio ($\ge 0.25$ for $N \ge 15$), shutting down cyclical macros and repeating multi-step loop scripts.

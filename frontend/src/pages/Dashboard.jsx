@@ -22,6 +22,10 @@ const Trophies = lazy(() => import('./Trophies').then(m => ({ default: m.Trophie
 const Casino = lazy(() => import('./Casino').then(m => ({ default: m.Casino })));
 const Mobile = lazy(() => import('./Mobile').then(m => ({ default: m.Mobile })));
 const Manual = lazy(() => import('./Manual').then(m => ({ default: m.Manual })));
+const Wallet = lazy(() => import('./Wallet').then(m => ({ default: m.Wallet })));
+const Vault = lazy(() => import('./Vault').then(m => ({ default: m.Vault })));
+const Gallery = lazy(() => import('./Gallery').then(m => ({ default: m.Gallery })));
+const Governance = lazy(() => import('./Governance').then(m => ({ default: m.Governance })));
 
 export function Dashboard() {
     const [score, setScore] = useState(0);
@@ -256,6 +260,20 @@ export function Dashboard() {
                     🎰 CASINO & REWARDS
                 </button>
                 <button
+                    className={`cyber-button small ${commandTab === 'privacy' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('privacy')}
+                    title="Switch to Privacy Vault: sovereign wallet, encrypted cloak vault, and NFT gallery"
+                >
+                    🔒 WALLET & VAULT
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'governance' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('governance')}
+                    title="Switch to Lattice Governance: quadratic DAO voting and neural proposal audits"
+                >
+                    ⚖️ GOVERNANCE
+                </button>
+                <button
                     className={`cyber-button small ${commandTab === 'manual' ? 'active' : 'secondary'}`}
                     onClick={() => setCommandTab('manual')}
                     title="Switch to Sovereign Protocol Manual"
@@ -318,7 +336,7 @@ export function Dashboard() {
                                 >
                                     VIEW ON EXPLORER &rarr;
                                 </a>
-                                <button className="cyber-button small" onClick={() => { setMintStatus(null); setMintResult(null); }} style={{marginTop: '1rem'}}>CLOSE</button>
+                                <button className="cyber-button small" title="Dismiss this mint result" onClick={() => { setMintStatus(null); setMintResult(null); }} style={{marginTop: '1rem'}}>CLOSE</button>
                             </div>
                         )}
 
@@ -446,6 +464,10 @@ export function Dashboard() {
                                 <Link to="/multisig" className="cyber-button small" title="Open MultiSig Shared Vault">MULTISIG VAULT &rarr;</Link>
                             </div>
                             <DEX />
+                            <div style={{marginTop: '2.5rem'}} title="Atomic HTLC swaps embedded from /swap"><Swap /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Proof-of-Stake staking embedded from /staking"><Staking /></div>
+                            <div style={{marginTop: '2.5rem'}} title="MultiSig shared vault embedded from /multisig"><MultiSig /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Storage market embedded from /market"><StorageMarket /></div>
                         </div>
                     </Suspense>
                 )}
@@ -460,6 +482,8 @@ export function Dashboard() {
                                 <Link to="/vault" className="cyber-button small">ENCRYPTED CLOAK VAULT &rarr;</Link>
                             </div>
                             <Supernode />
+                            <div style={{marginTop: '2.5rem'}} title="Storage market embedded from /market"><StorageMarket /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Encrypted cloak vault embedded from /vault"><Vault /></div>
                         </div>
                     </Suspense>
                 )}
@@ -474,6 +498,8 @@ export function Dashboard() {
                                 <Link to="/mobile" className="cyber-button small">MOBILE MINING SDK &rarr;</Link>
                             </div>
                             <SystemStatus />
+                            <div style={{marginTop: '2.5rem'}} title="DAG explorer embedded from /explorer"><Explorer /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Mobile vitality mining embedded from /mobile"><Mobile /></div>
                         </div>
                     </Suspense>
                 )}
@@ -494,10 +520,41 @@ export function Dashboard() {
                     </Suspense>
                 )}
 
-                {/* 6. PROTOCOL MANUAL TAB */}
+                {/* 6. WALLET & VAULT TAB */}
+                {commandTab === 'privacy' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING PRIVACY VAULT...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem', flexWrap: 'wrap'}}>
+                                <Link to="/wallet" className="cyber-button small" title="Open the sovereign wallet fullscreen">FULL WALLET &rarr;</Link>
+                                <Link to="/vault" className="cyber-button small" title="Open the encrypted cloak vault fullscreen">ENCRYPTED VAULT &rarr;</Link>
+                                <Link to="/gallery" className="cyber-button small" title="Open the NFT gallery fullscreen">NFT GALLERY &rarr;</Link>
+                            </div>
+                            <Wallet />
+                            <div style={{marginTop: '2.5rem'}} title="Encrypted cloak vault embedded from /vault"><Vault /></div>
+                            <div style={{marginTop: '2.5rem'}} title="NFT gallery embedded from /gallery"><Gallery /></div>
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 7. GOVERNANCE TAB */}
+                {commandTab === 'governance' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING GOVERNANCE...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/governance" className="cyber-button small" title="Open Lattice Governance fullscreen">FULL GOVERNANCE &rarr;</Link>
+                            </div>
+                            <Governance />
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 8. PROTOCOL MANUAL TAB */}
                 {commandTab === 'manual' && (
                     <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING PROTOCOL MANUAL...</div>}>
                         <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/manual" className="cyber-button small" title="Open the protocol manual fullscreen">FULLSCREEN MANUAL &rarr;</Link>
+                            </div>
                             <Manual />
                         </div>
                     </Suspense>
@@ -510,7 +567,7 @@ export function Dashboard() {
                     <div className="modal-content" style={{background: '#0a0a0a', border: '1px solid #0ff', padding: '2rem', maxWidth: '550px', width: '90%', borderRadius: '6px', fontFamily: 'monospace'}}>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '0.8rem', marginBottom: '1.2rem'}}>
                             <h3 style={{margin: 0, color: '#0ff', fontSize: '1.1rem'}}>AI ORACLE AUDIT INSPECTOR</h3>
-                            <button className="cyber-button small" onClick={() => setSelectedAudit(null)} style={{padding: '0.2rem 0.6rem'}}>✕</button>
+                            <button className="cyber-button small" title="Close the AI Oracle audit inspector" onClick={() => setSelectedAudit(null)} style={{padding: '0.2rem 0.6rem'}}>✕</button>
                         </div>
 
                         <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem', fontSize: '0.85rem'}}>
@@ -576,7 +633,7 @@ export function Dashboard() {
                         </div>
 
                         <div style={{display: 'flex', justifyContent: 'flex-end'}}>
-                            <button className="cyber-button small" onClick={() => setSelectedAudit(null)}>DISMISS INSPECTOR</button>
+                            <button className="cyber-button small" title="Close the AI Oracle audit inspector" onClick={() => setSelectedAudit(null)}>DISMISS INSPECTOR</button>
                         </div>
                     </div>
                 </div>

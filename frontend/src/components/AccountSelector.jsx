@@ -41,7 +41,7 @@ export function AccountSelector({ currentAccount, onAccountChange }) {
         <div className="account-selector-container" style={{ marginBottom: '2rem', textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <label style={{ fontSize: '0.7rem', color: '#666', letterSpacing: '1px' }}>ACTIVE SOVEREIGN ACCOUNT</label>
-                <button className="cyber-button small" onClick={scan} disabled={isScanning} style={{ fontSize: '0.6rem' }}>
+                <button className="cyber-button small" title="Scan all derived accounts and refresh portfolio balances" onClick={scan} disabled={isScanning} style={{ fontSize: '0.6rem' }}>
                     {isScanning ? 'SCANNING...' : 'SCAN PORTFOLIO'}
                 </button>
             </div>

@@ -28,7 +28,7 @@ export function SupernodeControls({ onAdd }) {
                             className="cyber-input"
                             style={{flex: 1, background: '#111', border: '1px solid #333', color: '#0ff', padding: '0.5rem', fontFamily: 'monospace'}}
                         />
-                        <button type="submit" className="cyber-button small" style={{fontSize: '0.8rem', padding: '0.5rem 1rem'}}>SEED</button>
+                        <button type="submit" className="cyber-button small" title="Seed this torrent from the supernode" style={{fontSize: '0.8rem', padding: '0.5rem 1rem'}}>SEED</button>
                     </div>
                 </div>
             </form>

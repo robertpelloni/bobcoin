@@ -580,10 +580,10 @@ export function StorageWasmWorkbench() {
                     className="cyber-input"
                     style={{ flex: 1, minWidth: '280px' }}
                 />
-                <button className="cyber-button" onClick={handlePrepare} disabled={processing || runtimeStatus !== 'ready'}>
+                <button className="cyber-button" title="Encrypt and shard this file locally with the Go WASM storage kernel" onClick={handlePrepare} disabled={processing || runtimeStatus !== 'ready'}>
                     {processing ? 'PROCESSING...' : 'PREPARE FILE'}
                 </button>
-                <button className="cyber-button" onClick={handlePublish} disabled={publishing || processing || !manifest || preparedShards.length === 0}>
+                <button className="cyber-button" title="Upload prepared shards and publish the manifest to the supernode" onClick={handlePublish} disabled={publishing || processing || !manifest || preparedShards.length === 0}>
                     {publishing ? 'PUBLISHING...' : 'PUBLISH TO SUPERNODE'}
                 </button>
             </div>
@@ -603,10 +603,10 @@ export function StorageWasmWorkbench() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                         <h3 style={{ color: '#fff', margin: 0 }}>PREPROCESSING MANIFEST</h3>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <button className="cyber-button small" onClick={() => downloadJson(`${manifest.source.name}.manifest.json`, manifest)}>
+                            <button className="cyber-button small" title="Download this preprocessing manifest as JSON" onClick={() => downloadJson(`${manifest.source.name}.manifest.json`, manifest)}>
                                 DOWNLOAD MANIFEST
                             </button>
-                            <button className="cyber-button small" onClick={handleCopy}>
+                            <button className="cyber-button small" title="Copy this manifest JSON to the clipboard" onClick={handleCopy}>
                                 {copyState === 'copied' ? 'COPIED' : copyState === 'failed' ? 'COPY FAILED' : 'COPY JSON'}
                             </button>
                         </div>
@@ -666,7 +666,7 @@ export function StorageWasmWorkbench() {
                             <div style={{ color: '#bbb', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
                                 MANIFEST URL: <a href={publishedResult.manifestUrl} target="_blank" rel="noreferrer" style={{ color: '#0ff' }}>{publishedResult.manifestUrl}</a>
                             </div>
-                            <button className="cyber-button small" onClick={handleAnchorManifest} disabled={anchoring}>
+                            <button className="cyber-button small" title="Anchor this manifest on the Go lattice with a signed publish_manifest block" onClick={handleAnchorManifest} disabled={anchoring}>
                                 {anchoring ? 'ANCHORING...' : 'ANCHOR ON GO LATTICE'}
                             </button>
                             {anchorState && <div style={{ color: '#0ff', marginTop: '0.75rem', fontSize: '0.9rem' }}>{anchorState}</div>}
@@ -719,10 +719,10 @@ export function StorageWasmWorkbench() {
                         className="cyber-input"
                         style={{ flex: 1, minWidth: '320px' }}
                     />
-                    <button className="cyber-button" onClick={handleLoadManifest} disabled={restoring || !manifestRef.trim()}>
+                    <button className="cyber-button" title="Load a published manifest by reference for restoration" onClick={handleLoadManifest} disabled={restoring || !manifestRef.trim()}>
                         LOAD MANIFEST
                     </button>
-                    <button className="cyber-button" onClick={handleRestore} disabled={restoring || !loadedManifest}>
+                    <button className="cyber-button" title="Download shards, decrypt, and reconstruct the original file" onClick={handleRestore} disabled={restoring || !loadedManifest}>
                         {restoring ? 'RESTORING...' : 'RESTORE FILE'}
                     </button>
                 </div>
@@ -798,6 +798,7 @@ export function StorageWasmWorkbench() {
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
                             <button
                                 className="cyber-button small"
+                                title="Download the shard recovery report for this restore attempt"
                                 onClick={() => downloadJson(
                                     `${loadedManifest?.source?.name || loadedManifest?.manifestId || 'restore'}-recovery-report.json`,
                                     buildRecoveryReport({ loadedManifest, restoreDiagnostics, restoredInfo, omittedShardIndexes })

@@ -1,5 +1,10 @@
 # Changelog
 
+## [8.117.3] - 2026-11-14
+### Added
+- **Host-side SP1 verifier**: `proof-of-play/verifier` (sp1-sdk) exposes `proof-of-play-verifier --elf <elf> --proof <file>` (exit 0 = valid). This replaces the Go bridge's obsolete `cargo-prove verify` invocation, which does not exist in SP1 v6.
+- **Go ZK bridge wiring**: `go-game-server` now attempts real RISC-V verification when a submission carries `proofBytesB64`: native `proof-of-play-verifier` on PATH (Linux/CI) first, then the WSL-built verifier on Windows (`wsl -d Ubuntu -- …`, with `C:\` → `/mnt/c/` path conversion, unit-tested). Submissions without proof bytes continue to the AI Oracle statistical audit, as before.
+
 ## [8.117.2] - 2026-11-14
 ### Added
 - **Real SP1 proving (WSL)**: SP1 ships no win32 `cargo-prove` (verified against v6.10.0 release assets), so the toolchain now lives in WSL2 Ubuntu via `scripts/wsl-sp1-setup.sh` / `scripts/wsl-sp1-build.sh`. The v1.2 toolchain's LLVM rejects its own passes (`unknown pass name 'loweratomic'`), so `proof-of-play/program` was migrated from `sp1-zkvm 1.0.0` to `6.0.0` (pre-migration manifests/ELF kept as `*.v1.bak`) and builds cleanly: `cargo prove build` finished in ~2 min, producing a riscv64im ELF now installed at `proof-of-play/program/elf/proof-of-play`.

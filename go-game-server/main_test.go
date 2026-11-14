@@ -801,3 +801,12 @@ func TestHandleSubmitProof_CyclicMacroAndDiversityRatio(t *testing.T) {
 		t.Fatalf("expected confidenceScore 0.14 for cyclic macro, got %v", oracle["confidenceScore"])
 	}
 }
+
+func TestWindowsPathToWSL(t *testing.T) {
+	if got := windowsPathToWSL(`C:\Users\hyper\workspace\bobcoin\proof-of-play\program\elf\proof-of-play`); got != "/mnt/c/Users/hyper/workspace/bobcoin/proof-of-play/program/elf/proof-of-play" {
+		t.Fatalf("unexpected WSL path conversion: %q", got)
+	}
+	if got := windowsPathToWSL("relative/path.bin"); got != "" && !strings.HasPrefix(got, "/mnt/") {
+		t.Fatalf("relative path should convert via Abs or be empty, got %q", got)
+	}
+}

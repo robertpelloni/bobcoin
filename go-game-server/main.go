@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -587,31 +589,66 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 	return ok
 }
 
+// sp1VerifierCommand resolves how to run the host-side SP1 verifier
+// (proof-of-play/verifier, built with sp1-sdk — SP1 v6 `cargo prove` has no
+// `verify` subcommand). Preference: native binary on PATH (Linux/CI), then
+// the WSL-built binary on Windows. Returns nil when no verifier is available.
+func sp1VerifierCommand(proofPath, elfPath string) *exec.Cmd {
+	if bin, err := exec.LookPath("proof-of-play-verifier"); err == nil {
+		return exec.Command(bin, "--elf", elfPath, "--proof", proofPath)
+	}
+	if runtime.GOOS == "windows" {
+		if _, err := exec.LookPath("wsl"); err == nil {
+			wsProof := windowsPathToWSL(proofPath)
+			wsElf := windowsPathToWSL(elfPath)
+			if wsProof != "" && wsElf != "" {
+				bin := "/mnt/c/Users/hyper/workspace/bobcoin/proof-of-play/verifier/target/release/proof-of-play-verifier"
+				// Resolve the verifier relative to the ELF's repo root when possible.
+				if idx := strings.Index(wsElf, "/proof-of-play/"); idx > 0 {
+					bin = wsElf[:idx] + "/proof-of-play/verifier/target/release/proof-of-play-verifier"
+				}
+				return exec.Command("wsl", "-d", "Ubuntu", "--", bin, "--elf", wsElf, "--proof", wsProof)
+			}
+		}
+	}
+	return nil
+}
+
+// windowsPathToWSL converts C:\a\b to /mnt/c/a/b ("" for non-absolute paths).
+func windowsPathToWSL(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil || len(abs) < 3 || abs[1] != ':' {
+		return ""
+	}
+	drive := strings.ToLower(abs[:1])
+	rest := strings.ReplaceAll(abs[2:], "\\", "/")
+	return "/mnt/" + drive + rest
+}
+
 func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, proof map[string]interface{}) (bool, map[string]interface{}) {
-	// Native ZK Verification (SP1 Simulation)
-	// In production, we call the 'cargo-prove' verifier binary on the proof-of-play circuit.
-	// If the binary is missing, we fall back to a high-fidelity AI Oracle audit.
-
-	// Attempt real SP1 verification if toolchain exists
-	if _, err := exec.LookPath("cargo-prove"); err == nil {
-		log.Printf("[ZK Service] Toolchain detected. Commencing true RISC-V ZK verification...")
-
-		// Setup temp proof file for cargo-prove
-		proofBytes, _ := json.Marshal(proof)
-		proofPath := filepath.Join(os.TempDir(), fmt.Sprintf("proof_%d.json", time.Now().UnixNano()))
-		_ = os.WriteFile(proofPath, proofBytes, 0644)
-		defer os.Remove(proofPath)
-
-		// Target the proof-of-play circuit binary (ELF)
-		elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
-
-		cmd := exec.Command("cargo-prove", "verify", "--proof", proofPath, "--elf", elfPath)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			log.Printf("[ZK Service] Native verification failed: %v\nOutput: %s", err, string(output))
-			// Fallback to simulation if native verification is explicitly failing due to env setup
-		} else {
-			log.Printf("[ZK Service] Native verification succeeded!\nOutput: %s", string(output))
-			return true, map[string]interface{}{"mode": "RISC-V_NATIVE", "confidence": 1.0}
+	// Real SP1 verification runs only when the submission carries actual
+	// serialized proof material (`proofBytesB64`, written by an sp1-sdk
+	// prover via proof.save()). Simulated/browser proofs have no bytes and
+	// go straight to the AI Oracle statistical audit below.
+	if proofB64, ok := proof["proofBytesB64"].(string); ok && proofB64 != "" {
+		raw, decErr := base64.StdEncoding.DecodeString(proofB64)
+		if decErr == nil {
+			proofPath := filepath.Join(os.TempDir(), fmt.Sprintf("proof_%d.bin", time.Now().UnixNano()))
+			if os.WriteFile(proofPath, raw, 0644) == nil {
+				defer os.Remove(proofPath)
+				elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
+				if cmd := sp1VerifierCommand(proofPath, elfPath); cmd != nil {
+					log.Printf("[ZK Service] Verifier detected (%s). Commencing RISC-V ZK verification...", cmd.Path)
+					if output, err := cmd.CombinedOutput(); err != nil {
+						log.Printf("[ZK Service] Native verification failed: %v\nOutput: %s", err, string(output))
+					} else {
+						log.Printf("[ZK Service] Native verification succeeded!\nOutput: %s", string(output))
+						return true, map[string]interface{}{"mode": "RISC-V_NATIVE", "confidenceScore": 1.0}
+					}
+				} else {
+					log.Printf("[ZK Service] Proof bytes supplied but no SP1 verifier available (native or WSL); falling back to AI Oracle.")
+				}
+			}
 		}
 	}
 

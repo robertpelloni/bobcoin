@@ -33,9 +33,11 @@
 - [x] **Single-Page Console Complete:** Dashboard now embeds all 17 routes (added Wallet/Vault/Gallery + Governance tabs; DeFi/Storage/Network tabs embed their subpages). Enforced by `testing/dashboard_coverage.py`.
 - [x] **Tooltip Gate:** ~62 buttons gained descriptive `title=` tooltips; coverage gate fails on regressions.
 - [x] **Windows Runtime:** `start.ps1`/`stop.ps1` (BelowNormal, `logs/`, `.services.pids`); tray fixed for Windows (no `DISPLAY`/`lsof`/`pkill` dependency).
-- [ ] **Native Rust SP1 Verification:** still requires the `cargo-prove` toolchain in the production pipeline (see ROADMAP Phase V).
-- [ ] **Frontend version sync:** `frontend/package.json` is `2.6.1` while the global version lives in `VERSION.md` (currently the Vite footer reads `VERSION.md` correctly; align the package version or document the split).
-- [ ] **Retire root log files:** older launchers wrote `*.log` at repo root; launchers now write `logs/` — clean stale root logs on next tidy pass (nondestructive: archive first).
+- [ ] **Native Rust SP1 Verification:** `cargo`/`rustc` 1.99.1 are present but the SP1 `cargo-prove` toolchain (`sp1up`) is not installed; installing it is the remaining step for non-simulated proving (see ROADMAP Phase V).
+- [x] **Frontend version sync:** `frontend/package.json` aligned to `VERSION.md` (v8.117.1).
+- [x] **Retire root log files:** stale root logs archived to `logs/archive/` (v8.117.1).
+- [x] **SPoRA decimal/hex mismatch:** Go supertorrent `/spora` echoed decimal challenges re-parsed as hex; fixed + regression test (v8.117.1).
+- [x] **Dashboard `?tab=` deep-linking:** console tabs are URL-addressable (v8.117.1).
 
 ## System Ready
 - All Phase III and Phase IV core features are mathematically completed and natively implemented across the Node.js ecosystem.

@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.117.1] - 2026-11-14
+### Fixed
+- **SPoRA challenge mismatch (Go supertorrent)**: `/spora/:challenge` re-parsed the caller-supplied decimal challenge as hex (`atoiDefault`), turning `4102374674` into `279210051188` and failing every lattice SPoRA verification for frontend-submitted blocks. The endpoint now echoes the decimal value (matching the legacy JS `parseInt(challenge, 10)`), restoring JS/Go parity. Regression asserted in `TestSporaEndpoint`.
+### Added
+- **Dashboard deep-linking**: `/?tab=<arcade|defi|storage|network|casino|privacy|governance|manual>` opens the single-page console on that module; tab clicks keep the URL in sync. Guarded by `testing/dashboard_coverage.py`.
+### Changed
+- `frontend/package.json` version aligned to the global `VERSION.md` single source of truth (8.117.1). Stale root logs archived to `logs/archive/`; launchers write only to `logs/`.
+
 ## [8.117.0] - 2026-11-14
 ### Added
 - **Single-Page Command Console (complete)**: The Dashboard (`/`) now embeds every one of the 17 routes. New `WALLET & VAULT` tab (Wallet + Vault + NFT Gallery) and `GOVERNANCE` tab join Arcade, DeFi (now also embedding Swap, Staking, MultiSig, Storage Market), Storage (now also embedding Storage Market + Vault), Node & Topology (now also embedding Explorer + Mobile), Casino & Rewards, and Manual — each with descriptive tooltips and fullscreen links. Standalone routes remain for deep links.

@@ -70,6 +70,8 @@ def main():
             failures.append(f"route {seg} not referenced in Dashboard.jsx (single-page console)")
         if seg not in nav and seg not in dash:
             failures.append(f"route {seg} not reachable from Navigation.jsx or Dashboard.jsx")
+    if "URLSearchParams" not in dash or "searchParams.set('tab'" not in dash:
+        failures.append("Dashboard.jsx lost ?tab= deep-linking (COMMAND_TABS / URLSearchParams)")
     for f in sorted((SRC / "pages").glob("*.jsx")) + sorted((SRC / "components").glob("*.jsx")):
         for line in buttons_without_title(read(f)):
             failures.append(f"{f.relative_to(ROOT)}:{line} <button> missing title= tooltip")

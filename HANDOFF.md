@@ -112,3 +112,11 @@
 ## Next Recommended Tasks
 - Port remaining Node.js test fixtures to native Go test harnesses in `go-lattice/`.
 - Implement background stealth scan worker in WebAssembly for automated one-time UTXO discovery.
+
+## Session 2026-11-14 (continuation, v8.117.1)
+- **SPoRA bug fixed**: Go supertorrent `/spora` re-parsed decimal challenges as hex (`4102374674` -> `279210051188`), failing lattice verification for frontend blocks. Now echoes decimal, matching JS `parseInt(challenge, 10)`; regression in `TestSporaEndpoint` (was: 12345 -> 74565). Live check: `/spora/4102374674` returns `challenge: 4102374674` and no new lattice mismatches.
+- **Dashboard `?tab=` deep-linking** added and browser-verified (`/?tab=privacy` opens Wallet & Vault).
+- **Version split closed**: `frontend/package.json` = `VERSION.md` = 8.117.1. Root logs archived to `logs/archive/`.
+- **SP1 status**: cargo/rustc 1.99.1 present; `cargo prove` (sp1up) NOT installed — that install is the only remaining SP1 step.
+- Note: go-supertorrent `/status` intentionally proxies the game-server status payload (compat layer); its own identity is at `writeServiceStatus` (Go SuperTorrent control plane).
+

@@ -891,8 +891,17 @@ func (s *SuperTorrentService) handleSpora(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Callers send the challenge as a DECIMAL string (frontend:
+	// parseInt(prevHash.substr(0, 8), 16)). Echo that same decimal value back;
+	// re-parsing the digits as hex (atoiDefault) inflated it and made every
+	// lattice SPoRA check fail with a challenge mismatch (v8.117.1).
+	challengeNum, err := strconv.Atoi(challenge)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "challenge must be a decimal integer"})
+		return
+	}
 	chunkHash := hashString(infoHash + challenge)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "spora": map[string]interface{}{"infoHash": infoHash, "challenge": atoiDefault(challenge), "chunkHash": chunkHash}})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "spora": map[string]interface{}{"infoHash": infoHash, "challenge": challengeNum, "chunkHash": chunkHash}})
 }
 
 func saveUploadedFile(file multipart.File, header *multipart.FileHeader, uploadsDir string) (string, int64, string, error) {

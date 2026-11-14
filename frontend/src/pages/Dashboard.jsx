@@ -40,8 +40,20 @@ export function Dashboard() {
     const [oracleAudits, setOracleAudits] = useState([]);
     const [selectedAudit, setSelectedAudit] = useState(null);
 
-    // Command Center Active Sub-Module Tab (Eliminates fragmentation)
-    const [commandTab, setCommandTab] = useState('arcade');
+    // Command Center Active Sub-Module Tab (Eliminates fragmentation).
+    // Deep-linkable via ?tab=<id> (e.g. /?tab=privacy) so support/docs links
+    // can open the single-page console directly on the right module.
+    const COMMAND_TABS = ['arcade', 'defi', 'storage', 'network', 'casino', 'privacy', 'governance', 'manual'];
+    const [commandTab, setCommandTabState] = useState(() => {
+        const requested = new URLSearchParams(window.location.search).get('tab');
+        return COMMAND_TABS.includes(requested) ? requested : 'arcade';
+    });
+    const setCommandTab = (tab) => {
+        setCommandTabState(tab);
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState(null, '', url);
+    };
 
     const replayLog = useRef([]);
     const { heartbeat } = useNetwork();

@@ -151,3 +151,8 @@
 - **Daemon concurrency + lifecycle**: thread-per-connection; on Windows the daemon must be held by a persistent `wsl.exe` session (`scripts/start-sp1-daemon.ps1`, BelowNormal, `.sp1-daemon.pid`) because WSL2 terminates the distro after the last client disconnects. Currently running that way and answering (garbage path -> `INVALID cannot load proof` in <1s after setup).
 - **Next**: regenerate the compressed proof into `~/sp1-proofs/` (WSL `/tmp` wiped the last one) via `scripts/wsl-sp1-reprove-compressed.sh` when a fresh end-to-end run is needed; then consider Groth16 for on-chain-size proofs, and auto-starting the daemon from `start.ps1` behind a flag.
 
+
+## Session 2026-11-14 (continuation, v8.117.7)
+- `start.ps1 -WithSp1Daemon` now brings the whole stack up including the held SP1 verifier daemon; `stop.ps1` tears it down (verified in one restart cycle). Compressed proof regenerated to persistent `~/sp1-proofs/` and re-verified via Go (audit #1048).
+- **Remaining SP1 work**: Groth16 mode if on-chain-size proofs are ever needed; a proving sidecar so live gameplay (not just sample traces) can submit `proofBytesB64`; the browser WASM prover (`proof-of-play/wasm`) still targets the old SP1 API and would need the same v6 migration.
+

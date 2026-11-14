@@ -2,8 +2,8 @@
 # Builds Go services once, starts every component at BelowNormal priority,
 # logs to logs\<name>.log, and records PIDs in .services.pids (JSON) so
 # stop.ps1 / scripts\system_tray.py can quit exactly what was started.
-# Usage: powershell -ExecutionPolicy Bypass -File .\start.ps1 [-SkipBuild]
-param([switch]$SkipBuild)
+# Usage: powershell -ExecutionPolicy Bypass -File .\start.ps1 [-SkipBuild] [-WithSp1Daemon]
+param([switch]$SkipBuild, [switch]$WithSp1Daemon)
 $ErrorActionPreference = 'Continue'
 $Root = $PSScriptRoot
 $LogDir = Join-Path $Root 'logs'
@@ -96,6 +96,15 @@ if ($casinoProc) { $pids['go-casino'] = [int]$casinoProc.ProcessId; try { (Get-P
 $npcProc = Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -like '*npc_agent.py*' } | Select-Object -First 1
 if ($npcProc) { $pids['npc-agent'] = [int]$npcProc.ProcessId; try { (Get-Process -Id $npcProc.ProcessId).PriorityClass = 'BelowNormal' } catch {} }
+
+# Optional: SP1 verifier daemon (held WSL session; see scripts/start-sp1-daemon.ps1).
+if ($WithSp1Daemon) {
+    $daemonScript = Join-Path $Root 'scripts\start-sp1-daemon.ps1'
+    if (Test-Path $daemonScript) {
+        Write-Host '[start] Launching SP1 verifier daemon (WSL, BelowNormal)...'
+        & $daemonScript
+    }
+}
 
 $pids | ConvertTo-Json | Set-Content -Path (Join-Path $Root '.services.pids') -Encoding UTF8
 Write-Host '[start] Dashboard: http://localhost:4173  Lattice:4001  Game:3001  Supertorrent:8000'

@@ -24,4 +24,8 @@ if ($stopped.Count -eq 0) {
         }
     }
 }
+# Also stop the held SP1 verifier daemon session, if one was started.
+$sp1Stop = Join-Path $Root 'scripts\stop-sp1-daemon.ps1'
+if (Test-Path (Join-Path $Root '.sp1-daemon.pid')) { & $sp1Stop }
+
 Write-Host "[stop] Stopped: $($stopped -join ', ')"

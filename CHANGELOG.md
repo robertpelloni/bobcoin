@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.7] - 2026-11-14
+### Added
+- **Launcher integration**: `start.ps1 -WithSp1Daemon` starts the held SP1 verifier daemon with the stack; `stop.ps1` stops it too. The compressed sample proof now persists at `~/sp1-proofs/pop_proof_compressed.bin` (WSL `/tmp` wipes on distro restart) and was re-verified end-to-end through the Go bridge (audit #1048, daemon verdict `valid=true`).
+
 ## [8.117.6] - 2026-11-14
 ### Changed
 - **Compressed SP1 proofs**: the prover now emits `SP1ProofMode::Compressed` proofs (1.27 MB vs 2.78 MB core). Daemon verification drops from ~9 minutes (core) to **1 second** (measured directly and end-to-end via the Go bridge, audit #899, `RISC-V_NATIVE_DAEMON`). Proving is slower (~16 min CPU) — the right trade: prove once, verify instantly.

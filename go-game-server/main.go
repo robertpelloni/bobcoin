@@ -616,6 +616,50 @@ func sp1VerifierCommand(proofPath, elfPath string) *exec.Cmd {
 	return nil
 }
 
+var daemonRecoveryMu sync.Mutex
+var lastDaemonRecovery time.Time
+
+// recoverDaemon restarts the held SP1 verifier daemon after a WSL restart
+// or crash (Windows only). Rate-limited to one attempt per 5 minutes so a
+// genuinely absent toolchain falls back to the CLI/Oracle path quickly.
+// Disable with BOBCOIN_SP1_AUTOSTART=0.
+func recoverDaemon() bool {
+	if runtime.GOOS != "windows" || os.Getenv("BOBCOIN_SP1_AUTOSTART") == "0" {
+		return false
+	}
+	daemonRecoveryMu.Lock()
+	defer daemonRecoveryMu.Unlock()
+	if time.Since(lastDaemonRecovery) < 5*time.Minute {
+		return false
+	}
+	lastDaemonRecovery = time.Now()
+	script := filepath.Join("..", "scripts", "start-sp1-daemon.ps1")
+	if _, err := os.Stat(script); err != nil {
+		return false
+	}
+	log.Printf("[ZK Service] Verifier daemon unreachable; attempting auto-recovery via %s", script)
+	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script)
+	if err := cmd.Start(); err != nil {
+		log.Printf("[ZK Service] Daemon auto-recovery failed to launch: %v", err)
+		return false
+	}
+	// Setup (proving-key generation) takes ~2 minutes; poll for the port.
+	addr := os.Getenv("SP1_VERIFIER_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:9823"
+	}
+	for i := 0; i < 90; i++ {
+		time.Sleep(2 * time.Second)
+		if conn, err := net.DialTimeout("tcp", addr, time.Second); err == nil {
+			conn.Close()
+			log.Printf("[ZK Service] Verifier daemon recovered after %ds", (i+1)*2)
+			return true
+		}
+	}
+	log.Printf("[ZK Service] Verifier daemon did not come up within 180s")
+	return false
+}
+
 // verifyViaDaemon asks the long-lived SP1 verifier daemon (cached setup;
 // see proof-of-play/verifier --serve) to verify serialized proof bytes.
 // Returns (attempted, valid). Protocol: "<len>\n<raw bytes>" -> "VALID" /
@@ -668,7 +712,11 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 			if os.WriteFile(proofPath, raw, 0644) == nil {
 				defer os.Remove(proofPath)
 				elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
-				if attempted, valid := verifyViaDaemon(raw); attempted {
+				attempted, valid := verifyViaDaemon(raw)
+				if !attempted && recoverDaemon() {
+					attempted, valid = verifyViaDaemon(raw)
+				}
+				if attempted {
 					log.Printf("[ZK Service] Verifier daemon verdict: valid=%v", valid)
 					if valid {
 						return true, map[string]interface{}{"mode": "RISC-V_NATIVE_DAEMON", "confidenceScore": 1.0}

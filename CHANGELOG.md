@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.11] - 2026-11-14
+### Added
+- **SP1 daemon auto-recovery**: when the verifier daemon is unreachable (WSL restart/crash), the Go bridge relaunches it via `scripts/start-sp1-daemon.ps1`, polls for the port (setup ~2 min), and retries verification once. Rate-limited to one attempt per 5 minutes; disable with `BOBCOIN_SP1_AUTOSTART=0`. Live-verified: daemon killed in-distro, next native submission recovered in 104s and verified (`RISC-V_NATIVE_DAEMON`).
+
 ## [8.117.10] - 2026-11-14
 ### Added
 - **WASM artifact rebuilt**: `frontend/src/wasm` regenerated with wasm-pack (WSL, `scripts/wsl-wasm-rebuild.sh`); the binary now emits the honest `pop_input_commitment_v1_` prefix (verified via strings).

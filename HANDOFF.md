@@ -169,3 +169,8 @@
 - Full verification suite green at v8.117.9: coverage gate, 4 Go packages, Playwright E2E. `stop.ps1` now reaps daemon + prover + stack together.
 - **Remaining backlog**: Groth16 proof mode (only if on-chain-size proofs are needed); tray menu entries for SP1 daemon/prover; `wasm-pack` rebuild of the frontend WASM commitment artifact; verifier daemon auto-recovery if WSL restarts mid-session.
 
+
+## Session 2026-11-14 (continuation, v8.117.11)
+- **Daemon auto-recovery shipped + live-verified** (kill in-distro -> recovered 104s -> `RISC-V_NATIVE_DAEMON`). Backlog now: Groth16 only-if-needed; everything else from the SP1 arc is done (program v6, prover + compressed, verifier daemon byte-protocol, sidecar, frontend wiring, tray controls, launcher integration, auto-recovery).
+- Suggested next horizons: (1) periodic Groth16 evaluation, (2) React Native mobile (IDEAS #8), (3) ZK order-book DEX (IDEAS #9), (4) tray auto-start with stack on login.
+

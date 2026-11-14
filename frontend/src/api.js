@@ -338,12 +338,35 @@ export const submitFHEOracle = async (cipherText) => {
     }
 };
 
+export const PROVER_URL = import.meta.env.VITE_PROVER_URL || 'http://localhost:9824';
+
 export const submitProof = async (score, perfects, greats, replayLog = []) => { 
     let address = null;
     try {
         const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) address = JSON.parse(storedKeys).publicKey;
     } catch(e) {}
+
+    // Real SP1 proof via the local prover sidecar (scripts/start-sp1-prover.ps1,
+    // WSL). Proving is slow (minutes, CPU) — the mint button stays in its
+    // PROVING state meanwhile. Any failure falls back to the WASM/Oracle path.
+    let proofBytesB64 = null;
+    try {
+        const health = await fetch(`${PROVER_URL}/health`, { signal: AbortSignal.timeout(1500) });
+        if (health.ok) {
+            const proveRes = await fetch(`${PROVER_URL}/prove`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score, keystrokes: replayLog.map(l => Math.round(l.time || 0)) })
+            });
+            if (proveRes.ok) {
+                proofBytesB64 = (await proveRes.json()).proofBytesB64 || null;
+                if (proofBytesB64) console.log('SP1 prover sidecar returned a real ZK proof.');
+            }
+        }
+    } catch (e) {
+        console.warn('SP1 prover sidecar unavailable, continuing without native proof.', e);
+    }
 
     let proofBytes = 'mock_bytes';
     try {
@@ -377,7 +400,8 @@ export const submitProof = async (score, perfects, greats, replayLog = []) => {
                 proof: { 
                     playerId: 'player_' + Math.random().toString(36).substr(2, 6), 
                     publicValues: { score, perfects, greats, misses: 0, address, replayLog }, 
-                    proofBytes: proofBytes
+                    proofBytes: proofBytes,
+                    ...(proofBytesB64 ? { proofBytesB64 } : {})
                 } 
             }) 
         }); 

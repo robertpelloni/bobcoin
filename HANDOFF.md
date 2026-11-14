@@ -163,3 +163,9 @@
 - **Concurrency trap**: parallel `EnvProver::verify` deadlocks; daemon is sequential on purpose. Also kill stale in-distro verifier processes (`pkill -f proof-of-play-verifier`) when swapping binaries — stopping the Windows wsl session does not always reap them, and zombies hold port 9823.
 - Test-harness note: my PowerShell `Set-Content` copy of the sidecar b64 was subtly re-encoded and Go's base64 decoder rejected it silently; the browser JSON path is unaffected. The known-good `~/sp1-proofs` copy verified as `RISC-V_NATIVE_DAEMON` in 1s.
 
+
+## Session 2026-11-14 (continuation, v8.117.9)
+- `proof-of-play/wasm` is a SHA-256 commitment, not SP1 (renamed honestly; rebuild its artifact when `wasm-pack` is available: CI's zk-pipeline already installs it). No SP1 v6 migration is needed there — it never depended on sp1-zkvm.
+- Full verification suite green at v8.117.9: coverage gate, 4 Go packages, Playwright E2E. `stop.ps1` now reaps daemon + prover + stack together.
+- **Remaining backlog**: Groth16 proof mode (only if on-chain-size proofs are needed); tray menu entries for SP1 daemon/prover; `wasm-pack` rebuild of the frontend WASM commitment artifact; verifier daemon auto-recovery if WSL restarts mid-session.
+

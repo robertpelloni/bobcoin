@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.117.9] - 2026-11-14
+### Fixed
+- **Honest WASM labeling**: `proof-of-play/wasm` never produced a ZK proof — it is a SHA-256 input-commitment hash that was labeled `sp1_zk_proof_v1_…`. Renamed to `pop_input_commitment_v1_…` with the real proving path (sidecar + daemon) documented in code and console output. The prebuilt artifact in `frontend/src/wasm` still emits the old string (no `wasm-pack` available to rebuild it); the server treats the value as opaque, so behavior is unchanged.
+- `stop.ps1` now also stops the held SP1 prover sidecar session.
+### Verified
+- Full suite green: dashboard coverage gate, all four Go test packages, and the Playwright E2E suite (navigation, command console incl. `?tab=` tabs, oracle inspector, vitality, stealth) after the sidecar/daemon changes.
+
 ## [8.117.8] - 2026-11-14
 ### Added
 - **Proving sidecar**: `proof-of-play-prover --serve 127.0.0.1:9824` (`POST /prove`, `GET /health`), held via `scripts/start-sp1-prover.ps1`. The Dashboard mint flow now requests a real SP1 proof from the sidecar when it is reachable and submits it as `proofBytesB64`; any failure falls back to the WASM/Oracle path unchanged.

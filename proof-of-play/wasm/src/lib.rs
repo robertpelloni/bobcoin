@@ -18,16 +18,18 @@ pub fn generate_proof(score: u32, keystrokes_json: &str) -> Result<String, JsVal
         keystrokes,
     };
 
-    // Simulate SP1 Proving Time and Output
-    // In production, this would compile down to the SP1 WASM client to
-    // run the RISC-V ELF locally inside the browser.
-
+    // NOTE (v8.117.9): this is NOT a ZK proof and never was — it is a
+    // SHA-256 input-commitment hash. Real SP1 proving happens in the
+    // prover sidecar (proof-of-play/prover, SP1 v6) and verification in
+    // the verifier daemon; the browser cannot run the SP1 prover. The
+    // commitment still binds the submitted score/keystrokes together
+    // for the AI Oracle path, so it is kept — under an honest name.
     let serialized_input = serde_json::to_string(&input).unwrap();
     let mut hasher = Sha256::new();
     hasher.update(serialized_input.as_bytes());
     let result = hasher.finalize();
 
-    let simulated_proof_bytes = format!("sp1_zk_proof_v1_{:x}", result);
+    let commitment = format!("pop_input_commitment_v1_{:x}", result);
 
-    Ok(simulated_proof_bytes)
+    Ok(commitment)
 }

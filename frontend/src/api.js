@@ -387,7 +387,7 @@ export const submitProof = async (score, perfects, greats, replayLog = []) => {
         await wasm.default(); // Initialize WASM
         const keystrokes = replayLog.map(log => log.time || 0);
         proofBytes = wasm.generate_proof(score, JSON.stringify(keystrokes));
-        console.log("Successfully generated Client-Side WASM ZK Proof!");
+        console.log("Generated client-side input commitment (not a ZK proof; real SP1 proving happens in the sidecar).");
     } catch (e) {
         console.warn("Failed to generate native SP1 WASM Proof, falling back to Oracle.", e);
     }

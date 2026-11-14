@@ -27,7 +27,7 @@ export function LiveFeed() {
     }, [soundEnabled]);
 
     useEffect(() => {
-        const wsUrl = LATTICE_URL.replace('http', 'ws');
+        const wsUrl = LATTICE_URL.replace('http', 'ws') + '/heartbeat';
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 

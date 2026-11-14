@@ -11,3 +11,7 @@ build-info.json
 nul
 target/
 __pycache__/
+
+.services.pids
+logs/
+bin/

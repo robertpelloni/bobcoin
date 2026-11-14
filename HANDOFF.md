@@ -1,4 +1,14 @@
-# HANDOFF SUMMARY - LATTICE ARCADE v8.116.9
+# HANDOFF SUMMARY - LATTICE ARCADE v8.117.0
+
+## Session 2026-11-14 (Muse Code / muse-wonder-1.0 in bobcoin on laptop)
+- **State at start**: `main` clean and up to date; all `jules-*`/dependabot branches already merged (0 commits ahead); no bobcoin ports listening; MS Edge CDP live on 9222 with no page targets.
+- **Shipped**: single-page Command Console now embeds all 17 routes (8 tabs incl. new Wallet & Vault + Governance); `testing/dashboard_coverage.py` gate (routes + every `<button title=>`); ~62 tooltips added; Windows `start.ps1`/`stop.ps1` (BelowNormal, `logs/`, reconciled real PIDs in `.services.pids`); tray fixed for Windows with Quit & Terminate All; `LiveFeed` WS corrected to `/heartbeat`; Wallet crash fixed (unguarded `.slice`/`.toFixed` on lattice-shaped pending/account rows crashed `/wallet` into the ErrorBoundary).
+- **Verified**: frontend build OK; Go tests pass for go-lattice/go-supertorrent/go-casino, and go-game-server on re-run (first run failed while the live stack held its DB/ports — treat as contention, re-run when changing that area); Playwright E2E `testing/test_e2e_system_tray_and_nav.py` fully passes incl. new tabs; stack healthy on 4001/3001/8000/4173 at BelowNormal, NPC agent submitting proofs, casino processing bets.
+- **Not working / next**: native Rust SP1 (`cargo-prove`) still not in the production pipeline; `frontend/package.json` version (2.6.1) is split from `VERSION.md` (8.117.0); stale root `*.log` files from old launchers still exist (archive, don't delete); go-lattice logs occasional `SPoRA challenge mismatch` during bootstrap sends while still processing blocks — worth a focused look.
+- **Coordination**: identified to the Edge CDP session only by health check (`/json/version` OK, zero page targets to message). A permanent 15-minute cron continuation (job `4dfd67aa`) is scheduled; delete it if unwanted.
+- **Run it**: `powershell -ExecutionPolicy Bypass -File .\start.ps1` then open `http://localhost:4173`; stop with `.\stop.ps1`. Processes started by the launcher stop when killed via `stop.ps1`/tray Quit; left running at handoff by design.
+
+## Architectural Milestones Accomplished
 
 ## Architectural Milestones Accomplished
 1. **AI Oracle Multi-Lag Autocorrelation & Delta Diversity Ratio**:

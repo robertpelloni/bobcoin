@@ -452,7 +452,7 @@ export function Wallet() {
                                 }}
                             >
                                 <div style={{display: 'flex', flexDirection: 'column'}}>
-                                    <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{acc.address.slice(0,8)}...</span></span>
+                                    <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{(acc.address || 'unknown').slice(0,8)}...</span></span>
                                     <div style={{display: 'flex', gap: '8px', marginTop: '4px'}}>
                                         {acc.staked > 0 && <span title="Staking Active" style={{fontSize: '0.6rem', color: '#0f0'}}>🥩 {acc.staked.toFixed(1)}</span>}
                                         {acc.nftCount > 0 && <span title="Artifacts Collected" style={{fontSize: '0.6rem', color: '#f0f'}}>🖼️ {acc.nftCount}</span>}
@@ -499,7 +499,7 @@ export function Wallet() {
                                 Generated via Dual-Key Stealth Address Protocol (DKSAP) using ephemeral Diffie-Hellman exchange and your view key.
                                 {stealthInfo && (
                                     <div style={{marginTop: '0.25rem', fontFamily: 'monospace', fontSize: '0.65rem', color: '#888'}}>
-                                        EPHEMERAL PUBKEY: {stealthInfo.ephemeralPublicKey.slice(0, 16)}...
+                                        EPHEMERAL PUBKEY: {(stealthInfo.ephemeralPublicKey || 'unknown').slice(0, 16)}...
                                     </div>
                                 )}
                             </div>
@@ -524,8 +524,8 @@ export function Wallet() {
                             <div key={p.hash} style={{background: '#000', padding: '1rem', border: '1px solid #333', marginBottom: '0.5rem'}}>
                                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                     <div>
-                                        <span style={{color: '#0f0', fontWeight: 'bold'}}>{p.amount.toFixed(2)} BOB</span>
-                                        <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {p.sender.slice(0, 8)}...</span>
+                                        <span style={{color: '#0f0', fontWeight: 'bold'}}>{(p.amount ?? p.payload?.amount ?? 0).toFixed(2)} BOB</span>
+                                        <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {(p.sender || p.account || 'unknown').slice(0, 8)}...</span>
                                     </div>
                                     <button className="cyber-button small" title="Claim this pending incoming transfer" onClick={() => claimPending(p)}>CLAIM</button>
                                 </div>

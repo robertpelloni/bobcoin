@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.117.8] - 2026-11-14
+### Added
+- **Proving sidecar**: `proof-of-play-prover --serve 127.0.0.1:9824` (`POST /prove`, `GET /health`), held via `scripts/start-sp1-prover.ps1`. The Dashboard mint flow now requests a real SP1 proof from the sidecar when it is reachable and submits it as `proofBytesB64`; any failure falls back to the WASM/Oracle path unchanged.
+### Fixed
+- **Verifier daemon protocol**: proofs are now sent as bytes over TCP instead of file paths. Root cause of the multi-minute verifications: SP1 load/verify from the Windows 9p mount (`/mnt/c`) measured 3m53s vs 0.95s from WSL-native storage. Go end-to-end native submission now completes in ~1s (`RISC-V_NATIVE_DAEMON`).
+- **Daemon concurrency reverted**: thread-per-connection `EnvProver::verify` deadlocked (idle-stuck threads, stale daemons fighting over the port). The daemon is sequential again, with the deadlock documented in code.
+
 ## [8.117.7] - 2026-11-14
 ### Added
 - **Launcher integration**: `start.ps1 -WithSp1Daemon` starts the held SP1 verifier daemon with the stack; `stop.ps1` stops it too. The compressed sample proof now persists at `~/sp1-proofs/pop_proof_compressed.bin` (WSL `/tmp` wipes on distro restart) and was re-verified end-to-end through the Go bridge (audit #1048, daemon verdict `valid=true`).

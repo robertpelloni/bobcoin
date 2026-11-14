@@ -25,9 +25,11 @@ fn arg_value(args: &[String], name: &str) -> Option<String> {
 }
 
 /// Long-lived daemon: runs the expensive `client.setup(elf)` once, then
-/// verifies proof files named by newline-terminated TCP requests.
-/// Protocol per connection: send "<proof-path>\n", read back
-/// "VALID\n" or "INVALID <reason>\n". Start with:
+/// verifies proofs sent over TCP. Protocol per connection: send
+/// "<byte-length>\n" followed by the raw serialized proof bytes, read back
+/// "VALID\n" or "INVALID <reason>\n". Bytes (not a file path) because
+/// verifying a proof loaded from the Windows 9p mount (/mnt/c) takes
+/// minutes vs ~1s from WSL-native storage. Start with:
 ///   proof-of-play-verifier --serve 127.0.0.1:9823 --elf <program-elf>
 fn serve(addr: &str, elf_path: &str) -> Result<(), String> {
     let elf_bytes =
@@ -38,38 +40,55 @@ fn serve(addr: &str, elf_path: &str) -> Result<(), String> {
         .map_err(|e| format!("setup failed: {e}"))?;
     let listener = TcpListener::bind(addr).map_err(|e| format!("cannot bind {addr}: {e}"))?;
     println!("SP1 VERIFIER DAEMON READY {addr}");
-    // Thread per connection: verification is CPU-heavy and requests must not
-    // serialize behind one slow proof. Client and proving key are shared.
-    let client = std::sync::Arc::new(client);
-    let pk = std::sync::Arc::new(pk);
+    // Sequential by design: concurrent EnvProver::verify calls deadlock
+    // (observed idle-stuck threads in v8.117.6 testing). One verification
+    // at a time; compressed proofs verify in ~1s so the queue stays short.
     for stream in listener.incoming() {
         let mut stream = match stream {
             Ok(s) => s,
             Err(_) => continue,
         };
-        let client = client.clone();
-        let pk = pk.clone();
-        std::thread::spawn(move || {
-            let mut line = String::new();
-            let proof_path = match stream.try_clone() {
-                Ok(cloned) => {
-                    let mut reader = BufReader::new(cloned);
-                    match reader.read_line(&mut line) {
-                        Ok(_) => line.trim().to_string(),
-                        Err(_) => return,
-                    }
+        use std::io::Read;
+        let mut line = String::new();
+        let proof_path = match stream.try_clone() {
+            Ok(cloned) => {
+                let mut reader = BufReader::new(cloned);
+                let len: usize = match reader.read_line(&mut line) {
+                    Ok(_) => match line.trim().parse() {
+                        Ok(n) => n,
+                        Err(_) => continue,
+                    },
+                    Err(_) => continue,
+                };
+                if len > 64 * 1024 * 1024 {
+                    continue;
                 }
-                Err(_) => return,
-            };
-            let verdict = match SP1ProofWithPublicValues::load(&proof_path) {
-                Ok(proof) => match client.verify(&proof, pk.verifying_key(), None) {
-                    Ok(()) => "VALID".to_string(),
-                    Err(e) => format!("INVALID verification failed: {e}"),
-                },
-                Err(e) => format!("INVALID cannot load proof: {e}"),
-            };
-            let _ = stream.write_all(format!("{verdict}\n").as_bytes());
-        });
+                let mut bytes = vec![0u8; len];
+                match reader.read_exact(&mut bytes) {
+                    Ok(()) => {
+                        // Stage in native temp storage: SP1 load/verify over
+                        // the 9p mount is ~200x slower than native fs.
+                        let staged = std::env::temp_dir()
+                            .join(format!("sp1_daemon_proof_{}.bin", std::process::id()));
+                        match std::fs::write(&staged, &bytes) {
+                            Ok(()) => staged,
+                            Err(_) => continue,
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+            Err(_) => continue,
+        };
+        let verdict = match SP1ProofWithPublicValues::load(&proof_path) {
+            Ok(proof) => match client.verify(&proof, pk.verifying_key(), None) {
+                Ok(()) => "VALID".to_string(),
+                Err(e) => format!("INVALID verification failed: {e}"),
+            },
+            Err(e) => format!("INVALID cannot load proof: {e}"),
+        };
+        let _ = std::fs::remove_file(&proof_path);
+        let _ = stream.write_all(format!("{verdict}\n").as_bytes());
     }
     Ok(())
 }

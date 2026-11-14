@@ -156,3 +156,10 @@
 - `start.ps1 -WithSp1Daemon` now brings the whole stack up including the held SP1 verifier daemon; `stop.ps1` tears it down (verified in one restart cycle). Compressed proof regenerated to persistent `~/sp1-proofs/` and re-verified via Go (audit #1048).
 - **Remaining SP1 work**: Groth16 mode if on-chain-size proofs are ever needed; a proving sidecar so live gameplay (not just sample traces) can submit `proofBytesB64`; the browser WASM prover (`proof-of-play/wasm`) still targets the old SP1 API and would need the same v6 migration.
 
+
+## Session 2026-11-14 (continuation, v8.117.8)
+- **Proving sidecar live**: `proof-of-play-prover --serve 127.0.0.1:9824` (held: `scripts/start-sp1-prover.ps1`); Dashboard mint tries sidecar -> `proofBytesB64` -> daemon verify, with silent fallback. Sidecar prove for the sample trace took 822s and returned the same-size compressed proof.
+- **9p latency root cause (important)**: SP1 verify from `/mnt/c` = 3m53s vs 0.95s native. Daemon protocol is now `<len>\n<bytes>` with native staging; Go native submission = ~1s end-to-end. Never pass /mnt paths to SP1 load/verify.
+- **Concurrency trap**: parallel `EnvProver::verify` deadlocks; daemon is sequential on purpose. Also kill stale in-distro verifier processes (`pkill -f proof-of-play-verifier`) when swapping binaries — stopping the Windows wsl session does not always reap them, and zombies hold port 9823.
+- Test-harness note: my PowerShell `Set-Content` copy of the sidecar b64 was subtly re-encoded and Go's base64 decoder rejected it silently; the browser JSON path is unaffected. The known-good `~/sp1-proofs` copy verified as `RISC-V_NATIVE_DAEMON` in 1s.
+

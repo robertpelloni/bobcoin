@@ -617,10 +617,11 @@ func sp1VerifierCommand(proofPath, elfPath string) *exec.Cmd {
 }
 
 // verifyViaDaemon asks the long-lived SP1 verifier daemon (cached setup;
-// see proof-of-play/verifier --serve) to verify a proof file. Returns
-// (attempted, valid). The daemon speaks a one-line TCP protocol and reads
-// the proof from the filesystem, so on Windows the path is WSL-translated.
-func verifyViaDaemon(proofPath string) (bool, bool) {
+// see proof-of-play/verifier --serve) to verify serialized proof bytes.
+// Returns (attempted, valid). Protocol: "<len>\n<raw bytes>" -> "VALID" /
+// "INVALID ...". Bytes are sent (not a file path) because SP1 verification
+// over the Windows 9p mount takes minutes vs ~1s on WSL-native storage.
+func verifyViaDaemon(proofBytes []byte) (bool, bool) {
 	addr := os.Getenv("SP1_VERIFIER_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:9823"
@@ -631,13 +632,10 @@ func verifyViaDaemon(proofPath string) (bool, bool) {
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(15 * time.Minute))
-	sendPath := proofPath
-	if runtime.GOOS == "windows" {
-		if converted := windowsPathToWSL(proofPath); converted != "" {
-			sendPath = converted
-		}
+	if _, err := fmt.Fprintf(conn, "%d\n", len(proofBytes)); err != nil {
+		return true, false
 	}
-	if _, err := fmt.Fprintf(conn, "%s\n", sendPath); err != nil {
+	if _, err := conn.Write(proofBytes); err != nil {
 		return true, false
 	}
 	reply, err := bufio.NewReader(conn).ReadString('\n')
@@ -670,7 +668,7 @@ func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, pr
 			if os.WriteFile(proofPath, raw, 0644) == nil {
 				defer os.Remove(proofPath)
 				elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
-				if attempted, valid := verifyViaDaemon(proofPath); attempted {
+				if attempted, valid := verifyViaDaemon(raw); attempted {
 					log.Printf("[ZK Service] Verifier daemon verdict: valid=%v", valid)
 					if valid {
 						return true, map[string]interface{}{"mode": "RISC-V_NATIVE_DAEMON", "confidenceScore": 1.0}

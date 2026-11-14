@@ -33,7 +33,7 @@
 - [x] **Single-Page Console Complete:** Dashboard now embeds all 17 routes (added Wallet/Vault/Gallery + Governance tabs; DeFi/Storage/Network tabs embed their subpages). Enforced by `testing/dashboard_coverage.py`.
 - [x] **Tooltip Gate:** ~62 buttons gained descriptive `title=` tooltips; coverage gate fails on regressions.
 - [x] **Windows Runtime:** `start.ps1`/`stop.ps1` (BelowNormal, `logs/`, `.services.pids`); tray fixed for Windows (no `DISPLAY`/`lsof`/`pkill` dependency).
-- [ ] **Native Rust SP1 Verification:** `cargo`/`rustc` 1.99.1 are present but the SP1 `cargo-prove` toolchain (`sp1up`) is not installed; installing it is the remaining step for non-simulated proving (see ROADMAP Phase V).
+- [x] **Native Rust SP1 Verification:** SP1 v6 toolchain installed in WSL2 (`scripts/wsl-sp1-setup.sh`); program migrated sp1-zkvm 1.0.0 → 6.0.0 and `cargo prove build` succeeds (v8.117.2). Host verifier crate `proof-of-play/verifier` + Go bridge WSL wiring landed in v8.117.3; remaining: a real sp1-sdk prover producing `proofBytesB64` submissions (browser proofs are still simulated JSON audited by the AI Oracle).
 - [x] **Frontend version sync:** `frontend/package.json` aligned to `VERSION.md` (v8.117.1).
 - [x] **Retire root log files:** stale root logs archived to `logs/archive/` (v8.117.1).
 - [x] **SPoRA decimal/hex mismatch:** Go supertorrent `/spora` echoed decimal challenges re-parsed as hex; fixed + regression test (v8.117.1).

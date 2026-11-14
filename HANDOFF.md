@@ -126,3 +126,10 @@
 - **CI fixed**: `zk-pipeline.yml` called `cargo prove build` without installing SP1; now runs `sp1up` first.
 - **Next**: wire the Windows Go game-server ZK bridge through WSL (`wsl -d Ubuntu -- cargo-prove verify ...`) or run proving as a WSL sidecar; until then Windows verification remains the AI Oracle simulation by design. Also regenerate the browser WASM client (`wasm-pack`) against SP1 6 if the in-browser prover is revived.
 
+
+## Session 2026-11-14 (continuation, v8.117.3)
+- **ZK bridge live via WSL**: `proof-of-play/verifier` (sp1-sdk 6, blocking API + `blocking` feature) built in WSL-native storage (`~/bobcoin-verifier-build`; /mnt/c builds are ~10x slower and detached WSL builds die with the client — build in the foreground or native fs). Binary at `proof-of-play/verifier/target/release/proof-of-play-verifier` (61MB). Negative test: garbage proof -> `PROOF INVALID`, exit 1.
+- **Go bridge**: `sp1VerifierCommand` prefers native verifier, falls back to `wsl -d Ubuntu` with `windowsPathToWSL` conversion (unit test `TestWindowsPathToWSL`). Live test: submission with `proofBytesB64` invoked the WSL verifier from the Windows Go server (log: `Verifier detected (wsl.exe)`), rejected garbage, fell back to AI Oracle. Verifier startup is slow (~90s, proving-key setup per invocation) — cache the vk/setup if proving latency matters.
+- **SP1 v6 API notes**: `cargo prove` has no `verify`; `ProverClient::from_env()` is async in the default API — use `sp1_sdk::blocking` (feature `blocking`) with `client.setup(Elf::from(bytes))` + `verify(&proof, pk.verifying_key(), None)`. `protoc` must exist for sp1-prover-types (bootstrapped to `~/.local/protoc` by `scripts/wsl-sp1-verifier.sh`).
+- **Next**: a real sp1-sdk prover emitting `proofBytesB64` (e.g. a WSL sidecar proving service) so browser plays can be proven for real; the frontend still submits simulated proofs audited statistically.
+

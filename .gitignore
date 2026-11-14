@@ -17,3 +17,5 @@ logs/
 bin/
 
 .sp1-daemon.pid
+
+.sp1-prover.pid

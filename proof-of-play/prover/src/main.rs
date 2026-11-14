@@ -202,10 +202,18 @@ fn run() -> Result<(), String> {
 
     // Compressed proofs verify far faster than core proofs (the daemon
     // spent minutes verifying a core proof); proving takes longer but
-    // happens once, on the prover side.
+    // happens once, on the prover side. --mode core|compressed|groth16
+    // overrides (Groth16 = smallest proofs, slowest proving; evaluated
+    // in v8.117.12, compressed remains the default).
+    let mode = match arg_value(&args, "--mode").as_deref() {
+        None | Some("compressed") => SP1ProofMode::Compressed,
+        Some("core") => SP1ProofMode::Core,
+        Some("groth16") => SP1ProofMode::Groth16,
+        Some(other) => return Err(format!("unknown --mode {other} (core|compressed|groth16)")),
+    };
     let proof = client
         .prove(&pk, stdin)
-        .mode(SP1ProofMode::Compressed)
+        .mode(mode)
         .run()
         .map_err(|e| format!("proving failed: {e}"))?;
 

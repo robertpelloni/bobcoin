@@ -12,12 +12,20 @@ window.Buffer = Buffer;
 window.process = { env: {} };
 
 function Root() {
-    const [booting, setBooting] = useState(true);
+    // If running in automated tests or already booted, skip splash screen
+    const [booting, setBooting] = useState(() => {
+        return !sessionStorage.getItem('lattice_booted') && !window.navigator.webdriver;
+    });
+
+    const handleComplete = () => {
+        sessionStorage.setItem('lattice_booted', 'true');
+        setBooting(false);
+    };
 
     return (
         <ErrorBoundary>
             {booting ? (
-                <SplashScreen onComplete={() => setBooting(false)} />
+                <SplashScreen onComplete={handleComplete} />
             ) : (
                 <App />
             )}

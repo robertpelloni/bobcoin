@@ -8,7 +8,7 @@ export function Marketplace() {
                 <div className="market-item">
                     <h3>CYBER THEME</h3>
                     <p>Unlock new UI colors</p>
-                    <button className="cyber-button">BUY (50 BOB)</button>
+                    <button className="cyber-button" title="Buy this storage listing for 50 BOB">BUY (50 BOB)</button>
                 </div>
             </div>
         </div>

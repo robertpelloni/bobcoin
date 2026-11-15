@@ -301,7 +301,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
             />
             <div className="matchmaking-panel" style={{position: 'absolute', top: '-60px', left: 0, width: '100%', display: 'flex', justifyContent: 'space-between', color: '#0ff', fontFamily: 'monospace', zIndex: 10}}>
                 {matchStatus !== 'IN_GAME' ? (
-                    <button className="cyber-button small" onClick={initMatchmaking} disabled={matchStatus === 'SEARCHING' || matchStatus === 'CONNECTING'}>
+                    <button className="cyber-button small" title="Find a peer-to-peer rhythm match over WebRTC signaling" onClick={initMatchmaking} disabled={matchStatus === 'SEARCHING' || matchStatus === 'CONNECTING'}>
                         {matchStatus === 'DISCONNECTED' ? 'FIND MATCH (P2P)' : matchStatus === 'SEARCHING' ? 'SEARCHING FOR PEER...' : 'CONNECTING...'}
                     </button>
                 ) : (
@@ -343,7 +343,7 @@ export function RhythmGame({ onScoreUpdate, onLogEvent }) {
                 <div className="game-overlay">
                     <h2>PROOF OF PLAY</h2>
                     <p>Press D, F, J, K to match notes.</p>
-                    <button className="cyber-button" onClick={() => setIsPlaying(true)}>
+                    <button className="cyber-button" title="Start the rhythm game and begin earning Proof-of-Play score" onClick={() => setIsPlaying(true)}>
                         START MINING
                     </button>
                 </div>

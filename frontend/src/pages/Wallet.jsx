@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getTransactions, getLatticePending, getLatticeFrontier, submitLatticeBlock, getSporaProof, LATTICE_URL, getLatticeChain } from '../api';
-import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair } from '../cryptoUtils';
+import { generateKeypair, encryptMemo, decryptMemo, deriveKeypair, generateStealthAddress } from '../cryptoUtils';
 import { checkAndUnlock } from '../AchievementService';
 import { Block } from '../Block';
 import { SignConfirmModal } from '../components/SignConfirmModal';
@@ -12,6 +12,24 @@ export function Wallet() {
     const [balance, setBalance] = useState(0.00);
     const [history, setHistory] = useState([]);
     const [showKeys, setShowKeys] = useState(false);
+    const [stealthInfo, setStealthInfo] = useState(null);
+    const [keypair, setKeypair] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [typedEntropy, setTypedEntropy] = useState('');
+    const entropyRef = useRef('');
+    const [accountIndex, setAccountIndex] = useState(0);
+    const [activeAccounts, setActiveAccounts] = useState([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [pending, setPending] = useState([]);
+    const [showBackup, setShowBackup] = useState(false);
+    const [showContacts, setShowContacts] = useState(false);
+    const [contacts, setContacts] = useState({});
+    const [contactName, setContactName] = useState('');
+    const [contactAddr, setContactAddr] = useState('');
+    const [importSeed, setImportSeed] = useState('');
+    const [pendingBlock, setPendingBlock] = useState(null);
+    const [onGuardianConfirm, setOnGuardianConfirm] = useState(() => null);
+
     // Vault Lockdown State
     const [isLocked, setIsLocked] = useState(false);
     const [password, setPassword] = useState('');
@@ -84,6 +102,11 @@ export function Wallet() {
 
     useEffect(() => {
         fetchState();
+        if (keypair && keypair.publicKey && keypair.boxPublicKey) {
+            generateStealthAddress(keypair.publicKey, keypair.boxPublicKey).then(info => {
+                setStealthInfo(info);
+            });
+        }
         const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
     }, [keypair]);
@@ -163,8 +186,8 @@ export function Wallet() {
                 account: keypair.publicKey,
                 previous: previousHash,
                 balance: newBalance,
-                staked_balance: frontierData.staked_balance || 0,
-                height: frontierData.frontier ? (frontierData.height + 1) : 0,
+                staked_balance: frontRes.staked_balance || 0,
+                height: frontRes.frontier ? (frontRes.height + 1) : 0,
                 link: pend.hash, // Link is the send block hash we are claiming
                 spora: sporaProof
             });
@@ -346,7 +369,7 @@ export function Wallet() {
                             style={{width: '100%', marginBottom: '1rem'}}
                             onChange={e => setPassword(e.target.value)} 
                         />
-                        <button className="cyber-button" onClick={async () => {
+                        <button className="cyber-button" title="Generate a new keypair and initialize your encrypted vault" onClick={async () => {
                             const kp = await generateKeypair();
                             handleOnboardingComplete(kp, password);
                         }}>INITIALIZE ENCRYPTED VAULT</button>
@@ -371,7 +394,7 @@ export function Wallet() {
                     placeholder="Password..."
                     autoFocus
                 />
-                <button className="cyber-button large" style={{marginTop: '2rem'}} onClick={handleUnlock}>UNLOCK VAULT</button>
+                <button className="cyber-button large" title="Unlock your encrypted wallet vault with your password" style={{marginTop: '2rem'}} onClick={handleUnlock}>UNLOCK VAULT</button>
             </div>
         );
     }
@@ -405,7 +428,7 @@ export function Wallet() {
                 <div className="account-switcher" style={{marginTop: '1.5rem', borderTop: '1px solid #222', paddingTop: '1rem', textAlign: 'left'}}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                         <label style={{fontSize: '0.7rem', color: '#666', letterSpacing: '1px'}}>SUB-ACCOUNT PORTFOLIO (BIP-44)</label>
-                        <button className="cyber-button small" onClick={scanForAccounts} disabled={isScanning} style={{fontSize: '0.6rem'}}>
+                        <button className="cyber-button small" title="Rescan derived sub-accounts and refresh the portfolio list" onClick={scanForAccounts} disabled={isScanning} style={{fontSize: '0.6rem'}}>
                             {isScanning ? 'SCANNING...' : 'REFRESH LIST'}
                         </button>
                     </div>
@@ -429,7 +452,7 @@ export function Wallet() {
                                 }}
                             >
                                 <div style={{display: 'flex', flexDirection: 'column'}}>
-                                    <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{acc.address.slice(0,8)}...</span></span>
+                                    <span>ACCOUNT #{acc.index} <span style={{color: '#444', marginLeft: '0.5rem'}}>{(acc.address || 'unknown').slice(0,8)}...</span></span>
                                     <div style={{display: 'flex', gap: '8px', marginTop: '4px'}}>
                                         {acc.staked > 0 && <span title="Staking Active" style={{fontSize: '0.6rem', color: '#0f0'}}>🥩 {acc.staked.toFixed(1)}</span>}
                                         {acc.nftCount > 0 && <span title="Artifacts Collected" style={{fontSize: '0.6rem', color: '#f0f'}}>🖼️ {acc.nftCount}</span>}
@@ -448,6 +471,7 @@ export function Wallet() {
                                 key={idx} 
                                 className={`cyber-button small ${accountIndex === idx ? 'active' : 'secondary'}`}
                                 onClick={() => handleSwitchAccount(idx)}
+                                title={`Switch to derived sub-account #${idx}`}
                                 style={{fontSize: '0.6rem', minWidth: '30px', padding: '0.2rem'}}
                             >
                                 #{idx}
@@ -470,10 +494,14 @@ export function Wallet() {
                     {privacyMode && (
                         <div className="stealth-address-box">
                             <label>ONE-TIME STEALTH ADDRESS (GENERATED)</label>
-                            <code className="stealth">stealth:9z8y7x6w...1c4d</code>
+                            <code className="stealth">{stealthInfo ? stealthInfo.stealthAddress : 'GENERATING STEALTH DESTINATION...'}</code>
                             <div className="description" style={{fontSize: '0.8rem', color: '#ff00ff'}}>
-                                Generated via Diffie-Hellman Key Exchange using the sender's ephemeral key and your view key.
-                                Only you can link this address to your wallet.
+                                Generated via Dual-Key Stealth Address Protocol (DKSAP) using ephemeral Diffie-Hellman exchange and your view key.
+                                {stealthInfo && (
+                                    <div style={{marginTop: '0.25rem', fontFamily: 'monospace', fontSize: '0.65rem', color: '#888'}}>
+                                        EPHEMERAL PUBKEY: {(stealthInfo.ephemeralPublicKey || 'unknown').slice(0, 16)}...
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -496,10 +524,10 @@ export function Wallet() {
                             <div key={p.hash} style={{background: '#000', padding: '1rem', border: '1px solid #333', marginBottom: '0.5rem'}}>
                                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                     <div>
-                                        <span style={{color: '#0f0', fontWeight: 'bold'}}>{p.amount.toFixed(2)} BOB</span>
-                                        <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {p.sender.slice(0, 8)}...</span>
+                                        <span style={{color: '#0f0', fontWeight: 'bold'}}>{(p.amount ?? p.payload?.amount ?? 0).toFixed(2)} BOB</span>
+                                        <span style={{color: '#888', fontSize: '0.8rem', marginLeft: '1rem'}}>From: {(p.sender || p.account || 'unknown').slice(0, 8)}...</span>
                                     </div>
-                                    <button className="cyber-button small" onClick={() => claimPending(p)}>CLAIM</button>
+                                    <button className="cyber-button small" title="Claim this pending incoming transfer" onClick={() => claimPending(p)}>CLAIM</button>
                                 </div>
                                 {decryptedMemo && (
                                     <div style={{marginTop: '0.5rem', fontSize: '0.8rem', color: '#ff00ff', borderTop: '1px dashed #333', paddingTop: '0.5rem'}}>
@@ -563,7 +591,7 @@ export function Wallet() {
                                 title="A private memo that only the recipient can decrypt."
                             />
                         </div>
-                        <button type="submit" className="cyber-button" disabled={isSending} style={{marginTop: '1rem', width: '100%', color: '#0f0', borderColor: '#0f0'}}>
+                            <button type="submit" className="cyber-button" disabled={isSending} style={{marginTop: '1rem', width: '100%', color: '#0f0', borderColor: '#0f0'}} title="Initiate a secure, encrypted token transfer across the network.">
                             {isSending ? 'PROCESSING...' : 'INITIATE TRANSFER'}
                         </button>
                     </form>
@@ -612,7 +640,7 @@ export function Wallet() {
                             <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
                                 <input className="cyber-input" style={{flex: 1}} placeholder="Name..." value={contactName} onChange={e => setContactName(e.target.value)} />
                                 <input className="cyber-input" style={{flex: 2}} placeholder="Public Key..." value={contactAddr} onChange={e => setContactAddr(e.target.value)} />
-                                <button className="cyber-button small" onClick={handleAddContact}>ADD</button>
+                                <button className="cyber-button small" title="Save this contact to your address book" onClick={handleAddContact}>ADD</button>
                             </div>
                             <div className="contact-list" style={{maxHeight: '200px', overflowY: 'auto'}}>
                                 {Object.entries(contacts).map(([addr, name]) => (
@@ -622,8 +650,8 @@ export function Wallet() {
                                             <div style={{color: '#444', fontSize: '0.7rem', fontFamily: 'monospace'}}>{addr.slice(0, 16)}...</div>
                                         </div>
                                         <div style={{display: 'flex', gap: '0.5rem'}}>
-                                            <button className="cyber-button small" onClick={() => setSendAddress(addr)}>USE</button>
-                                            <button className="cyber-button small secondary" onClick={() => handleDeleteContact(addr)}>DEL</button>
+                                            <button className="cyber-button small" title="Use this contact as the send recipient" onClick={() => setSendAddress(addr)}>USE</button>
+                                            <button className="cyber-button small secondary" title="Delete this contact from your address book" onClick={() => handleDeleteContact(addr)}>DEL</button>
                                         </div>
                                     </div>
                                 ))}
@@ -649,7 +677,7 @@ export function Wallet() {
                                     onChange={e => setImportSeed(e.target.value)}
                                     style={{marginBottom: '1rem', width: '100%'}}
                                 />
-                                <button className="cyber-button small" onClick={handleRestore}>RESTORE WALLET</button>
+                                <button className="cyber-button small" onClick={handleRestore} title="Recover your entire wallet from the provided mnemonic seed phrase.">RESTORE WALLET</button>
                             </div>
                         </div>
                     )}
@@ -726,6 +754,7 @@ export function Wallet() {
                                         className="cyber-button"
                                         style={{fontSize: '0.7rem', padding: '0.2rem 0.5rem'}}
                                         onClick={() => toggleDecode(tx.id)}
+                                        title="Decode or hide this transaction's encrypted memo"
                                     >
                                         {tx.decoded ? 'HIDE' : 'DECODE'}
                                     </button>

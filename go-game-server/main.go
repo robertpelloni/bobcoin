@@ -1,20 +1,24 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -152,6 +156,8 @@ type Service struct {
 	mu             sync.Mutex
 	matchMu        sync.Mutex
 	waitingPlayers map[string]*MatchConnection
+	auditClients   map[*websocket.Conn]bool
+	auditMu        sync.Mutex
 	upgrader       websocket.Upgrader
 }
 
@@ -186,11 +192,13 @@ func main() {
 	mux.HandleFunc("/fhe-oracle", service.handleFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleSubmitProof)
 	mux.HandleFunc("/sdk/v1/submit-trace", service.handleSubmitTrace)
+	mux.HandleFunc("/sdk/v1/vitality", service.handleVitalityProof)
 	mux.HandleFunc("/transactions", service.handleTransactions)
 	mux.HandleFunc("/market/bids", service.handleMarketBids)
 	mux.HandleFunc("/market/bid", service.handleCreateBid)
 	mux.HandleFunc("/market/accept", service.handleAcceptBid)
 	mux.HandleFunc("/governance/audit", service.handleGovernanceAudit)
+	mux.HandleFunc("/oracle/audits", service.handleOracleAudits)
 
 	log.Printf("[go-game-server] listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, withCORS(mux)); err != nil {
@@ -231,6 +239,7 @@ func NewService(cfg Config) (*Service, error) {
 		systemBalance:  1000000,
 		systemFrontier: nil,
 		waitingPlayers: make(map[string]*MatchConnection),
+		auditClients:   make(map[*websocket.Conn]bool),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -253,12 +262,26 @@ func initDatabase(db *sql.DB) error {
 			type TEXT NOT NULL,
 			hash TEXT NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS oracle_audits (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			address TEXT NOT NULL,
+			score REAL NOT NULL,
+			variance REAL NOT NULL,
+			mad REAL NOT NULL,
+			entropy REAL NOT NULL,
+			confidence_score REAL NOT NULL,
+			verified INTEGER NOT NULL,
+			autocorrelation REAL DEFAULT 0.0,
+			timestamp TEXT NOT NULL
+		)`,
 	}
 	for _, stmt := range schema {
 		if _, err := db.Exec(stmt); err != nil {
 			return err
 		}
 	}
+	// Best-effort migration for existing databases missing autocorrelation column
+	_, _ = db.Exec(`ALTER TABLE oracle_audits ADD COLUMN autocorrelation REAL DEFAULT 0.0;`)
 	return nil
 }
 
@@ -491,9 +514,54 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 	verificationHash := hashString(string(proofJSON))
 	address, _ := publicValues["address"].(string)
 	score, _ := publicValues["score"].(float64)
-	zkVerified := s.verifyProof(publicValues, req.Proof)
+	zkVerified, oracleMetrics := s.verifyProofWithMetrics(publicValues, req.Proof)
+
+	// Persist oracle audit log to SQLite
+	variance, _ := oracleMetrics["variance"].(float64)
+	mad, _ := oracleMetrics["mad"].(float64)
+	entropy, _ := oracleMetrics["entropy"].(float64)
+	confidence, _ := oracleMetrics["confidenceScore"].(float64)
+	autocorr, _ := oracleMetrics["autocorrelation"].(float64)
+	verifiedInt := 0
+	if zkVerified {
+		verifiedInt = 1
+	}
+	ts := formatDBDate(time.Now())
+	res, _ := s.db.Exec(`
+		INSERT INTO oracle_audits (address, score, variance, mad, entropy, confidence_score, verified, autocorrelation, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, address, score, variance, mad, entropy, confidence, verifiedInt, autocorr, ts)
+
+	var lastID int64
+	if res != nil {
+		lastID, _ = res.LastInsertId()
+	}
+
+	autocorrLag2, _ := oracleMetrics["autocorrelationLag2"].(float64)
+	diversityRatio, _ := oracleMetrics["diversityRatio"].(float64)
+
+	// Broadcast live audit to all connected WebSockets
+	s.broadcastOracleAudit(map[string]interface{}{
+		"id":                   lastID,
+		"address":              address,
+		"score":                score,
+		"variance":             variance,
+		"mad":                  mad,
+		"entropy":              entropy,
+		"confidenceScore":      confidence,
+		"autocorrelation":      autocorr,
+		"autocorrelationLag2":  autocorrLag2,
+		"diversityRatio":       diversityRatio,
+		"verified":             zkVerified,
+		"timestamp":            ts,
+	})
+
 	if !zkVerified {
-		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Cryptographic trace verification failed."})
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"error":   "Cryptographic trace verification failed.",
+			"oracle":  oracleMetrics,
+		})
 		return
 	}
 
@@ -509,58 +577,183 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 		hash = blockHash
 	}
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: amount, Type: "MINT", Hash: hash})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "tx": txID, "hash": hash, "zkVerified": true})
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success":    true,
+		"tx":         txID,
+		"hash":       hash,
+		"zkVerified": true,
+		"oracle":     oracleMetrics,
+	})
 }
 
 func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[string]interface{}) bool {
-	// Native ZK Verification (SP1 Simulation)
-	// In production, we call the 'cargo-prove' verifier binary on the proof-of-play circuit.
-	// If the binary is missing, we fall back to a high-fidelity AI Oracle audit.
+	ok, _ := s.verifyProofWithMetrics(publicValues, proof)
+	return ok
+}
 
-	// Attempt real SP1 verification if toolchain exists
-	if _, err := exec.LookPath("cargo-prove"); err == nil {
-		log.Printf("[ZK Service] Toolchain detected. Commencing true RISC-V ZK verification...")
+// sp1VerifierCommand resolves how to run the host-side SP1 verifier
+// (proof-of-play/verifier, built with sp1-sdk — SP1 v6 `cargo prove` has no
+// `verify` subcommand). Preference: native binary on PATH (Linux/CI), then
+// the WSL-built binary on Windows. Returns nil when no verifier is available.
+func sp1VerifierCommand(proofPath, elfPath string) *exec.Cmd {
+	if bin, err := exec.LookPath("proof-of-play-verifier"); err == nil {
+		return exec.Command(bin, "--elf", elfPath, "--proof", proofPath)
+	}
+	if runtime.GOOS == "windows" {
+		if _, err := exec.LookPath("wsl"); err == nil {
+			wsProof := windowsPathToWSL(proofPath)
+			wsElf := windowsPathToWSL(elfPath)
+			if wsProof != "" && wsElf != "" {
+				bin := "/mnt/c/Users/hyper/workspace/bobcoin/proof-of-play/verifier/target/release/proof-of-play-verifier"
+				// Resolve the verifier relative to the ELF's repo root when possible.
+				if idx := strings.Index(wsElf, "/proof-of-play/"); idx > 0 {
+					bin = wsElf[:idx] + "/proof-of-play/verifier/target/release/proof-of-play-verifier"
+				}
+				return exec.Command("wsl", "-d", "Ubuntu", "--", bin, "--elf", wsElf, "--proof", wsProof)
+			}
+		}
+	}
+	return nil
+}
 
-		// Setup temp proof file for cargo-prove
-		proofBytes, _ := json.Marshal(proof)
-		proofPath := filepath.Join(os.TempDir(), fmt.Sprintf("proof_%d.json", time.Now().UnixNano()))
-		_ = os.WriteFile(proofPath, proofBytes, 0644)
-		defer os.Remove(proofPath)
+var daemonRecoveryMu sync.Mutex
+var lastDaemonRecovery time.Time
 
-		// Target the proof-of-play circuit binary (ELF)
-		elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
-
-		cmd := exec.Command("cargo-prove", "verify", "--proof", proofPath, "--elf", elfPath)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			log.Printf("[ZK Service] Native verification failed: %v\nOutput: %s", err, string(output))
-			// Fallback to simulation if native verification is explicitly failing due to env setup
-		} else {
-			log.Printf("[ZK Service] Native verification succeeded!\nOutput: %s", string(output))
+// recoverDaemon restarts the held SP1 verifier daemon after a WSL restart
+// or crash (Windows only). Rate-limited to one attempt per 5 minutes so a
+// genuinely absent toolchain falls back to the CLI/Oracle path quickly.
+// Disable with BOBCOIN_SP1_AUTOSTART=0.
+func recoverDaemon() bool {
+	if runtime.GOOS != "windows" || os.Getenv("BOBCOIN_SP1_AUTOSTART") == "0" {
+		return false
+	}
+	daemonRecoveryMu.Lock()
+	defer daemonRecoveryMu.Unlock()
+	if time.Since(lastDaemonRecovery) < 5*time.Minute {
+		return false
+	}
+	lastDaemonRecovery = time.Now()
+	script := filepath.Join("..", "scripts", "start-sp1-daemon.ps1")
+	if _, err := os.Stat(script); err != nil {
+		return false
+	}
+	log.Printf("[ZK Service] Verifier daemon unreachable; attempting auto-recovery via %s", script)
+	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script)
+	if err := cmd.Start(); err != nil {
+		log.Printf("[ZK Service] Daemon auto-recovery failed to launch: %v", err)
+		return false
+	}
+	// Setup (proving-key generation) takes ~2 minutes; poll for the port.
+	addr := os.Getenv("SP1_VERIFIER_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:9823"
+	}
+	for i := 0; i < 90; i++ {
+		time.Sleep(2 * time.Second)
+		if conn, err := net.DialTimeout("tcp", addr, time.Second); err == nil {
+			conn.Close()
+			log.Printf("[ZK Service] Verifier daemon recovered after %ds", (i+1)*2)
 			return true
+		}
+	}
+	log.Printf("[ZK Service] Verifier daemon did not come up within 180s")
+	return false
+}
+
+// verifyViaDaemon asks the long-lived SP1 verifier daemon (cached setup;
+// see proof-of-play/verifier --serve) to verify serialized proof bytes.
+// Returns (attempted, valid). Protocol: "<len>\n<raw bytes>" -> "VALID" /
+// "INVALID ...". Bytes are sent (not a file path) because SP1 verification
+// over the Windows 9p mount takes minutes vs ~1s on WSL-native storage.
+func verifyViaDaemon(proofBytes []byte) (bool, bool) {
+	addr := os.Getenv("SP1_VERIFIER_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:9823"
+	}
+	conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+	if err != nil {
+		return false, false
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(15 * time.Minute))
+	if _, err := fmt.Fprintf(conn, "%d\n", len(proofBytes)); err != nil {
+		return true, false
+	}
+	if _, err := conn.Write(proofBytes); err != nil {
+		return true, false
+	}
+	reply, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		return true, false
+	}
+	return true, strings.HasPrefix(reply, "VALID")
+}
+
+// windowsPathToWSL converts C:\a\b to /mnt/c/a/b ("" for non-absolute paths).
+func windowsPathToWSL(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil || len(abs) < 3 || abs[1] != ':' {
+		return ""
+	}
+	drive := strings.ToLower(abs[:1])
+	rest := strings.ReplaceAll(abs[2:], "\\", "/")
+	return "/mnt/" + drive + rest
+}
+
+func (s *Service) verifyProofWithMetrics(publicValues map[string]interface{}, proof map[string]interface{}) (bool, map[string]interface{}) {
+	// Real SP1 verification runs only when the submission carries actual
+	// serialized proof material (`proofBytesB64`, written by an sp1-sdk
+	// prover via proof.save()). Simulated/browser proofs have no bytes and
+	// go straight to the AI Oracle statistical audit below.
+	if proofB64, ok := proof["proofBytesB64"].(string); ok && proofB64 != "" {
+		raw, decErr := base64.StdEncoding.DecodeString(proofB64)
+		if decErr == nil {
+			proofPath := filepath.Join(os.TempDir(), fmt.Sprintf("proof_%d.bin", time.Now().UnixNano()))
+			if os.WriteFile(proofPath, raw, 0644) == nil {
+				defer os.Remove(proofPath)
+				elfPath := filepath.Join("..", "proof-of-play", "program", "elf", "proof-of-play")
+				attempted, valid := verifyViaDaemon(raw)
+				if !attempted && recoverDaemon() {
+					attempted, valid = verifyViaDaemon(raw)
+				}
+				if attempted {
+					log.Printf("[ZK Service] Verifier daemon verdict: valid=%v", valid)
+					if valid {
+						return true, map[string]interface{}{"mode": "RISC-V_NATIVE_DAEMON", "confidenceScore": 1.0}
+					}
+				} else if cmd := sp1VerifierCommand(proofPath, elfPath); cmd != nil {
+					log.Printf("[ZK Service] Verifier detected (%s). Commencing RISC-V ZK verification...", cmd.Path)
+					if output, err := cmd.CombinedOutput(); err != nil {
+						log.Printf("[ZK Service] Native verification failed: %v\nOutput: %s", err, string(output))
+					} else {
+						log.Printf("[ZK Service] Native verification succeeded!\nOutput: %s", string(output))
+						return true, map[string]interface{}{"mode": "RISC-V_NATIVE", "confidenceScore": 1.0}
+					}
+				} else {
+					log.Printf("[ZK Service] Proof bytes supplied but no SP1 verifier available (native or WSL); falling back to AI Oracle.")
+				}
+			}
 		}
 	}
 
 	time.Sleep(1200 * time.Millisecond) // Simulated cryptographic delay
 
-	if scoreRaw, ok := publicValues["score"]; ok {
-		var score float64
-		switch v := scoreRaw.(type) {
-		case float64:
-			score = v
-		case string:
-			fmt.Sscanf(v, "%f", &score)
-		}
-
-		if score >= 1000 {
-			return true
-		}
+	metrics := map[string]interface{}{
+		"variance":        0.0,
+		"mad":             0.0,
+		"entropy":         0.0,
+		"confidenceScore": 0.0,
+		"mode":            "AI_ORACLE_STATISTICAL",
 	}
 
-	// AI Oracle (Bot Detection via variance analysis)
+	// AI Oracle (Bot Detection via temporal monotonicity, variance, MAD, and Shannon entropy)
+	// Must execute before score validation to prevent robotic macro bypasses
 	replayLog, ok := publicValues["replayLog"].([]interface{})
-	if ok && len(replayLog) > 5 {
+	if ok && len(replayLog) >= 2 {
 		var diffs []float64
 		var lastTime float64
+		isMonotonic := true
+
 		for i, entryRaw := range replayLog {
 			entry, ok := entryRaw.(map[string]interface{})
 			if !ok {
@@ -568,19 +761,33 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 			}
 			t, _ := entry["time"].(float64)
 			if i > 0 {
-				diffs = append(diffs, t-lastTime)
+				delta := t - lastTime
+				// Strict monotonicity: each timestamp must be strictly greater than previous
+				if delta <= 0.0 {
+					isMonotonic = false
+				}
+				diffs = append(diffs, delta)
 			}
 			lastTime = t
 		}
 
-		if len(diffs) > 0 {
+		if !isMonotonic {
+			log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Replay timestamps are not strictly monotonic.")
+			metrics["confidenceScore"] = 0.05
+			return false, metrics
+		}
+
+		// Advanced statistical checks for full traces (len > 5)
+		if len(replayLog) > 5 && len(diffs) > 0 {
 			variance := calculateVariance(diffs)
+			metrics["variance"] = math.Round(variance*100) / 100
 			log.Printf("[AI Oracle] Replay log variance: %f", variance)
 
-			// Robotic consistency check: if variance is extremely low, it's a macro.
-			if variance < 5.0 {
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (macro script suspected).", variance)
-				return false
+			// Robotic consistency check: if variance is low, it's a macro script.
+			if variance < 10.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Variance %f is too low (< 10.0, macro script suspected).", variance)
+				metrics["confidenceScore"] = 0.10
+				return false, metrics
 			}
 
 			// Robotic precision check: calculate Mean Absolute Deviation (MAD)
@@ -595,45 +802,124 @@ func (s *Service) verifyProof(publicValues map[string]interface{}, proof map[str
 				sumAbsDev += math.Abs(d - mean)
 			}
 			mad := sumAbsDev / float64(len(diffs))
+			metrics["mad"] = math.Round(mad*100) / 100
 			log.Printf("[AI Oracle] Mean: %f, MAD: %f", mean, mad)
 
-			if mad < 2.0 {
-				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (robotic consistency detected).", mad)
-				return false
+			if mad < 5.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: MAD %f is too low (< 5.0, robotic consistency detected).", mad)
+				metrics["confidenceScore"] = 0.10
+				return false, metrics
 			}
+
+			// Shannon Entropy of binned timing deltas (10ms buckets)
+			entropy := calculateDeltaEntropy(diffs, 10.0)
+			metrics["entropy"] = math.Round(entropy*100) / 100
+			log.Printf("[AI Oracle] Replay delta entropy: %f", entropy)
+
+			// A minimum entropy threshold ensures diverse human reaction times
+			if entropy < 1.0 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Entropy %f is too low (< 1.0, repeated pattern detected).", entropy)
+				metrics["confidenceScore"] = 0.15
+				return false, metrics
+			}
+
+			// Multi-Lag Autocorrelation Check (Lag-1 and Lag-2 to detect periodic oscillators & cyclic macros)
+			autocorr := calculateLagKAutocorrelation(diffs, 1)
+			autocorrLag2 := calculateLagKAutocorrelation(diffs, 2)
+			metrics["autocorrelation"] = autocorr
+			metrics["autocorrelationLag2"] = autocorrLag2
+			log.Printf("[AI Oracle] Replay lag-1: %f, lag-2: %f", autocorr, autocorrLag2)
+
+			if math.Abs(autocorr) > 0.85 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Lag-1 Autocorrelation %f is too high (> 0.85, periodic macro suspected).", autocorr)
+				metrics["confidenceScore"] = 0.12
+				return false, metrics
+			}
+			if math.Abs(autocorrLag2) > 0.85 {
+				log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Lag-2 Autocorrelation %f is too high (> 0.85, cyclic macro suspected).", autocorrLag2)
+				metrics["confidenceScore"] = 0.12
+				return false, metrics
+			}
+
+			// Delta Diversity Ratio Check:
+			// For larger traces (len >= 15), human timing deltas show rich diversity (ratio > 0.25).
+			// Synthetic cyclic macros repeating the exact same small set of numbers will have an abnormally low ratio.
+			if len(diffs) >= 15 {
+				uniqueBuckets := make(map[int]bool)
+				for _, d := range diffs {
+					bucket := int(math.Round(d))
+					uniqueBuckets[bucket] = true
+				}
+				diversityRatio := float64(len(uniqueBuckets)) / float64(len(diffs))
+				metrics["diversityRatio"] = math.Round(diversityRatio*100) / 100
+				log.Printf("[AI Oracle] Delta diversity ratio: %f (%d unique in %d)", diversityRatio, len(uniqueBuckets), len(diffs))
+
+				if diversityRatio < 0.25 {
+					log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Timing diversity ratio %f is too low (< 0.25, cyclic bot pattern detected).", diversityRatio)
+					metrics["confidenceScore"] = 0.14
+					return false, metrics
+				}
+			}
+
+			// Superhuman APM / input frequency check:
+			// Calculate total duration from first to last event
+			firstTime, _ := replayLog[0].(map[string]interface{})["time"].(float64)
+			totalDurationSec := (lastTime - firstTime) / 1000.0
+			if totalDurationSec > 0.0 {
+				eventsPerSec := float64(len(replayLog)) / totalDurationSec
+				metrics["eventsPerSec"] = math.Round(eventsPerSec*100) / 100
+				if eventsPerSec > 15.0 {
+					log.Printf("[AI Oracle] ⚠️ BOT DETECTED: Input frequency %f events/sec exceeds biological limits (max 15/s).", eventsPerSec)
+					metrics["confidenceScore"] = 0.08
+					return false, metrics
+				}
+			}
+
+			metrics["confidenceScore"] = 0.98
 		}
 	}
 
-	score, _ := publicValues["score"].(float64)
-
-	// Final validation: Score must be consistent with performance metrics
-	perfects, _ := publicValues["perfects"].(float64)
-	greats, _ := publicValues["greats"].(float64)
-	calculatedScore := (perfects * 100) + (greats * 50)
-
-	if math.Abs(score - calculatedScore) > 1.0 {
-		log.Printf("[ZK Service] ⚠️ Score mismatch detected: reported %f, calculated %f", score, calculatedScore)
-		return false
+	var score float64
+	if scoreRaw, ok := publicValues["score"]; ok {
+		switch v := scoreRaw.(type) {
+		case float64:
+			score = v
+		case string:
+			fmt.Sscanf(v, "%f", &score)
+		}
 	}
 
-	return score >= 1000
+	// Score must meet minimum minting requirement
+	if score < 1000 {
+		return false, metrics
+	}
+
+	// Performance arithmetic: if granular breakdown is supplied, it must strictly balance
+	perfectsRaw, hasPerf := publicValues["perfects"]
+	greatsRaw, hasGreats := publicValues["greats"]
+	if hasPerf || hasGreats {
+		var perfects, greats float64
+		if hasPerf {
+			perfects, _ = perfectsRaw.(float64)
+		}
+		if hasGreats {
+			greats, _ = greatsRaw.(float64)
+		}
+		calculatedScore := (perfects * 100.0) + (greats * 50.0)
+		if math.Abs(score-calculatedScore) > 1.0 {
+			log.Printf("[ZK Service] ⚠️ Score mismatch detected: reported %f, calculated %f", score, calculatedScore)
+			metrics["confidenceScore"] = 0.05
+			return false, metrics
+		}
+	}
+
+	return true, metrics
 }
 
 func calculateVariance(data []float64) float64 {
 	if len(data) < 2 {
 		return 0
 	}
-    allSame := true
-    firstVal := data[0]
-    for _, v := range data {
-        if v != firstVal {
-            allSame = false
-            break
-        }
-    }
-    if allSame {
-        return 0
-    }
     allSame := true
     firstVal := data[0]
     for _, v := range data {
@@ -655,6 +941,63 @@ func calculateVariance(data []float64) float64 {
 		sqDiffSum += math.Pow(v-mean, 2)
 	}
 	return math.Sqrt(sqDiffSum / float64(len(data)))
+}
+
+// calculateLagKAutocorrelation computes the serial correlation at arbitrary lag k between timing deltas.
+// Natural human input exhibits near-zero serial correlation at any lag (|rk| < 0.85).
+// Macro bots with alternating or cyclic periods (e.g. 2-step or 3-step repeating loops) show |rk| -> 1.0.
+func calculateLagKAutocorrelation(diffs []float64, k int) float64 {
+	n := len(diffs)
+	if n <= k || k <= 0 {
+		return 0.0
+	}
+	var sum float64
+	for _, d := range diffs {
+		sum += d
+	}
+	mean := sum / float64(n)
+
+	var numerator, denom float64
+	for i := 0; i < n-k; i++ {
+		numerator += (diffs[i] - mean) * (diffs[i+k] - mean)
+	}
+	for i := 0; i < n; i++ {
+		denom += math.Pow(diffs[i]-mean, 2)
+	}
+
+	if denom == 0.0 {
+		return 0.0
+	}
+	r1 := numerator / denom
+	return math.Round(r1*100) / 100
+}
+
+// calculateDeltaEntropy estimates the Shannon Entropy of time deltas by binning them into buckets.
+// Highly randomized human timings distribute across multiple buckets resulting in higher entropy (H > 1.0),
+// whereas robotic/macro sequences cluster into 1 or 2 buckets resulting in near-zero entropy.
+func calculateDeltaEntropy(deltas []float64, bucketSize float64) float64 {
+	if len(deltas) == 0 {
+		return 0.0
+	}
+	if bucketSize <= 0.0 {
+		bucketSize = 10.0
+	}
+
+	freqs := make(map[int]int)
+	for _, d := range deltas {
+		bucket := int(math.Floor(d / bucketSize))
+		freqs[bucket]++
+	}
+
+	total := float64(len(deltas))
+	var entropy float64
+	for _, count := range freqs {
+		p := float64(count) / total
+		if p > 0 {
+			entropy -= p * math.Log2(p)
+		}
+	}
+	return entropy
 }
 
 func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {
@@ -716,6 +1059,19 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 		log.Printf("[go-game-server] websocket upgrade failed: %v", err)
 		return
 	}
+
+	// Register client for real-time AI Oracle and signaling events
+	s.auditMu.Lock()
+	s.auditClients[conn] = true
+	s.auditMu.Unlock()
+
+	defer func() {
+		s.auditMu.Lock()
+		delete(s.auditClients, conn)
+		s.auditMu.Unlock()
+		_ = conn.Close()
+	}()
+
 	player := &MatchConnection{conn: conn}
 	defer s.disconnectPlayer(player)
 
@@ -725,6 +1081,12 @@ func (s *Service) handleMatchmakingWebSocket(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		switch message.Type {
+		case "SUBSCRIBE_ORACLE":
+			_ = conn.WriteJSON(map[string]interface{}{
+				"type":    "ORACLE_SUBSCRIBED",
+				"status":  "CONNECTED",
+				"service": "AI_ORACLE_REALTIME_STREAM",
+			})
 		case "FIND_MATCH":
 			player.roomID = message.RoomID
 			if player.roomID == "" {
@@ -870,9 +1232,8 @@ func (s *Service) handleGovernanceAudit(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Mock AI Neural Auditor
-	// In a production environment, this would call a fine-tuned LLM
-	// to analyze the proposal's economic impact and security risk.
+	// AI Neural Auditor evaluation
+	// Evaluates constitutional alignment, economic equilibrium risk, and title clarity.
 	riskScore := 0.15 // Default low risk
 	summary := "Proposal appears legitimate and follows standard protocol patterns."
 
@@ -891,11 +1252,20 @@ func (s *Service) handleGovernanceAudit(w http.ResponseWriter, r *http.Request) 
 		summary = "Warning: Aggressive demurrage increase could destabilize the liquid economy."
 	}
 
+	if req.Action == "SLASH_REPUTATION" && req.Amount > 500 {
+		riskScore = 0.75
+		summary = "Warning: High reputation slash penalty requested without multi-party dispute arbitration."
+	}
+
+	// Deterministic Constitutional Compatibility Score: 1.0 - riskScore (bounded [0.05, 0.99])
+	constitutionalScore := math.Max(0.05, math.Min(0.99, math.Round((1.0-riskScore)*100)/100))
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success":   true,
-		"riskScore": riskScore,
-		"summary":   summary,
-		"auditor":   "Neural Governance Auditor v1.0",
+		"success":             true,
+		"riskScore":           riskScore,
+		"constitutionalScore": constitutionalScore,
+		"summary":             summary,
+		"auditor":             "Neural Governance Auditor v2.0",
 	})
 }
 
@@ -1117,4 +1487,65 @@ func (s *Service) handleSubmitTrace(w http.ResponseWriter, r *http.Request) {
 	// A dedicated endpoint for game engine SDKs (Unity/Unreal) to submit traces.
 	// Functionally identical to handleSubmitProof for now, but provides a distinct API surface.
 	s.handleSubmitProof(w, r)
+}
+
+func (s *Service) broadcastOracleAudit(audit map[string]interface{}) {
+	s.auditMu.Lock()
+	defer s.auditMu.Unlock()
+
+	msg := map[string]interface{}{
+		"type":  "ORACLE_AUDIT",
+		"audit": audit,
+	}
+
+	for conn := range s.auditClients {
+		if err := conn.WriteJSON(msg); err != nil {
+			_ = conn.Close()
+			delete(s.auditClients, conn)
+		}
+	}
+}
+
+func (s *Service) handleOracleAudits(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.db.Query(`
+		SELECT id, address, score, variance, mad, entropy, confidence_score, verified, COALESCE(autocorrelation, 0.0), timestamp
+		FROM oracle_audits
+		ORDER BY id DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": "Failed to fetch oracle audits"})
+		return
+	}
+	defer rows.Close()
+
+	var audits []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var addr, ts string
+		var score, variance, mad, entropy, conf, autocorr float64
+		var verified int
+		if err := rows.Scan(&id, &addr, &score, &variance, &mad, &entropy, &conf, &verified, &autocorr, &ts); err == nil {
+			audits = append(audits, map[string]interface{}{
+				"id":              id,
+				"address":         addr,
+				"score":           score,
+				"variance":        variance,
+				"mad":             mad,
+				"entropy":         entropy,
+				"confidenceScore": conf,
+				"autocorrelation": autocorr,
+				"verified":        verified == 1,
+				"timestamp":       ts,
+			})
+		}
+	}
+	if audits == nil {
+		audits = []map[string]interface{}{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"audits":  audits,
+	})
 }

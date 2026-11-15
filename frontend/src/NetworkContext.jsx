@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { LATTICE_URL } from './api';
+import { GO_LATTICE_URL } from './api';
 
 const NetworkContext = createContext();
 
@@ -10,7 +10,7 @@ export function NetworkProvider({ children }) {
     const [trustScores, setTrustScores] = useState({});
 
     useEffect(() => {
-        const wsUrl = LATTICE_URL.replace('http', 'ws') + '/heartbeat';
+        const wsUrl = GO_LATTICE_URL.replace('http', 'ws') + '/heartbeat';
         let ws;
 
         const connect = () => {

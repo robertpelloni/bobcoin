@@ -177,9 +177,11 @@ func main() {
 	mux.HandleFunc("/transactions", service.handleProxyTransactions)
 	mux.HandleFunc("/fhe-oracle", service.handleProxyFHEOracle)
 	mux.HandleFunc("/submit-proof", service.handleProxySubmitProof)
+	mux.HandleFunc("/sdk/v1/vitality", service.handleProxyVitality)
 	mux.HandleFunc("/market/bid", service.handleProxyMarketBid)
 	mux.HandleFunc("/market/accept", service.handleProxyMarketAccept)
 	mux.HandleFunc("/market/bids", service.handleProxyMarketBids)
+	mux.HandleFunc("/oracle/audits", service.handleProxyOracleAudits)
 	mux.HandleFunc("/add-torrent", service.handleAddTorrent)
 	mux.HandleFunc("/remove-torrent", service.handleRemoveTorrent)
 	mux.HandleFunc("/upload", service.handleUpload)
@@ -594,6 +596,11 @@ func (s *SuperTorrentService) proxyGameServerRequest(w http.ResponseWriter, r *h
 	}
 	defer resp.Body.Close()
 	for key, values := range resp.Header {
+		if strings.EqualFold(key, "Access-Control-Allow-Origin") ||
+			strings.EqualFold(key, "Access-Control-Allow-Methods") ||
+			strings.EqualFold(key, "Access-Control-Allow-Headers") {
+			continue
+		}
 		for _, value := range values {
 			w.Header().Add(key, value)
 		}
@@ -620,6 +627,9 @@ func (s *SuperTorrentService) handleProxyFHEOracle(w http.ResponseWriter, r *htt
 func (s *SuperTorrentService) handleProxySubmitProof(w http.ResponseWriter, r *http.Request) {
 	s.proxyGameServerRequest(w, r, "/submit-proof")
 }
+func (s *SuperTorrentService) handleProxyVitality(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/sdk/v1/vitality")
+}
 func (s *SuperTorrentService) handleProxyMarketBid(w http.ResponseWriter, r *http.Request) {
 	s.proxyGameServerRequest(w, r, "/market/bid")
 }
@@ -628,6 +638,9 @@ func (s *SuperTorrentService) handleProxyMarketAccept(w http.ResponseWriter, r *
 }
 func (s *SuperTorrentService) handleProxyMarketBids(w http.ResponseWriter, r *http.Request) {
 	s.proxyGameServerRequest(w, r, "/market/bids")
+}
+func (s *SuperTorrentService) handleProxyOracleAudits(w http.ResponseWriter, r *http.Request) {
+	s.proxyGameServerRequest(w, r, "/oracle/audits")
 }
 
 func (s *SuperTorrentService) simulateDownloadProgress() {
@@ -878,8 +891,17 @@ func (s *SuperTorrentService) handleSpora(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Callers send the challenge as a DECIMAL string (frontend:
+	// parseInt(prevHash.substr(0, 8), 16)). Echo that same decimal value back;
+	// re-parsing the digits as hex (atoiDefault) inflated it and made every
+	// lattice SPoRA check fail with a challenge mismatch (v8.117.1).
+	challengeNum, err := strconv.Atoi(challenge)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "challenge must be a decimal integer"})
+		return
+	}
 	chunkHash := hashString(infoHash + challenge)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "spora": map[string]interface{}{"infoHash": infoHash, "challenge": atoiDefault(challenge), "chunkHash": chunkHash}})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "spora": map[string]interface{}{"infoHash": infoHash, "challenge": challengeNum, "chunkHash": chunkHash}})
 }
 
 func saveUploadedFile(file multipart.File, header *multipart.FileHeader, uploadsDir string) (string, int64, string, error) {

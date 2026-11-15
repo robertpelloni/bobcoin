@@ -222,3 +222,73 @@ export function decryptMemo(encryptedBox, nonceBase58, senderBoxPublicKeyBase58,
         return null;
     }
 }
+
+/**
+ * Scan and verify whether an ephemeral public key corresponds to a given stealth address
+ * for the recipient holding the view secret key and spend public key.
+ */
+export async function scanStealthAddress(ephemeralPublicKeyBase58, recipientSpendKeyBase58, recipientViewSecretKeyBase58) {
+    try {
+        const ephemeralPub = bs58.decode(ephemeralPublicKeyBase58);
+        const recipientViewSec = bs58.decode(recipientViewSecretKeyBase58);
+        const recipientSpendPub = bs58.decode(recipientSpendKeyBase58);
+
+        // Recipient reconstructs shared secret: S = nacl.box.before(ephemeralPub, recipientViewSec)
+        const sharedSecret = nacl.box.before(ephemeralPub, recipientViewSec);
+        const hashBuf = await crypto.subtle.digest('SHA-256', sharedSecret);
+        const tweak = new Uint8Array(hashBuf);
+
+        // P_stealth = SHA256(recipientSpendPub || tweak)
+        const combined = new Uint8Array(recipientSpendPub.length + tweak.length);
+        combined.set(recipientSpendPub);
+        combined.set(tweak, recipientSpendPub.length);
+        const stealthBuf = await crypto.subtle.digest('SHA-256', combined);
+        const stealthPub = bs58.encode(new Uint8Array(stealthBuf));
+
+        return {
+            stealthAddress: `stealth:${stealthPub}`,
+            tweak: bs58.encode(tweak),
+            matches: (expectedStealth) => expectedStealth === `stealth:${stealthPub}`
+        };
+    } catch (e) {
+        console.error("Failed to scan stealth address:", e);
+        return null;
+    }
+}
+
+/**
+ * Generate a Cryptographic Stealth Address using Dual-Key Stealth Address Protocol (DKSAP)
+ * Combines ephemeral Diffie-Hellman exchange with spend key derivation.
+ */
+export async function generateStealthAddress(recipientSpendKeyBase58, recipientViewKeyBase58) {
+    try {
+        // Ephemeral sender keypair
+        const ephemeral = nacl.box.keyPair();
+        const recipientViewPub = bs58.decode(recipientViewKeyBase58);
+        const recipientSpendPub = bs58.decode(recipientSpendKeyBase58);
+
+        // Shared secret via Diffie-Hellman: S = nacl.box.before(recipientViewPub, ephemeral.secretKey)
+        const sharedSecret = nacl.box.before(recipientViewPub, ephemeral.secretKey);
+
+        // Hash shared secret: h = SHA256(sharedSecret)
+        const hashBuf = await crypto.subtle.digest('SHA-256', sharedSecret);
+        const tweak = new Uint8Array(hashBuf);
+
+        // Stealth destination key: P_stealth = SHA256(recipientSpendPub || tweak)
+        const combined = new Uint8Array(recipientSpendPub.length + tweak.length);
+        combined.set(recipientSpendPub);
+        combined.set(tweak, recipientSpendPub.length);
+        const stealthBuf = await crypto.subtle.digest('SHA-256', combined);
+        const stealthPub = bs58.encode(new Uint8Array(stealthBuf));
+        const ephemeralPub = bs58.encode(ephemeral.publicKey);
+
+        return {
+            stealthAddress: `stealth:${stealthPub}`,
+            ephemeralPublicKey: ephemeralPub,
+            tweak: bs58.encode(tweak)
+        };
+    } catch (e) {
+        console.error("Failed to generate stealth address:", e);
+        return null;
+    }
+}

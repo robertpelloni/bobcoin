@@ -33,3 +33,7 @@ The Bobcoin project actively maintains 1:1 mathematical parity between the legac
 
 ### Go Service Canonicalization
 The `go-game-server` and `go-supertorrent` services are now the official canonical microservices. The Node.js equivalents are officially marked for deprecation to consolidate performance under the Go stack.
+
+### Operability Principle (v8.117.0)
+The sovereign node must be operable from one page and one tray icon: the Dashboard Command Console presents every protocol feature in value order with plain-language labels and tooltips, and the system tray can start, restart, stop, and quit the whole stack. No feature is considered shipped until it is visible, labelled, and reachable there.
+

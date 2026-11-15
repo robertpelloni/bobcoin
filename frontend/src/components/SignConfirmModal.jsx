@@ -70,8 +70,8 @@ export function SignConfirmModal({ block, onConfirm, onCancel }) {
                 </div>
 
                 <div className="guardian-footer">
-                    <button className="cyber-button secondary" onClick={onCancel}>ABORT</button>
-                    <button className="cyber-button" onClick={onConfirm} disabled={loading || simulation?.status !== 'VALID'}>AUTHORIZE & SIGN</button>
+                    <button className="cyber-button secondary" title="Cancel without signing this transaction" onClick={onCancel}>ABORT</button>
+                    <button className="cyber-button" title="Sign and broadcast this transaction with your key" onClick={onConfirm} disabled={loading || simulation?.status !== 'VALID'}>AUTHORIZE & SIGN</button>
                 </div>
             </div>
         </div>

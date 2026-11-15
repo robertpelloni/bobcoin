@@ -12,19 +12,18 @@ def run():
 
         # 1. Dashboard
         try:
-            page.goto("http://localhost:5173/")
-            page.wait_for_selector(".game-container", timeout=10000)
+            page.goto("http://localhost:4173/")
+            page.wait_for_selector(".game-container", timeout=20000)
             page.screenshot(path="verification/dashboard.png")
             print("Dashboard screenshot taken.")
         except Exception as e:
             print(f"Dashboard failed: {e}")
 
+
         # 2. Supernode
         try:
-            page.goto("http://localhost:5173/supernode")
-            page.wait_for_selector(".supernode-container", timeout=10000)
-            # Wait for data to load if possible
-            time.sleep(2)
+            page.goto("http://localhost:4173/supernode")
+            page.wait_for_load_state('networkidle')
             page.screenshot(path="verification/supernode.png")
             print("Supernode screenshot taken.")
         except Exception as e:
@@ -32,8 +31,8 @@ def run():
 
         # 3. Wallet
         try:
-            page.goto("http://localhost:5173/wallet")
-            page.wait_for_selector(".wallet-container", timeout=10000)
+            page.goto("http://localhost:4173/wallet")
+            page.wait_for_load_state('networkidle')
             page.screenshot(path="verification/wallet.png")
             print("Wallet screenshot taken.")
         except Exception as e:
@@ -41,8 +40,8 @@ def run():
 
         # 4. Governance
         try:
-            page.goto("http://localhost:5173/governance")
-            page.wait_for_selector(".governance-container", timeout=10000)
+            page.goto("http://localhost:4173/governance")
+            page.wait_for_load_state('networkidle')
             page.screenshot(path="verification/governance.png")
             print("Governance screenshot taken.")
         except Exception as e:
@@ -50,8 +49,8 @@ def run():
 
         # 5. Manual
         try:
-            page.goto("http://localhost:5173/manual")
-            page.wait_for_selector(".manual-container", timeout=10000)
+            page.goto("http://localhost:4173/manual")
+            page.wait_for_load_state('networkidle')
             page.screenshot(path="verification/manual.png")
             print("Manual screenshot taken.")
         except Exception as e:

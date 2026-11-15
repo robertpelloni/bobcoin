@@ -572,6 +572,17 @@ func TestSporaEndpoint(t *testing.T) {
 	if body["success"] != true {
 		t.Fatalf("expected spora success payload, got %v", body)
 	}
+	// Regression (v8.117.1): callers send the challenge as a DECIMAL string
+	// (parseInt(prevHash[:8], 16) in the frontend). The endpoint must echo it
+	// back as the same decimal value, not re-parse the digits as hex
+	// (which turned 4102374674 into 279210051188 and failed lattice checks).
+	spora, ok := body["spora"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected spora object, got %v", body)
+	}
+	if got := spora["challenge"]; got != float64(12345) {
+		t.Fatalf("expected decimal challenge 12345 echoed back, got %v", got)
+	}
 }
 
 func TestAcceptBidOnLattice(t *testing.T) {

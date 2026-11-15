@@ -117,10 +117,10 @@ export function Governance() {
 
     const handleCreateProposal = async (e) => {
         e.preventDefault();
-        const title = prompt("Enter proposal title (costs 10 BOB):");
+        const title = prompt("Enter proposal title (costs 10 BOB):\nNote: Proposals must be formatted according to the Constitution guidelines.");
         if (!title) return;
         
-        const actionType = prompt("Action Type? (NONE, MINT_TREASURY, UPDATE_DEMURRAGE)", "NONE");
+        const actionType = prompt("Action Type?\n(NONE, MINT_TREASURY, UPDATE_DEMURRAGE, UPDATE_QUORUM_THRESHOLD, ADJUST_FEES, SLASH_REPUTATION)", "NONE");
         let actionPayload = {};
         if (actionType === 'MINT_TREASURY') {
             const target = prompt("Target Address:");
@@ -132,6 +132,31 @@ export function Governance() {
             const rate = parseFloat(prompt("New Demurrage Rate (e.g. 0.0001):"));
             if (!isNaN(rate)) {
                 actionPayload = { action: 'UPDATE_DEMURRAGE', rate };
+            }
+        } else if (actionType === 'UPDATE_QUORUM_THRESHOLD') {
+            const threshold = parseFloat(prompt("New Quorum Threshold (0-100):"));
+            if (!isNaN(threshold) && threshold > 0 && threshold <= 100) {
+                actionPayload = { action: 'UPDATE_QUORUM_THRESHOLD', threshold };
+            } else {
+                alert("Invalid threshold"); return;
+            }
+        } else if (actionType === 'ADJUST_FEES') {
+            const proposalFee = parseFloat(prompt("New Proposal Fee (Current default 10.0):"));
+            const nftMintFee = parseFloat(prompt("New NFT Mint Fee (Current default 50.0):"));
+            const storageFeeBase = parseFloat(prompt("New Storage Fee Base (Current default 1.0):"));
+            if (!isNaN(proposalFee) || !isNaN(nftMintFee) || !isNaN(storageFeeBase)) {
+                actionPayload = { action: 'ADJUST_FEES' };
+                if (!isNaN(proposalFee)) actionPayload.proposalFee = proposalFee;
+                if (!isNaN(nftMintFee)) actionPayload.nftMintFee = nftMintFee;
+                if (!isNaN(storageFeeBase)) actionPayload.storageFeeBase = storageFeeBase;
+            }
+        } else if (actionType === 'SLASH_REPUTATION') {
+            const target = prompt("Target Supernode Address:");
+            const amount = parseFloat(prompt("Amount of reputation to slash:"));
+            if (target && amount > 0) {
+                actionPayload = { action: 'SLASH_REPUTATION', target, amount };
+            } else {
+                alert("Invalid slash parameters"); return;
             }
         }
 
@@ -226,8 +251,11 @@ export function Governance() {
                         <div className="vote-bar">
                             <div className="bar-for" style={{width: `${(prop.votesFor / (prop.votesFor + prop.votesAgainst + 0.0001)) * 100}%`}}></div>
                         </div>
-                        <div className="compatibility-score" style={{color: "#0ff", fontSize: "0.8rem", marginBottom: "0.5rem"}}>
-                            <span>AI COMPATIBILITY: {(Math.random() * 100).toFixed(1)}%</span>
+                        <div className="compatibility-score" style={{color: "#0ff", fontSize: "0.8rem", marginBottom: "0.5rem", display: 'flex', justifyContent: 'space-between'}}>
+                            <span>AI CONSTITUTIONAL COMPATIBILITY:</span>
+                            <span style={{fontWeight: 'bold', color: auditCache[prop.id]?.constitutionalScore >= 0.7 ? '#0f0' : auditCache[prop.id]?.constitutionalScore >= 0.4 ? '#ffaa00' : '#ff0055'}}>
+                                {auditCache[prop.id]?.constitutionalScore ? `${(auditCache[prop.id].constitutionalScore * 100).toFixed(0)}%` : 'EVALUATING...'}
+                            </span>
                         </div>
                         <div className="vote-stats">
                             <span>YES: {prop.votesFor}</span>

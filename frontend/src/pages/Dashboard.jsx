@@ -1,13 +1,31 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
-import { SignConfirmModal } from '../components/SignConfirmModal';
-import { submitProof, getBankroll, submitFHEOracle } from '../api';
-import { checkAndUnlock } from '../AchievementService';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
+import { submitProof, getBankroll, submitFHEOracle, getOracleAudits, SIGNALING_URL } from '../api';
+import { checkAndUnlock } from '../AchievementService';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 import { useNetwork } from '../NetworkContext';
+import { Link } from 'react-router-dom';
+
+// Lazy-loaded submodules for Consolidated Command Center View
+const DEX = lazy(() => import('./DEX').then(m => ({ default: m.DEX })));
+const Staking = lazy(() => import('./Staking').then(m => ({ default: m.Staking })));
+const Swap = lazy(() => import('./Swap').then(m => ({ default: m.Swap })));
+const MultiSig = lazy(() => import('./MultiSig').then(m => ({ default: m.MultiSig })));
+const StorageMarket = lazy(() => import('./StorageMarket').then(m => ({ default: m.StorageMarket })));
+const Supernode = lazy(() => import('./Supernode').then(m => ({ default: m.Supernode })));
+const Explorer = lazy(() => import('./Explorer').then(m => ({ default: m.Explorer })));
+const SystemStatus = lazy(() => import('./SystemStatus').then(m => ({ default: m.SystemStatus })));
+const Trophies = lazy(() => import('./Trophies').then(m => ({ default: m.Trophies })));
+const Casino = lazy(() => import('./Casino').then(m => ({ default: m.Casino })));
+const Mobile = lazy(() => import('./Mobile').then(m => ({ default: m.Mobile })));
+const Manual = lazy(() => import('./Manual').then(m => ({ default: m.Manual })));
+const Wallet = lazy(() => import('./Wallet').then(m => ({ default: m.Wallet })));
+const Vault = lazy(() => import('./Vault').then(m => ({ default: m.Vault })));
+const Gallery = lazy(() => import('./Gallery').then(m => ({ default: m.Gallery })));
+const Governance = lazy(() => import('./Governance').then(m => ({ default: m.Governance })));
 
 export function Dashboard() {
     const [score, setScore] = useState(0);
@@ -15,28 +33,123 @@ export function Dashboard() {
     const [mintStatus, setMintStatus] = useState(null);
     const [fheStatus, setFheStatus] = useState(null);
     const [txSignature, setTxSignature] = useState('');
-    const [pendingBlock, setPendingBlock] = useState(null);
+    const [mintResult, setMintResult] = useState(null);
     const [bankroll, setBankroll] = useState(0);
     const [glitch, setGlitch] = useState(false);
+    const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, autocorr: 0, status: 'STANDBY' });
+    const [oracleAudits, setOracleAudits] = useState([]);
+    const [selectedAudit, setSelectedAudit] = useState(null);
+
+    // Command Center Active Sub-Module Tab (Eliminates fragmentation).
+    // Deep-linkable via ?tab=<id> (e.g. /?tab=privacy) so support/docs links
+    // can open the single-page console directly on the right module.
+    const COMMAND_TABS = ['arcade', 'defi', 'storage', 'network', 'casino', 'privacy', 'governance', 'manual'];
+    const [commandTab, setCommandTabState] = useState(() => {
+        const requested = new URLSearchParams(window.location.search).get('tab');
+        return COMMAND_TABS.includes(requested) ? requested : 'arcade';
+    });
+    const setCommandTab = (tab) => {
+        setCommandTabState(tab);
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState(null, '', url);
+    };
+
     const replayLog = useRef([]);
     const { heartbeat } = useNetwork();
 
     const handleLogEvent = (evt) => {
         replayLog.current.push(evt);
+        if (replayLog.current.length > 5) {
+            const diffs = [];
+            for (let i = 1; i < replayLog.current.length; i++) {
+                diffs.push(replayLog.current[i].time - replayLog.current[i - 1].time);
+            }
+            if (diffs.length > 0) {
+                const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                const variance = diffs.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / diffs.length;
+                const mad = diffs.reduce((a, b) => a + Math.abs(b - mean), 0) / diffs.length;
+
+                // Shannon Entropy estimation of delta buckets (10ms)
+                const freqs = {};
+                diffs.forEach(d => {
+                    const bucket = Math.floor(d / 10.0);
+                    freqs[bucket] = (freqs[bucket] || 0) + 1;
+                });
+                let entropy = 0.0;
+                Object.values(freqs).forEach(count => {
+                    const p = count / diffs.length;
+                    if (p > 0) entropy -= p * Math.log2(p);
+                });
+
+                // Lag-1 Autocorrelation
+                let autocorr = 0.0;
+                if (diffs.length >= 4) {
+                    let num = 0, den = 0;
+                    for (let i = 0; i < diffs.length - 1; i++) {
+                        num += (diffs[i] - mean) * (diffs[i + 1] - mean);
+                    }
+                    for (let i = 0; i < diffs.length; i++) {
+                        den += Math.pow(diffs[i] - mean, 2);
+                    }
+                    if (den > 0) autocorr = num / den;
+                }
+
+                setOracleStats({
+                    variance: parseFloat(variance.toFixed(2)),
+                    mad: parseFloat(mad.toFixed(2)),
+                    entropy: parseFloat(entropy.toFixed(2)),
+                    autocorr: parseFloat(autocorr.toFixed(2)),
+                    status: (variance >= 10.0 && mad >= 5.0 && entropy >= 1.0 && Math.abs(autocorr) <= 0.85) ? 'HUMAN_VERIFIED' : 'CALCULATING'
+                });
+            }
+        }
     };
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const bal = await getBankroll();
+                const [bal, audits] = await Promise.all([
+                    getBankroll().catch(() => 0),
+                    getOracleAudits().catch(() => [])
+                ]);
                 setBankroll(bal);
+                setOracleAudits(audits);
             } catch (e) {
-                console.warn("Failed to fetch bankroll", e);
+                console.warn("Failed to fetch bankroll or oracle audits", e);
             }
         };
         fetchStats();
-        const interval = setInterval(fetchStats, 10000);
-        return () => clearInterval(interval);
+        const interval = setInterval(fetchStats, 6000);
+
+        // Real-Time WebSocket Streaming for instant AI Oracle audit feed updates
+        let ws;
+        try {
+            const wsTarget = SIGNALING_URL.replace(/^http/, 'ws');
+            ws = new WebSocket(wsTarget);
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'SUBSCRIBE_ORACLE' }));
+            };
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'ORACLE_AUDIT' && data.audit) {
+                        setOracleAudits(prev => [data.audit, ...prev.filter(a => a.id !== data.audit.id)].slice(0, 50));
+                    }
+                } catch (e) {
+                    // Ignore non-json frames
+                }
+            };
+        } catch (e) {
+            console.warn("Real-time Oracle WebSocket connection failed:", e);
+        }
+
+        return () => {
+            clearInterval(interval);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+        };
     }, []);
 
     const handleScoreUpdate = (points) => {
@@ -62,6 +175,7 @@ export function Dashboard() {
             if (result.success) {
                 setMintStatus('success');
                 setTxSignature(result.tx);
+                setMintResult(result);
                 setTimeout(async () => setBankroll(await getBankroll()), 2000);
             } else {
                 setMintStatus('error');
@@ -76,27 +190,18 @@ export function Dashboard() {
     const testFHE = async () => {
         setFheStatus('encrypting');
         try {
-            // 1. Setup SEAL and Keys
             const { secretKey, publicKey, context, seal } = await generateFHEKeys();
-            
-            // 2. Encrypt current score
             const scoreToEncrypt = score > 0 ? score : 5000;
             const cipherText = await encryptInt(scoreToEncrypt, publicKey, context, seal);
             setFheStatus('sending');
 
-            // 3. Send to Game Server Oracle
             const oracleRes = await submitFHEOracle(cipherText);
             if (oracleRes.success) {
                 setFheStatus('decrypting');
-                // 4. Decrypt resulting ciphertext
                 const finalResult = await decryptInt(oracleRes.resultCipher, secretKey, context, seal);
-                
-                // The server should have applied: (score * 2) + 500
                 const expected = (scoreToEncrypt * 2) + 500;
                 if (finalResult === expected) {
                     alert(`FHE Success! Server blindly computed: (${scoreToEncrypt} * 2) + 500 = ${finalResult}`);
-                    
-                    // Unlock Achievement
                     try {
                         const stored = localStorage.getItem('lattice_arcade_wallet');
                         if (stored) {
@@ -119,59 +224,432 @@ export function Dashboard() {
 
     return (
         <div className="game-container">
-            <div className="network-live-bar" style={{background: '#000', borderBottom: '1px solid #ff0055', padding: '0.5rem 1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#ff0055', fontFamily: 'monospace', letterSpacing: '1px', width: '100%'}}>
-                <span>TPS: {heartbeat?.tps?.toFixed(2) || '0.00'}</span>
-                <span>PEERS: {heartbeat?.peers || '0'}</span>
-                <span>BLOCKS: {heartbeat?.blocks || '0'}</span>
-                <span>MERKLE: {heartbeat?.merkleRoot?.slice(0, 16) || 'LOADING...'}</span>
+            {/* Real-time Network Metrics Telemetry */}
+            <div className="network-live-bar" style={{background: '#000', borderBottom: '1px solid #ff0055', padding: '0.5rem 1.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#ff0055', fontFamily: 'monospace', letterSpacing: '1px', width: '100%'}}>
+                <span title="Transactions per second on the Sovereign DAG">⚡ TPS: {heartbeat?.tps?.toFixed(2) || '0.00'}</span>
+                <span title="Active P2P gossip peer connections">🌐 PEERS: {heartbeat?.peers || '0'}</span>
+                <span title="Total confirmed lattice block height">🧱 BLOCKS: {heartbeat?.blocks || '0'}</span>
+                <span title="Cumulative Merkle Patricia Trie root hash">🔗 MERKLE: {heartbeat?.merkleRoot?.slice(0, 16) || 'LOADING...'}</span>
+                <span title="Ecosystem Demurrage rate applied every 60s">📉 DEMURRAGE: 0.01%/min</span>
             </div>
+
+            {/* Sovereign Command Center Navigation Bar */}
+            <div className="command-center-tabs" style={{display: 'flex', gap: '0.5rem', background: '#0a0a0a', padding: '0.75rem 1.5rem', borderBottom: '1px solid #222', flexWrap: 'wrap', alignItems: 'center'}}>
+                <span style={{color: '#ff0055', fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 'bold', marginRight: '0.5rem'}}>COMMAND CONSOLE:</span>
+                <button
+                    className={`cyber-button small ${commandTab === 'arcade' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('arcade')}
+                    title="Switch to Arcade & Zero-Knowledge Minting Studio"
+                >
+                    🎮 ARCADE & MINT
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'defi' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('defi')}
+                    title="Switch to Sovereign DeFi Suite (Orderbook, Swaps, Staking)"
+                >
+                    📈 DEFI & EXCHANGE
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'storage' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('storage')}
+                    title="Switch to SPoRA Storage & Supernode WebTorrent"
+                >
+                    💾 STORAGE NETWORK
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'network' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('network')}
+                    title="Switch to DAG Explorer & Node Operations"
+                >
+                    🖥️ NODE & TOPOLOGY
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'casino' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('casino')}
+                    title="Switch to Provably Fair Casino & Trophies"
+                >
+                    🎰 CASINO & REWARDS
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'privacy' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('privacy')}
+                    title="Switch to Privacy Vault: sovereign wallet, encrypted cloak vault, and NFT gallery"
+                >
+                    🔒 WALLET & VAULT
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'governance' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('governance')}
+                    title="Switch to Lattice Governance: quadratic DAO voting and neural proposal audits"
+                >
+                    ⚖️ GOVERNANCE
+                </button>
+                <button
+                    className={`cyber-button small ${commandTab === 'manual' ? 'active' : 'secondary'}`}
+                    onClick={() => setCommandTab('manual')}
+                    title="Switch to Sovereign Protocol Manual"
+                >
+                    📖 MANUAL
+                </button>
+            </div>
+
             <div className="ui-layer">
-                <header className="game-header">
-                    <h1 className={glitch ? 'glitch' : ''} data-text="THE MINT">THE MINT</h1>
-                    <div className="bankroll-display">
-                        <span className="label">SERVER BANKROLL:</span>
-                        <span className={`value ${bankroll < 0.01 ? 'danger' : ''}`}>{bankroll ? bankroll.toFixed(4) : '0.0000'} SOL</span>
-                    </div>
-                </header>
+                {/* 1. ARCADE & MINT TAB */}
+                {commandTab === 'arcade' && (
+                    <>
+                        <header className="game-header">
+                            <h1 className={glitch ? 'glitch' : ''} data-text="THE MINT">THE MINT</h1>
+                            <div className="bankroll-display">
+                                <span className="label" title="Reward treasury available for successful Proof-of-Play minting">SERVER BANKROLL:</span>
+                                <span className={`value ${bankroll < 0.01 ? 'danger' : ''}`}>{bankroll ? bankroll.toFixed(4) : '0.0000'} SOL</span>
+                            </div>
+                        </header>
 
-                <div className="stats-box">
-                    <p>SCORE: <span className="neon-text">{score}</span></p>
-                    <p>COMBO: <span className="neon-text-blue">x{combo}</span></p>
-                </div>
+                        <div className="stats-box">
+                            <p title="Current rhythm accuracy points">SCORE: <span className="neon-text">{score}</span></p>
+                            <p title="Consecutive successful key hits multiplier">COMBO: <span className="neon-text-blue">x{combo}</span></p>
+                            <p title="AI Oracle Real-time Anti-Bot Verifier status based on input entropy, variance, MAD, and lag-1 autocorrelation">
+                                ORACLE ENTROPY: <span style={{color: oracleStats.status === 'HUMAN_VERIFIED' ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>{oracleStats.status}</span>
+                                <span style={{fontSize: '0.65rem', color: '#888', marginLeft: '0.5rem'}}>[VAR: {oracleStats.variance} | MAD: {oracleStats.mad} | H: {oracleStats.entropy || 0.0} | R1: {oracleStats.autocorr || 0.0}]</span>
+                            </p>
+                        </div>
 
-                <div className="play-area-wrapper" style={{display: 'flex', justifyContent: 'center'}}>
-                    <RhythmGame onScoreUpdate={handleScoreUpdate} onLogEvent={handleLogEvent} />
-                </div>
+                        <div className="play-area-wrapper" style={{display: 'flex', justifyContent: 'center'}}>
+                            <RhythmGame onScoreUpdate={handleScoreUpdate} onLogEvent={handleLogEvent} />
+                        </div>
 
-                <div className="controls" style={{display: 'flex', gap: '1rem'}}>
-                    <button className="cyber-button" onClick={handleMint} disabled={mintStatus === 'minting'}>
-                        {mintStatus === 'minting' ? 'MINTING...' : 'MINT TOKENS'}
-                    </button>
-                    <button className="cyber-button" onClick={testFHE} disabled={fheStatus !== null} style={{borderColor: '#f0f', color: '#f0f'}}>
-                        {fheStatus ? `FHE: ${fheStatus.toUpperCase()}...` : 'TEST FHE COMPUTATION'}
-                    </button>
-                </div>
+                        <div className="controls" style={{display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem'}}>
+                            <button className="cyber-button" onClick={handleMint} disabled={mintStatus === 'minting'} title="Mint tokens using a Zero-Knowledge Proof (SP1 RISC-V) of your rhythm game score.">
+                                {mintStatus === 'minting' ? 'PROVING & MINTING...' : 'MINT TOKENS (ZK PROOF)'}
+                            </button>
+                            <button className="cyber-button" onClick={testFHE} disabled={fheStatus !== null} style={{borderColor: '#f0f', color: '#f0f'}} title="Test Fully Homomorphic Encryption (FHE) with Microsoft SEAL by computing blindly on the server.">
+                                {fheStatus ? `FHE: ${fheStatus.toUpperCase()}...` : 'TEST FHE COMPUTATION'}
+                            </button>
+                        </div>
 
-                {mintStatus === 'success' && (
-                    <div className="modal success">
-                        <h2>MINT SUCCESSFUL</h2>
-                        <p>Tokens minted to wallet.</p>
-                        <a
-                            href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="tx-link"
-                        >
-                            VIEW ON EXPLORER &rarr;
-                        </a>
-                        <button className="cyber-button small" onClick={() => setMintStatus(null)} style={{marginTop: '1rem'}}>CLOSE</button>
-                    </div>
+                        {mintStatus === 'success' && (
+                            <div className="modal success">
+                                <h2>MINT SUCCESSFUL</h2>
+                                <p>Tokens minted to your sovereign wallet using Succinct SP1 RISC-V verification.</p>
+                                {mintResult?.oracle && (
+                                    <div style={{background: '#0a0a0a', border: '1px solid #0f0', padding: '0.75rem', margin: '0.75rem 0', textAlign: 'left', fontFamily: 'monospace', fontSize: '0.75rem'}}>
+                                        <div style={{color: '#0f0', fontWeight: 'bold', marginBottom: '0.25rem'}}>AI ORACLE AUDIT VERIFIED:</div>
+                                        <div>CONFIDENCE: <span style={{color: '#0ff'}}>{(mintResult.oracle.confidenceScore * 100).toFixed(0)}%</span></div>
+                                        <div>INPUT VARIANCE: <span style={{color: '#fff'}}>{mintResult.oracle.variance}</span> (threshold: &gt; 10.0)</div>
+                                        <div>MEAN ABS DEV (MAD): <span style={{color: '#fff'}}>{mintResult.oracle.mad}</span> (threshold: &gt; 5.0)</div>
+                                    </div>
+                                )}
+                                <a
+                                    href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="tx-link"
+                                >
+                                    VIEW ON EXPLORER &rarr;
+                                </a>
+                                <button className="cyber-button small" title="Dismiss this mint result" onClick={() => { setMintStatus(null); setMintResult(null); }} style={{marginTop: '1rem'}}>CLOSE</button>
+                            </div>
+                        )}
+
+                        <div className="arcade-auxiliary-grid" style={{marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', width: '100%'}}>
+                            <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
+                                <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>HALL OF FAME</h3>
+                                <Leaderboard mintStatus={mintStatus} />
+                            </div>
+                            <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
+                                <h3 style={{color: '#0ff', marginTop: 0, borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>SPoRA STORAGE MARKET</h3>
+                                <Marketplace />
+                            </div>
+                            <div className="dashboard-section-card" style={{background: '#050505', border: '1px solid #222', padding: '1rem', borderRadius: '4px'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #222', paddingBottom: '0.5rem'}}>
+                                    <h3 style={{color: '#0ff', margin: 0}}>AI ORACLE SECURITY FEED</h3>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                        {oracleAudits.some(a => !a.verified) && (
+                                            <span className="anomaly-alert-badge" style={{background: 'rgba(255, 0, 85, 0.2)', border: '1px solid #ff0055', color: '#ff0055', padding: '0.1rem 0.4rem', borderRadius: '3px', fontSize: '0.65rem', fontWeight: 'bold'}} title="Synthetic / Bot Anomaly Detected in Recent Stream">
+                                                ⚠ ANOMALY DETECTED
+                                            </span>
+                                        )}
+                                        <span style={{fontSize: '0.65rem', color: '#0f0'}}>ACTIVE</span>
+                                    </div>
+                                </div>
+
+                                {/* Real-time Telemetry Sparklines for Entropy and Autocorrelation */}
+                                {oracleAudits.length > 1 && (
+                                    <div className="oracle-sparklines-container" style={{display: 'flex', gap: '1rem', padding: '0.6rem 0', borderBottom: '1px solid #161616', fontSize: '0.65rem', fontFamily: 'monospace'}}>
+                                        <div style={{flex: 1, background: '#0a0a0a', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #1a1a1a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px'}}>
+                                                <span>ENTROPY (H)</span>
+                                                <span style={{color: '#0ff'}}>{oracleAudits[0]?.entropy?.toFixed(2) || '0.00'}</span>
+                                            </div>
+                                            <svg className="sparkline-entropy" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                                {(() => {
+                                                    const recent = oracleAudits.slice(0, 10).reverse();
+                                                    if (recent.length < 2) return null;
+                                                    const maxH = Math.max(4.0, ...recent.map(r => r.entropy || 0));
+                                                    const points = recent.map((r, idx) => {
+                                                        const x = (idx / (recent.length - 1)) * 100;
+                                                        const y = 22 - (((r.entropy || 0) / maxH) * 20);
+                                                        return `${x},${y}`;
+                                                    }).join(' ');
+                                                    return (
+                                                        <>
+                                                            <line x1="0" y1="17" x2="100" y2="17" stroke="#ff0055" strokeWidth="0.5" strokeDasharray="2,2" />
+                                                            <polyline fill="none" stroke="#00ffff" strokeWidth="1.5" points={points} />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </svg>
+                                        </div>
+
+                                        <div style={{flex: 1, background: '#0a0a0a', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #1a1a1a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px'}}>
+                                                <span>AUTOCORR (R1)</span>
+                                                <span style={{color: '#f0f'}}>{oracleAudits[0]?.autocorrelation ? oracleAudits[0].autocorrelation.toFixed(2) : '0.00'}</span>
+                                            </div>
+                                            <svg className="sparkline-autocorr" width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                                {(() => {
+                                                    const recent = oracleAudits.slice(0, 10).reverse();
+                                                    if (recent.length < 2) return null;
+                                                    const points = recent.map((r, idx) => {
+                                                        const x = (idx / (recent.length - 1)) * 100;
+                                                        const r1 = Math.max(-1.0, Math.min(1.0, r.autocorrelation || 0));
+                                                        const y = 12 - (r1 * 10);
+                                                        return `${x},${y}`;
+                                                    }).join(' ');
+                                                    return (
+                                                        <>
+                                                            <line x1="0" y1="12" x2="100" y2="12" stroke="#444" strokeWidth="0.5" />
+                                                            <polyline fill="none" stroke="#ff00ff" strokeWidth="1.5" points={points} />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </svg>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="oracle-audit-feed" style={{maxHeight: '180px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.7rem'}}>
+                                    {oracleAudits.length === 0 ? (
+                                        <div style={{color: '#666', padding: '1rem 0'}}>NO RECENT AUDITS LOGGED</div>
+                                    ) : (
+                                        oracleAudits.slice(0, 8).map(audit => (
+                                            <div
+                                                key={audit.id}
+                                                onClick={() => setSelectedAudit(audit)}
+                                                className="oracle-audit-item"
+                                                style={{padding: '0.4rem 0', borderBottom: '1px solid #1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.2s'}}
+                                                title="Click to inspect real-time cryptographic audit breakdown"
+                                            >
+                                                <div>
+                                                    <span style={{color: audit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', marginRight: '6px'}}>
+                                                        {audit.verified ? '✓ PASSED' : '⚠️ REJECTED'}
+                                                    </span>
+                                                    <span style={{color: '#aaa'}}>{audit.address?.slice(0, 10)}...</span>
+                                                </div>
+                                                <div style={{textAlign: 'right', color: '#555'}}>
+                                                    <span style={{color: '#0ff'}}>H: {audit.entropy?.toFixed(1) || '0.0'}</span>
+                                                    <span style={{marginLeft: '6px', color: '#888'}}>{(audit.confidenceScore * 100).toFixed(0)}%</span>
+                                                    <span style={{marginLeft: '6px', color: '#0ff', fontSize: '0.65rem'}}>🔍</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{marginTop: '1.5rem', width: '100%'}}>
+                            <LiveFeed />
+                        </div>
+                    </>
                 )}
 
-                <Leaderboard mintStatus={mintStatus} />
-                <Marketplace />
-                <LiveFeed />
+                {/* 2. DEFI & EXCHANGE TAB */}
+                {commandTab === 'defi' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING DEFI MODULE...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/dex" className="cyber-button small" title="Open full DEX page">FULLSCREEN ORDERBOOK &rarr;</Link>
+                                <Link to="/swap" className="cyber-button small" title="Open HTLC Atomic Swaps">ATOMIC SWAPS &rarr;</Link>
+                                <Link to="/staking" className="cyber-button small" title="Open Staking Yield Validator">PoS STAKING &rarr;</Link>
+                                <Link to="/multisig" className="cyber-button small" title="Open MultiSig Shared Vault">MULTISIG VAULT &rarr;</Link>
+                            </div>
+                            <DEX />
+                            <div style={{marginTop: '2.5rem'}} title="Atomic HTLC swaps embedded from /swap"><Swap /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Proof-of-Stake staking embedded from /staking"><Staking /></div>
+                            <div style={{marginTop: '2.5rem'}} title="MultiSig shared vault embedded from /multisig"><MultiSig /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Storage market embedded from /market"><StorageMarket /></div>
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 3. STORAGE NETWORK TAB */}
+                {commandTab === 'storage' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING STORAGE ENGINE...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/supernode" className="cyber-button small">FULL SUPERNODE &rarr;</Link>
+                                <Link to="/market" className="cyber-button small">STORAGE MARKETPLACE &rarr;</Link>
+                                <Link to="/vault" className="cyber-button small">ENCRYPTED CLOAK VAULT &rarr;</Link>
+                            </div>
+                            <Supernode />
+                            <div style={{marginTop: '2.5rem'}} title="Storage market embedded from /market"><StorageMarket /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Encrypted cloak vault embedded from /vault"><Vault /></div>
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 4. NODE & NETWORK TAB */}
+                {commandTab === 'network' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING NETWORK TOPOLOGY...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/system" className="cyber-button small">SYSTEM STATUS &rarr;</Link>
+                                <Link to="/explorer" className="cyber-button small">DAG EXPLORER &rarr;</Link>
+                                <Link to="/mobile" className="cyber-button small">MOBILE MINING SDK &rarr;</Link>
+                            </div>
+                            <SystemStatus />
+                            <div style={{marginTop: '2.5rem'}} title="DAG explorer embedded from /explorer"><Explorer /></div>
+                            <div style={{marginTop: '2.5rem'}} title="Mobile vitality mining embedded from /mobile"><Mobile /></div>
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 5. CASINO & REWARDS TAB */}
+                {commandTab === 'casino' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING ARCADE CASINO...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/casino" className="cyber-button small">FULLSCREEN CASINO &rarr;</Link>
+                                <Link to="/trophies" className="cyber-button small">ALL TROPHIES &rarr;</Link>
+                            </div>
+                            <Casino />
+                            <div style={{marginTop: '2rem'}}>
+                                <Trophies />
+                            </div>
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 6. WALLET & VAULT TAB */}
+                {commandTab === 'privacy' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING PRIVACY VAULT...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem', flexWrap: 'wrap'}}>
+                                <Link to="/wallet" className="cyber-button small" title="Open the sovereign wallet fullscreen">FULL WALLET &rarr;</Link>
+                                <Link to="/vault" className="cyber-button small" title="Open the encrypted cloak vault fullscreen">ENCRYPTED VAULT &rarr;</Link>
+                                <Link to="/gallery" className="cyber-button small" title="Open the NFT gallery fullscreen">NFT GALLERY &rarr;</Link>
+                            </div>
+                            <Wallet />
+                            <div style={{marginTop: '2.5rem'}} title="Encrypted cloak vault embedded from /vault"><Vault /></div>
+                            <div style={{marginTop: '2.5rem'}} title="NFT gallery embedded from /gallery"><Gallery /></div>
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 7. GOVERNANCE TAB */}
+                {commandTab === 'governance' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING GOVERNANCE...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/governance" className="cyber-button small" title="Open Lattice Governance fullscreen">FULL GOVERNANCE &rarr;</Link>
+                            </div>
+                            <Governance />
+                        </div>
+                    </Suspense>
+                )}
+
+                {/* 8. PROTOCOL MANUAL TAB */}
+                {commandTab === 'manual' && (
+                    <Suspense fallback={<div className="tab-loading" style={{padding: '3rem', color: '#0ff'}}>LOADING PROTOCOL MANUAL...</div>}>
+                        <div className="consolidated-tab-content" style={{width: '100%'}}>
+                            <div style={{display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '1rem'}}>
+                                <Link to="/manual" className="cyber-button small" title="Open the protocol manual fullscreen">FULLSCREEN MANUAL &rarr;</Link>
+                            </div>
+                            <Manual />
+                        </div>
+                    </Suspense>
+                )}
             </div>
+
+            {/* AI Oracle Telemetry & Audit Inspector Modal */}
+            {selectedAudit && (
+                <div className="modal-overlay" style={{position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                    <div className="modal-content" style={{background: '#0a0a0a', border: '1px solid #0ff', padding: '2rem', maxWidth: '550px', width: '90%', borderRadius: '6px', fontFamily: 'monospace'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '0.8rem', marginBottom: '1.2rem'}}>
+                            <h3 style={{margin: 0, color: '#0ff', fontSize: '1.1rem'}}>AI ORACLE AUDIT INSPECTOR</h3>
+                            <button className="cyber-button small" title="Close the AI Oracle audit inspector" onClick={() => setSelectedAudit(null)} style={{padding: '0.2rem 0.6rem'}}>✕</button>
+                        </div>
+
+                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem', fontSize: '0.85rem'}}>
+                            <div style={{background: '#111', padding: '0.8rem', borderRadius: '4px'}}>
+                                <div style={{color: '#888', fontSize: '0.75rem'}}>VERIFICATION STATUS</div>
+                                <div style={{color: selectedAudit.verified ? '#0f0' : '#ff0055', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.2rem'}}>
+                                    {selectedAudit.verified ? '✓ PASSED (HUMAN)' : '⚠️ REJECTED (BOT)'}
+                                </div>
+                            </div>
+                            <div style={{background: '#111', padding: '0.8rem', borderRadius: '4px'}}>
+                                <div style={{color: '#888', fontSize: '0.75rem'}}>CONFIDENCE RATING</div>
+                                <div style={{color: '#0ff', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.2rem'}}>
+                                    {((selectedAudit.confidenceScore || 0) * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', marginBottom: '1.2rem', fontSize: '0.8rem', lineHeight: '1.6'}}>
+                            <div><strong style={{color: '#888'}}>AUDIT ID:</strong> #{selectedAudit.id}</div>
+                            <div><strong style={{color: '#888'}}>PROVER WALLET:</strong> <span style={{wordBreak: 'break-all', color: '#fff'}}>{selectedAudit.address}</span></div>
+                            <div><strong style={{color: '#888'}}>SCORE / STEPS:</strong> <span style={{color: '#ff0'}}>{selectedAudit.score}</span></div>
+                            <div><strong style={{color: '#888'}}>TIMESTAMP:</strong> {selectedAudit.timestamp}</div>
+                        </div>
+
+                        <h4 style={{color: '#0ff', fontSize: '0.85rem', marginBottom: '0.5rem'}}>BIOMETRIC & TIMING DELTA METRICS</h4>
+                        <div style={{background: '#111', padding: '1rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center'}}>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>VARIANCE (&ge; 10.0)</div>
+                                <div style={{color: selectedAudit.variance >= 10.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.variance?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>MAD (&ge; 5.0)</div>
+                                <div style={{color: selectedAudit.mad >= 5.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.mad?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>ENTROPY (&ge; 1.0)</div>
+                                <div style={{color: selectedAudit.entropy >= 1.0 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.entropy?.toFixed(2) || '0.00'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>AUTOCORR (|r1| &le; 0.85)</div>
+                                <div style={{color: Math.abs(selectedAudit.autocorrelation || 0) <= 0.85 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {(selectedAudit.autocorrelation || 0.0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>CYCLIC (|r2| &le; 0.85)</div>
+                                <div style={{color: Math.abs(selectedAudit.autocorrelationLag2 || 0) <= 0.85 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {(selectedAudit.autocorrelationLag2 || 0.0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div>
+                                <div style={{color: '#666', fontSize: '0.65rem'}}>DIVERSITY (&ge; 0.25)</div>
+                                <div style={{color: (selectedAudit.diversityRatio || 1.0) >= 0.25 ? '#0f0' : '#ff0055', fontWeight: 'bold'}}>
+                                    {selectedAudit.diversityRatio ? `${(selectedAudit.diversityRatio * 100).toFixed(0)}%` : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+                            <button className="cyber-button small" title="Close the AI Oracle audit inspector" onClick={() => setSelectedAudit(null)}>DISMISS INSPECTOR</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

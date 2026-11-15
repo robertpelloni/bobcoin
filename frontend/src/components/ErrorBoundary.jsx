@@ -27,6 +27,7 @@ export class ErrorBoundary extends React.Component {
                         className="cyber-button" 
                         style={{ marginTop: '2rem' }}
                         onClick={() => window.location.reload()}
+                        title="Reload the application to recover from this error"
                     >
                         REBOOT SYSTEM
                     </button>

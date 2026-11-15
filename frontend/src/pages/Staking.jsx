@@ -141,10 +141,11 @@ export function Staking() {
                     className="cyber-input" 
                     value={amount} 
                     onChange={e => setAmount(Number(e.target.value))} 
+                    title="Amount of BOB tokens to stake or unstake."
                 />
                 <div className="button-group">
-                    <button className="cyber-button" onClick={handleStake} disabled={loading || balance < amount}>STAKE</button>
-                    <button className="cyber-button secondary" onClick={handleUnstake} disabled={loading || stakedBalance < amount}>UNSTAKE</button>
+                    <button className="cyber-button" onClick={handleStake} disabled={loading || balance < amount} title="Lock BOB to secure the network, earn yield, and double your voting power.">STAKE</button>
+                    <button className="cyber-button secondary" onClick={handleUnstake} disabled={loading || stakedBalance < amount} title="Unlock BOB from staking, making it liquid and spendable again.">UNSTAKE</button>
                 </div>
             </div>
 

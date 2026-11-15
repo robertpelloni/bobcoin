@@ -157,6 +157,7 @@ export function StorageMarket() {
                                 className="cyber-button small" 
                                 onClick={() => keypair && fetchAnchors(keypair.publicKey)}
                                 style={{ padding: '0 1rem' }}
+                                title="Refresh your active sovereign archive anchors."
                             >
                                 REFRESH
                             </button>

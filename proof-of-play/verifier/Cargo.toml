@@ -1,0 +1,11 @@
+[package]
+name = "proof-of-play-verifier"
+version = "0.1.0"
+edition = "2021"
+
+# Standalone crate (not a proof-of-play workspace member): verification runs
+# on the host (WSL/Linux/CI), unlike the zkVM program and the WASM client.
+[workspace]
+
+[dependencies]
+sp1-sdk = { version = "6.0.0", features = ["blocking"] }

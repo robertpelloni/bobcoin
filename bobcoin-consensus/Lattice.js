@@ -22,6 +22,8 @@ export class Lattice {
         this.storageFeeBase = 1.0;
         this.proposalFee = 10.0;
         this.nftMintFee = 50.0;
+        this.quorumScore = 100.0;
+        this.quorumThreshold = 67.0;
         this.totalSupply = 0;
         this.pools = {
             'BOB/sSOL': {
@@ -169,6 +171,9 @@ export class Lattice {
         } else if (action === 'UPDATE_DEMURRAGE') {
             const { rate } = proposal;
             if (rate !== undefined && rate >= 0) this.DEMURRAGE_RATE_PER_MS = rate;
+        } else if (action === 'UPDATE_QUORUM_THRESHOLD') {
+            const { threshold } = proposal;
+            if (threshold !== undefined && threshold > 0 && threshold <= 100) this.quorumThreshold = threshold;
         } else if (action === 'ADJUST_FEES') {
             if (proposal.proposalFee !== undefined) this.proposalFee = proposal.proposalFee;
             if (proposal.nftMintFee !== undefined) this.nftMintFee = proposal.nftMintFee;

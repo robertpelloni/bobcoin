@@ -70,6 +70,21 @@ async function gossipLoop() {
         } catch (e) {
             peers.set(url, { status: 'offline', latency: 0 });
         }
+
+        // Update Quorum Score
+        let agreeCount = 0;
+        let totalOnline = 0;
+        for (const [pUrl, pData] of peers.entries()) {
+            if (pData.status === 'online') {
+                totalOnline++;
+                if (pData.stateHash === lattice.stateHash) agreeCount++;
+            }
+        }
+        if (totalOnline > 0) {
+            lattice.quorumScore = (agreeCount / totalOnline) * 100.0;
+        } else {
+            lattice.quorumScore = 100.0; // Solo mode
+        }
     }
     setTimeout(gossipLoop, 10000);
 }

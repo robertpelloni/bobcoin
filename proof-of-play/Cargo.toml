@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "program",
+    "wasm",
 ]
 resolver = "2"

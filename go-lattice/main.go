@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sort"
@@ -131,8 +132,21 @@ func main() {
 	go gossipLoop()
 	go broadcastHeartbeat()
 
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
 	log.Printf("[Go-Lattice] Sovereign Consensus Node starting on port %s", latticePort)
-	log.Fatal(http.ListenAndServe(":"+latticePort, nil))
+	log.Fatal(http.ListenAndServe(":"+latticePort, corsMiddleware(http.DefaultServeMux)))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -251,9 +265,7 @@ func handleFrontiers(w http.ResponseWriter, r *http.Request) {
 				balance = head.Balance
 			} else {
 				decay := head.Balance * lattice.DemurrageRate * float64(elapsed)
-				if head.Balance > decay {
-					balance = head.Balance - decay
-				}
+				balance = math.Max(0, head.Balance-decay)
 			}
 		}
 		accounts[account] = map[string]interface{}{
@@ -285,9 +297,7 @@ func handleFrontier(w http.ResponseWriter, r *http.Request) {
 			balance = head.Balance
 		} else {
 			decay := head.Balance * lattice.DemurrageRate * float64(elapsed)
-			if head.Balance > decay {
-				balance = head.Balance - decay
-			}
+			balance = math.Max(0, head.Balance-decay)
 		}
 		stakedBalance = head.StakedBalance
 	}

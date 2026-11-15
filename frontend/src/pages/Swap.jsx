@@ -128,17 +128,17 @@ export function Swap() {
                         <label>SECRET HASH (SHA-256)</label>
                         <div style={{display: 'flex', gap: '0.5rem'}}>
                             <input className="cyber-input" value={secretHash} readOnly placeholder="Generate a secret..." />
-                            <button className="cyber-button small" onClick={handleGenerateSecret}>GEN</button>
+                            <button className="cyber-button small" title="Generate a fresh HTLC secret and its hash-lock" onClick={handleGenerateSecret}>GEN</button>
                         </div>
                         {secret && <p className="secret-reveal">YOUR SECRET: <span className="neon-text">{secret}</span> (SAVE THIS!)</p>}
                     </div>
-                    <button className="cyber-button" onClick={handleLock} disabled={loading}>LOCK FUNDS ON-CHAIN</button>
+                    <button className="cyber-button" title="Lock funds in a hashed time-lock contract for an atomic swap" onClick={handleLock} disabled={loading}>LOCK FUNDS ON-CHAIN</button>
                 </div>
 
                 <div className="swap-panel">
                     <h2>CLAIM SWAP</h2>
                     <p className="desc">If someone has locked funds for you, reveal the secret to claim them.</p>
-                    <button className="cyber-button" onClick={handleClaim} disabled={loading}>REVEAL SECRET & CLAIM</button>
+                    <button className="cyber-button" title="Reveal the HTLC secret to claim the locked funds" onClick={handleClaim} disabled={loading}>REVEAL SECRET & CLAIM</button>
                 </div>
             </div>
 

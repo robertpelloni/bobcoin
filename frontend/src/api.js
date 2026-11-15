@@ -1,7 +1,7 @@
 export const SUPERNODE_URL = import.meta.env.VITE_SUPERNODE_URL || 'http://localhost:8000';
-export const API_URL = import.meta.env.VITE_GAME_HTTP_URL || SUPERNODE_URL;
+export const API_URL = import.meta.env.VITE_GAME_HTTP_URL || 'http://localhost:3001';
 export const SIGNALING_URL = import.meta.env.VITE_GAME_SIGNALING_URL || SUPERNODE_URL || import.meta.env.VITE_GAME_SERVER_URL || 'http://localhost:3001';
-export const LATTICE_URL = import.meta.env.VITE_LATTICE_URL || 'http://localhost:4001';
+export const LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4001';
 export const GO_LATTICE_URL = import.meta.env.VITE_GO_LATTICE_URL || 'http://localhost:4001';
 
 export const getSporaProof = async (challenge) => {
@@ -26,6 +26,19 @@ export const submitLatticeBlock = async (block) => {
         return await res.json();
     } catch (e) {
         console.error("Lattice block submission failed:", e);
+        return { success: false, error: e.message };
+    }
+};
+
+export const submitVitalityProof = async (payload) => {
+    try {
+        const res = await fetch(`${API_URL}/sdk/v1/vitality`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    } catch (e) {
         return { success: false, error: e.message };
     }
 };
@@ -135,6 +148,17 @@ export const getMarketBids = async () => {
         return data.bids || [];
     } catch (e) {
         console.error("Failed to fetch market bids:", e);
+        return [];
+    }
+};
+
+export const getOracleAudits = async () => {
+    try {
+        const res = await fetch(`${API_URL}/oracle/audits`);
+        const data = await res.json();
+        return data.audits || [];
+    } catch(e) {
+        console.error("Failed to fetch oracle audits:", e);
         return [];
     }
 };
@@ -314,12 +338,59 @@ export const submitFHEOracle = async (cipherText) => {
     }
 };
 
+export const PROVER_URL = import.meta.env.VITE_PROVER_URL || 'http://localhost:9824';
+
 export const submitProof = async (score, perfects, greats, replayLog = []) => { 
     let address = null;
     try {
         const storedKeys = localStorage.getItem('lattice_arcade_wallet');
         if (storedKeys) address = JSON.parse(storedKeys).publicKey;
     } catch(e) {}
+
+    // Real SP1 proof via the local prover sidecar (scripts/start-sp1-prover.ps1,
+    // WSL). Proving is slow (minutes, CPU) — the mint button stays in its
+    // PROVING state meanwhile. Any failure falls back to the WASM/Oracle path.
+    let proofBytesB64 = null;
+    try {
+        const health = await fetch(`${PROVER_URL}/health`, { signal: AbortSignal.timeout(1500) });
+        if (health.ok) {
+            const proveRes = await fetch(`${PROVER_URL}/prove`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score, keystrokes: replayLog.map(l => Math.round(l.time || 0)) })
+            });
+            if (proveRes.ok) {
+                proofBytesB64 = (await proveRes.json()).proofBytesB64 || null;
+                if (proofBytesB64) console.log('SP1 prover sidecar returned a real ZK proof.');
+            }
+        }
+    } catch (e) {
+        console.warn('SP1 prover sidecar unavailable, continuing without native proof.', e);
+    }
+
+    let proofBytes = 'mock_bytes';
+    try {
+        // Phase VI: Dynamic WebAssembly Upgrade
+        // Check for latest registry WASM anchor in the Sovereign Storage Market
+        let wasmModule;
+        try {
+            const marketCheck = await fetch(`${SUPERNODE_URL}/market/bids`);
+            const bids = await marketCheck.json();
+            const wasmRegistryUpdate = bids.bids?.find(b => b.magnet.includes("proof_of_play_wasm"));
+            if (wasmRegistryUpdate) {
+                console.log("[WASM-Loader] Discovered remote WASM update anchor: ", wasmRegistryUpdate.magnet);
+                // Placeholder: fetch from supernode using proxy
+            }
+        } catch(e) {}
+
+        const wasm = await import('./wasm/proof_of_play_wasm.js');
+        await wasm.default(); // Initialize WASM
+        const keystrokes = replayLog.map(log => log.time || 0);
+        proofBytes = wasm.generate_proof(score, JSON.stringify(keystrokes));
+        console.log("Generated client-side input commitment (not a ZK proof; real SP1 proving happens in the sidecar).");
+    } catch (e) {
+        console.warn("Failed to generate native SP1 WASM Proof, falling back to Oracle.", e);
+    }
 
     try { 
         const res = await fetch(`${API_URL}/submit-proof`, { 
@@ -329,7 +400,8 @@ export const submitProof = async (score, perfects, greats, replayLog = []) => {
                 proof: { 
                     playerId: 'player_' + Math.random().toString(36).substr(2, 6), 
                     publicValues: { score, perfects, greats, misses: 0, address, replayLog }, 
-                    proofBytes: 'mock_bytes' 
+                    proofBytes: proofBytes,
+                    ...(proofBytesB64 ? { proofBytesB64 } : {})
                 } 
             }) 
         }); 

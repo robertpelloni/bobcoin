@@ -992,22 +992,22 @@ export function Vault() {
                         value={presetName}
                         onChange={(e) => setPresetName(e.target.value)}
                     />
-                    <button className="cyber-button small" onClick={savePreset}>SAVE PRESET</button>
-                    <button className="cyber-button small secondary" onClick={exportPresets}>EXPORT PRESETS</button>
+                    <button className="cyber-button small" title="Save the current archive filters as a reusable preset" onClick={savePreset}>SAVE PRESET</button>
+                    <button className="cyber-button small secondary" title="Export saved archive filter presets as JSON" onClick={exportPresets}>EXPORT PRESETS</button>
                     <label className="vault-import-label">
                         <span className="cyber-button small secondary">IMPORT PRESETS</span>
                         <input type="file" accept="application/json" onChange={importPresets} />
                     </label>
                     {savedPresets.map((preset) => (
                         <div key={preset.name} className="vault-preset-chip">
-                            <button className="cyber-button small secondary" onClick={() => applyPreset(preset)}>{preset.name}</button>
+                            <button className="cyber-button small secondary" title="Apply this saved archive filter preset" onClick={() => applyPreset(preset)}>{preset.name}</button>
                             <button className="chip-delete" onClick={() => deletePreset(preset.name)} title="Delete preset">×</button>
                         </div>
                     ))}
                 </div>
                 <div className="vault-batch-row">
-                    <button className="cyber-button small secondary" onClick={exportVisibleArchive}>EXPORT VISIBLE ARCHIVE</button>
-                    <button className="cyber-button small secondary" onClick={copyVisibleLocators}>COPY VISIBLE LOCATORS</button>
+                    <button className="cyber-button small secondary" title="Export the currently visible archive records as JSON" onClick={exportVisibleArchive}>EXPORT VISIBLE ARCHIVE</button>
+                    <button className="cyber-button small secondary" title="Copy locators for the currently visible archive records" onClick={copyVisibleLocators}>COPY VISIBLE LOCATORS</button>
                 </div>
             </div>
 
@@ -1045,8 +1045,8 @@ export function Vault() {
                         </p>
                     </div>
                     <div className="section-actions-row">
-                        <button className="cyber-button small secondary" onClick={exportComparativeSourceDiagnostics}>EXPORT COMPARATIVE DIAGNOSTICS</button>
-                        <button className="cyber-button small secondary" onClick={exportSignedComparativeSourceDiagnostics}>EXPORT SIGNED PACKAGE</button>
+                        <button className="cyber-button small secondary" title="Export comparative source-reliability diagnostics as JSON" onClick={exportComparativeSourceDiagnostics}>EXPORT COMPARATIVE DIAGNOSTICS</button>
+                        <button className="cyber-button small secondary" title="Export diagnostics as a wallet-signed, verifiable package" onClick={exportSignedComparativeSourceDiagnostics}>EXPORT SIGNED PACKAGE</button>
                         <label className="vault-import-label">
                             <span className="cyber-button small secondary">IMPORT SIGNED PACKAGE</span>
                             <input type="file" accept="application/json" onChange={importSignedComparativeSourceDiagnostics} />
@@ -1207,7 +1207,7 @@ export function Vault() {
                         </p>
                     </div>
                     {keypair && (
-                        <button className="cyber-button small" onClick={() => refresh(keypair.publicKey)}>
+                        <button className="cyber-button small" title="Reload your anchored archive from the lattice" onClick={() => refresh(keypair.publicKey)}>
                             REFRESH ARCHIVE
                         </button>
                     )}
@@ -1323,7 +1323,7 @@ function AnchorCard({ anchor, ownerProfile, owned = false, onCloakedDownload }) 
             </div>
             <div className="anchor-actions">
                 {anchor.cloaked && onCloakedDownload && (
-                    <button className="cyber-button small" onClick={() => onCloakedDownload(anchor)}>
+                    <button className="cyber-button small" title="Decrypt this cloaked file locally and download the original" onClick={() => onCloakedDownload(anchor)}>
                         DECRYPT & DOWNLOAD
                     </button>
                 )}
@@ -1333,12 +1333,12 @@ function AnchorCard({ anchor, ownerProfile, owned = false, onCloakedDownload }) 
                     </a>
                 )}
                 {locator && (
-                    <button className="cyber-button small secondary" onClick={() => navigator.clipboard.writeText(locator)}>
+                    <button className="cyber-button small secondary" title="Copy this archive record locator to the clipboard" onClick={() => navigator.clipboard.writeText(locator)}>
                         COPY LOCATOR
                     </button>
                 )}
                 {anchor.owner && (
-                    <button className="cyber-button small secondary" onClick={() => navigator.clipboard.writeText(anchor.owner)}>
+                    <button className="cyber-button small secondary" title="Copy the archive owner address to the clipboard" onClick={() => navigator.clipboard.writeText(anchor.owner)}>
                         COPY OWNER
                     </button>
                 )}
@@ -1381,7 +1381,8 @@ function PublisherProofEntry({ proof, account }) {
             </div>
             <button 
                 className={`verify-action-btn ${status}`} 
-                onClick={handleVerify} 
+                onClick={handleVerify}
+                title="Verify this publisher attestation with the supernode verifier"
                 disabled={verifying || status === 'verified'}
             >
                 {status === 'verified' ? '✓ VERIFIED' : (verifying ? '...' : 'VERIFY')}
@@ -1411,7 +1412,7 @@ function LegacyAnchorCard({ anchor, ownerProfile, onCloakedDownload }) {
             </div>
             <div className="anchor-actions">
                 {anchor.cloaked && onCloakedDownload && (
-                    <button className="cyber-button small" onClick={() => onCloakedDownload(anchor)}>
+                    <button className="cyber-button small" title="Decrypt this cloaked legacy file locally and download the original" onClick={() => onCloakedDownload(anchor)}>
                         DECRYPT & DOWNLOAD
                     </button>
                 )}

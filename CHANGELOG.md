@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.28] - 2026-11-17
+### Verified
+- `verify_frontend.py` screenshot suite passes against the Vite 8 build (dashboard, supernode, wallet, governance, manual captures refreshed), and CI stays green on the resynced toolchain ([run 44056146932](https://github.com/robertpelloni/bobcoin/actions/runs/44056146932), 6m02s).
+
 ## [8.117.27] - 2026-11-17
 ### Fixed
 - **Frontend dependency drift**: `node_modules` had Vite 5.4.21 installed while `package.json`/lockfile pin Vite 8.3.8 — every recent build silently used the old major. Resynced to the lockfile (Vite 8.3.8; build now completes in ~2s) and re-verified with coverage gate + Playwright E2E. Environment note: `npm` registry fetches currently die with `ERR_SSL_TLSV1_ALERT_PROTOCOL_VERSION` for both local Node toolchains (registry policy/proxy), while `pnpm`'s fetcher succeeds — the resync was done with `pnpm install --ignore-workspace` (its generated `pnpm-lock.yaml` removed afterward; `package-lock.json` remains the source of truth). If npm is preferred later, retry `npm ci --legacy-peer-deps` when registry access recovers.

@@ -38,7 +38,7 @@ function Start-BelowNormal([string]$Name, [string]$File, [string]$ArgString, [st
         if ($child) { $childId = [int]$child.ProcessId }
         $target = Get-Process -Id $childId -ErrorAction SilentlyContinue
         if ($target) { $target.PriorityClass = 'BelowNormal' }
-    } catch { Write-Host "[start] could not set priority for ${Name}: $_" }
+    } catch { <# conhost race: the reconcile pass below sets the real listener PID to BelowNormal #> }
     Write-Host "[start] $Name pid=$childId (BelowNormal) -> logs\$Name.*.log"
     return $childId
 }

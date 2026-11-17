@@ -27,6 +27,7 @@ Heavyweight processes are started at **BelowNormal** priority by both launchers 
 - **Go Lattice Node:** `http://localhost:4001`
 - **Go Game Server:** `http://localhost:3001`
 - **Go Supertorrent:** `http://localhost:8000`
+- **Go Casino Daemon status:** `http://localhost:8001/status`
 - **SP1 Verifier Daemon (WSL):** `127.0.0.1:9823` (raw TCP, byte protocol)
 - **SP1 Prover Sidecar (WSL):** `http://localhost:9824` (`GET /health`, `POST /prove`)
 

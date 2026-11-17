@@ -126,3 +126,23 @@ func TestCasinoBotBootstrapAndPoll(t *testing.T) {
 		t.Fatalf("expected only receive for loss")
 	}
 }
+
+func TestCasinoStatusHandler(t *testing.T) {
+	bot := &CasinoBot{wallet: Wallet{PublicKey: "casino-test-wallet"}, betsHandled: 7, lastPollUnix: 1234567890}
+	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	rec := httptest.NewRecorder()
+	bot.statusHandler()(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 from casino /status, got %d", rec.Code)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode casino status: %v", err)
+	}
+	if body["service"] != "Go Casino daemon" || body["status"] != "online" {
+		t.Fatalf("unexpected casino status payload: %v", body)
+	}
+	if body["betsHandled"] != float64(7) {
+		t.Fatalf("expected betsHandled 7, got %v", body["betsHandled"])
+	}
+}

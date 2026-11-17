@@ -66,9 +66,11 @@ type APIResponse struct {
 }
 
 type CasinoBot struct {
-	cfg        Config
-	wallet     Wallet
-	httpClient *http.Client
+	cfg          Config
+	wallet       Wallet
+	httpClient   *http.Client
+	betsHandled  int
+	lastPollUnix int64
 }
 
 func main() {
@@ -88,10 +90,44 @@ func main() {
 
 	bot.bootstrap()
 
+	// Read-only status surface (System Status page polls this). The bot
+	// itself is a lattice poller with no other inbound API.
+	go bot.serveStatus()
+
 	// Main Loop
 	ticker := time.NewTicker(5 * time.Second)
 	for range ticker.C {
 		bot.pollAndProcess()
+	}
+}
+
+// serveStatus exposes GET /status on CASINO_STATUS_PORT (default 8001).
+func (b *CasinoBot) serveStatus() {
+	port := envOrDefault("CASINO_STATUS_PORT", "8001")
+	mux := http.NewServeMux()
+	mux.HandleFunc("/status", b.statusHandler())
+	log.Printf("[go-casino] status endpoint listening on :%s", port)
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Printf("[go-casino] status endpoint failed: %v", err)
+	}
+}
+
+func (b *CasinoBot) statusHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		version := "unknown"
+		if data, err := os.ReadFile(filepath.Join("..", "VERSION.md")); err == nil {
+			version = strings.TrimSpace(string(data))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":       "online",
+			"service":      "Go Casino daemon",
+			"version":      version,
+			"wallet":       b.wallet.PublicKey,
+			"betsHandled":  b.betsHandled,
+			"lastPollUnix": b.lastPollUnix,
+		})
 	}
 }
 
@@ -180,10 +216,12 @@ func (b *CasinoBot) bootstrap() {
 }
 
 func (b *CasinoBot) pollAndProcess() {
+	b.lastPollUnix = time.Now().Unix()
 	pending, err := b.fetchPending(b.wallet.PublicKey)
 	if err != nil || len(pending) == 0 {
 		return
 	}
+	b.betsHandled += len(pending)
 
 	for _, tx := range pending {
 		senderPrefix := tx.Sender

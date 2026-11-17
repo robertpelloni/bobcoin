@@ -17,7 +17,8 @@ export function SystemStatus() {
         lattice: 'Checking...',
         storageWasm: 'Checking...',
         sp1Verifier: 'Checking...',
-        sp1Prover: 'Checking...'
+        sp1Prover: 'Checking...',
+        casino: 'Checking...'
     });
     const [peers, setPeers] = useState({});
     const [networkRoot, setNetworkRoot] = useState('0x...');
@@ -153,6 +154,14 @@ export function SystemStatus() {
             }));
         } catch {
             setServices(s => ({ ...s, zkService: 'UNKNOWN', sp1Verifier: 'UNKNOWN', sp1Prover: 'UNKNOWN' }));
+        }
+
+        try {
+            const res = await fetch('http://localhost:8001/status');
+            const casino = await res.json();
+            setServices(s => ({ ...s, casino: `ONLINE (bets handled: ${casino.betsHandled ?? 0})` }));
+        } catch {
+            setServices(s => ({ ...s, casino: 'OFFLINE' }));
         }
 
         try {
@@ -298,6 +307,11 @@ export function SystemStatus() {
                     <h3>SP1 VERIFIER DAEMON</h3>
                     <p>STATUS: {services.sp1Verifier}</p>
                     <p className="detail">Cached-setup RISC-V proof verification (compressed SP1 proofs). Start: scripts/start-sp1-daemon.ps1.</p>
+                </div>
+                <div className={`status-card ${services.casino.startsWith('ONLINE') ? 'online' : 'offline'}`} title="Go casino daemon (port 8001): autonomous bot that watches the lattice for casino bets and settles them. Started automatically by start.ps1 / start.sh.">
+                    <h3>CASINO DAEMON</h3>
+                    <p>STATUS: {services.casino}</p>
+                    <p className="detail">Autonomous on-chain casino bot (bet polling and settlement). Play it from the Casino & Rewards tab.</p>
                 </div>
                 <div className={`status-card ${services.sp1Prover.startsWith('ONLINE') ? 'online' : 'offline'}`} title="SP1 prover sidecar (WSL, port 9824): the Dashboard mint flow asks it for a real ZK proof of your game trace. Proving takes minutes; without it, minting uses the AI Oracle audit.">
                     <h3>SP1 PROVER SIDECAR</h3>

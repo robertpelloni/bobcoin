@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.19] - 2026-11-17
+### Added
+- **Casino daemon status surface**: `go-casino` was the only service with no status anywhere. It now serves `GET :8001/status` (wallet, bets handled this run, last poll; CORS-enabled, unit-tested) and System Status shows a CASINO DAEMON card fed by it. Also: quieted the cosmetic `could not set priority` race message in `start.ps1` (the reconcile pass already sets real PIDs), documented port 8001 in DEPLOY, and catalogued all SP1 scripts in `scripts/README.md`.
+
 ## [8.117.18] - 2026-11-17
 ### Fixed
 - **Honest ZK Service card**: System Status hard-coded the ZK Service card to `ACTIVE (RISC-V)` with a permanently green border regardless of reality. It now derives from the live `/sp1/status` check — `ACTIVE (RISC-V, daemon-verified)` when the verifier daemon is up, `ORACLE AUDIT ONLY (daemon offline)` otherwise — with matching card styling and tooltip.

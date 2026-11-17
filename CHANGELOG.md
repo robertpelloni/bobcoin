@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.20] - 2026-11-17
+### Fixed
+- **Tray Quit completeness**: the close-out Quit proof showed the tray's stop path terminated lattice/game/supertorrent/frontend but left the casino's new `:8001` status listener orphaned (the tray sweep didn't know the port). `scripts/system_tray.py` now includes `go-casino: 8001` in its port map; verified by a full stop/start cycle with all seven services reporting up through the tray itself.
+
 ## [8.117.19] - 2026-11-17
 ### Added
 - **Casino daemon status surface**: `go-casino` was the only service with no status anywhere. It now serves `GET :8001/status` (wallet, bets handled this run, last poll; CORS-enabled, unit-tested) and System Status shows a CASINO DAEMON card fed by it. Also: quieted the cosmetic `could not set priority` race message in `start.ps1` (the reconcile pass already sets real PIDs), documented port 8001 in DEPLOY, and catalogued all SP1 scripts in `scripts/README.md`.

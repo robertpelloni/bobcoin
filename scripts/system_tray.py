@@ -32,6 +32,7 @@ PORTS = {
     "go-lattice": 4001,
     "go-game-server": 3001,
     "go-supertorrent": 8000,
+    "go-casino": 8001,
     "frontend": 4173,
 }
 

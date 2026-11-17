@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.12] - 2026-11-14
+### Evaluated
+- **Groth16 proof mode: not viable in this environment.** The prover gained a `--mode core|compressed|groth16` flag, but Groth16 proving failed after 41 CPU-minutes: SP1 v6 delegates Groth16 to a Docker image (`ghcr.io/succinctlabs/sp1-gnark:v6.1.0`) and the registry denied the pull. The circuit artifacts themselves downloaded fine. **Decision: Compressed remains the default and recommended mode** (1.27 MB proofs, ~1s daemon verification). Revisit Groth16 only with Docker registry access or a Succinct prover-network key. Driver kept as `scripts/wsl-sp1-groth16.sh`.
+
 ## [8.117.11] - 2026-11-14
 ### Added
 - **SP1 daemon auto-recovery**: when the verifier daemon is unreachable (WSL restart/crash), the Go bridge relaunches it via `scripts/start-sp1-daemon.ps1`, polls for the port (setup ~2 min), and retries verification once. Rate-limited to one attempt per 5 minutes; disable with `BOBCOIN_SP1_AUTOSTART=0`. Live-verified: daemon killed in-distro, next native submission recovered in 104s and verified (`RISC-V_NATIVE_DAEMON`).

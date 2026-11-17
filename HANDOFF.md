@@ -174,3 +174,8 @@
 - **Daemon auto-recovery shipped + live-verified** (kill in-distro -> recovered 104s -> `RISC-V_NATIVE_DAEMON`). Backlog now: Groth16 only-if-needed; everything else from the SP1 arc is done (program v6, prover + compressed, verifier daemon byte-protocol, sidecar, frontend wiring, tray controls, launcher integration, auto-recovery).
 - Suggested next horizons: (1) periodic Groth16 evaluation, (2) React Native mobile (IDEAS #8), (3) ZK order-book DEX (IDEAS #9), (4) tray auto-start with stack on login.
 
+
+## Session 2026-11-14 (continuation, v8.117.12)
+- **Groth16 evaluated, rejected for now**: SP1 v6 Groth16 proving shells out to Docker image `ghcr.io/succinctlabs/sp1-gnark:v6.1.0`; pull denied in this environment after 41 min of CPU proving. Compressed stays default. `--mode` flag + `scripts/wsl-sp1-groth16.sh` remain for when registry access or a prover-network key exists. Do not retry Groth16 blindly — check `docker pull ghcr.io/succinctlabs/sp1-gnark:v6.1.0` first.
+- Everything else is green and running. Suggested next horizons remain: React Native mobile (IDEAS #8), ZK order-book DEX (IDEAS #9), tray auto-start on login.
+

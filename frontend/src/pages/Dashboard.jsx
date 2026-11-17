@@ -3,7 +3,7 @@ import { RhythmGame } from '../components/RhythmGame';
 import { LiveFeed } from '../components/LiveFeed';
 import { Leaderboard } from '../components/Leaderboard';
 import { Marketplace } from '../components/Marketplace';
-import { submitProof, getBankroll, submitFHEOracle, getOracleAudits, SIGNALING_URL } from '../api';
+import { submitProof, getBankroll, submitFHEOracle, getOracleAudits, SIGNALING_URL, PROVER_URL } from '../api';
 import { checkAndUnlock } from '../AchievementService';
 import { generateFHEKeys, encryptInt, decryptInt } from '../fheUtils';
 import { useNetwork } from '../NetworkContext';
@@ -39,6 +39,25 @@ export function Dashboard() {
     const [oracleStats, setOracleStats] = useState({ variance: 0, mad: 0, entropy: 0, autocorr: 0, status: 'STANDBY' });
     const [oracleAudits, setOracleAudits] = useState([]);
     const [selectedAudit, setSelectedAudit] = useState(null);
+    const [proverOnline, setProverOnline] = useState(false);
+
+    // Poll the SP1 prover sidecar so the mint button can say honestly
+    // whether minting will use a real ZK proof (slow, minutes) or the
+    // fast AI Oracle audit. Without this the wait/fallback was silent.
+    useEffect(() => {
+        let cancelled = false;
+        const checkProver = async () => {
+            try {
+                const res = await fetch(`${PROVER_URL}/health`, { signal: AbortSignal.timeout(1500) });
+                if (!cancelled) setProverOnline(res.ok);
+            } catch {
+                if (!cancelled) setProverOnline(false);
+            }
+        };
+        checkProver();
+        const interval = setInterval(checkProver, 15000);
+        return () => { cancelled = true; clearInterval(interval); };
+    }, []);
 
     // Command Center Active Sub-Module Tab (Eliminates fragmentation).
     // Deep-linkable via ?tab=<id> (e.g. /?tab=privacy) so support/docs links
@@ -317,6 +336,12 @@ export function Dashboard() {
 
                         <div className="play-area-wrapper" style={{display: 'flex', justifyContent: 'center'}}>
                             <RhythmGame onScoreUpdate={handleScoreUpdate} onLogEvent={handleLogEvent} />
+                        </div>
+
+                        <div className="prover-mode-bar" style={{textAlign: 'center', marginTop: '1rem', fontSize: '0.7rem', fontFamily: 'monospace', letterSpacing: '1px'}} title={proverOnline ? 'The SP1 prover sidecar is reachable: minting will generate a real compressed ZK proof (takes minutes of CPU), verified by the verifier daemon.' : 'The SP1 prover sidecar is offline: minting uses the fast AI Oracle statistical audit. Start it with scripts/start-sp1-prover.ps1 for real ZK proofs.'}>
+                            {proverOnline
+                                ? <span style={{color: '#0f0'}}>● SP1 PROVER CONNECTED — REAL ZK PROOF MODE (SLOW, MINUTES)</span>
+                                : <span style={{color: '#888'}}>○ SP1 PROVER OFFLINE — AI ORACLE MODE (FAST)</span>}
                         </div>
 
                         <div className="controls" style={{display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem'}}>

@@ -219,6 +219,12 @@ def test_consolidated_navigation_and_command_console():
         assert telemetry.is_visible()
         print("  ✓ Telemetry bar visible.")
 
+        # SP1 prover mode indicator (real ZK vs Oracle fallback must be visible)
+        prover_bar = page.locator(".prover-mode-bar")
+        assert prover_bar.is_visible()
+        assert "SP1 PROVER" in prover_bar.inner_text()
+        print(f"  ✓ Prover mode indicator visible: {prover_bar.inner_text()}")
+
         # 1. Test Mega-Module Navigation links
         mega_links = [
             ("ARCADE HUB", "/"),

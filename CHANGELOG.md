@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.15] - 2026-11-14
+### Added
+- **Prover mode indicator**: the Dashboard mint area now shows whether the SP1 prover sidecar is connected (`REAL ZK PROOF MODE (SLOW, MINUTES)`) or minting will use the fast AI Oracle audit, polled every 15s with an explanatory tooltip. Previously the multi-minute wait (or silent fallback) was invisible. Covered by a new Playwright assertion.
+
 ## [8.117.14] - 2026-11-14
 ### Added
 - **Manual chapter**: the in-dashboard Protocol Manual gained a "ZK PROVING (SP1)" chapter explaining the prover sidecar, verifier daemon, how minting uses them, and where to check their live status — mirroring the System Status SP1 cards from v8.117.13. ROADMAP/TODO updated with the completed Phase VII and the two remaining gated items (tray login auto-start needs user go-ahead; Groth16 needs registry access).

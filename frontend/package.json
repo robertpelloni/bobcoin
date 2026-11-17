@@ -1,7 +1,7 @@
 {
   "name": "bobcoin-frontend",
   "private": true,
-  "version": "8.117.29",
+  "version": "8.117.30",
   "type": "module",
   "scripts": {
     "dev": "vite",

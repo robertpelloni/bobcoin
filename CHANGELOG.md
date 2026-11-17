@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.21] - 2026-11-17
+### Tests
+- Playwright E2E now asserts every System Status service card (game server, supernode, ZK service, casino daemon, SP1 verifier, SP1 prover) so the v8.117.13–19 status surfaces cannot silently regress. Full suite green.
+
 ## [8.117.20] - 2026-11-17
 ### Fixed
 - **Tray Quit completeness**: the close-out Quit proof showed the tray's stop path terminated lattice/game/supertorrent/frontend but left the casino's new `:8001` status listener orphaned (the tray sweep didn't know the port). `scripts/system_tray.py` now includes `go-casino: 8001` in its port map; verified by a full stop/start cycle with all seven services reporting up through the tray itself.

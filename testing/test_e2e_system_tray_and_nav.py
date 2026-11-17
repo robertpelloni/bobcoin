@@ -315,6 +315,16 @@ def test_consolidated_navigation_and_command_console():
             assert expected_content_snippet in body_text, f"Snippet '{expected_content_snippet}' not found in active tab content"
             print(f"    ✓ Tab switched and content contains '{expected_content_snippet}'.")
 
+        # 2b. System Status must surface every service incl. casino + SP1
+        print("  * Checking System Status service cards (/system)...")
+        page.goto(f"{base_url}/system")
+        page.wait_for_selector(".system-container", timeout=15000)
+        page.wait_for_timeout(4000)
+        system_text = page.inner_text(".system-container")
+        for card in ["GAME SERVER", "SUPERNODE", "ZK SERVICE", "CASINO DAEMON", "SP1 VERIFIER DAEMON", "SP1 PROVER SIDECAR"]:
+            assert card in system_text, f"System Status card missing: {card}"
+        print("    ✓ All service cards present (game, supernode, ZK, casino, SP1 verifier, SP1 prover).")
+
         # 3. Test Mobile Vitality Sync integration
         print("  * Navigating to Mobile Light Node (/mobile)...")
         page.goto(f"{base_url}/mobile")

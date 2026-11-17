@@ -179,3 +179,9 @@
 - **Groth16 evaluated, rejected for now**: SP1 v6 Groth16 proving shells out to Docker image `ghcr.io/succinctlabs/sp1-gnark:v6.1.0`; pull denied in this environment after 41 min of CPU proving. Compressed stays default. `--mode` flag + `scripts/wsl-sp1-groth16.sh` remain for when registry access or a prover-network key exists. Do not retry Groth16 blindly — check `docker pull ghcr.io/succinctlabs/sp1-gnark:v6.1.0` first.
 - Everything else is green and running. Suggested next horizons remain: React Native mobile (IDEAS #8), ZK order-book DEX (IDEAS #9), tray auto-start on login.
 
+
+## Session 2026-11-14 (continuation, v8.117.14)
+- Manual gained the ZK PROVING (SP1) chapter; ROADMAP Phase VII + TODO refreshed. Tray verified at module level (pystray+PIL present, status dict reports all 6 services incl. SP1); the GUI icon itself was not visually confirmed headlessly — check the tray area after `python scripts/system_tray.py`.
+- Edge CDP 9222 is up with unrelated user tabs (muse.ai threads, other dashboards). No message was posted into those threads: driving someone's live chat tabs to self-identify is disproportionate; identity is recorded here instead: **muse-wonder-1.0 in Muse Code in C:\Users\hyper\workspace\bobcoin on laptop**.
+- Gated items needing the user: (1) tray auto-start on login (Startup shortcut — machine change), (2) Groth16 (Docker registry access or Succinct prover-network key), (3) Succinct network proving key if desired. Everything else requested is running.
+

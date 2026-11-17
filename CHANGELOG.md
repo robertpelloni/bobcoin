@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.14] - 2026-11-14
+### Added
+- **Manual chapter**: the in-dashboard Protocol Manual gained a "ZK PROVING (SP1)" chapter explaining the prover sidecar, verifier daemon, how minting uses them, and where to check their live status — mirroring the System Status SP1 cards from v8.117.13. ROADMAP/TODO updated with the completed Phase VII and the two remaining gated items (tray login auto-start needs user go-ahead; Groth16 needs registry access).
+
 ## [8.117.13] - 2026-11-14
 ### Added
 - **SP1 services in the dashboard**: the System Status page (Network Ops) now shows SP1 Verifier Daemon and SP1 Prover Sidecar cards with plain-language descriptions, start-script guidance, and tooltips — previously the entire SP1 stack was invisible in the UI. Backed by a new `GET /sp1/status` on the Go game-server (browsers cannot dial the daemon's raw TCP port directly), with a maintained Go test (`TestHandleSP1Status`). Note the cards read OFFLINE for the first ~2 minutes after launch while SP1 setup runs.

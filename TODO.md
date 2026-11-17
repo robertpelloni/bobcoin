@@ -29,6 +29,11 @@
 - [x] **Supply Rebuild Logic:** Ensure total supply is accurately recalculated during chain audit and recovery. (v8.107.3)
 - [x] **AMM Liquidity Parity:** Implement `amm_add_liquidity` and `amm_remove_liquidity` with 1:1 parity. (v8.107.3)
 
+## v8.117.13–14 (2026-11-14)
+- [x] **SP1 in the UI:** System Status shows verifier-daemon/prover-sidecar cards via `GET /sp1/status` (`TestHandleSP1Status`); Manual gained a ZK PROVING (SP1) chapter with start instructions.
+- [ ] **Tray auto-start on login:** offer a Startup-folder shortcut installer (user-machine change — needs explicit user go-ahead, intentionally not installed autonomously).
+- [ ] **Groth16:** blocked on `docker pull ghcr.io/succinctlabs/sp1-gnark:v6.1.0` (registry denied); recheck before retrying.
+
 ## v8.117.0 Session (2026-11-14)
 - [x] **Single-Page Console Complete:** Dashboard now embeds all 17 routes (added Wallet/Vault/Gallery + Governance tabs; DeFi/Storage/Network tabs embed their subpages). Enforced by `testing/dashboard_coverage.py`.
 - [x] **Tooltip Gate:** ~62 buttons gained descriptive `title=` tooltips; coverage gate fails on regressions.

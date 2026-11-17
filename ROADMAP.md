@@ -82,6 +82,12 @@
 - [x] **Cross-Chain Bridge Scalability**: Port the Solana bridge logic to Go and implement multi-signature relayers.
 - [ ] **Native Rust SP1 Verification**: Fully integrate the `cargo-prove` toolchain into the production build pipeline for non-simulated ZK proving.
 
+## Phase VII: Real ZK Proof-of-Play (v8.117.2–v8.117.13, 2026-11-14)
+- [x] **SP1 v6 migration + WSL toolchain**, compressed prover sidecar, verifier daemon (byte protocol, ~1s verifies), Go bridge with auto-recovery, Dashboard mint wiring, tray + System Status representation.
+- [x] **Groth16 evaluated**: blocked on the gnark Docker image in this environment; compressed remains the production mode.
+- [ ] **Groth16 / prover-network**: only with Docker registry access or a Succinct network key.
+- [ ] **React Native mobile** for native Proof-of-Vitality hardware (IDEAS #8).
+
 ## Phase VI: Consolidation & Operability (v8.117.0, 2026-11-14)
 - [x] **One-Page Dashboard:** all 17 routes embedded in the `/` Command Console under 8 high-value tabs (Arcade, DeFi, Storage, Node, Casino, Wallet & Vault, Governance, Manual), ordered by value with Arcade first; standalone routes kept for deep links.
 - [x] **Coverage Gate:** `testing/dashboard_coverage.py` keeps routes + button tooltips from regressing.

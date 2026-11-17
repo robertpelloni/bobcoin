@@ -91,8 +91,34 @@ const SECTIONS = {
             </>
         )
     },
+    ZK: {
+        title: "4. ZK PROVING (SP1)",
+        content: (
+            <>
+                <h2>REAL ZERO-KNOWLEDGE PROOF-OF-PLAY</h2>
+                <p>
+                    Minting can carry a real Succinct SP1 (RISC-V) proof of your game trace instead of only a statistical audit.
+                    The full chain runs locally: prover sidecar, verifier daemon, and the game server that checks the proof.
+                </p>
+                <div className="tech-stack">
+                    <div className="tech-item">
+                        <h4>PROVER SIDECAR (PORT 9824)</h4>
+                        <p>Start with scripts/start-sp1-prover.ps1. When it is running, MINT TOKENS automatically asks it to prove your replay (this takes minutes of CPU time). Without it, minting falls back to the AI Oracle audit.</p>
+                    </div>
+                    <div className="tech-item">
+                        <h4>VERIFIER DAEMON (PORT 9823)</h4>
+                        <p>Start with scripts/start-sp1-daemon.ps1 (or launch everything with start.ps1 -WithSp1Daemon). It verifies compressed SP1 proofs in about a second and auto-recovers after a WSL restart on the next native submission.</p>
+                    </div>
+                    <div className="tech-item">
+                        <h4>CHECK IT YOURSELF</h4>
+                        <p>Open Network Ops → System Status: the SP1 VERIFIER DAEMON and SP1 PROVER SIDECAR cards show live status. They read OFFLINE for the first ~2 minutes after launch while SP1 setup runs.</p>
+                    </div>
+                </div>
+            </>
+        )
+    },
     TOKENOMICS: {
-        title: "4. THE ARCADE ECONOMY",
+        title: "5. THE ARCADE ECONOMY",
         content: (
             <>
                 <h2>WHITE-MAGIC TOKENOMICS</h2>

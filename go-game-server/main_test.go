@@ -802,6 +802,29 @@ func TestHandleSubmitProof_CyclicMacroAndDiversityRatio(t *testing.T) {
 	}
 }
 
+func TestHandleSP1Status(t *testing.T) {
+	service := newTestService(t)
+	req := httptest.NewRequest(http.MethodGet, "/sp1/status", nil)
+	rec := httptest.NewRecorder()
+	service.handleSP1Status(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 from /sp1/status, got %d", rec.Code)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode sp1 status: %v", err)
+	}
+	if _, ok := body["verifierDaemon"].(bool); !ok {
+		t.Fatalf("expected boolean verifierDaemon, got %v", body)
+	}
+	if _, ok := body["proverSidecar"].(bool); !ok {
+		t.Fatalf("expected boolean proverSidecar, got %v", body)
+	}
+	if body["daemonAddr"] != "127.0.0.1:9823" {
+		t.Fatalf("expected default daemon addr, got %v", body["daemonAddr"])
+	}
+}
+
 func TestWindowsPathToWSL(t *testing.T) {
 	if got := windowsPathToWSL(`C:\Users\hyper\workspace\bobcoin\proof-of-play\program\elf\proof-of-play`); got != "/mnt/c/Users/hyper/workspace/bobcoin/proof-of-play/program/elf/proof-of-play" {
 		t.Fatalf("unexpected WSL path conversion: %q", got)

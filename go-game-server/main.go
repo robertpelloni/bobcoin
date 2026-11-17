@@ -199,6 +199,7 @@ func main() {
 	mux.HandleFunc("/market/accept", service.handleAcceptBid)
 	mux.HandleFunc("/governance/audit", service.handleGovernanceAudit)
 	mux.HandleFunc("/oracle/audits", service.handleOracleAudits)
+	mux.HandleFunc("/sp1/status", service.handleSP1Status)
 
 	log.Printf("[go-game-server] listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, withCORS(mux)); err != nil {
@@ -368,6 +369,37 @@ func (s *Service) handleStatus(w http.ResponseWriter, r *http.Request) {
 		version = strings.TrimSpace(string(data))
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "online", "service": "Go Game Server orchestrator", "version": version})
+}
+
+// handleSP1Status reports reachability of the SP1 verifier daemon
+// (raw TCP, port 9823 — browsers cannot dial it directly) and the prover
+// sidecar (HTTP /health, port 9824) so the dashboard can surface them.
+func (s *Service) handleSP1Status(w http.ResponseWriter, r *http.Request) {
+	daemonAddr := os.Getenv("SP1_VERIFIER_ADDR")
+	if daemonAddr == "" {
+		daemonAddr = "127.0.0.1:9823"
+	}
+	daemonUp := false
+	if conn, err := net.DialTimeout("tcp", daemonAddr, 2*time.Second); err == nil {
+		conn.Close()
+		daemonUp = true
+	}
+	proverURL := os.Getenv("SP1_PROVER_URL")
+	if proverURL == "" {
+		proverURL = "http://127.0.0.1:9824"
+	}
+	proverUp := false
+	client := &http.Client{Timeout: 2 * time.Second}
+	if resp, err := client.Get(proverURL + "/health"); err == nil {
+		resp.Body.Close()
+		proverUp = resp.StatusCode == http.StatusOK
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"verifierDaemon": daemonUp,
+		"proverSidecar":  proverUp,
+		"daemonAddr":     daemonAddr,
+		"proverUrl":      proverURL,
+	})
 }
 
 func (s *Service) handleBankroll(w http.ResponseWriter, r *http.Request) {

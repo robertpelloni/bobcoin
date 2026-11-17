@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.13] - 2026-11-14
+### Added
+- **SP1 services in the dashboard**: the System Status page (Network Ops) now shows SP1 Verifier Daemon and SP1 Prover Sidecar cards with plain-language descriptions, start-script guidance, and tooltips — previously the entire SP1 stack was invisible in the UI. Backed by a new `GET /sp1/status` on the Go game-server (browsers cannot dial the daemon's raw TCP port directly), with a maintained Go test (`TestHandleSP1Status`). Note the cards read OFFLINE for the first ~2 minutes after launch while SP1 setup runs.
+
 ## [8.117.12] - 2026-11-14
 ### Evaluated
 - **Groth16 proof mode: not viable in this environment.** The prover gained a `--mode core|compressed|groth16` flag, but Groth16 proving failed after 41 CPU-minutes: SP1 v6 delegates Groth16 to a Docker image (`ghcr.io/succinctlabs/sp1-gnark:v6.1.0`) and the registry denied the pull. The circuit artifacts themselves downloaded fine. **Decision: Compressed remains the default and recommended mode** (1.27 MB proofs, ~1s daemon verification). Revisit Groth16 only with Docker registry access or a Succinct prover-network key. Driver kept as `scripts/wsl-sp1-groth16.sh`.

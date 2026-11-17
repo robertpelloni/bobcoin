@@ -15,7 +15,9 @@ export function SystemStatus() {
         zkService: 'Checking...',
         supernode: 'Checking...',
         lattice: 'Checking...',
-        storageWasm: 'Checking...'
+        storageWasm: 'Checking...',
+        sp1Verifier: 'Checking...',
+        sp1Prover: 'Checking...'
     });
     const [peers, setPeers] = useState({});
     const [networkRoot, setNetworkRoot] = useState('0x...');
@@ -138,6 +140,18 @@ export function SystemStatus() {
             setServices(s => ({ ...s, supernode: 'ONLINE' }));
         } catch {
             setServices(s => ({ ...s, supernode: 'OFFLINE' }));
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/sp1/status`);
+            const sp1 = await res.json();
+            setServices(s => ({
+                ...s,
+                sp1Verifier: sp1.verifierDaemon ? `ONLINE (${sp1.daemonAddr})` : 'OFFLINE (auto-recovery on next proof)',
+                sp1Prover: sp1.proverSidecar ? `ONLINE (${sp1.proverUrl})` : 'OFFLINE (Oracle fallback active)'
+            }));
+        } catch {
+            setServices(s => ({ ...s, sp1Verifier: 'UNKNOWN', sp1Prover: 'UNKNOWN' }));
         }
 
         try {
@@ -278,6 +292,16 @@ export function SystemStatus() {
                     <h3>GO STORAGE WASM KERNEL</h3>
                     <p>STATUS: {services.storageWasm}</p>
                     <p className="detail">Browser-side encryption and erasure coding runtime for zero-trust upload preprocessing.</p>
+                </div>
+                <div className={`status-card ${services.sp1Verifier.startsWith('ONLINE') ? 'online' : 'offline'}`} title="SP1 verifier daemon (WSL, port 9823): verifies compressed Proof-of-Play proofs in about a second. Auto-recovers on the next native submission if WSL restarted.">
+                    <h3>SP1 VERIFIER DAEMON</h3>
+                    <p>STATUS: {services.sp1Verifier}</p>
+                    <p className="detail">Cached-setup RISC-V proof verification (compressed SP1 proofs). Start: scripts/start-sp1-daemon.ps1.</p>
+                </div>
+                <div className={`status-card ${services.sp1Prover.startsWith('ONLINE') ? 'online' : 'offline'}`} title="SP1 prover sidecar (WSL, port 9824): the Dashboard mint flow asks it for a real ZK proof of your game trace. Proving takes minutes; without it, minting uses the AI Oracle audit.">
+                    <h3>SP1 PROVER SIDECAR</h3>
+                    <p>STATUS: {services.sp1Prover}</p>
+                    <p className="detail">Produces real compressed SP1 proofs for Proof-of-Play minting. Start: scripts/start-sp1-prover.ps1.</p>
                 </div>
             </div>
 

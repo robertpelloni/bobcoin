@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.17] - 2026-11-17
+### Fixed
+- **Bootstrap log noise + false success**: a full-stack log audit found the game-server logging a scary `failed to bootstrap system chain: dial refused` line during the normal startup race (it self-healed on retry), and then logging `initialized system chain` even if all 25 attempts had failed. Startup now logs `waiting for lattice` once, progress every 5 attempts, success only on success, and a single failure line only after exhaustion. The only other log hit was the Oracle correctly rejecting a score-manipulation probe — working as designed.
+
 ## [8.117.16] - 2026-11-14
 ### Documentation
 - **DEPLOY.md** now covers the SP1 services: ports 9823/9824, WSL launch commands, first-time toolchain setup, the ~2-minute setup window, and persistent proof storage at `~/sp1-proofs/`.

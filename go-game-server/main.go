@@ -307,15 +307,25 @@ func loadOrCreateWallet(path string) (Wallet, error) {
 }
 
 func (s *Service) initializeSystemChain() {
+	// The lattice may still be starting when this service boots (both are
+	// launched together), so early dial-refused errors are expected noise:
+	// log progress sparingly instead of one scary failure line per retry.
+	var lastErr error
 	for i := 0; i < 25; i++ {
 		if err := s.initializeSystemChainOnce(); err != nil {
-			log.Printf("[go-game-server] failed to bootstrap system chain: %v", err)
+			lastErr = err
+			if i == 0 {
+				log.Printf("[go-game-server] waiting for lattice before bootstrap...")
+			} else if (i+1)%5 == 0 {
+				log.Printf("[go-game-server] bootstrap attempt %d/25 still waiting: %v", i+1, err)
+			}
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		break
+		log.Printf("[go-game-server] initialized system chain: %s...", s.systemWallet.PublicKey[:16])
+		return
 	}
-	log.Printf("[go-game-server] initialized system chain: %s...", s.systemWallet.PublicKey[:16])
+	log.Printf("[go-game-server] failed to bootstrap system chain after 25 attempts: %v", lastErr)
 }
 
 func (s *Service) initializeSystemChainOnce() error {

@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.22] - 2026-11-17
+### Verified
+- **JS/Go consensus parity re-verified live**: `node test_e2e_governance.cjs` passes end-to-end — Node replay-semantics suite, all 8 fixture-driven same-timestamp scenarios (governance, swaps, NFTs, manifests, demurrage, dual-collector), and the Go lattice suite agree. Parity scenario matrix regenerated (`docs/ai/testing/parity-scenario-matrix.md`).
+
 ## [8.117.21] - 2026-11-17
 ### Tests
 - Playwright E2E now asserts every System Status service card (game server, supernode, ZK service, casino daemon, SP1 verifier, SP1 prover) so the v8.117.13–19 status surfaces cannot silently regress. Full suite green.

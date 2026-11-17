@@ -130,9 +130,9 @@ export function SystemStatus() {
                     reject(new Error('signaling unavailable'));
                 };
             });
-            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING ONLINE (${SIGNALING_URL === SUPERNODE_URL ? 'GO WS' : 'LEGACY WS'})` }));
+            setServices(s => ({ ...s, gameServer: `${s.gameServer} / SIGNALING ONLINE (${SIGNALING_URL === SUPERNODE_URL ? 'GO WS' : 'LEGACY WS'})` }));
         } catch {
-            setServices(s => ({ ...s, zkService: 'ACTIVE (RISC-V)', gameServer: `${s.gameServer} / SIGNALING OFFLINE (${SIGNALING_URL === SUPERNODE_URL ? 'GO WS' : 'LEGACY WS'})` }));
+            setServices(s => ({ ...s, gameServer: `${s.gameServer} / SIGNALING OFFLINE (${SIGNALING_URL === SUPERNODE_URL ? 'GO WS' : 'LEGACY WS'})` }));
         }
 
         try {
@@ -147,11 +147,12 @@ export function SystemStatus() {
             const sp1 = await res.json();
             setServices(s => ({
                 ...s,
+                zkService: sp1.verifierDaemon ? 'ACTIVE (RISC-V, daemon-verified)' : 'ORACLE AUDIT ONLY (daemon offline)',
                 sp1Verifier: sp1.verifierDaemon ? `ONLINE (${sp1.daemonAddr})` : 'OFFLINE (auto-recovery on next proof)',
                 sp1Prover: sp1.proverSidecar ? `ONLINE (${sp1.proverUrl})` : 'OFFLINE (Oracle fallback active)'
             }));
         } catch {
-            setServices(s => ({ ...s, sp1Verifier: 'UNKNOWN', sp1Prover: 'UNKNOWN' }));
+            setServices(s => ({ ...s, zkService: 'UNKNOWN', sp1Verifier: 'UNKNOWN', sp1Prover: 'UNKNOWN' }));
         }
 
         try {
@@ -278,10 +279,10 @@ export function SystemStatus() {
                     <p>STATUS: {services.supernode}</p>
                     <p className="detail">P2P Storage Layer (WebTorrent) + Validator Logic.</p>
                 </div>
-                <div className="status-card online">
+                <div className={`status-card ${services.zkService.startsWith('ACTIVE') ? 'online' : 'offline'}`} title="Whether Proof-of-Play submissions are verified by the real SP1 RISC-V verifier daemon or only by the AI Oracle statistical audit.">
                     <h3>ZK SERVICE (PROOF OF PLAY)</h3>
                     <p>STATUS: {services.zkService}</p>
-                    <p className="detail">Rust/SP1 Circuit Verifier (RISC-V).</p>
+                    <p className="detail">Rust/SP1 Circuit Verifier (RISC-V) via the verifier daemon; AI Oracle audit when the daemon is offline.</p>
                 </div>
                 <div className={`status-card ${services.lattice.startsWith('ONLINE') ? 'online' : 'offline'}`}>
                     <h3>ASYNCHRONOUS BLOCK LATTICE</h3>

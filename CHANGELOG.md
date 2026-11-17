@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.18] - 2026-11-17
+### Fixed
+- **Honest ZK Service card**: System Status hard-coded the ZK Service card to `ACTIVE (RISC-V)` with a permanently green border regardless of reality. It now derives from the live `/sp1/status` check — `ACTIVE (RISC-V, daemon-verified)` when the verifier daemon is up, `ORACLE AUDIT ONLY (daemon offline)` otherwise — with matching card styling and tooltip.
+
 ## [8.117.17] - 2026-11-17
 ### Fixed
 - **Bootstrap log noise + false success**: a full-stack log audit found the game-server logging a scary `failed to bootstrap system chain: dial refused` line during the normal startup race (it self-healed on retry), and then logging `initialized system chain` even if all 25 attempts had failed. Startup now logs `waiting for lattice` once, progress every 5 attempts, success only on success, and a single failure line only after exhaustion. The only other log hit was the Oracle correctly rejecting a score-manipulation probe — working as designed.

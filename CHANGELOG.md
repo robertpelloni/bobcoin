@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.31] - 2026-11-17
+### Security
+- **Dependabot 25 → 23**: dismissed the unfixable `ip` high in the deprecated Node supertorrent (no patched release; that service is not started by any launcher) and the frontend `minimatch` medium as tolerable risk with cause recorded — it is build-time-only transitive tooling, and regenerating `package-lock.json` at the patched version is currently blocked by the npm-registry TLS failure in this environment (pnpm already resolves minimatch 11.0.1). An `overrides` attempt was reverted: it could not update the npm lockfile the alert is scored from, and keeping it would have pretended otherwise. Remaining open alerts are lows in SP1 transitive crates (no fix published) and highs inside the vendored `research/solana` reference checkout.
+
 ## [8.117.30] - 2026-11-17
 ### Security
 - **Dependabot triage (29 open → 26)**: bumped `klauspost/compress` 1.18.0 → 1.18.7 in go-game-server (tests green). The three `p3-challenger` highs are false positives — lockfiles pin `0.4.3-succinct`, Succinct's fork of the patched base, which Dependabot parses as a prerelease below 0.4.3; `cargo update` confirms no higher compatible version exists, so the alerts were dismissed as inaccurate with that reasoning recorded. Remaining highs live in the vendored `research/solana` reference checkout and the deprecated Node supertorrent (no patched `ip` release exists) — neither is shipped code.

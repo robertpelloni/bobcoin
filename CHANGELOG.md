@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.117.16] - 2026-11-14
+### Documentation
+- **DEPLOY.md** now covers the SP1 services: ports 9823/9824, WSL launch commands, first-time toolchain setup, the ~2-minute setup window, and persistent proof storage at `~/sp1-proofs/`.
+### Verified
+- Browser-probed both prover-indicator branches (CONNECTED with the sidecar up) and the System Status SP1 cards rendering `ONLINE (127.0.0.1:9823)` / `ONLINE (http://127.0.0.1:9824)` against the live stack.
+
 ## [8.117.15] - 2026-11-14
 ### Added
 - **Prover mode indicator**: the Dashboard mint area now shows whether the SP1 prover sidecar is connected (`REAL ZK PROOF MODE (SLOW, MINUTES)`) or minting will use the fast AI Oracle audit, polled every 15s with an explanatory tooltip. Previously the multi-minute wait (or silent fallback) was invisible. Covered by a new Playwright assertion.

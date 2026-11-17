@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.25] - 2026-11-17
+### Fixed
+- **CI pipeline could never pass**: `zk-pipeline.yml` pinned Go 1.22 while every `go.mod` requires 1.26.1, used the archived `actions-rs/toolchain`, and never ran the Go test suites. Modernized pins (checkout v4, dtolnay/rust-toolchain, setup-node v4/Node 20, setup-go v5/Go 1.26), added a Go test step for all four modules, and renamed the WASM step to match what the crate actually is (an input-commitment client). YAML validated locally; the SP1 `sp1up` step from v8.117.2 is retained.
+
 ## [8.117.24] - 2026-11-17
 ### Changed
 - **Go formatting normalized**: an audit found every Go file failing `gofmt -l` (CRLF line endings from Windows authoring). All 19 Go files are now `gofmt`-clean (line-ending normalization only). Proven semantics-free: all four Go test suites and the JS/Go governance parity E2E pass unchanged. `go vet` is clean on all modules.

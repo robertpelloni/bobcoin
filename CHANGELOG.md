@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.27] - 2026-11-17
+### Fixed
+- **Frontend dependency drift**: `node_modules` had Vite 5.4.21 installed while `package.json`/lockfile pin Vite 8.3.8 — every recent build silently used the old major. Resynced to the lockfile (Vite 8.3.8; build now completes in ~2s) and re-verified with coverage gate + Playwright E2E. Environment note: `npm` registry fetches currently die with `ERR_SSL_TLSV1_ALERT_PROTOCOL_VERSION` for both local Node toolchains (registry policy/proxy), while `pnpm`'s fetcher succeeds — the resync was done with `pnpm install --ignore-workspace` (its generated `pnpm-lock.yaml` removed afterward; `package-lock.json` remains the source of truth). If npm is preferred later, retry `npm ci --legacy-peer-deps` when registry access recovers.
+
 ## [8.117.26] - 2026-11-17
 ### Verified
 - **CI green, observed**: after the v8.117.25 modernization, two real failures surfaced and were fixed — `sp1up` dying on unauthenticated GitHub API rate limits (now pinned `v6.10.0` with the workflow token) and `TestWindowsPathToWSL` failing on Linux (now skipped off Windows). [Run 44052597353](https://github.com/robertpelloni/bobcoin/actions/runs/44052597353) completes successfully in 4m57s. Correction to the previous entry: the old Go 1.22 pin had not actually been fatal — Go's toolchain auto-switching masked it — but the new Go test step it enabled is what caught the platform-specific test.

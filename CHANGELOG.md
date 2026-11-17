@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.29] - 2026-11-17
+### Verified
+- **Complete test-asset sweep**: the last unexercised root scripts pass — `test_fhe.js` (SEAL homomorphic round-trip: encrypt 5000, server computes ×2+500 blind, decrypt 10500) and `test_webrtc.js` (all 9 signaling/matchmaking/ICE-relay/disconnect checks). Every test asset in the repository (Go suites, JS parity, Playwright E2E, coverage gate, screenshot suite, root E2E/stress/oracle/FHE/WebRTC scripts, GitHub CI) is now verified green.
+
 ## [8.117.28] - 2026-11-17
 ### Verified
 - `verify_frontend.py` screenshot suite passes against the Vite 8 build (dashboard, supernode, wallet, governance, manual captures refreshed), and CI stays green on the resynced toolchain ([run 44056146932](https://github.com/robertpelloni/bobcoin/actions/runs/44056146932), 6m02s).

@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.23] - 2026-11-17
+### Verified
+- **Full E2E sweep green**: every root verification script passes against the live stack — `test_e2e.cjs` (game-server + supertorrent parity), `test_e2e_stress.cjs` (10,000 quadratic vote calculations), `verify_oracle_governance.cjs` (neural governance auditor flags a treasury rug-pull at 0.95 risk), plus the governance parity suite from v8.117.22. No defects found in this sweep.
+
 ## [8.117.22] - 2026-11-17
 ### Verified
 - **JS/Go consensus parity re-verified live**: `node test_e2e_governance.cjs` passes end-to-end — Node replay-semantics suite, all 8 fixture-driven same-timestamp scenarios (governance, swaps, NFTs, manifests, demurrage, dual-collector), and the Go lattice suite agree. Parity scenario matrix regenerated (`docs/ai/testing/parity-scenario-matrix.md`).

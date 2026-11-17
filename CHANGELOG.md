@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.117.26] - 2026-11-17
+### Verified
+- **CI green, observed**: after the v8.117.25 modernization, two real failures surfaced and were fixed — `sp1up` dying on unauthenticated GitHub API rate limits (now pinned `v6.10.0` with the workflow token) and `TestWindowsPathToWSL` failing on Linux (now skipped off Windows). [Run 44052597353](https://github.com/robertpelloni/bobcoin/actions/runs/44052597353) completes successfully in 4m57s. Correction to the previous entry: the old Go 1.22 pin had not actually been fatal — Go's toolchain auto-switching masked it — but the new Go test step it enabled is what caught the platform-specific test.
+
 ## [8.117.25] - 2026-11-17
 ### Fixed
 - **CI pipeline could never pass**: `zk-pipeline.yml` pinned Go 1.22 while every `go.mod` requires 1.26.1, used the archived `actions-rs/toolchain`, and never ran the Go test suites. Modernized pins (checkout v4, dtolnay/rust-toolchain, setup-node v4/Node 20, setup-go v5/Go 1.26), added a Go test step for all four modules, and renamed the WASM step to match what the crate actually is (an input-commitment client). YAML validated locally; the SP1 `sp1up` step from v8.117.2 is retained.

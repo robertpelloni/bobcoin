@@ -227,11 +227,11 @@ func NewService(cfg Config) (*Service, error) {
 		return nil, err
 	}
 	return &Service{
-		cfg:            cfg,
-		db:             db,
-		httpClient:     &http.Client{Timeout: 15 * time.Second},
-		solanaClient:   rpc.New(cfg.SolanaRPCURL),
-		systemWallet:   wallet,
+		cfg:          cfg,
+		db:           db,
+		httpClient:   &http.Client{Timeout: 15 * time.Second},
+		solanaClient: rpc.New(cfg.SolanaRPCURL),
+		systemWallet: wallet,
 		relayers: []Relayer{
 			{ID: "relayer-1", PublicKey: "solana-bridge-node-1"},
 			{ID: "relayer-2", PublicKey: "solana-bridge-node-2"},
@@ -335,7 +335,7 @@ func (s *Service) initializeSystemChainOnce() error {
 	if alreadyInitialized {
 		return nil
 	}
-    // Try to fetch to double check
+	// Try to fetch to double check
 	frontier, balance, height, err := s.fetchFrontier(s.systemWallet.PublicKey)
 	if err == nil && frontier != nil && *frontier != "" {
 		s.mu.Lock()
@@ -345,10 +345,10 @@ func (s *Service) initializeSystemChainOnce() error {
 		return nil
 	}
 
-    actualHeight := 0
-    if err == nil && height > -1 {
-        actualHeight = height
-    }
+	actualHeight := 0
+	if err == nil && height > -1 {
+		actualHeight = height
+	}
 
 	block := &Block{Type: "open", Account: s.systemWallet.PublicKey, Previous: nil, Balance: s.systemBalance, StakedBalance: 0, Height: actualHeight, Link: "SYSTEM_GENESIS", Timestamp: time.Now().UnixMilli()}
 	signBlock(block, s.systemWallet.PrivateKey)
@@ -478,11 +478,11 @@ func (s *Service) handleMint(w http.ResponseWriter, r *http.Request) {
 	txID := "tx_mint_" + shortHash(hash+req.Address)
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: req.Amount, Type: "MINT", Hash: hash})
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"tx": txID,
-		"hash": hash,
-		"relayer": "solana_devnet",
-		"multisig": true,
+		"success":    true,
+		"tx":         txID,
+		"hash":       hash,
+		"relayer":    "solana_devnet",
+		"multisig":   true,
 		"signatures": signatures,
 	})
 }
@@ -529,7 +529,7 @@ func (s *Service) handleFHEOracle(w http.ResponseWriter, r *http.Request) {
 	resultCipher := strings.TrimSpace(string(output))
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
+		"success":      true,
 		"resultCipher": resultCipher,
 	})
 }
@@ -584,18 +584,18 @@ func (s *Service) handleSubmitProof(w http.ResponseWriter, r *http.Request) {
 
 	// Broadcast live audit to all connected WebSockets
 	s.broadcastOracleAudit(map[string]interface{}{
-		"id":                   lastID,
-		"address":              address,
-		"score":                score,
-		"variance":             variance,
-		"mad":                  mad,
-		"entropy":              entropy,
-		"confidenceScore":      confidence,
-		"autocorrelation":      autocorr,
-		"autocorrelationLag2":  autocorrLag2,
-		"diversityRatio":       diversityRatio,
-		"verified":             zkVerified,
-		"timestamp":            ts,
+		"id":                  lastID,
+		"address":             address,
+		"score":               score,
+		"variance":            variance,
+		"mad":                 mad,
+		"entropy":             entropy,
+		"confidenceScore":     confidence,
+		"autocorrelation":     autocorr,
+		"autocorrelationLag2": autocorrLag2,
+		"diversityRatio":      diversityRatio,
+		"verified":            zkVerified,
+		"timestamp":           ts,
 	})
 
 	if !zkVerified {
@@ -962,17 +962,17 @@ func calculateVariance(data []float64) float64 {
 	if len(data) < 2 {
 		return 0
 	}
-    allSame := true
-    firstVal := data[0]
-    for _, v := range data {
-        if v != firstVal {
-            allSame = false
-            break
-        }
-    }
-    if allSame {
-        return 0
-    }
+	allSame := true
+	firstVal := data[0]
+	for _, v := range data {
+		if v != firstVal {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
+		return 0
+	}
 	var sum float64
 	for _, v := range data {
 		sum += v
@@ -1077,11 +1077,11 @@ func (s *Service) handleBurn(w http.ResponseWriter, r *http.Request) {
 
 	_ = recordTransaction(s.db, Transaction{ID: txID, Date: formatDBDate(time.Now()), Amount: req.Amount, Type: "SEND", Hash: solanaHash})
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"tx": txID,
-		"hash": solanaHash,
-		"bridge": "solana_devnet",
-		"multisig": true,
+		"success":    true,
+		"tx":         txID,
+		"hash":       solanaHash,
+		"bridge":     "solana_devnet",
+		"multisig":   true,
 		"signatures": signatures,
 	})
 }
@@ -1326,10 +1326,10 @@ func (s *Service) sendSystemFunds(address string, amount float64, zkProof string
 	chunkHash := hashString(infoHash + strconv.Itoa(challenge))
 	now := time.Now().UnixMilli()
 	newBalance := balance - amount
-    actualHeight := 1
-    if height != -1 {
-        actualHeight = height + 1
-    }
+	actualHeight := 1
+	if height != -1 {
+		actualHeight = height + 1
+	}
 	block := &Block{Type: "send", Account: s.systemWallet.PublicKey, Previous: frontier, Balance: newBalance, StakedBalance: 0, Height: actualHeight, Link: address, Spora: &SporaProof{InfoHash: infoHash, Challenge: challenge, ChunkHash: chunkHash}, ZKProof: zkProof, Timestamp: now}
 	signBlock(block, s.systemWallet.PrivateKey)
 	var resp APIResponse
@@ -1352,10 +1352,10 @@ func (s *Service) fetchFrontier(account string) (*string, float64, int, error) {
 	frontierRaw, _ := body["frontier"].(string)
 	balance, _ := body["balance"].(float64)
 	heightFloat, ok := body["height"].(float64)
-    height := int(heightFloat)
-    if !ok {
-        height = -1 // if account doesn't exist, we start at 0
-    }
+	height := int(heightFloat)
+	if !ok {
+		height = -1 // if account doesn't exist, we start at 0
+	}
 	if frontierRaw == "" {
 		return nil, balance, height, nil
 	}

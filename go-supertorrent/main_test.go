@@ -202,7 +202,7 @@ func TestMultiRoomMatchmaking(t *testing.T) {
 	defer server.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/"
-	
+
 	conn1, _, _ := websocket.DefaultDialer.Dial(wsURL, nil)
 	defer conn1.Close()
 	_ = conn1.WriteJSON(SignalMessage{Type: "FIND_MATCH", RoomID: "private-room"})

@@ -41,7 +41,7 @@ func TestInitializeSystemChainOnce(t *testing.T) {
 	lattice := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/frontier/") {
 			w.WriteHeader(http.StatusOK)
-            w.Write([]byte(`{"frontier":""}`))
+			w.Write([]byte(`{"frontier":""}`))
 			return
 		}
 		if r.URL.Path != "/process" {
@@ -451,7 +451,7 @@ func TestMultiRoomMatchmaking(t *testing.T) {
 	defer server.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/"
-	
+
 	// Player 1 in Room A
 	conn1, _, _ := websocket.DefaultDialer.Dial(wsURL, nil)
 	defer conn1.Close()

@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.117.24] - 2026-11-17
+### Changed
+- **Go formatting normalized**: an audit found every Go file failing `gofmt -l` (CRLF line endings from Windows authoring). All 19 Go files are now `gofmt`-clean (line-ending normalization only). Proven semantics-free: all four Go test suites and the JS/Go governance parity E2E pass unchanged. `go vet` is clean on all modules.
+### Noted
+- `research/forest` and `research/solana` are partial vendored checkouts (a handful of subdirectories, no `.git`), despite being declared in `.gitmodules` — they are reference material, not live submodules; left untouched.
+
 ## [8.117.23] - 2026-11-17
 ### Verified
 - **Full E2E sweep green**: every root verification script passes against the live stack — `test_e2e.cjs` (game-server + supertorrent parity), `test_e2e_stress.cjs` (10,000 quadratic vote calculations), `verify_oracle_governance.cjs` (neural governance auditor flags a treasury rug-pull at 0.95 risk), plus the governance parity suite from v8.117.22. No defects found in this sweep.

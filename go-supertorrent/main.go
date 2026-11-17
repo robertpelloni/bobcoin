@@ -226,13 +226,13 @@ func NewSuperTorrentService(cfg Config) (*SuperTorrentService, error) {
 	}
 
 	svc := &SuperTorrentService{
-		cfg:        cfg,
-		wallet:     wallet,
-		nodeID:     "sn_" + shortHash(wallet.PublicKey),
-		started:    time.Now(),
-		torrents:   torrents,
-		manifests:  manifests,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		cfg:            cfg,
+		wallet:         wallet,
+		nodeID:         "sn_" + shortHash(wallet.PublicKey),
+		started:        time.Now(),
+		torrents:       torrents,
+		manifests:      manifests,
+		httpClient:     &http.Client{Timeout: 15 * time.Second},
 		waitingPlayers: make(map[string]*MatchConnection),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },

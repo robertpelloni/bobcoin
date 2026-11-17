@@ -74,7 +74,7 @@ type Lattice struct {
 	Nfts            map[string]interface{}
 	Anchors         map[string]interface{}
 	Multisigs       map[string]*MultisigVault
-	Pools           map[string]*LiquidityPool    // PairName -> Pool
+	Pools           map[string]*LiquidityPool     // PairName -> Pool
 	Balances        map[string]map[string]float64 // Account -> Asset -> Amount
 	TotalSupply     float64
 	TrustScores     map[string]float64           // Account -> Score (0-100)
@@ -291,12 +291,12 @@ func (l *Lattice) ProcessBlock(block *Block, isRecovery bool) error {
 			return errors.New("invalid previous hash link")
 		}
 		if block.Height != head.Height+1 {
-            // Temporary exception to get around test cold boot persistence issue where height drifts in test environments
-            if block.Height == head.Height || block.Height == head.Height+2 {
-                // allow drift during rapid test restarts
-            } else {
-			    return fmt.Errorf("invalid height: expected %d, got %d", head.Height+1, block.Height)
-            }
+			// Temporary exception to get around test cold boot persistence issue where height drifts in test environments
+			if block.Height == head.Height || block.Height == head.Height+2 {
+				// allow drift during rapid test restarts
+			} else {
+				return fmt.Errorf("invalid height: expected %d, got %d", head.Height+1, block.Height)
+			}
 		}
 	}
 
@@ -1041,7 +1041,7 @@ func (l *Lattice) refreshMarketStatusesAt(at time.Time) {
 			if ok && ts > expiry {
 				bid["status"] = "EXPIRED"
 			}
-	} else if status == "ACCEPTED" {
+		} else if status == "ACCEPTED" {
 			// Automated Slashing for storage non-compliance
 			// Winner must submit 'storage_audit_pass' block for the magnet within 1 hour
 			var acceptedTs int64
@@ -1156,15 +1156,15 @@ func (l *Lattice) GetStateSnapshot() map[string]interface{} {
 	defer l.mu.RUnlock()
 
 	return map[string]interface{}{
-		"chains":     l.Chains,
-		"blocks":     l.Blocks,
-		"pending":    l.Pending,
-		"proposals":  l.Proposals,
-		"votes":      l.Votes,
-		"marketBids": l.MarketBids,
-		"swaps":      l.Swaps,
-		"nfts":       l.Nfts,
-		"anchors":    l.Anchors,
+		"chains":      l.Chains,
+		"blocks":      l.Blocks,
+		"pending":     l.Pending,
+		"proposals":   l.Proposals,
+		"votes":       l.Votes,
+		"marketBids":  l.MarketBids,
+		"swaps":       l.Swaps,
+		"nfts":        l.Nfts,
+		"anchors":     l.Anchors,
 		"multisigs":   l.Multisigs,
 		"pools":       l.Pools,
 		"balances":    l.Balances,

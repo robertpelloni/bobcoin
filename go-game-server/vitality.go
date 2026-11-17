@@ -7,15 +7,15 @@ import (
 )
 
 type VitalityPayload struct {
-	DeviceID      string  `json:"deviceId"`
-	Steps         int     `json:"steps"`
-	HeartRateAvg  float64 `json:"heartRateAvg"`
-	Cadence       float64 `json:"cadence,omitempty"`     // Steps per minute
-	DurationSec   float64 `json:"durationSec,omitempty"` // Workout duration in seconds
+	DeviceID       string  `json:"deviceId"`
+	Steps          int     `json:"steps"`
+	HeartRateAvg   float64 `json:"heartRateAvg"`
+	Cadence        float64 `json:"cadence,omitempty"`        // Steps per minute
+	DurationSec    float64 `json:"durationSec,omitempty"`    // Workout duration in seconds
 	CaloriesBurned float64 `json:"caloriesBurned,omitempty"` // Energy burned in kcal
-	ActivityType  string  `json:"activityType,omitempty"` // WALK, RUN, HIKE
-	Signature     string  `json:"signature"`
-	WalletAddress string  `json:"wallet"`
+	ActivityType   string  `json:"activityType,omitempty"`   // WALK, RUN, HIKE
+	Signature      string  `json:"signature"`
+	WalletAddress  string  `json:"wallet"`
 }
 
 // handleVitalityProof acts as the gateway for wearable physical mining with AI Oracle physiological validation
@@ -41,7 +41,7 @@ func (s *Service) handleVitalityProof(w http.ResponseWriter, r *http.Request) {
 	// Valid human heart rates during physical exercise range between 40 and 220 bpm
 	if req.HeartRateAvg < 40.0 || req.HeartRateAvg > 220.0 {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"error": "Physiological anomaly detected: Heart rate out of human biometric bounds",
+			"error":     "Physiological anomaly detected: Heart rate out of human biometric bounds",
 			"heartRate": req.HeartRateAvg,
 		})
 		return
@@ -50,7 +50,7 @@ func (s *Service) handleVitalityProof(w http.ResponseWriter, r *http.Request) {
 	// Cadence realism: human running cadence almost never exceeds 300 steps/minute
 	if req.Cadence > 300.0 {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"error": "Physiological anomaly detected: Cadence exceeds biological locomotion limits",
+			"error":   "Physiological anomaly detected: Cadence exceeds biological locomotion limits",
 			"cadence": req.Cadence,
 		})
 		return
@@ -84,7 +84,7 @@ func (s *Service) handleVitalityProof(w http.ResponseWriter, r *http.Request) {
 		if caloriesPerMin > 32.0 {
 			writeJSON(w, http.StatusBadRequest, map[string]interface{}{
 				"error": "Metabolic anomaly detected: Caloric burn rate exceeds human physiological maximum (>32 kcal/min)",
-				"rate": caloriesPerMin,
+				"rate":  caloriesPerMin,
 			})
 			return
 		}

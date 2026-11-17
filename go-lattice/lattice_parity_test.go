@@ -237,14 +237,14 @@ func TestTrustWeightedGovernance(t *testing.T) {
 
 	// 4. Vote FOR
 	vote := &Block{
-		Type:     "vote",
-		Account:  keys["publicKey"],
-		Previous: &prop.Hash,
-		Balance:  l.GetBalance(keys["publicKey"], 2000),
-		Link:     prop.Hash,
-		Height:   2,
-		Spora:    validSpora(prop.Hash),
-		Payload:  map[string]interface{}{"vote": "FOR"},
+		Type:      "vote",
+		Account:   keys["publicKey"],
+		Previous:  &prop.Hash,
+		Balance:   l.GetBalance(keys["publicKey"], 2000),
+		Link:      prop.Hash,
+		Height:    2,
+		Spora:     validSpora(prop.Hash),
+		Payload:   map[string]interface{}{"vote": "FOR"},
 		Timestamp: 2000,
 	}
 	signTestBlock(t, vote, keys["privateKey"])
@@ -269,13 +269,13 @@ func TestAutomatedSlashing(t *testing.T) {
 
 	// 1. Setup bidder and worker
 	send := &Block{
-		Type:     "send",
-		Account:  bidder["publicKey"],
-		Previous: &genesis.Hash,
-		Balance:  900,
-		Height:   1,
-		Link:     worker["publicKey"],
-		Spora:    validSpora(genesis.Hash),
+		Type:      "send",
+		Account:   bidder["publicKey"],
+		Previous:  &genesis.Hash,
+		Balance:   900,
+		Height:    1,
+		Link:      worker["publicKey"],
+		Spora:     validSpora(genesis.Hash),
 		Timestamp: 200,
 	}
 	signTestBlock(t, send, bidder["privateKey"])
@@ -317,13 +317,13 @@ func TestAutomatedSlashing(t *testing.T) {
 
 	// 3. Accept Bid
 	accept := &Block{
-		Type:     "accept_bid",
-		Account:  worker["publicKey"],
-		Previous: &receive.Hash,
-		Balance:  l.GetBalance(worker["publicKey"], base+1000) + 50,
-		Height:   1,
-		Link:     bid.Hash,
-		Spora:    validSpora(receive.Hash),
+		Type:      "accept_bid",
+		Account:   worker["publicKey"],
+		Previous:  &receive.Hash,
+		Balance:   l.GetBalance(worker["publicKey"], base+1000) + 50,
+		Height:    1,
+		Link:      bid.Hash,
+		Spora:     validSpora(receive.Hash),
 		Timestamp: base + 1000,
 	}
 	signTestBlock(t, accept, worker["privateKey"])
@@ -466,7 +466,7 @@ func TestReputationStaking(t *testing.T) {
 	// Trust weighted reward = 50 * 0.5 = 25 BOB
 	oneYearMs := int64(365 * 24 * 60 * 60 * 1000)
 	unlockTs := int64(1000) + oneYearMs
-	
+
 	// Balance should be prev + amount + reward
 	liquidDecay := l.GetBalance(keys["publicKey"], unlockTs)
 	reward := lockAmount * 0.05 * 0.5
@@ -3747,7 +3747,6 @@ func TestGovernanceEnactmentDelay(t *testing.T) {
 		t.Fatalf("expected amount 500.0, got %v", l.Pending[target][0].Amount)
 	}
 }
-
 
 func TestRecoveryRebuildsDemurrageSensitiveMultiAccountSameTimestampLedgerFromSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "demurrage-multi-account-same-timestamp.sqlite")

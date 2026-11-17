@@ -103,7 +103,7 @@ func TestHandleVitalityProof_PhysiologicalChecks(t *testing.T) {
 		Steps:          2000,
 		HeartRateAvg:   140.0,
 		Cadence:        140.0,
-		DurationSec:    60.0, // 1 minute
+		DurationSec:    60.0,  // 1 minute
 		CaloriesBurned: 100.0, // 100 kcal/min > 32 kcal/min limit
 		Signature:      "mock-zk-signature",
 		WalletAddress:  "mock-wallet-address",

@@ -614,7 +614,7 @@ func gossipLoop() {
 				fmt.Printf("[GOSSIP] State Divergence with %s! Attempting Bloom Sync...\n", url)
 
 				// Speed up gossip when out of sync
-				if interval > 2 * time.Second {
+				if interval > 2*time.Second {
 					interval = 2 * time.Second
 					ticker.Reset(interval)
 					log.Printf("[GOSSIP] Synchronizing... Increasing gossip frequency to 2s.")
@@ -727,7 +727,7 @@ func gossipLoop() {
 			}
 
 			// Return to healthy interval if quorum reached
-			if lattice.QuorumScore >= lattice.QuorumThreshold && interval < 10 * time.Second {
+			if lattice.QuorumScore >= lattice.QuorumThreshold && interval < 10*time.Second {
 				interval = 10 * time.Second
 				ticker.Reset(interval)
 				log.Printf("[GOSSIP] Network healthy. Relaxing gossip frequency to 10s.")

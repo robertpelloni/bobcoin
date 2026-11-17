@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -826,6 +827,9 @@ func TestHandleSP1Status(t *testing.T) {
 }
 
 func TestWindowsPathToWSL(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("windowsPathToWSL is only meaningful on Windows hosts")
+	}
 	if got := windowsPathToWSL(`C:\Users\hyper\workspace\bobcoin\proof-of-play\program\elf\proof-of-play`); got != "/mnt/c/Users/hyper/workspace/bobcoin/proof-of-play/program/elf/proof-of-play" {
 		t.Fatalf("unexpected WSL path conversion: %q", got)
 	}

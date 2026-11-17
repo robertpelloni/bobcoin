@@ -24,10 +24,13 @@ jobs:
         node-version: 20
 
     - name: Install SP1 Toolchain
+      # Pin the version and pass the workflow token: unpinned `sp1up`
+      # queries api.github.com unauthenticated and dies on rate limits
+      # (observed in run 44049752373 and locally).
       run: |
         curl -L https://sp1up.succinct.xyz | bash
         export PATH="$HOME/.sp1/bin:$PATH"
-        sp1up
+        sp1up -v v6.10.0 -t ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build SP1 ZK Circuits (Proof of Play)
       working-directory: proof-of-play/program
